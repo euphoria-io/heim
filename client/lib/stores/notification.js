@@ -1,6 +1,8 @@
 var _ = require('lodash')
 var Reflux = require('reflux')
 
+var storage = require('./storage')
+
 
 var actions = Reflux.createActions([
   'enable',
@@ -13,6 +15,7 @@ actions.enable.sync = true
 module.exports.store = Reflux.createStore({
   listenables: [
     actions,
+    {storageChange: storage.store},
     {chatUpdate: require('./chat').store},
   ],
 
@@ -43,30 +46,32 @@ module.exports.store = Reflux.createStore({
     this.focus = false
   },
 
-  getDefaultData: function() {
+  getInitialState: function() {
     return this.state
   },
 
   enable: function() {
     if (this.state.permission) {
-      this.state.enabled = true
-      this.trigger(this.state)
+      storage.set('notify', true)
     } else {
       Notification.requestPermission(this.onPermission)
     }
   },
 
   disable: function() {
-    this.state.enabled = false
-    this.trigger(this.state)
+    storage.set('notify', false)
   },
 
   onPermission: function(permission) {
     if (permission === "granted") {
       this.state.permission = true
-      this.state.enabled = true
-      this.trigger(this.state)
+      storage.set('notify', true)
     }
+  },
+
+  storageChange: function(data) {
+    this.state.enabled = this.state.permission && data.notify
+    this.trigger(this.state)
   },
 
   chatUpdate: function(state) {
