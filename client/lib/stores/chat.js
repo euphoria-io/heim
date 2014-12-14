@@ -57,7 +57,6 @@ module.exports.store = Reflux.createStore({
     var val = 0
     for (var i = 0; i < nick.length; i++) {
       val += nick.charCodeAt(i)
-      console.log(i, val, nick.charCodeAt(i))
     }
     this.state.nickHues[nick] = val % 255
   },
