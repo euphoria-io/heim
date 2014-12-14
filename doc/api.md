@@ -39,17 +39,17 @@ The following commands are available to the client:
 
 Use the nick command to change the user's display name, for subsequent messages sent from the user and for subsequent listings of the room.
 
-Request: `{id: "1", type: "nick", data: {name: "Logan"}}`
+Request: `{id: "1", type: "nick", data: {name: "Ezzie"}}`
 
-Response: `{id: "1", type: "nick", data: {id: "logan", name: "Logan"}}`
+Response: `{id: "1", type: "nick", data: {id: "logan", name: "Ezzie"}}`
 
 The response will also be broadcast to all other users in the room.
 
-Broadcast: `{type: "nick", data: {id: "logan", name: "Logan"}}`
+Broadcast: `{type: "nick", data: {id: "logan", name: "Ezzie", from: "Logan"}}`
 
 <h4>who</h4>
 
-Use the listing command to fetch the current list of live users in the room.
+Use the who command to fetch the current list of live users in the room.
 
 Request: `{id: "1", type: "who"}`
 
