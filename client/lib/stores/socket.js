@@ -13,6 +13,7 @@ module.exports.store = Reflux.createStore({
 
   init: function() {
     this.ws = null
+    this.seq = 0
   },
 
   connect: function() {
@@ -49,6 +50,9 @@ module.exports.store = Reflux.createStore({
   },
 
   send: function(data) {
+    if (!data.id) {
+      data.id = String(this.seq++)
+    }
     this.ws.send(JSON.stringify(data))
   }
 })
