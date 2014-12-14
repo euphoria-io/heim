@@ -11,4 +11,4 @@ React.render(
 
 require('./actions').connect()
 
-document.t abody.classList.add('loaded')
+document.body.classList.add('loaded')
