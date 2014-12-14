@@ -22,7 +22,7 @@ module.exports = Reflux.createStore({
 
   socketEvent: function(ev) {
     if (ev.status == 'receive') {
-      if (ev.body.type == 'message') {
+      if (ev.body.type == 'send') {
         this.state.messages.push(ev.body.data)
       }
     } else if (ev.status == 'open') {
