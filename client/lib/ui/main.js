@@ -10,7 +10,9 @@ module.exports = React.createClass({
   ],
 
   send: function(ev) {
-    actions.send(this.refs.line.getDOMNode().value)
+    var input = this.refs.line.getDOMNode()
+    actions.sendMessage(input.value)
+    input.value = ''
     ev.preventDefault()
   },
 

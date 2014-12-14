@@ -9,4 +9,4 @@ React.render(
   document.getElementById('container')
 )
 
-require('./actions').connect('ezzie')
+require('./actions').connect()

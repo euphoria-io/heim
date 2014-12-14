@@ -1,17 +1,22 @@
+var _ = require('lodash')
 var Reflux = require('reflux')
 
 
-module.exports = Reflux.createStore({
-  listenables: [
-    require('../actions'),
-  ],
+var actions = Reflux.createActions([
+  'send',
+  'connect',
+])
+_.extend(module.exports, actions)
+
+module.exports.store = Reflux.createStore({
+  listenables: actions,
 
   init: function() {
     this.ws = null
   },
 
-  connect: function(roomName) {
-    var url = 'ws:' + location.host + '/room/' + roomName + '/ws'
+  connect: function() {
+    var url = 'ws:' + location.host + location.pathname + 'ws'
     this.ws = new WebSocket(url, 'heim1')
     this.ws.onopen = this._open
     this.ws.onclose = this._close
@@ -38,16 +43,7 @@ module.exports = Reflux.createStore({
     })
   },
 
-  _send: function(data) {
+  send: function(data) {
     this.ws.send(JSON.stringify(data))
-  },
-
-  send: function(content) {
-    this._send({
-      type: 'send',
-      data: {
-        content: content
-      }
-    })
-  },
+  }
 })

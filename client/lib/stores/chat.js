@@ -1,12 +1,12 @@
 var Reflux = require('reflux')
 
-var SocketStore = require('./socket')
+var socket = require('./socket')
 
 
 module.exports = Reflux.createStore({
   listenables: [
     require('../actions'),
-    {socketEvent: require('./socket')},
+    {socketEvent: socket.store},
   ],
 
   init: function() {
@@ -24,12 +24,31 @@ module.exports = Reflux.createStore({
     if (ev.status == 'receive') {
       if (ev.body.type == 'send') {
         this.state.messages.push(ev.body.data)
+      } else if (ev.body.type == 'log') {
+        this.state.messages = ev.body.data
       }
     } else if (ev.status == 'open') {
       this.state.connected = true
+      socket.send({
+        type: 'log',
+        data: {n: 100},
+      })
     } else if (ev.status == 'close') {
       this.state.connected = false
     }
     this.trigger(this.state)
+  },
+
+  connect: function() {
+    socket.connect()
+  },
+
+  sendMessage: function(content) {
+    socket.send({
+      type: 'send',
+      data: {
+        content: content
+      },
+    })
   },
 })
