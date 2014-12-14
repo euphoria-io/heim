@@ -76,15 +76,15 @@ html, body, #container, .chat {
       height: 30px;
       background: #eee;
       border: none;
-      border-top: 1px solid transparent;
-      border-bottom: 2px solid transparent;
+      border-bottom: 3px solid transparent;
+      box-shadow: 0 0 10px fade(black, 10%) inset;
       transition: all .15s ease;
 
       &:focus {
         @green: fade(green, 50%);
         outline: none;
-        border-top: 1px solid @green;
-        border-bottom: 2px solid @green;
+        border-bottom: 3px solid @green;
+        background: white;
         box-shadow: 0 0 5px fade(black, 25%);
       }
     }
