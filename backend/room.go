@@ -24,7 +24,12 @@ type memRoom struct {
 	live       map[string][]Session
 }
 
-func newMemRoom(name string) *memRoom { return &memRoom{name: name} }
+func newMemRoom(name string) *memRoom {
+	return &memRoom{
+		name: name,
+		log:  &memLog{},
+	}
+}
 
 func (r *memRoom) Latest(ctx context.Context, n int) ([]Message, error) {
 	return r.log.Latest(ctx, n)
