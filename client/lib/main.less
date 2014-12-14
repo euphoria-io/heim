@@ -44,6 +44,8 @@ html, body, #container, .chat {
       padding: 10px;
 
       .line {
+        display: flex;
+        align-items: flex-start;
         margin: 2px 0;
 
         &.status {
@@ -62,6 +64,7 @@ html, body, #container, .chat {
 
       time, .nick {
         display: inline-block;
+        flex-shrink: 0;
         margin-right: 8px;
         font-size: .85em;
       }
