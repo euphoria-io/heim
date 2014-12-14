@@ -1,7 +1,7 @@
 frontend:
   build: client
   volumes:
-    - client:/srv/heim/client
+    - client:/srv/heim/client/src
 
 web:
   build: web
