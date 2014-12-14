@@ -101,5 +101,8 @@ module.exports.store = Reflux.createStore({
     }
 
     this.notification = new Notification(message, options)
+    this.notification.onclick = function() {
+      window.focus()
+    }
   },
 })
