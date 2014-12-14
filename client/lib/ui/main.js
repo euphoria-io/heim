@@ -4,6 +4,7 @@ var cx = React.addons.classSet
 
 var actions = require('../actions')
 var Chat = require('./chat')
+var NotifyToggle = require('./notifytoggle')
 
 module.exports = React.createClass({
   mixins: [
@@ -26,6 +27,9 @@ module.exports = React.createClass({
       <div className="chat">
         <div className="messages-container" onClick={this.focusInput}>
           <Chat messages={this.state.messages} />
+          <div className="options">
+            <NotifyToggle />
+          </div>
           <div className={cx({'status': true, 'disconnected': this.state.connected == false})}>disconnected!</div>
         </div>
         <form onSubmit={this.send}>
