@@ -9,15 +9,20 @@ html, body, #container, .chat {
 }
 
 .chat {
+  @time-margin: 70px;
   display: flex;
   flex-direction: column;
 
   .messages-container {
     position: relative;
     flex: 1;
-    background: white;
-    padding: 10px;
     overflow-y: auto;
+    padding-left: @time-margin;
+
+    .messages {
+      background: white;
+      padding: 10px;
+    }
 
     .line {
       margin: 2px 0;
@@ -30,8 +35,12 @@ html, body, #container, .chat {
     }
 
     time {
-      color: #777;
-      width: 4em;
+      position: absolute;
+      left: 0;
+      color: #aaa;
+      width: @time-margin;
+      padding-right: 10px;
+      box-sizing: border-box;
       text-align: right;
     }
 
@@ -70,11 +79,13 @@ html, body, #container, .chat {
   }
 
   form {
+    margin-left: @time-margin;
+
     input {
       position: relative;
       width: 100%;
       box-sizing: border-box;
-      padding: 6px;
+      padding: 10px;
       height: 30px;
       background: #eee;
       border: none;
@@ -90,5 +101,9 @@ html, body, #container, .chat {
         box-shadow: 0 0 5px fade(black, 25%);
       }
     }
+  }
+
+  .messages, form {
+    box-shadow: 0 0 10px fade(black, 50%);
   }
 }
