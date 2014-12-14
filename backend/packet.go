@@ -28,13 +28,13 @@ type NickCommand struct {
 
 type WhoCommand struct{}
 
-type Command struct {
+type Packet struct {
 	ID   string          `json:"id"`
 	Type CommandType     `json:"type"`
 	Data json.RawMessage `json:"data"`
 }
 
-func (cmd *Command) Payload() (interface{}, error) {
+func (cmd *Packet) Payload() (interface{}, error) {
 	var payload interface{}
 
 	switch cmd.Type {
@@ -57,10 +57,10 @@ func (cmd *Command) Payload() (interface{}, error) {
 	return payload, nil
 }
 
-func (cmd *Command) Encode() ([]byte, error) { return json.Marshal(cmd) }
+func (cmd *Packet) Encode() ([]byte, error) { return json.Marshal(cmd) }
 
-func Response(refID string, msgType CommandType, payload interface{}) (*Command, error) {
-	cmd := &Command{
+func Response(refID string, msgType CommandType, payload interface{}) (*Packet, error) {
+	cmd := &Packet{
 		ID:   refID,
 		Type: msgType,
 	}
@@ -77,8 +77,8 @@ func Response(refID string, msgType CommandType, payload interface{}) (*Command,
 	return cmd, nil
 }
 
-func ParseRequest(data []byte) (*Command, error) {
-	cmd := &Command{}
+func ParseRequest(data []byte) (*Packet, error) {
+	cmd := &Packet{}
 	if err := json.Unmarshal(data, cmd); err != nil {
 		return nil, err
 	}

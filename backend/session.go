@@ -19,8 +19,8 @@ type memSession struct {
 	identity *memIdentity
 	room     Room
 
-	incoming chan *Command
-	outgoing chan *Command
+	incoming chan *Packet
+	outgoing chan *Packet
 }
 
 func newMemSession(ctx context.Context, conn *websocket.Conn, room Room) *memSession {
@@ -33,8 +33,8 @@ func newMemSession(ctx context.Context, conn *websocket.Conn, room Room) *memSes
 		identity: newMemIdentity(id),
 		room:     room,
 
-		incoming: make(chan *Command),
-		outgoing: make(chan *Command, 100),
+		incoming: make(chan *Packet),
+		outgoing: make(chan *Packet, 100),
 	}
 	return session
 }
@@ -47,7 +47,7 @@ func (s *memSession) Send(ctx context.Context, cmdType CommandType, payload inte
 		return err
 	}
 
-	cmd := &Command{
+	cmd := &Packet{
 		Type: cmdType,
 		Data: encoded,
 	}
@@ -134,7 +134,7 @@ func (s *memSession) readMessages() {
 	}
 }
 
-func (s *memSession) handleCommand(cmd *Command) (interface{}, error) {
+func (s *memSession) handleCommand(cmd *Packet) (interface{}, error) {
 	payload, err := cmd.Payload()
 	if err != nil {
 		return nil, err
