@@ -3,10 +3,3 @@ frontend:
   build: client
   volumes:
     - client:/srv/heim/client/src
-
-web:
-  build: web
-  volumes_from:
-    - frontend
-  ports:
-    - "80:80"
