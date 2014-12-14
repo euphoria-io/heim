@@ -12,6 +12,7 @@ import (
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
+	Subprotocols:    []string{"heim1"},
 }
 
 type Server struct {
