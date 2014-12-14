@@ -17,7 +17,7 @@ module.exports = React.createClass({
               <time dateTime={time.toISOString()} title={time.format('MMMM Do YYYY, h:mm:ss a')}>
                 {time.format('h:mma')}
               </time>
-              <span className="name">{message.sender.name}</span>
+              <span className="nick">{message.sender.name}</span>
               <span className="message">{message.content}</span>
             </div>
           )

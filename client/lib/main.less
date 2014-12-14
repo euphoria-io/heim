@@ -1,9 +1,9 @@
 body {
   margin: 0;
-  font-family: Droid Sans, sans-serif;
 
-  &.loaded {
-    background: gray;
+  &, input {
+    font-family: Droid Sans, sans-serif;
+    font-size: 12pt;
   }
 }
 
@@ -15,6 +15,7 @@ html, body, #container, .chat {
   @time-margin: 70px;
   display: flex;
   flex-direction: column;
+  background: gray;
 
   .messages-container {
     position: relative;
@@ -23,35 +24,43 @@ html, body, #container, .chat {
     padding-left: @time-margin;
     height: 100%;
 
-    .messages {
+    .messages-content {
+      display: flex;
+      flex-direction: column-reverse;
       background: white;
-      padding: 10px;
       min-height: 100%;
-    }
-
-    .line {
-      margin: 2px 0;
-    }
-
-    time, .name {
-      display: inline-block;
-      font-size: .85em;
-      margin-right: 8px;
-    }
-
-    time {
-      position: absolute;
-      left: 0;
-      color: #aaa;
-      width: @time-margin;
-      padding-right: 10px;
       box-sizing: border-box;
-      text-align: right;
+      box-shadow: 0 0 10px fade(black, 50%);
     }
 
-    .name {
+    .nick {
       background: #eee;
       padding: 2px 4px;
+      font-size: .85em;
+    }
+
+    .messages {
+      padding: 10px;
+
+      .line {
+        margin: 2px 0;
+      }
+
+      time, .nick {
+        display: inline-block;
+        margin-right: 8px;
+        font-size: .85em;
+      }
+
+      time {
+        position: absolute;
+        left: 0;
+        color: #aaa;
+        width: @time-margin;
+        padding-right: 10px;
+        box-sizing: border-box;
+        text-align: right;
+      }
     }
 
     .options {
@@ -84,31 +93,42 @@ html, body, #container, .chat {
   }
 
   form {
-    margin-left: @time-margin;
+    position: relative;
+    display: flex;
+    flex-direction: row;
+    box-sizing: border-box;
+    background: #eee;
+    border: none;
+    border-bottom: 3px solid transparent;
+    box-shadow: 0 0 10px fade(black, 10%) inset;
+    transition: all .15s ease;
+
+    & > * {
+      height: 38px;
+      padding: 10px;
+      box-sizing: border-box;
+    }
+
+    &.focus {
+      @green: fade(green, 50%);
+      border-bottom: 3px solid @green;
+      background: white;
+      box-shadow: 0 0 5px fade(black, 25%);
+    }
 
     input {
-      position: relative;
-      width: 100%;
-      box-sizing: border-box;
-      padding: 10px;
-      height: 30px;
-      background: #eee;
+      flex: 1;
+      background: none;
       border: none;
-      border-bottom: 3px solid transparent;
-      box-shadow: 0 0 10px fade(black, 10%) inset;
-      transition: all .15s ease;
+      padding-left: 0;
 
       &:focus {
-        @green: fade(green, 50%);
         outline: none;
-        border-bottom: 3px solid @green;
-        background: white;
-        box-shadow: 0 0 5px fade(black, 25%);
       }
     }
-  }
 
-  .messages, form {
-    box-shadow: 0 0 10px fade(black, 50%);
+    label {
+      opacity: .5;
+    }
   }
 }
