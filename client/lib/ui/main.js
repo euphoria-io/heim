@@ -17,6 +17,10 @@ module.exports = React.createClass({
   },
 
   send: function(ev) {
+    if (ev.which != '13') {
+      return
+    }
+
     var input = this.refs.input.getDOMNode()
     actions.sendMessage(input.value)
     input.value = ''
@@ -24,13 +28,23 @@ module.exports = React.createClass({
   },
 
   setNick: function(ev) {
-    var input = this.refs.input.getDOMNode()
+    var input = this.refs.nick.getDOMNode()
     actions.setNick(input.value)
     ev.preventDefault()
   },
 
-  focusInput: function() {
-    this.refs.input.getDOMNode().focus()
+  previewNick: function() {
+    var input = this.refs.nick.getDOMNode()
+    this.setState({nickText: input.value})
+  },
+
+  focusInput: function(ev) {
+    if (ev.target.nodeName == 'INPUT') {
+      return
+    }
+
+    var input = this.refs.input || this.refs.nick
+    input.getDOMNode().focus()
   },
 
   onFormFocus: function() {
@@ -45,18 +59,21 @@ module.exports = React.createClass({
     var sendForm
     if (this.state.chat.nick) {
       sendForm = (
-        <form onSubmit={this.send} className={cx({'focus': this.state.formFocus})}>
+        <form className={cx({'focus': this.state.formFocus})}>
           <div className="nick-box">
-            <span className="nick">{this.state.chat.nick}</span>
+            <div className="auto-size-container">
+              <input className="nick" ref="nick" defaultValue={this.state.chat.nick} onBlur={this.setNick} onChange={this.previewNick} />
+              <span className="nick">{this.state.nickText || this.state.chat.nick}</span>
+            </div>
           </div>
-          <input key="msg" ref="input" type="text" autoFocus onFocus={this.onFormFocus} onBlur={this.onFormBlur} />
+          <input key="msg" ref="input" type="text" autoFocus onKeyDown={this.send} onFocus={this.onFormFocus} onBlur={this.onFormBlur} />
         </form>
       )
     } else {
       sendForm = (
         <form onSubmit={this.setNick} className={cx({'focus': this.state.formFocus})}>
           <label>choose a nickname to start chatting:</label>
-          <input key="nick" ref="input" type="text" onFocus={this.onFormFocus} onBlur={this.onFormBlur} />
+          <input key="nick" ref="nick" type="text" onFocus={this.onFormFocus} onBlur={this.onFormBlur} />
         </form>
       )
     }

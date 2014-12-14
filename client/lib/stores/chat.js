@@ -53,6 +53,10 @@ module.exports.store = Reflux.createStore({
   },
 
   setNick: function(nick) {
+    if (nick == this.state.nick) {
+      return
+    }
+
     storage.set('nick', nick)
     this._sendNick(nick)
   },

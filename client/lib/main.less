@@ -130,5 +130,23 @@ html, body, #container, .chat {
     label {
       opacity: .5;
     }
+
+    .auto-size-container {
+      position: relative;
+
+      .nick {
+        box-sizing: border-box;
+      }
+
+      input.nick {
+        display: block;
+        position: absolute;
+        width: 100%;
+
+        &:focus {
+          background: white;
+        }
+      }
+    }
   }
 }
