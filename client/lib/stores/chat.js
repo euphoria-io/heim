@@ -31,7 +31,7 @@ module.exports = Reflux.createStore({
       this.state.connected = true
       socket.send({
         type: 'log',
-        data: {n: 100},
+        data: {n: 1000},
       })
     } else if (ev.status == 'close') {
       this.state.connected = false
