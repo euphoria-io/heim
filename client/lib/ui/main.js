@@ -66,7 +66,7 @@ module.exports = React.createClass({
               <span className="nick">{this.state.nickText || this.state.chat.nick}</span>
             </div>
           </div>
-          <input key="msg" ref="input" type="text" autoFocus disabled={!this.state.chat.connected} onKeyDown={this.send} onFocus={this.onFormFocus} onBlur={this.onFormBlur} />
+          <input key="msg" ref="input" type="text" autoFocus disabled={this.state.chat.connected == false} onKeyDown={this.send} onFocus={this.onFormFocus} onBlur={this.onFormBlur} />
         </form>
       )
     } else {
