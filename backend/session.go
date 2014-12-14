@@ -23,10 +23,13 @@ type memSession struct {
 }
 
 func newMemSession(ctx context.Context, conn *websocket.Conn, room Room) *memSession {
+	id := conn.LocalAddr().String()
+	loggingCtx := LoggingContext(ctx, fmt.Sprintf("[%s] ", id))
+
 	session := &memSession{
-		ctx:      ctx,
+		ctx:      loggingCtx,
 		conn:     conn,
-		identity: rawIdentity(conn.LocalAddr().String()),
+		identity: rawIdentity(id),
 		room:     room,
 
 		incoming: make(chan *Command),
@@ -56,40 +59,46 @@ func (s *memSession) Send(ctx context.Context, msg Message) error {
 func (s *memSession) serve() {
 	go s.readMessages()
 
+	logger := Logger(s.ctx)
+
 	for {
 		select {
 		case cmd := <-s.incoming:
+			logger.Printf("received command: %#v", cmd)
+
 			reply, err := s.handleCommand(cmd)
 			if err != nil {
-				// TODO: log error?
+				logger.Printf("error: handleCommand: %s", err)
 				reply = err
 			}
 
 			resp, err := Response(cmd.ID, cmd.Type, reply)
 			if err != nil {
-				// TODO: log error, disconnect?
+				logger.Printf("error: Response: %s", err)
 				return
 			}
 
 			data, err := resp.Encode()
 			if err != nil {
-				// TODO: log error, disconnect?
+				logger.Printf("error: Response encode: %s", err)
 				return
 			}
 
 			if err := s.conn.WriteMessage(websocket.TextMessage, data); err != nil {
-				// TODO: log error, disconnect?
+				logger.Printf("error: write message: %s", err)
 				return
 			}
 		case cmd := <-s.outgoing:
+			logger.Printf("pushing message: %#v", cmd)
+
 			data, err := cmd.Encode()
 			if err != nil {
-				// TODO: log error, disconnect?
+				logger.Printf("error: push message encode: %s", err)
 				return
 			}
 
 			if err := s.conn.WriteMessage(websocket.TextMessage, data); err != nil {
-				// TODO: log error, disconnect?
+				logger.Printf("error: write message: %s", err)
 				return
 			}
 		}
@@ -97,11 +106,13 @@ func (s *memSession) serve() {
 }
 
 func (s *memSession) readMessages() {
+	logger := Logger(s.ctx)
+
 	// TODO: termination condition?
 	for {
 		_, data, err := s.conn.ReadMessage()
 		if err != nil {
-			// TODO: log error, disconnect?
+			logger.Printf("error: read message: %s", err)
 			return
 		}
 
@@ -109,7 +120,7 @@ func (s *memSession) readMessages() {
 
 		cmd, err := ParseRequest(data)
 		if err != nil {
-			// TODO: log error, disconnect?
+			logger.Printf("error: ParseRequest: %s", err)
 			return
 		}
 
