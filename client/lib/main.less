@@ -45,6 +45,19 @@ html, body, #container, .chat {
 
       .line {
         margin: 2px 0;
+
+        &.status {
+          border: 1px solid #ddd;
+          border-radius: 3px;
+          padding: .25em 0;
+          margin: .5em 0;
+          text-align: center;
+
+          &.disconnected {
+            color: darkred;
+            background: fade(darkred, 5%);
+          }
+        }
       }
 
       time, .nick {
@@ -71,24 +84,6 @@ html, body, #container, .chat {
 
       * {
         vertical-align: middle;
-      }
-    }
-
-    .status {
-      display: inline-block;
-      padding: 2px 4px;
-      position: fixed;
-      bottom: 42px;
-      right: 10px;
-      font-size: 12px;
-      color: white;
-      background: darkred;
-      border-radius: 3px;
-      opacity: 0;
-      transition: all .25s ease;
-
-      &.disconnected {
-        opacity: 1;
       }
     }
   }

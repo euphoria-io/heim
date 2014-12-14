@@ -66,7 +66,7 @@ module.exports = React.createClass({
               <span className="nick">{this.state.nickText || this.state.chat.nick}</span>
             </div>
           </div>
-          <input key="msg" ref="input" type="text" autoFocus onKeyDown={this.send} onFocus={this.onFormFocus} onBlur={this.onFormBlur} />
+          <input key="msg" ref="input" type="text" autoFocus disabled={!this.state.chat.connected} onKeyDown={this.send} onFocus={this.onFormFocus} onBlur={this.onFormBlur} />
         </form>
       )
     } else {
@@ -83,12 +83,11 @@ module.exports = React.createClass({
         <Scroller className="messages-container" onClick={this.focusInput}>
           <div className="messages-content">
             {sendForm}
-            <Chat messages={this.state.chat.messages} />
+            <Chat messages={this.state.chat.messages} disconnected={this.state.chat.connected == false} />
             <div className="overlay">
               <div className="options">
                 <NotifyToggle />
               </div>
-              <div className={cx({'status': true, 'disconnected': this.state.chat.connected == false})}>disconnected!</div>
             </div>
           </div>
         </Scroller>

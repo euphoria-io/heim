@@ -7,6 +7,7 @@ module.exports = {}
 
 module.exports = React.createClass({
   render: function() {
+    var now = moment()
     return (
       <div className="messages">
         {_.map(this.props.messages, function(message, idx) {
@@ -22,6 +23,14 @@ module.exports = React.createClass({
             </div>
           )
         })}
+        {this.props.disconnected ?
+          <div key="status" className="line status disconnected">
+            <time dateTime={now.toISOString()} title={now.format('MMMM Do YYYY, h:mm:ss a')}>
+              {now.format('h:mma')}
+            </time>
+            <span className="message">disconnected!</span>
+          </div>
+        : null}
       </div>
     )
   },
