@@ -23,7 +23,7 @@ type memSession struct {
 }
 
 func newMemSession(ctx context.Context, conn *websocket.Conn, room Room) *memSession {
-	id := conn.LocalAddr().String()
+	id := conn.RemoteAddr().String()
 	loggingCtx := LoggingContext(ctx, fmt.Sprintf("[%s] ", id))
 
 	session := &memSession{
