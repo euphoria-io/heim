@@ -17,6 +17,10 @@ module.exports = React.createClass({
   },
 
   componentWillUpdate: function() {
+    this.checkScroll()
+  },
+
+  checkScroll: function() {
     // via http://blog.vjeux.com/2013/javascript/scroll-position-with-react.html
     var node = this.refs.scroller.getDOMNode()
     this._atBottom = node.scrollTop + node.offsetHeight >= node.scrollHeight
@@ -31,7 +35,7 @@ module.exports = React.createClass({
 
   render: function() {
     return (
-      <div ref="scroller" {...this.props} />
+      <div ref="scroller" onScroll={this.checkScroll} {...this.props} />
     )
   },
 })
