@@ -3,6 +3,7 @@ var Reflux = require('reflux')
 var cx = React.addons.classSet
 
 var actions = require('../actions')
+var Scroller = require('./scroller')
 var Chat = require('./chat')
 var NotifyToggle = require('./notifytoggle')
 
@@ -25,13 +26,15 @@ module.exports = React.createClass({
   render: function() {
     return (
       <div className="chat">
-        <div className="messages-container" onClick={this.focusInput}>
+        <Scroller className="messages-container" onClick={this.focusInput}>
           <Chat messages={this.state.messages} />
-          <div className="options">
-            <NotifyToggle />
+          <div className="overlay">
+            <div className="options">
+              <NotifyToggle />
+            </div>
+            <div className={cx({'status': true, 'disconnected': this.state.connected == false})}>disconnected!</div>
           </div>
-          <div className={cx({'status': true, 'disconnected': this.state.connected == false})}>disconnected!</div>
-        </div>
+        </Scroller>
         <form onSubmit={this.send}>
           <input ref="input" type="text" autoFocus />
         </form>

@@ -16,16 +16,8 @@ html, body, #container, .chat {
     position: relative;
     flex: 1;
     background: white;
-
-    .messages {
-      padding: 10px;
-      position: absolute;
-      left: 0;
-      right: 0;
-      top: 0;
-      bottom: 0;
-      overflow: auto;
-    }
+    padding: 10px;
+    overflow-y: auto;
 
     .line {
       margin: 2px 0;
@@ -50,13 +42,17 @@ html, body, #container, .chat {
       position: absolute;
       top: 10px;
       right: 10px;
+
+      * {
+        vertical-align: middle;
+      }
     }
 
     .status {
       display: inline-block;
       padding: 2px 4px;
-      position: absolute;
-      bottom: 10px;
+      position: fixed;
+      bottom: 42px;
       right: 10px;
       font-size: 12px;
       color: white;
