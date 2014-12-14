@@ -83,7 +83,7 @@ module.exports = React.createClass({
         <Scroller className="messages-container" onClick={this.focusInput}>
           <div className="messages-content">
             {sendForm}
-            <Chat messages={this.state.chat.messages} disconnected={this.state.chat.connected == false} />
+            <Chat messages={this.state.chat.messages} hues={this.state.chat.nickHues} disconnected={this.state.chat.connected == false} />
             <div className="overlay">
               <div className="options">
                 <NotifyToggle />

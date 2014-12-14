@@ -1,3 +1,4 @@
+var _ = require('lodash')
 var Reflux = require('reflux')
 
 var storage = require('./storage')
@@ -15,6 +16,7 @@ module.exports.store = Reflux.createStore({
     this.state = {
       connected: null,
       messages: [],
+      nickHues: {},
     }
   },
 
@@ -26,8 +28,10 @@ module.exports.store = Reflux.createStore({
     if (ev.status == 'receive') {
       if (ev.body.type == 'send') {
         this.state.messages.push(ev.body.data)
+        this._addNickHue(ev.body.data)
       } else if (ev.body.type == 'log' && ev.body.data) {
         this.state.messages = ev.body.data
+        _.each(this.state.messages, this._addNickHue)
       }
     } else if (ev.status == 'open') {
       this.state.connected = true
@@ -46,6 +50,16 @@ module.exports.store = Reflux.createStore({
 
   storageChange: function(data) {
     this.state.nick = data.nick
+  },
+
+  _addNickHue: function(message) {
+    var nick = message.sender.name
+    var val = 0
+    for (var i = 0; i < nick.length; i++) {
+      val += nick.charCodeAt(i)
+      console.log(i, val, nick.charCodeAt(i))
+    }
+    this.state.nickHues[nick] = val % 255
   },
 
   connect: function() {

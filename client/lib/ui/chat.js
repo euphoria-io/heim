@@ -18,11 +18,11 @@ module.exports = React.createClass({
               <time dateTime={time.toISOString()} title={time.format('MMMM Do YYYY, h:mm:ss a')}>
                 {time.format('h:mma')}
               </time>
-              <span className="nick">{message.sender.name}</span>
+              <span className="nick" style={{background: 'hsl(' + this.props.hues[message.sender.name] + ', 65%, 85%)'}}>{message.sender.name}</span>
               <span className="message">{message.content}</span>
             </div>
           )
-        })}
+        }, this)}
         {this.props.disconnected ?
           <div key="status" className="line status disconnected">
             <time dateTime={now.toISOString()} title={now.format('MMMM Do YYYY, h:mm:ss a')}>
