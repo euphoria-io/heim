@@ -12,16 +12,21 @@ import (
 type session struct {
 	sync.Mutex
 	id      string
-	history []Message
+	history []message
+}
+
+type message struct {
+	cmdType CommandType
+	payload interface{}
 }
 
 func newSession(id string) *session { return &session{id: id} }
 
 func (s *session) Identity() Identity { return newMemIdentity(s.id) }
 
-func (s *session) Send(ctx context.Context, msg Message) error {
+func (s *session) Send(ctx context.Context, cmdType CommandType, payload interface{}) error {
 	s.Lock()
-	s.history = append(s.history, msg)
+	s.history = append(s.history, message{cmdType, payload})
 	s.Unlock()
 	return nil
 }
@@ -90,16 +95,23 @@ func TestRoomBroadcast(t *testing.T) {
 	})
 
 	Convey("Multiple exclude", t, func() {
-		So(room.broadcast(ctx, &Message{Content: "1"}, userA, userB), ShouldBeNil)
+		So(room.broadcast(ctx, SendType, Message{Content: "1"}, userA, userB), ShouldBeNil)
 		So(userA.history, ShouldBeNil)
 		So(userB.history, ShouldBeNil)
-		So(userC.history, ShouldResemble, []Message{{Content: "1"}})
+		So(userC.history, ShouldResemble,
+			[]message{{cmdType: SendType, payload: Message{Content: "1"}}})
 	})
 
 	Convey("No exclude", t, func() {
-		So(room.broadcast(ctx, &Message{Content: "2"}), ShouldBeNil)
-		So(userA.history, ShouldResemble, []Message{{Content: "2"}})
-		So(userB.history, ShouldResemble, []Message{{Content: "2"}})
-		So(userC.history, ShouldResemble, []Message{{Content: "1"}, {Content: "2"}})
+		So(room.broadcast(ctx, SendType, Message{Content: "2"}), ShouldBeNil)
+		So(userA.history, ShouldResemble,
+			[]message{{cmdType: SendType, payload: Message{Content: "2"}}})
+		So(userB.history, ShouldResemble,
+			[]message{{cmdType: SendType, payload: Message{Content: "2"}}})
+		So(userC.history, ShouldResemble,
+			[]message{
+				{cmdType: SendType, payload: Message{Content: "1"}},
+				{cmdType: SendType, payload: Message{Content: "2"}},
+			})
 	})
 }

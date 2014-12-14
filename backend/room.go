@@ -90,10 +90,12 @@ func (r *memRoom) Send(ctx context.Context, session Session, message Message) (M
 		Content:  message.Content,
 	}
 	r.log.post(&msg)
-	return msg, r.broadcast(ctx, &msg, session)
+	return msg, r.broadcast(ctx, SendType, msg, session)
 }
 
-func (r *memRoom) broadcast(ctx context.Context, msg *Message, excluding ...Session) error {
+func (r *memRoom) broadcast(
+	ctx context.Context, cmdType CommandType, payload interface{}, excluding ...Session) error {
+
 	for _, sessions := range r.live {
 	loop:
 		for _, session := range sessions {
@@ -102,7 +104,7 @@ func (r *memRoom) broadcast(ctx context.Context, msg *Message, excluding ...Sess
 					continue loop
 				}
 			}
-			if err := session.Send(ctx, *msg); err != nil {
+			if err := session.Send(ctx, cmdType, payload); err != nil {
 				// TODO: accumulate errors
 				return err
 			}

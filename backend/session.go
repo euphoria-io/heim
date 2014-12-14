@@ -1,6 +1,7 @@
 package backend
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/gorilla/websocket"
@@ -9,7 +10,7 @@ import (
 
 type Session interface {
 	Identity() Identity
-	Send(context.Context, Message) error
+	Send(context.Context, CommandType, interface{}) error
 }
 
 type memSession struct {
@@ -40,21 +41,21 @@ func newMemSession(ctx context.Context, conn *websocket.Conn, room Room) *memSes
 
 func (s *memSession) Identity() Identity { return s.identity }
 
-func (s *memSession) Send(ctx context.Context, msg Message) error {
-	encoded, err := msg.Encode()
+func (s *memSession) Send(ctx context.Context, cmdType CommandType, payload interface{}) error {
+	encoded, err := json.Marshal(payload)
 	if err != nil {
 		return err
 	}
 
 	cmd := &Command{
-		Type: SendType,
+		Type: cmdType,
 		Data: encoded,
 	}
 
 	logger := Logger(s.ctx)
 
 	go func() {
-		logger.Printf("pushing message: %#v", msg)
+		logger.Printf("pushing message: %s %#v", cmdType, payload)
 		s.outgoing <- cmd
 	}()
 
