@@ -21,9 +21,9 @@ type LogCommand struct {
 }
 
 type Command struct {
-	ID   string      `json:"id"`
-	Type CommandType `json:"type"`
-	Data json.RawMessage
+	ID   string          `json:"id"`
+	Type CommandType     `json:"type"`
+	Data json.RawMessage `json:"data"`
 }
 
 func (cmd *Command) Payload() (interface{}, error) {
