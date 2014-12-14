@@ -164,8 +164,20 @@ html, body, #container, .chat {
   .chat .messages-container {
     padding-left: 0;
 
-    .messages time {
-      display: none;
+    .messages {
+      .line {
+        display: block;
+        margin-left: .5em;
+        text-indent: -.5em;
+      }
+
+      .nick {
+        text-indent: 0;
+      }
+
+      time {
+        display: none;
+      }
     }
   }
 }
