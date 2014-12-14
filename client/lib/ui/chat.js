@@ -19,7 +19,7 @@ module.exports = React.createClass({
 
   render: function() {
     return (
-      <div ref="messages" className="messages">
+      <div ref="messages" className="messages" onClick={this.props.onClick}>
         {_.map(this.props.messages, function(message, idx) {
           return (
             <div key={idx}>
