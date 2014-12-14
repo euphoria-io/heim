@@ -16,8 +16,16 @@ html, body, #container, .chat {
     position: relative;
     flex: 1;
     background: white;
-    padding: 10px;
-    overflow: auto;
+
+    .messages {
+      padding: 10px;
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      overflow: auto;
+    }
 
     .line {
       margin: 2px 0;
