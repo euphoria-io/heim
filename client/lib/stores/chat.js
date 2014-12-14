@@ -12,7 +12,7 @@ module.exports = Reflux.createStore({
   init: function() {
     this.state = {
       connected: false,
-      messages: []
+      messages: [],
     }
   },
 

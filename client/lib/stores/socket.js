@@ -7,15 +7,15 @@ module.exports = Reflux.createStore({
   ],
 
   init: function() {
-    this.s = null
+    this.ws = null
   },
 
   connect: function(roomName) {
     var url = 'ws:' + location.host + '/room/' + roomName + '/ws'
-    this.s = new WebSocket(url, 'heim1')
-    this.s.onopen = this._open
-    this.s.onclose = this._close
-    this.s.onmessage = this._message
+    this.ws = new WebSocket(url, 'heim1')
+    this.ws.onopen = this._open
+    this.ws.onclose = this._close
+    this.ws.onmessage = this._message
   },
 
   _open: function() {
@@ -38,6 +38,16 @@ module.exports = Reflux.createStore({
     })
   },
 
-  send: function(data) {
-  }
+  _send: function(data) {
+    this.ws.send(JSON.stringify(data))
+  },
+
+  send: function(content) {
+    this._send({
+      type: 'send',
+      data: {
+        content: content
+      }
+    })
+  },
 })
