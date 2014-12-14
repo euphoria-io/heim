@@ -15,7 +15,7 @@ type Session interface {
 type memSession struct {
 	ctx      context.Context
 	conn     *websocket.Conn
-	identity Identity
+	identity *memIdentity
 	room     Room
 
 	incoming chan *Command
@@ -29,7 +29,7 @@ func newMemSession(ctx context.Context, conn *websocket.Conn, room Room) *memSes
 	session := &memSession{
 		ctx:      loggingCtx,
 		conn:     conn,
-		identity: rawIdentity(id),
+		identity: newMemIdentity(id),
 		room:     room,
 
 		incoming: make(chan *Command),
@@ -144,6 +144,11 @@ func (s *memSession) handleCommand(cmd *Command) (interface{}, error) {
 		return s.room.Send(s.ctx, s, Message{Content: msg.Content})
 	case *LogCommand:
 		return s.room.Latest(s.ctx, msg.N)
+	case *NickCommand:
+		s.identity.name = msg.Name
+		return msg, nil
+	case *WhoCommand:
+		return s.room.Listing(s.ctx)
 	default:
 		return nil, fmt.Errorf("command type %T not implemented", payload)
 	}

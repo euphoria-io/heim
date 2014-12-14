@@ -7,12 +7,15 @@ import (
 	"golang.org/x/net/context"
 )
 
+type Listing []IdentityView
+
 type Room interface {
 	Log
 
 	Join(context.Context, Session) error
 	Part(context.Context, Session) error
 	Send(context.Context, Session, Message) (Message, error)
+	Listing(context.Context) (Listing, error)
 }
 
 type memRoom struct {
@@ -83,7 +86,7 @@ func (r *memRoom) Send(ctx context.Context, session Session, message Message) (M
 
 	msg := Message{
 		UnixTime: time.Now().Unix(),
-		Sender:   session.Identity(),
+		Sender:   session.Identity().View(),
 		Content:  message.Content,
 	}
 	r.log.post(&msg)
@@ -106,4 +109,14 @@ func (r *memRoom) broadcast(ctx context.Context, msg *Message, excluding ...Sess
 		}
 	}
 	return nil
+}
+
+func (r *memRoom) Listing(ctx context.Context) (Listing, error) {
+	listing := Listing{}
+	for _, sessions := range r.live {
+		for _, session := range sessions {
+			listing = append(listing, *session.Identity().View())
+		}
+	}
+	return listing, nil
 }

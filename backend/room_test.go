@@ -17,7 +17,7 @@ type session struct {
 
 func newSession(id string) *session { return &session{id: id} }
 
-func (s *session) Identity() Identity { return rawIdentity(s.id) }
+func (s *session) Identity() Identity { return newMemIdentity(s.id) }
 
 func (s *session) Send(ctx context.Context, msg Message) error {
 	s.Lock()
@@ -50,7 +50,7 @@ func TestRoomPresence(t *testing.T) {
 
 	Convey("Second join", t, func() {
 		So(room.Join(ctx, userB), ShouldBeNil)
-		So(room.identities["B"], ShouldEqual, userB.Identity())
+		So(room.identities["B"], ShouldResemble, userB.Identity())
 		So(room.live["B"], ShouldResemble, []Session{userB})
 	})
 
@@ -61,7 +61,7 @@ func TestRoomPresence(t *testing.T) {
 
 	Convey("Deduplicate part", t, func() {
 		So(room.Part(ctx, userA), ShouldBeNil)
-		So(room.identities["A"], ShouldEqual, userA.Identity())
+		So(room.identities["A"], ShouldResemble, userA.Identity())
 		So(room.live["A"], ShouldResemble, []Session{userA2})
 	})
 
