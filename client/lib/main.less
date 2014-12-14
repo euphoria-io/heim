@@ -1,7 +1,10 @@
 body {
-  background: gray;
   margin: 0;
   font-family: Droid Sans, sans-serif;
+
+  &.loaded {
+    background: gray;
+  }
 }
 
 html, body, #container, .chat {
@@ -18,10 +21,12 @@ html, body, #container, .chat {
     flex: 1;
     overflow-y: auto;
     padding-left: @time-margin;
+    height: 100%;
 
     .messages {
       background: white;
       padding: 10px;
+      min-height: 100%;
     }
 
     .line {
