@@ -1,5 +1,4 @@
 var React = require('react')
-require('superagent-bluebird-promise')
 
 var Main = require('./ui/main')
 
