@@ -92,7 +92,7 @@ module.exports.store = Reflux.createStore({
   },
 
   notify: function(message, options) {
-    if (this.focus && !this.state.enabled || this.notification) {
+    if (this.focus || !this.state.enabled || this.notification) {
       return
     }
 
