@@ -39,7 +39,7 @@ module.exports = React.createClass({
   },
 
   focusInput: function(ev) {
-    if (ev.target.nodeName == 'INPUT') {
+    if (ev.target.nodeName == 'INPUT' || window.getSelection().type == 'Range') {
       return
     }
 
