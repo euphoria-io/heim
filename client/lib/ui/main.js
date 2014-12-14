@@ -26,7 +26,7 @@ module.exports = React.createClass({
       <div className="chat">
         <div className="messages-container" onClick={this.focusInput}>
           <Chat messages={this.state.messages} />
-          <div className={cx({'status': true, 'disconnected': this.state.connected == false})}>disconnected</div>
+          <div className={cx({'status': true, 'disconnected': this.state.connected == false})}>disconnected!</div>
         </div>
         <form onSubmit={this.send}>
           <input ref="input" type="text" autoFocus />
