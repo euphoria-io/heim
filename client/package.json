@@ -12,6 +12,7 @@
     "superagent-bluebird-promise": "~0.5.0"
   },
   "devDependencies": {
+    "browserify": "~6.1.0",
     "watchify": "~2.1.1",
     "reactify": "~0.16.0",
     "envify": "~3.0.0",
