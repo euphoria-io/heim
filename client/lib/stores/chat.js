@@ -50,6 +50,7 @@ module.exports.store = Reflux.createStore({
 
   storageChange: function(data) {
     this.state.nick = data.nick
+    this.trigger(this.state)
   },
 
   _addNickHue: function(message) {
