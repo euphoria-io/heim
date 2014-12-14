@@ -10,5 +10,3 @@ React.render(
 )
 
 require('./actions').connect()
-
-document.body.classList.add('loaded')
