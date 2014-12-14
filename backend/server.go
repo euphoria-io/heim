@@ -33,13 +33,23 @@ func NewServer(staticPath string) *Server {
 func (s *Server) route() {
 	s.r = mux.NewRouter()
 	s.r.HandleFunc("/room/{room:[a-z0-9]+}/ws", s.handleRoom)
-	if s.staticPath != "" {
-		s.r.PathPrefix("/room/{room:[a-z0-9]+}/").Handler(http.FileServer(http.Dir(s.staticPath)))
-	}
+	s.r.PathPrefix("/room/{room:[a-z0-9]+}/").HandlerFunc(s.handleStatic)
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.r.ServeHTTP(w, r)
+}
+
+func (s *Server) handleStatic(w http.ResponseWriter, r *http.Request) {
+	if s.staticPath == "" {
+		http.NotFound(w, r)
+		return
+	}
+
+	roomName := mux.Vars(r)["room"]
+	handler := http.StripPrefix(
+		"/room/"+roomName+"/", http.FileServer(http.Dir(s.staticPath)))
+	handler.ServeHTTP(w, r)
 }
 
 func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
