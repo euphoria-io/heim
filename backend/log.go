@@ -15,6 +15,8 @@ type memLog struct {
 	msgs []*Message
 }
 
+func newMemLog() *memLog { return &memLog{msgs: []*Message{}} }
+
 func (log *memLog) post(msg *Message) {
 	log.Lock()
 	defer log.Unlock()

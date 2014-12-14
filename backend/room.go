@@ -27,7 +27,7 @@ type memRoom struct {
 func newMemRoom(name string) *memRoom {
 	return &memRoom{
 		name: name,
-		log:  &memLog{},
+		log:  newMemLog(),
 	}
 }
 

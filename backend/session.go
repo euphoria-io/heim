@@ -51,7 +51,12 @@ func (s *memSession) Send(ctx context.Context, msg Message) error {
 		Data: encoded,
 	}
 
-	go func() { s.outgoing <- cmd }()
+	logger := Logger(s.ctx)
+
+	go func() {
+		logger.Printf("pushing message: %#v", msg)
+		s.outgoing <- cmd
+	}()
 
 	return nil
 }
@@ -91,8 +96,6 @@ func (s *memSession) serve() {
 				return
 			}
 		case cmd := <-s.outgoing:
-			logger.Printf("pushing message: %#v", cmd)
-
 			data, err := cmd.Encode()
 			if err != nil {
 				logger.Printf("error: push message encode: %s", err)
