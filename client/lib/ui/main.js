@@ -49,14 +49,14 @@ module.exports = React.createClass({
           <div className="nick-box">
             <span className="nick">{this.state.chat.nick}</span>
           </div>
-          <input ref="input" type="text" autoFocus onFocus={this.onFormFocus} onBlur={this.onFormBlur} />
+          <input key="msg" ref="input" type="text" autoFocus onFocus={this.onFormFocus} onBlur={this.onFormBlur} />
         </form>
       )
     } else {
       sendForm = (
         <form onSubmit={this.setNick} className={cx({'focus': this.state.formFocus})}>
           <label>choose a nickname to start chatting:</label>
-          <input ref="input" type="text" onFocus={this.onFormFocus} onBlur={this.onFormBlur} />
+          <input key="nick" ref="input" type="text" onFocus={this.onFormFocus} onBlur={this.onFormBlur} />
         </form>
       )
     }

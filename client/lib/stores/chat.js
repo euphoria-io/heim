@@ -36,7 +36,7 @@ module.exports.store = Reflux.createStore({
         data: {n: 1000},
       })
       if (this.state.nick) {
-        this.sendNick()
+        this._sendNick(this.state.nick)
       }
     } else if (ev.status == 'close') {
       this.state.connected = false
@@ -54,14 +54,14 @@ module.exports.store = Reflux.createStore({
 
   setNick: function(nick) {
     storage.set('nick', nick)
-    this.sendNick()
+    this._sendNick(nick)
   },
 
-  sendNick: function() {
+  _sendNick: function(nick) {
     socket.send({
       type: 'nick',
       data: {
-        name: this.state.nick
+        name: nick
       },
     })
   },
