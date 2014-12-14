@@ -37,6 +37,7 @@ html, body, #container, .chat {
       background: #eee;
       padding: 2px 4px;
       font-size: .85em;
+      border-radius: 2px;
     }
 
     .messages {
@@ -142,11 +143,16 @@ html, body, #container, .chat {
         display: block;
         position: absolute;
         width: 100%;
+        box-shadow: 0 0 1px fade(black, 50%);
 
         &:focus {
           background: white;
         }
       }
+    }
+
+    &.focus input.nick {
+      box-shadow: none;
     }
   }
 }
