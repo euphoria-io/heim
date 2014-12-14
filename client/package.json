@@ -6,7 +6,7 @@
   "dependencies": {
     "lodash": "~2.4.1",
     "react": "~0.12.1",
-    "reflux": "~0.1.15",
+    "reflux": "~0.2.1",
     "bluebird": "~2.3.0",
     "superagent": "~0.20.0",
     "superagent-bluebird-promise": "~0.5.0"

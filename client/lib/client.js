@@ -9,11 +9,4 @@ React.render(
   document.getElementById('container')
 )
 
-ChatStore = require('./stores/chat')
-ChatStore.trigger({
-  messages: [
-    {text: 'hello world'},
-    {text: 'j0'},
-    {text: 'j0!!!'},
-  ]
-})
+require('./actions').connect('ezzie')
