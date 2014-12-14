@@ -3,7 +3,7 @@ var Reflux = require('reflux')
 var socket = require('./socket')
 
 
-module.exports = Reflux.createStore({
+module.exports.store = Reflux.createStore({
   listenables: [
     require('../actions'),
     {socketEvent: socket.store},

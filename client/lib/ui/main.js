@@ -7,7 +7,7 @@ var Chat = require('./chat')
 
 module.exports = React.createClass({
   mixins: [
-    Reflux.connect(require('../stores/chat')),
+    Reflux.connect(require('../stores/chat').store),
   ],
 
   send: function(ev) {
