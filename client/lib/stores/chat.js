@@ -24,7 +24,7 @@ module.exports = Reflux.createStore({
     if (ev.status == 'receive') {
       if (ev.body.type == 'send') {
         this.state.messages.push(ev.body.data)
-      } else if (ev.body.type == 'log') {
+      } else if (ev.body.type == 'log' && ev.body.data) {
         this.state.messages = ev.body.data
       }
     } else if (ev.status == 'open') {
