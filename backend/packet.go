@@ -24,6 +24,7 @@ type LogCommand struct {
 
 type NickCommand struct {
 	Name string `json:"name"`
+	From string `json:"from"`
 }
 
 type WhoCommand struct{}

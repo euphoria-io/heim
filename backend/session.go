@@ -146,7 +146,11 @@ func (s *memSession) handleCommand(cmd *Packet) (interface{}, error) {
 	case *LogCommand:
 		return s.room.Latest(s.ctx, msg.N)
 	case *NickCommand:
+		formerName := s.identity.Name()
 		s.identity.name = msg.Name
+		if formerName != msg.Name {
+			s.room.RenameUser(s.ctx, s, formerName)
+		}
 		return msg, nil
 	case *WhoCommand:
 		return s.room.Listing(s.ctx)

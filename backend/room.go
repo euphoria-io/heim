@@ -16,6 +16,7 @@ type Room interface {
 	Part(context.Context, Session) error
 	Send(context.Context, Session, Message) (Message, error)
 	Listing(context.Context) (Listing, error)
+	RenameUser(ctx context.Context, session Session, formerName string) error
 }
 
 type memRoom struct {
@@ -121,4 +122,12 @@ func (r *memRoom) Listing(ctx context.Context) (Listing, error) {
 		}
 	}
 	return listing, nil
+}
+
+func (r *memRoom) RenameUser(ctx context.Context, session Session, formerName string) error {
+	payload := &NickCommand{
+		From: formerName,
+		Name: session.Identity().Name(),
+	}
+	return r.broadcast(ctx, NickType, payload, session)
 }
