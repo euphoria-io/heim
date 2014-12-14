@@ -1,6 +1,7 @@
 var _ = require('lodash')
 var React = require('react')
 var moment = require('moment')
+var autolinker = require('autolinker')
 
 
 module.exports = {}
@@ -19,7 +20,7 @@ module.exports = React.createClass({
                 {time.format('h:mma')}
               </time>
               <span className="nick" style={{background: 'hsl(' + this.props.hues[message.sender.name] + ', 65%, 85%)'}}>{message.sender.name}</span>
-              <span className="message">{message.content}</span>
+              <span className="message" dangerouslySetInnerHTML={{__html: autolinker.link(message.content, {twitter: false, truncate: 40})}} />
             </div>
           )
         }, this)}
