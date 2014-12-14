@@ -22,7 +22,7 @@ module.exports = React.createClass({
         <div>connected: {this.state.connected ? 'yep!' : 'nope'}</div>
         <Chat messages={this.state.messages} />
         <form onSubmit={this.send}>
-          <input ref="line" type="text" />
+          <input ref="line" type="text" autoFocus />
         </form>
       </div>
     )
