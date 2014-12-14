@@ -81,7 +81,7 @@ module.exports.store = Reflux.createStore({
     }
 
     if (lastMsg.time > this._lastMsg) {
-      this.notify('new message', {body: lastMsg.sender + ': ' + lastMsg.content})
+      this.notify('new message', {body: lastMsg.sender.name + ': ' + lastMsg.content})
     }
   },
 
