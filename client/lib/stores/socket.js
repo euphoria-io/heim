@@ -21,6 +21,7 @@ module.exports.store = Reflux.createStore({
     this.ws.onopen = this._open
     this.ws.onclose = this._close
     this.ws.onmessage = this._message
+    this.connected = true
   },
 
   _open: function() {
@@ -33,6 +34,10 @@ module.exports.store = Reflux.createStore({
     this.trigger({
       status: 'close',
     })
+
+    if (this.connected) {
+      setTimeout(this.connect, 2000 + 3000 * Math.random())
+    }
   },
 
   _message: function(ev) {

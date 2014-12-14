@@ -1,10 +1,63 @@
 body {
   background: gray;
+  margin: 0;
+  font-family: Droid Sans, sans-serif;
 }
 
-.messages {
-  background: white;
-  padding: 10px;
-  height: 400px;
-  overflow: auto;
+html, body, #container, .chat {
+  height: 100%;
+}
+
+.chat {
+  display: flex;
+  flex-direction: column;
+
+  .messages-container {
+    position: relative;
+    flex: 1;
+    background: white;
+    padding: 10px;
+    overflow: auto;
+
+    .status {
+      display: inline-block;
+      padding: 2px 4px;
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      font-size: 12px;
+      color: white;
+      background: darkred;
+      border-radius: 3px;
+      opacity: 0;
+      transition: all .25s ease;
+
+      &.disconnected {
+        opacity: 1;
+      }
+    }
+  }
+
+  form {
+    input {
+      position: relative;
+      width: 100%;
+      box-sizing: border-box;
+      padding: 6px;
+      height: 30px;
+      background: #eee;
+      border: none;
+      border-top: 1px solid transparent;
+      border-bottom: 2px solid transparent;
+      transition: all .15s ease;
+
+      &:focus {
+        @green: fade(green, 50%);
+        outline: none;
+        border-top: 1px solid @green;
+        border-bottom: 2px solid @green;
+        box-shadow: 0 0 5px fade(black, 25%);
+      }
+    }
+  }
 }

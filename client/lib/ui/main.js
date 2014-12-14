@@ -1,5 +1,6 @@
-var React = require('react')
+var React = require('react/addons')
 var Reflux = require('reflux')
+var cx = React.addons.classSet
 
 var actions = require('../actions')
 var Chat = require('./chat')
@@ -22,9 +23,11 @@ module.exports = React.createClass({
 
   render: function() {
     return (
-      <div>
-        <div>connected: {this.state.connected ? 'yep!' : 'nope'}</div>
-        <Chat messages={this.state.messages} onClick={this.focusInput} />
+      <div className="chat">
+        <div className="messages-container" onClick={this.focusInput}>
+          <Chat messages={this.state.messages} />
+          <div className={cx({'status': true, 'disconnected': this.state.connected == false})}>disconnected</div>
+        </div>
         <form onSubmit={this.send}>
           <input ref="input" type="text" autoFocus />
         </form>
