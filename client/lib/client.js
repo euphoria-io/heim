@@ -10,3 +10,9 @@ React.render(
 )
 
 require('./actions').connect()
+
+Heim = {
+  socket: require('./stores/socket'),
+  chat: require('./stores/chat'),
+  storage: require('./stores/storage'),
+}
