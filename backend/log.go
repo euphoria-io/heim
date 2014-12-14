@@ -35,7 +35,7 @@ func (log *memLog) Latest(ctx context.Context, n int) ([]Message, error) {
 
 	slice := log.msgs[start:]
 	if len(slice) == 0 {
-		return nil, nil
+		return []Message{}, nil
 	}
 
 	messages := make([]Message, len(slice))

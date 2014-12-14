@@ -72,6 +72,7 @@ func (r *memRoom) Part(ctx context.Context, session Session) error {
 	}
 	if len(r.live[id]) == 0 {
 		delete(r.live, id)
+		delete(r.identities, id)
 	}
 	return nil
 }
