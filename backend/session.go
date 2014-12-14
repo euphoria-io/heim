@@ -64,13 +64,15 @@ func (s *memSession) serve() {
 	for {
 		select {
 		case cmd := <-s.incoming:
-			logger.Printf("received command: %#v", cmd)
+			logger.Printf("received command: id=%s, type=%s", cmd.ID, cmd.Type)
 
 			reply, err := s.handleCommand(cmd)
 			if err != nil {
 				logger.Printf("error: handleCommand: %s", err)
 				reply = err
 			}
+
+			logger.Printf("response: id=%s, type=%s, %#v", cmd.ID, cmd.Type, reply)
 
 			resp, err := Response(cmd.ID, cmd.Type, reply)
 			if err != nil {

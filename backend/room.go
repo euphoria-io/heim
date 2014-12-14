@@ -81,9 +81,9 @@ func (r *memRoom) Send(ctx context.Context, session Session, message Message) (M
 	defer r.Unlock()
 
 	msg := Message{
-		Timestamp: time.Now(),
-		Sender:    session.Identity(),
-		Content:   message.Content,
+		UnixTime: time.Now().Unix(),
+		Sender:   session.Identity(),
+		Content:  message.Content,
 	}
 	r.log.post(&msg)
 	return msg, r.broadcast(ctx, &msg, session)
