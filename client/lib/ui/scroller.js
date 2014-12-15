@@ -1,3 +1,4 @@
+var _ = require('lodash')
 var React = require('react')
 
 
@@ -6,6 +7,7 @@ module.exports = {}
 module.exports = React.createClass({
   componentDidMount: function() {
     window.addEventListener('resize', this.onResize)
+    this._checkScroll = _.debounce(this.checkScroll, 150, {leading: false})
   },
 
   componentWillUnmount: function() {
@@ -13,11 +15,17 @@ module.exports = React.createClass({
   },
 
   onResize: function() {
-    this.componentDidUpdate()
+    // delay scroll check via debounce
+    this._checkScroll()
+    this.scroll()
   },
 
   componentWillUpdate: function() {
     this.checkScroll()
+  },
+
+  componentDidUpdate: function() {
+    this.scroll()
   },
 
   checkScroll: function() {
@@ -26,7 +34,7 @@ module.exports = React.createClass({
     this._atBottom = node.scrollTop + node.offsetHeight >= node.scrollHeight
   },
 
-  componentDidUpdate: function() {
+  scroll: function() {
     if (this._atBottom) {
       var node = this.refs.scroller.getDOMNode()
       node.scrollTop = node.scrollHeight
@@ -35,7 +43,7 @@ module.exports = React.createClass({
 
   render: function() {
     return (
-      <div ref="scroller" onScroll={this.checkScroll} {...this.props} />
+      <div ref="scroller" onScroll={this._checkScroll} {...this.props} />
     )
   },
 })
