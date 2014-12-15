@@ -7,6 +7,8 @@ var autolinker = require('autolinker')
 module.exports = {}
 
 module.exports = React.createClass({
+  displayName: 'messages',
+
   render: function() {
     var now = moment()
     return (

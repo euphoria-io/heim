@@ -7,6 +7,8 @@ var autolinker = require('autolinker')
 module.exports = {}
 
 module.exports = React.createClass({
+  displayName: 'UserList',
+
   render: function() {
     return (
       <div className="user-list" {...this.props}>

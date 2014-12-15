@@ -5,6 +5,8 @@ var React = require('react')
 module.exports = {}
 
 module.exports = React.createClass({
+  displayName: 'Scroller',
+
   componentDidMount: function() {
     window.addEventListener('resize', this.onResize)
     this._checkScroll = _.debounce(this.checkScroll, 150, {leading: false})

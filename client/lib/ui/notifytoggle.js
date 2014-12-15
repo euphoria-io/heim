@@ -5,6 +5,8 @@ var notification = require('../stores/notification')
 
 
 module.exports = React.createClass({
+  displayName: 'NotifyToggle',
+
   mixins: [
     Reflux.connect(notification.store),
   ],

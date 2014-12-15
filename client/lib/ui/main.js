@@ -9,6 +9,8 @@ var UserList = require('./userlist')
 var NotifyToggle = require('./notifytoggle')
 
 module.exports = React.createClass({
+  displayName: 'Main',
+
   mixins: [
     Reflux.connect(require('../stores/chat').store, 'chat'),
   ],
