@@ -14,7 +14,7 @@ var static = flag.String("static", "", "")
 func main() {
 	flag.Parse()
 
-	server := backend.NewServer(*static)
+	server := backend.NewServer(&backend.TestBackend{}, *static)
 	fmt.Printf("serving on %s\n", *addr)
 	http.ListenAndServe(*addr, server)
 }

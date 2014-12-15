@@ -2,7 +2,6 @@ package backend
 
 import (
 	"net/http"
-	"sync"
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
@@ -17,16 +16,15 @@ var upgrader = websocket.Upgrader{
 }
 
 type Server struct {
-	sync.Mutex
 	r          *mux.Router
+	b          Backend
 	staticPath string
-	rooms      map[string]Room
 }
 
-func NewServer(staticPath string) *Server {
+func NewServer(backend Backend, staticPath string) *Server {
 	s := &Server{
+		b:          backend,
 		staticPath: staticPath,
-		rooms:      map[string]Room{},
 	}
 	s.route()
 	return s
@@ -56,21 +54,17 @@ func (s *Server) handleStatic(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
 	roomName := mux.Vars(r)["room"]
-
-	s.Lock()
-	room, ok := s.rooms[roomName]
-	if !ok {
-		room = newMemRoom(roomName)
-		s.rooms[roomName] = room
+	room, err := s.b.GetRoom(roomName)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
-	s.Unlock()
 
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
 	defer conn.Close()
 
 	ctx := context.Background()
