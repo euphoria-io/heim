@@ -53,6 +53,12 @@ module.exports.store = Reflux.createStore({
     if (!data.id) {
       data.id = String(this.seq++)
     }
+
+    // FIXME: remove when fixed on server
+    if (!data.data) {
+      data.data = {}
+    }
+
     this.ws.send(JSON.stringify(data))
   }
 })

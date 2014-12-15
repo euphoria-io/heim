@@ -4,7 +4,8 @@ var cx = React.addons.classSet
 
 var actions = require('../actions')
 var Scroller = require('./scroller')
-var Chat = require('./chat')
+var Messages = require('./messages')
+var UserList = require('./userlist')
 var NotifyToggle = require('./notifytoggle')
 
 module.exports = React.createClass({
@@ -47,6 +48,10 @@ module.exports = React.createClass({
     input.getDOMNode().focus()
   },
 
+  onScrollbarSize: function(width) {
+    this.setState({scrollbarWidth: width})
+  },
+
   onFormFocus: function() {
     this.setState({formFocus: true})
   },
@@ -84,11 +89,12 @@ module.exports = React.createClass({
 
     return (
       <div className="chat">
-        <Scroller className={cx({'messages-container': true, 'settings-open': this.state.settingsOpen})} onClick={this.focusInput}>
+        <Scroller className={cx({'messages-container': true, 'settings-open': this.state.settingsOpen})} onClick={this.focusInput} onScrollbarSize={this.onScrollbarSize}>
           <div className="messages-content">
             {sendForm}
             <button type="button" className="settings" onClick={this.toggleSettings} />
-            <Chat messages={this.state.chat.messages} hues={this.state.chat.nickHues} disconnected={this.state.chat.connected == false} />
+            <UserList users={this.state.chat.who} hues={this.state.chat.nickHues} style={{marginRight: this.state.scrollbarWidth}} />
+            <Messages messages={this.state.chat.messages} hues={this.state.chat.nickHues} disconnected={this.state.chat.connected == false} />
           </div>
           <div className="settings-pane">
             <NotifyToggle />

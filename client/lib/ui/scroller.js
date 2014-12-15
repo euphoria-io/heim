@@ -20,6 +20,11 @@ module.exports = React.createClass({
     this.scroll()
   },
 
+  onScroll: function() {
+    this._checkScroll()
+    this.checkScrollbar()
+  },
+
   componentWillUpdate: function() {
     this.checkScroll()
   },
@@ -34,6 +39,17 @@ module.exports = React.createClass({
     this._atBottom = node.scrollTop + node.offsetHeight >= node.scrollHeight
   },
 
+  checkScrollbar: function() {
+    if (this.props.onScrollbarSize) {
+      var node = this.refs.scroller.getDOMNode()
+      var scrollbarWidth = node.offsetWidth - node.clientWidth
+      if (scrollbarWidth != this.scrollbarWidth) {
+        this.scrollbarWidth = scrollbarWidth
+        this.props.onScrollbarSize(scrollbarWidth)
+      }
+    }
+  },
+
   scroll: function() {
     if (this._atBottom) {
       var node = this.refs.scroller.getDOMNode()
@@ -43,7 +59,7 @@ module.exports = React.createClass({
 
   render: function() {
     return (
-      <div ref="scroller" onScroll={this._checkScroll} {...this.props} />
+      <div ref="scroller" onScroll={this.onScroll} {...this.props} />
     )
   },
 })

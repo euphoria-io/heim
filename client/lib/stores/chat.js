@@ -31,13 +31,23 @@ module.exports.store = Reflux.createStore({
         this._addNickHue(ev.body.data)
       } else if (ev.body.type == 'log' && ev.body.data) {
         this.state.messages = ev.body.data
-        _.each(this.state.messages, this._addNickHue)
+        _.each(this.state.messages, function(message) {
+          this._addNickHue(message.sender.name)
+        }, this)
+      } else if (ev.body.type == 'who') {
+        this.state.who = _.sortBy(ev.body.data, 'name')
+        _.each(this.state.who, function(user) {
+          this._addNickHue(user.name)
+        }, this)
       }
     } else if (ev.status == 'open') {
       this.state.connected = true
       socket.send({
         type: 'log',
         data: {n: 1000},
+      })
+      socket.send({
+        type: 'who',
       })
       if (this.state.nick) {
         this._sendNick(this.state.nick)
@@ -53,8 +63,7 @@ module.exports.store = Reflux.createStore({
     this.trigger(this.state)
   },
 
-  _addNickHue: function(message) {
-    var nick = message.sender.name
+  _addNickHue: function(nick) {
     var val = 0
     for (var i = 0; i < nick.length; i++) {
       val += nick.charCodeAt(i)
