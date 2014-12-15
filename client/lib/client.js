@@ -1,7 +1,14 @@
-var React = require('react')
+var React = require('react/addons')
 
 var Main = require('./ui/main')
 
+
+if (React.addons && React.addons.Perf) {
+  ReactPerf = React.addons.Perf
+  if (location.hash == '#perf') {
+    ReactPerf.start()
+  }
+}
 
 React.render(
   <Main />,
