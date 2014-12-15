@@ -14,11 +14,11 @@ module.exports = React.createClass({
   ],
 
   componentDidMount: function() {
-    window.addEventListener('blur', this.onWindowBlur.bind(this), false)
+    window.addEventListener('blur', this.onWindowBlur, false)
   },
 
   componentWillUnmount: function() {
-    window.removeEventListener('blur', this.onWindowBlur.bind(this), false)
+    window.removeEventListener('blur', this.onWindowBlur, false)
   },
 
   getInitialState: function() {
