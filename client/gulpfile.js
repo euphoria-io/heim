@@ -19,7 +19,7 @@ gulp.task('js', function() {
   return bundler()
     .bundle()
     .pipe(source('main.js'))
-    //.pipe(streamify(uglify()))
+    .pipe(process.env.NODE_ENV == 'production' ? streamify(uglify()) : gutil.noop())
     .on('error', gutil.log.bind(gutil, 'browserify error'))
     .pipe(gulp.dest(dest))
 })

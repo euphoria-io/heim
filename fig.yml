@@ -4,6 +4,8 @@ frontend:
   volumes:
     - client:/srv/heim/client/src
     - backend/static:/srv/heim/client/src/build
+  environment:
+    NODE_ENV: production
 
 backend:
   build: backend
