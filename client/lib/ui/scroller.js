@@ -7,9 +7,10 @@ module.exports = {}
 module.exports = React.createClass({
   displayName: 'Scroller',
 
-  componentDidMount: function() {
+  componentWillMount: function() {
     window.addEventListener('resize', this.onResize)
     this._checkScroll = _.debounce(this.checkScroll, 150, {leading: false})
+    this._atBottom = true
   },
 
   componentWillUnmount: function() {
@@ -25,10 +26,6 @@ module.exports = React.createClass({
   onScroll: function() {
     this._checkScroll()
     this.checkScrollbar()
-  },
-
-  componentWillUpdate: function() {
-    this.checkScroll()
   },
 
   componentDidUpdate: function() {
@@ -55,7 +52,7 @@ module.exports = React.createClass({
   scroll: function() {
     if (this._atBottom) {
       var node = this.refs.scroller.getDOMNode()
-      node.scrollTop = node.scrollHeight
+      node.scrollTop = 99999
     }
   },
 
