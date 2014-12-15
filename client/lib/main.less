@@ -1,3 +1,11 @@
+.no-select {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -o-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
 body {
   margin: 0;
 
@@ -102,6 +110,7 @@ html, body, #container, .chat {
     border-bottom: 3px solid transparent;
     box-shadow: 0 0 10px fade(black, 10%) inset;
     transition: all .15s ease;
+    .no-select;
 
     & > * {
       height: 38px;
