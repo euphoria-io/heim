@@ -28,7 +28,7 @@ module.exports.store = Reflux.createStore({
     if (ev.status == 'receive') {
       if (ev.body.type == 'send') {
         this.state.messages.push(ev.body.data)
-        this._addNickHue(ev.body.data)
+        this._addNickHue(ev.body.data.sender.name)
       } else if (ev.body.type == 'log' && ev.body.data) {
         this.state.messages = ev.body.data
         _.each(this.state.messages, function(message) {
