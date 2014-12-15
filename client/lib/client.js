@@ -11,6 +11,7 @@ React.render(
 require('./actions').connect()
 
 Heim = {
+  actions: require('./actions'),
   socket: require('./stores/socket'),
   chat: require('./stores/chat'),
   storage: require('./stores/storage'),
