@@ -31,7 +31,7 @@ module.exports = React.createClass({
             <time dateTime={now.toISOString()} title={now.format('MMMM Do YYYY, h:mm:ss a')}>
               {now.format('h:mma')}
             </time>
-            <span className="message">disconnected!</span>
+            <span className="message">reconnecting...</span>
           </div>
         : null}
       </div>
