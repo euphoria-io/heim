@@ -23,7 +23,7 @@ module.exports = React.createClass({
               <time dateTime={time.toISOString()} title={time.format('MMMM Do YYYY, h:mm:ss a')}>
                 {time.format('h:mma')}
               </time>
-              <span className="nick" style={{background: 'hsl(' + this.props.hues.get(message.sender.name) + ', 65%, 85%)'}}>{message.sender.name}</span>
+              <span className="nick" style={{background: 'hsl(' + message.sender.hue + ', 65%, 85%)'}}>{message.sender.name}</span>
               <span className="message" dangerouslySetInnerHTML={{
                 __html: autolinker.link(_.escape(message.content), {twitter: false, truncate: 40})
               }} />
