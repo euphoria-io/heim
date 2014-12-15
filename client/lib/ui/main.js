@@ -33,6 +33,10 @@ module.exports = React.createClass({
     }
 
     var input = this.refs.input.getDOMNode()
+    if (!input.value.length) {
+      return
+    }
+
     actions.sendMessage(input.value)
     input.value = ''
     ev.preventDefault()
