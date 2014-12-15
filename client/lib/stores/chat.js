@@ -1,5 +1,5 @@
-var _ = require('lodash')
 var Reflux = require('reflux')
+var Immutable = require('immutable')
 
 var storage = require('./storage')
 var socket = require('./socket')
@@ -15,8 +15,9 @@ module.exports.store = Reflux.createStore({
   init: function() {
     this.state = {
       connected: null,
-      messages: [],
-      nickHues: {},
+      messages: Immutable.List(),
+      nickHues: Immutable.Map(),
+      who: Immutable.List(),
     }
   },
 
@@ -27,16 +28,20 @@ module.exports.store = Reflux.createStore({
   socketEvent: function(ev) {
     if (ev.status == 'receive') {
       if (ev.body.type == 'send') {
-        this.state.messages.push(ev.body.data)
+        this.state.messages = this.state.messages.push(ev.body.data)
         this._addNickHue(ev.body.data.sender.name)
+
       } else if (ev.body.type == 'log' && ev.body.data) {
-        this.state.messages = ev.body.data
-        _.each(this.state.messages, function(message) {
+        this.state.messages = Immutable.List(ev.body.data)
+        this.state.messages.forEach(function(message) {
           this._addNickHue(message.sender.name)
         }, this)
+
       } else if (ev.body.type == 'who') {
-        this.state.who = _.sortBy(ev.body.data, 'name')
-        _.each(this.state.who, function(user) {
+        this.state.who = Immutable.Seq(ev.body.data)
+          .sortBy(function(user) { return user.name })
+
+        this.state.who.forEach(function(user) {
           this._addNickHue(user.name)
         }, this)
       }
@@ -64,11 +69,15 @@ module.exports.store = Reflux.createStore({
   },
 
   _addNickHue: function(nick) {
+    if (this.state.nickHues.has(nick)) {
+      return
+    }
+
     var val = 0
     for (var i = 0; i < nick.length; i++) {
       val += nick.charCodeAt(i)
     }
-    this.state.nickHues[nick] = val % 255
+    this.state.nickHues = this.state.nickHues.set(nick, val % 255)
   },
 
   connect: function() {

@@ -75,7 +75,7 @@ module.exports.store = Reflux.createStore({
   },
 
   chatUpdate: function(state) {
-    var lastMsg = _.last(state.messages)
+    var lastMsg = state.messages.last()
     if (!lastMsg) {
       return
     }

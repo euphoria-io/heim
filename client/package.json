@@ -8,7 +8,9 @@
     "react": "~0.12.1",
     "reflux": "~0.2.1",
     "moment": "~2.8.4",
-    "autolinker": "~0.15.0"
+    "autolinker": "~0.15.0",
+    "immutable": "~3.3.0",
+    "react-immutable-render-mixin": "~0.7.0"
   },
   "devDependencies": {
     "browserify": "~6.1.0",
