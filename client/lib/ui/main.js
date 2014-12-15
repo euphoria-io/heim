@@ -13,7 +13,7 @@ module.exports = React.createClass({
   ],
 
   getInitialState: function() {
-    return {formFocus: false}
+    return {formFocus: false, settingsOpen: false}
   },
 
   send: function(ev) {
@@ -55,6 +55,10 @@ module.exports = React.createClass({
     this.setState({formFocus: false})
   },
 
+  toggleSettings: function() {
+    this.setState({settingsOpen: !this.state.settingsOpen})
+  },
+
   render: function() {
     var sendForm
     if (this.state.chat.nick) {
@@ -80,15 +84,14 @@ module.exports = React.createClass({
 
     return (
       <div className="chat">
-        <Scroller className="messages-container" onClick={this.focusInput}>
+        <Scroller className={cx({'messages-container': true, 'settings-open': this.state.settingsOpen})} onClick={this.focusInput}>
           <div className="messages-content">
             {sendForm}
+            <button type="button" className="settings" onClick={this.toggleSettings} />
             <Chat messages={this.state.chat.messages} hues={this.state.chat.nickHues} disconnected={this.state.chat.connected == false} />
-            <div className="overlay">
-              <div className="options">
-                <NotifyToggle />
-              </div>
-            </div>
+          </div>
+          <div className="settings-pane">
+            <NotifyToggle />
           </div>
         </Scroller>
       </div>

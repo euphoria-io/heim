@@ -15,6 +15,10 @@ body {
   }
 }
 
+input:focus, button:focus {
+  outline: none;
+}
+
 html, body, #container, .chat {
   height: 100%;
 }
@@ -40,6 +44,7 @@ html, body, #container, .chat {
       min-height: 100%;
       box-sizing: border-box;
       box-shadow: 0 0 10px fade(black, 50%);
+      transition: all .15s ease;
     }
 
     .nick {
@@ -89,19 +94,99 @@ html, body, #container, .chat {
       }
     }
 
-    .options {
-      position: fixed;
-      top: 10px;
-      right: 10px;
+    .settings {
+      position: absolute;
+      left: @time-margin - 36px;
+      margin-top: 8px;
+      border: none;
+      background: none;
+      padding: 0;
+      opacity: .25;
+      cursor: pointer;
+
+      &, &:before, &:after {
+        width: 24px;
+        height: 24px;
+        transition: all .15s ease;
+      }
+
+      &:before, &:after {
+        position: absolute;
+        top: 0;
+        left: 0;
+        content: '';
+        display: block;
+      }
+
+      &:before {
+        background: data-uri('../static/cog.svg') no-repeat center center;
+        background-size: 24px;
+        -webkit-filter: blur(1px);
+      }
+
+      &:after {
+        background: data-uri('../static/cog-white.svg') no-repeat center center;
+        background-size: 24px;
+      }
+
+      &:hover {
+        opacity: .4;
+
+        &:after {
+          margin-top: -1px;
+        }
+      }
+
+      &:active {
+        &:before {
+          -webkit-filter: blur(2px);
+        }
+
+        &:after {
+          margin-top: 0;
+        }
+      }
+    }
+
+    .settings-pane {
+      position: absolute;
+      z-index: 1;
+      height: 38px;
+      line-height: 38px;
+      margin-top: -38px;
+      box-sizing: border-box;
+      transition: all .25s ease;
 
       * {
         vertical-align: middle;
+      }
+
+      label {
+        padding: 10px;
+        font-size: .8em;
+        color: white;
+      }
+    }
+
+    &.settings-open {
+      .settings {
+        opacity: .65;
+
+        &:after {
+          margin-top: -1px;
+        }
+      }
+
+      .messages-content {
+        margin-top: -38px;
+        margin-bottom: 38px;
       }
     }
   }
 
   form {
     position: relative;
+    z-index: 2;
     display: flex;
     flex-direction: row;
     box-sizing: border-box;
@@ -130,10 +215,7 @@ html, body, #container, .chat {
       background: none;
       border: none;
       padding-left: 0;
-
-      &:focus {
-        outline: none;
-      }
+      padding-right: 0;
     }
 
     label {
