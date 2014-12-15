@@ -109,7 +109,9 @@ module.exports = React.createClass({
           <div className="messages-content">
             {sendForm}
             <button type="button" className="settings" onClick={this.toggleSettings} />
-            <UserList users={this.state.chat.who} style={{marginRight: this.state.scrollbarWidth}} />
+            <div className="top-right" style={{marginRight: this.state.scrollbarWidth}}>
+              <UserList users={this.state.chat.who} />
+            </div>
             <Messages messages={this.state.chat.messages} disconnected={this.state.chat.connected == false} />
           </div>
           <div className="settings-pane">

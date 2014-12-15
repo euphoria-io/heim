@@ -12,7 +12,7 @@ module.exports = React.createClass({
 
   render: function() {
     return (
-      <div className="user-list" {...this.props}>
+      <div className="user-list">
         {this.props.users.map(function(user, idx) {
           return <div key={user.id} className="line"><span className="nick" style={{background: 'hsl(' + user.hue + ', 65%, 85%)'}}>{user.name}</span></div>
         }, this).toArray()}
