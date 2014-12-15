@@ -13,6 +13,14 @@ module.exports = React.createClass({
     Reflux.connect(require('../stores/chat').store, 'chat'),
   ],
 
+  componentDidMount: function() {
+    window.addEventListener('blur', this.onWindowBlur.bind(this), false)
+  },
+
+  componentWillUnmount: function() {
+    window.removeEventListener('blur', this.onWindowBlur.bind(this), false)
+  },
+
   getInitialState: function() {
     return {formFocus: false, settingsOpen: false}
   },
@@ -56,7 +64,13 @@ module.exports = React.createClass({
     this.setState({formFocus: true})
   },
 
-  onFormBlur: function() {
+  onMouseUp: function(ev) {
+    if (document.activeElement != this.refs.input.getDOMNode()) {
+      this.setState({formFocus: false})
+    }
+  },
+
+  onWindowBlur: function() {
     this.setState({formFocus: false})
   },
 
@@ -75,20 +89,20 @@ module.exports = React.createClass({
               <span className="nick">{this.state.nickText || this.state.chat.nick}</span>
             </div>
           </div>
-          <input key="msg" ref="input" type="text" autoFocus disabled={this.state.chat.connected == false} onKeyDown={this.send} onFocus={this.onFormFocus} onBlur={this.onFormBlur} />
+          <input key="msg" ref="input" type="text" autoFocus disabled={this.state.chat.connected == false} onKeyDown={this.send} onFocus={this.onFormFocus} />
         </form>
       )
     } else {
       sendForm = (
         <form onSubmit={this.setNick} className={cx({'focus': this.state.formFocus})}>
           <label>choose a nickname to start chatting:</label>
-          <input key="nick" ref="nick" type="text" onFocus={this.onFormFocus} onBlur={this.onFormBlur} />
+          <input key="nick" ref="nick" type="text" onFocus={this.onFormFocus} />
         </form>
       )
     }
 
     return (
-      <div className="chat">
+      <div className="chat" onMouseUp={this.onMouseUp}>
         <Scroller className={cx({'messages-container': true, 'settings-open': this.state.settingsOpen})} onClick={this.focusInput} onScrollbarSize={this.onScrollbarSize}>
           <div className="messages-content">
             {sendForm}
