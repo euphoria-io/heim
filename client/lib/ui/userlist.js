@@ -14,7 +14,7 @@ module.exports = React.createClass({
     return (
       <div className="user-list">
         {this.props.users.map(function(user, idx) {
-          return <div key={user.id} className="line"><span className="nick" style={{background: 'hsl(' + user.hue + ', 65%, 85%)'}}>{user.name}</span></div>
+          return <div key={user.get('id')} className="line"><span className="nick" style={{background: 'hsl(' + user.get('hue') + ', 65%, 85%)'}}>{user.get('name')}</span></div>
         }, this).toArray()}
       </div>
     )

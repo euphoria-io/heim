@@ -40,19 +40,21 @@ module.exports.store = Reflux.createStore({
         }, this)
 
       } else if (ev.body.type == 'who-reply') {
-        this.state.who = Immutable.Seq(ev.body.data.listing)
-          .sortBy(function(user) { return user.name })
-
-        this.state.who.forEach(function(user) {
-          user.hue = this._getNickHue(user.name)
-        }, this)
+        this.state.who = Immutable.OrderedMap(
+          Immutable.Seq(ev.body.data.listing)
+            .sortBy(function(user) { return user.name })
+            .map(function(user) {
+              user.hue = this._getNickHue(user.name)
+              return [user.id, Immutable.Map(user)]
+            }, this)
+        )
       } else if (ev.body.type == 'nick-reply' || ev.body.type == 'nick-event') {
-        this.state.who.forEach(function(user) {
-          if (user.id == ev.body.data.id) {
-            user.name = ev.body.data.to
-            user.hue = this._getNickHue(user.name)
-          }
-        }, this)
+        this.state.who = this.state.who
+          .mergeIn([ev.body.data.id], {
+            name: ev.body.data.to,
+            hue: this._getNickHue(ev.body.data.to),
+          })
+          .sortBy(function(user) { return user.get('name') })
       }
     } else if (ev.status == 'open') {
       this.state.connected = true
