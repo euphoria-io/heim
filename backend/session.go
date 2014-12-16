@@ -11,10 +11,12 @@ import (
 type Session interface {
 	Identity() Identity
 	Send(context.Context, CommandType, interface{}) error
+	Close()
 }
 
 type memSession struct {
 	ctx      context.Context
+	cancel   context.CancelFunc
 	conn     *websocket.Conn
 	identity *memIdentity
 	room     Room
@@ -26,9 +28,11 @@ type memSession struct {
 func newMemSession(ctx context.Context, conn *websocket.Conn, room Room) *memSession {
 	id := conn.RemoteAddr().String()
 	loggingCtx := LoggingContext(ctx, fmt.Sprintf("[%s] ", id))
+	cancellableCtx, cancel := context.WithCancel(loggingCtx)
 
 	session := &memSession{
-		ctx:      loggingCtx,
+		ctx:      cancellableCtx,
+		cancel:   cancel,
 		conn:     conn,
 		identity: newMemIdentity(id),
 		room:     room,
@@ -39,6 +43,7 @@ func newMemSession(ctx context.Context, conn *websocket.Conn, room Room) *memSes
 	return session
 }
 
+func (s *memSession) Close()             { s.cancel() }
 func (s *memSession) Identity() Identity { return s.identity }
 
 func (s *memSession) Send(ctx context.Context, cmdType CommandType, payload interface{}) error {
@@ -69,6 +74,8 @@ func (s *memSession) serve() {
 
 	for {
 		select {
+		case <-s.ctx.Done():
+			return
 		case cmd := <-s.incoming:
 			logger.Printf("received command: id=%s, type=%s", cmd.ID, cmd.Type)
 
@@ -113,9 +120,9 @@ func (s *memSession) serve() {
 
 func (s *memSession) readMessages() {
 	logger := Logger(s.ctx)
+	defer s.Close()
 
-	// TODO: termination condition?
-	for {
+	for s.ctx.Err() == nil {
 		_, data, err := s.conn.ReadMessage()
 		if err != nil {
 			logger.Printf("error: read message: %s", err)

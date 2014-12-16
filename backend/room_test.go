@@ -22,6 +22,8 @@ type message struct {
 
 func newSession(id string) *session { return &session{id: id} }
 
+func (s *session) Close() {}
+
 func (s *session) Identity() Identity { return newMemIdentity(s.id) }
 
 func (s *session) Send(ctx context.Context, cmdType CommandType, payload interface{}) error {

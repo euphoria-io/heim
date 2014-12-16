@@ -7,6 +7,8 @@ import (
 	"golang.org/x/net/context"
 )
 
+var clock = func() int64 { return time.Now().Unix() }
+
 type Listing []IdentityView
 
 type Room interface {
@@ -86,7 +88,7 @@ func (r *memRoom) Send(ctx context.Context, session Session, message Message) (M
 	defer r.Unlock()
 
 	msg := Message{
-		UnixTime: time.Now().Unix(),
+		UnixTime: clock(),
 		Sender:   session.Identity().View(),
 		Content:  message.Content,
 	}
