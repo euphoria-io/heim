@@ -31,13 +31,15 @@ module.exports.store = Reflux.createStore({
       if (ev.body.type == 'send-event' || ev.body.type == 'send-reply') {
         var message = ev.body.data
         message.sender.hue = this._getNickHue(message.sender.name)
-        this.state.messages = this.state.messages.push(ev.body.data)
+        this.state.messages = this.state.messages.push(Immutable.fromJS(ev.body.data))
 
       } else if (ev.body.type == 'log-reply' && ev.body.data) {
-        this.state.messages = Immutable.List(ev.body.data.log)
-        this.state.messages.forEach(function(message) {
-          message.sender.hue = this._getNickHue(message.sender.name)
-        }, this)
+        this.state.messages = Immutable.Seq(ev.body.data.log)
+          .map(function(message) {
+            message.sender.hue = this._getNickHue(message.sender.name)
+            return Immutable.fromJS(message)
+          }, this)
+          .toList()
 
       } else if (ev.body.type == 'who-reply') {
         this.state.who = Immutable.OrderedMap(

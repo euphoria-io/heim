@@ -76,18 +76,11 @@ module.exports.store = Reflux.createStore({
 
   chatUpdate: function(state) {
     var lastMsg = state.messages.last()
-    if (!lastMsg) {
+    if (lastMsg == this._lastMsg) {
       return
     }
-
-    if (!this._lastMsg) {
-      this._lastMsg = lastMsg.time
-      return
-    }
-
-    if (lastMsg.time > this._lastMsg) {
-      this.notify('new message', {body: lastMsg.sender.name + ': ' + lastMsg.content})
-    }
+    this._lastMsg = lastMsg
+    this.notify('new message', {body: lastMsg.getIn(['sender', 'name']) + ': ' + lastMsg.get('content')})
   },
 
   closeNotification: function() {
