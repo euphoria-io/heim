@@ -5,54 +5,103 @@ import (
 	"fmt"
 )
 
-type CommandType string
+type PacketType string
 
-const (
-	SendType CommandType = "send"
-	LogType              = "log"
-	NickType             = "nick"
-	WhoType              = "who"
+func (c PacketType) Event() PacketType { return c + "-event" }
+func (c PacketType) Reply() PacketType { return c + "-reply" }
+
+var (
+	SendType      = PacketType("send")
+	SendEventType = SendType.Event()
+	SendReplyType = SendType.Reply()
+
+	LogType      = PacketType("log")
+	LogReplyType = LogType.Reply()
+
+	NickType      = PacketType("nick")
+	NickEventType = NickType.Event()
+	NickReplyType = NickType.Reply()
+
+	WhoType      = PacketType("who")
+	WhoReplyType = WhoType.Reply()
 )
+
+type ErrorReply struct {
+	Error string
+}
 
 type SendCommand struct {
 	Content string `json:"content"`
 }
 
+type SendEvent Message
+type SendReply SendEvent
+
 type LogCommand struct {
 	N int `json:"n"`
 }
 
+type LogReply struct {
+	Log []Message `json:"log"`
+}
+
 type NickCommand struct {
 	Name string `json:"name"`
-	From string `json:"from"`
 }
+
+type NickReply struct {
+	ID   string `json:"id"`
+	From string `json:"from"`
+	To   string `json:"to"`
+}
+
+type NickEvent NickReply
 
 type WhoCommand struct{}
 
+type WhoReply struct {
+	Listing `json:"listing"`
+}
+
 type Packet struct {
 	ID   string          `json:"id"`
-	Type CommandType     `json:"type"`
+	Type PacketType      `json:"type"`
 	Data json.RawMessage `json:"data"`
 }
 
 func (cmd *Packet) Payload() (interface{}, error) {
 	var payload interface{}
 
+	// TODO: use reflect + a map
 	switch cmd.Type {
 	case SendType:
 		payload = &SendCommand{}
+	case SendReplyType:
+		payload = &SendReply{}
+	case SendEventType:
+		payload = &SendEvent{}
 	case LogType:
 		payload = &LogCommand{}
+	case LogReplyType:
+		payload = &LogReply{}
 	case NickType:
 		payload = &NickCommand{}
+	case NickReplyType:
+		payload = &NickReply{}
+	case NickEventType:
+		payload = &NickEvent{}
 	case WhoType:
-		payload = &WhoCommand{}
+		return &WhoCommand{}, nil
+	case WhoReplyType:
+		payload = &WhoReply{}
 	default:
 		return nil, fmt.Errorf("invalid command type: %s", cmd.Type)
 	}
 
-	if err := json.Unmarshal(cmd.Data, payload); err != nil {
-		return nil, err
+	if payload != nil {
+		if err := json.Unmarshal(cmd.Data, payload); err != nil {
+			return nil, err
+		}
 	}
 
 	return payload, nil
@@ -60,10 +109,10 @@ func (cmd *Packet) Payload() (interface{}, error) {
 
 func (cmd *Packet) Encode() ([]byte, error) { return json.Marshal(cmd) }
 
-func Response(refID string, msgType CommandType, payload interface{}) (*Packet, error) {
-	cmd := &Packet{
+func Response(refID string, msgType PacketType, payload interface{}) (*Packet, error) {
+	packet := &Packet{
 		ID:   refID,
-		Type: msgType,
+		Type: msgType.Reply(),
 	}
 
 	data, err := json.Marshal(payload)
@@ -71,11 +120,11 @@ func Response(refID string, msgType CommandType, payload interface{}) (*Packet, 
 		return nil, err
 	}
 
-	if err := cmd.Data.UnmarshalJSON(data); err != nil {
+	if err := packet.Data.UnmarshalJSON(data); err != nil {
 		return nil, err
 	}
 
-	return cmd, nil
+	return packet, nil
 }
 
 func ParseRequest(data []byte) (*Packet, error) {

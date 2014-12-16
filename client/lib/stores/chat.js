@@ -28,23 +28,30 @@ module.exports.store = Reflux.createStore({
 
   socketEvent: function(ev) {
     if (ev.status == 'receive') {
-      if (ev.body.type == 'send') {
+      if (ev.body.type == 'send-event' || ev.body.type == 'send-reply') {
         var message = ev.body.data
         message.sender.hue = this._getNickHue(message.sender.name)
         this.state.messages = this.state.messages.push(ev.body.data)
 
-      } else if (ev.body.type == 'log' && ev.body.data) {
-        this.state.messages = Immutable.List(ev.body.data)
+      } else if (ev.body.type == 'log-reply' && ev.body.data) {
+        this.state.messages = Immutable.List(ev.body.data.log)
         this.state.messages.forEach(function(message) {
           message.sender.hue = this._getNickHue(message.sender.name)
         }, this)
 
-      } else if (ev.body.type == 'who') {
-        this.state.who = Immutable.Seq(ev.body.data)
+      } else if (ev.body.type == 'who-reply') {
+        this.state.who = Immutable.Seq(ev.body.data.listing)
           .sortBy(function(user) { return user.name })
 
         this.state.who.forEach(function(user) {
           user.hue = this._getNickHue(user.name)
+        }, this)
+      } else if (ev.body.type == 'nick-reply' || ev.body.type == 'nick-event') {
+        this.state.who.forEach(function(user) {
+          if (user.id == ev.body.data.id) {
+            user.name = ev.body.data.to
+            user.hue = this._getNickHue(user.name)
+          }
         }, this)
       }
     } else if (ev.status == 'open') {

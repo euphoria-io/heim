@@ -9,7 +9,7 @@ import (
 )
 
 func TestCommandPayload(t *testing.T) {
-	makeCommand := func(cmdType CommandType, payload interface{}) *Packet {
+	makeCommand := func(cmdType PacketType, payload interface{}) *Packet {
 		payloadBytes, err := json.Marshal(payload)
 		So(err, ShouldBeNil)
 		return &Packet{Type: cmdType, Data: payloadBytes}
@@ -32,7 +32,7 @@ func TestCommandPayload(t *testing.T) {
 	})
 
 	Convey("Error", t, func() {
-		cmd := &Packet{Type: CommandType("unknown")}
+		cmd := &Packet{Type: PacketType("unknown")}
 		_, err := cmd.Payload()
 		So(err, ShouldResemble, fmt.Errorf("invalid command type: unknown"))
 	})

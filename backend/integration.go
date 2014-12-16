@@ -5,11 +5,14 @@ import (
 	"fmt"
 	"net/http/httptest"
 	"strings"
+	"testing"
 
 	"github.com/gorilla/websocket"
 
 	. "github.com/smartystreets/goconvey/convey"
 )
+
+type testSuite func(testing.TB, *serverUnderTest)
 
 type serverUnderTest struct {
 	backend Backend
@@ -29,7 +32,13 @@ func (s *serverUnderTest) Connect(roomName string) *websocket.Conn {
 	return conn
 }
 
-func readPacket(conn *websocket.Conn) (CommandType, interface{}) {
+func closeConn(conn *websocket.Conn) {
+	conn.WriteMessage(
+		websocket.CloseMessage,
+		websocket.FormatCloseMessage(websocket.CloseNormalClosure, "normal closure"))
+}
+
+func readPacket(conn *websocket.Conn) (PacketType, interface{}) {
 	msgType, data, err := conn.ReadMessage()
 	So(err, ShouldBeNil)
 	So(msgType, ShouldEqual, websocket.TextMessage)
@@ -44,107 +53,124 @@ func readPacket(conn *websocket.Conn) (CommandType, interface{}) {
 
 func shouldReceive(actual interface{}, expected ...interface{}) string {
 	conn, ok := actual.(*websocket.Conn)
-	if msg := ShouldBeTrue(ok); msg != "" {
-		return msg
+	if !ok {
+		return fmt.Sprintf("shouldReceive expects a *websocket.Conn on the left, got %T", actual)
 	}
-	if msg := ShouldEqual(len(expected), 2); msg != "" {
-		return msg
+	if len(expected) != 2 {
+		return "shouldReceive expects string, payload on right"
 	}
-	expectedType, ok := expected[0].(string)
-	if msg := ShouldBeTrue(ok); msg != "" {
-		return msg
+	expectedType, ok := expected[0].(PacketType)
+	if !ok {
+		return fmt.Sprintf(
+			"shouldReceive expects string, payload on right, got %T, %T", expected...)
 	}
 	expectedPayload := expected[1]
 
 	packetType, payload := readPacket(conn)
-	if msg := ShouldEqual(packetType, expectedType); msg != "" {
-		return msg
+	if packetType != expectedType {
+		return fmt.Sprintf("Expected: %s -> %#v\nActual:   %s -> %#v\n",
+			expectedType, expectedPayload, packetType, payload)
 	}
 
 	return ShouldResemble(payload, expectedPayload)
 }
 
-func IntegrationTest(factory func() Backend) func() {
-	runTest := func(test func(*serverUnderTest)) {
+func IntegrationTest(t testing.TB, factory func() Backend) {
+	runTest := func(test testSuite) {
 		backend := factory()
 		app := NewServer(backend, "")
 		server := httptest.NewServer(app)
 		defer server.Close()
-		test(&serverUnderTest{backend, app, server})
+		test(t, &serverUnderTest{backend, app, server})
 	}
 
-	return func() {
-		runTest(testLurker)
-	}
+	runTest(testLurker)
+	runTest(testBroadcast)
 }
 
-func testLurker(s *serverUnderTest) {
-	Convey("Lurker", func() {
+func testLurker(t testing.TB, s *serverUnderTest) {
+	Convey("Lurker", t, func() {
 		conn1 := s.Connect("test")
-		defer conn1.Close()
+		defer closeConn(conn1)
 
 		conn2 := s.Connect("test")
-		defer conn2.Close()
+		defer closeConn(conn2)
 
 		err := conn2.WriteMessage(
 			websocket.TextMessage,
 			[]byte(`{"id":"1","type":"nick","data":{"name":"speaker"}}`))
 		So(err, ShouldBeNil)
 
+		id := conn2.LocalAddr().String()
+		So(conn2, shouldReceive,
+			NickReplyType, &NickReply{ID: id, From: id, To: "speaker"})
 		So(conn1, shouldReceive,
-			NickType, &NickCommand{From: conn2.LocalAddr().String(), Name: "speaker"})
+			NickEventType, &NickEvent{ID: id, From: id, To: "speaker"})
 	})
 }
 
-func testBroadcast(s *serverUnderTest) {
-	Convey("Broadcast", func() {
+func testBroadcast(t testing.TB, s *serverUnderTest) {
+	Convey("Broadcast", t, func() {
 		saveClock := clock
 		clock = func() int64 { return 0 }
 		defer func() { clock = saveClock }()
 
 		conns := make([]*websocket.Conn, 3)
-		for i := 0; i < 3; i++ {
-			conns[i] = s.Connect("test")
-		}
-		defer func() {
-			for _, conn := range conns {
-				conn.Close()
-			}
-		}()
 
-		ids := make([]*IdentityView, len(conns))
+		ids := make(Listing, len(conns))
 
-		for i, conn := range conns {
-			ids[i] = &IdentityView{ID: conn.LocalAddr().String(), Name: fmt.Sprintf("test%d", i)}
+		for i := range conns {
+			conn := s.Connect("test")
+			conns[i] = conn
+			ids[i] = IdentityView{ID: conn.LocalAddr().String(), Name: fmt.Sprintf("user%d", i)}
 			msg := fmt.Sprintf(`{"id":"1","type":"nick","data":{"name":"user%d"}}`, i)
 			err := conn.WriteMessage(websocket.TextMessage, []byte(msg))
 			So(err, ShouldBeNil)
+
+			msg = fmt.Sprintf(`{"id":"2","type":"who"}`)
+			err = conn.WriteMessage(websocket.TextMessage, []byte(msg))
+			So(err, ShouldBeNil)
+
+			So(conn, shouldReceive, NickReplyType,
+				&NickReply{ID: ids[i].ID, From: ids[i].ID, To: fmt.Sprintf("user%d", i)})
+			So(conn, shouldReceive, WhoReplyType, &WhoReply{Listing: ids[:(i + 1)]})
+
+			for _, c := range conns[:i] {
+				So(c, shouldReceive, NickEventType,
+					&NickEvent{ID: ids[i].ID, From: ids[i].ID, To: fmt.Sprintf("user%d", i)})
+			}
 		}
+
+		defer func() {
+			for _, conn := range conns {
+				defer closeConn(conn)
+			}
+		}()
 
 		err := conns[1].WriteMessage(
 			websocket.TextMessage,
 			[]byte(`{"id":"2","type":"send","data":{"content":"hi"}}`))
 		So(err, ShouldBeNil)
 
+		So(conns[0], shouldReceive, SendEventType,
+			&SendEvent{UnixTime: 0, Sender: &ids[1], Content: "hi"})
+
 		err = conns[2].WriteMessage(
 			websocket.TextMessage,
 			[]byte(`{"id":"2","type":"send","data":{"content":"bye"}}`))
 		So(err, ShouldBeNil)
 
-		So(conns[0], shouldReceive,
-			NickType, &NickCommand{From: conns[1].LocalAddr().String(), Name: "test1"})
-		So(conns[0], shouldReceive,
-			NickType, &NickCommand{From: conns[2].LocalAddr().String(), Name: "test2"})
+		So(conns[0], shouldReceive, SendEventType,
+			&SendEvent{UnixTime: 0, Sender: &ids[2], Content: "bye"})
 
-		So(conns[0], shouldReceive,
-			SendType, &Message{UnixTime: 0, Sender: ids[1], Content: "hi"})
-		So(conns[0], shouldReceive,
-			SendType, &Message{UnixTime: 0, Sender: ids[2], Content: "bye"})
+		So(conns[1], shouldReceive, SendReplyType,
+			&SendReply{UnixTime: 0, Sender: &ids[1], Content: "hi"})
+		So(conns[1], shouldReceive, SendEventType,
+			&SendEvent{UnixTime: 0, Sender: &ids[2], Content: "bye"})
 
-		So(conns[1], shouldReceive,
-			SendType, &Message{UnixTime: 0, Sender: ids[2], Content: "bye"})
-
-		So(conns[2], shouldReceive,
-			SendType, &Message{UnixTime: 0, Sender: ids[1], Content: "hi"})
+		So(conns[2], shouldReceive, SendEventType,
+			&SendEvent{UnixTime: 0, Sender: &ids[1], Content: "hi"})
+		So(conns[2], shouldReceive, SendReplyType,
+			&SendReply{UnixTime: 0, Sender: &ids[2], Content: "bye"})
 	})
 }

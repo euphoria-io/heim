@@ -16,17 +16,17 @@ type session struct {
 }
 
 type message struct {
-	cmdType CommandType
+	cmdType PacketType
 	payload interface{}
 }
 
 func newSession(id string) *session { return &session{id: id} }
 
-func (s *session) Close() {}
-
+func (s *session) ID() string         { return s.id }
+func (s *session) Close()             {}
 func (s *session) Identity() Identity { return newMemIdentity(s.id) }
 
-func (s *session) Send(ctx context.Context, cmdType CommandType, payload interface{}) error {
+func (s *session) Send(ctx context.Context, cmdType PacketType, payload interface{}) error {
 	s.Lock()
 	s.history = append(s.history, message{cmdType, payload})
 	s.Unlock()
@@ -101,19 +101,19 @@ func TestRoomBroadcast(t *testing.T) {
 		So(userA.history, ShouldBeNil)
 		So(userB.history, ShouldBeNil)
 		So(userC.history, ShouldResemble,
-			[]message{{cmdType: SendType, payload: Message{Content: "1"}}})
+			[]message{{cmdType: SendEventType, payload: Message{Content: "1"}}})
 	})
 
 	Convey("No exclude", t, func() {
 		So(room.broadcast(ctx, SendType, Message{Content: "2"}), ShouldBeNil)
 		So(userA.history, ShouldResemble,
-			[]message{{cmdType: SendType, payload: Message{Content: "2"}}})
+			[]message{{cmdType: SendEventType, payload: Message{Content: "2"}}})
 		So(userB.history, ShouldResemble,
-			[]message{{cmdType: SendType, payload: Message{Content: "2"}}})
+			[]message{{cmdType: SendEventType, payload: Message{Content: "2"}}})
 		So(userC.history, ShouldResemble,
 			[]message{
-				{cmdType: SendType, payload: Message{Content: "1"}},
-				{cmdType: SendType, payload: Message{Content: "2"}},
+				{cmdType: SendEventType, payload: Message{Content: "1"}},
+				{cmdType: SendEventType, payload: Message{Content: "2"}},
 			})
 	})
 }

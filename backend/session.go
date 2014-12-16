@@ -3,14 +3,16 @@ package backend
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 
 	"github.com/gorilla/websocket"
 	"golang.org/x/net/context"
 )
 
 type Session interface {
+	ID() string
 	Identity() Identity
-	Send(context.Context, CommandType, interface{}) error
+	Send(context.Context, PacketType, interface{}) error
 	Close()
 }
 
@@ -43,10 +45,11 @@ func newMemSession(ctx context.Context, conn *websocket.Conn, room Room) *memSes
 	return session
 }
 
+func (s *memSession) ID() string         { return s.conn.RemoteAddr().String() }
 func (s *memSession) Close()             { s.cancel() }
 func (s *memSession) Identity() Identity { return s.identity }
 
-func (s *memSession) Send(ctx context.Context, cmdType CommandType, payload interface{}) error {
+func (s *memSession) Send(ctx context.Context, cmdType PacketType, payload interface{}) error {
 	encoded, err := json.Marshal(payload)
 	if err != nil {
 		return err
@@ -57,10 +60,7 @@ func (s *memSession) Send(ctx context.Context, cmdType CommandType, payload inte
 		Data: encoded,
 	}
 
-	logger := Logger(s.ctx)
-
 	go func() {
-		logger.Printf("pushing message: %s %#v", cmdType, payload)
 		s.outgoing <- cmd
 	}()
 
@@ -71,6 +71,7 @@ func (s *memSession) serve() {
 	go s.readMessages()
 
 	logger := Logger(s.ctx)
+	logger.Printf("client connected")
 
 	for {
 		select {
@@ -82,10 +83,8 @@ func (s *memSession) serve() {
 			reply, err := s.handleCommand(cmd)
 			if err != nil {
 				logger.Printf("error: handleCommand: %s", err)
-				reply = err
+				reply = ErrorReply{Error: err.Error()}
 			}
-
-			logger.Printf("response: id=%s, type=%s, %#v", cmd.ID, cmd.Type, reply)
 
 			resp, err := Response(cmd.ID, cmd.Type, reply)
 			if err != nil {
@@ -125,6 +124,10 @@ func (s *memSession) readMessages() {
 	for s.ctx.Err() == nil {
 		_, data, err := s.conn.ReadMessage()
 		if err != nil {
+			if err == io.EOF {
+				logger.Printf("client disconnected")
+				return
+			}
 			logger.Printf("error: read message: %s", err)
 			return
 		}
@@ -144,23 +147,36 @@ func (s *memSession) readMessages() {
 func (s *memSession) handleCommand(cmd *Packet) (interface{}, error) {
 	payload, err := cmd.Payload()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("payload: %s", err)
 	}
 
 	switch msg := payload.(type) {
 	case *SendCommand:
-		return s.room.Send(s.ctx, s, Message{Content: msg.Content})
+		sent, err := s.room.Send(s.ctx, s, Message{Content: msg.Content})
+		if err != nil {
+			return nil, err
+		}
+		return SendReply(sent), nil
 	case *LogCommand:
-		return s.room.Latest(s.ctx, msg.N)
+		msgs, err := s.room.Latest(s.ctx, msg.N)
+		if err != nil {
+			return nil, err
+		}
+		return LogReply{Log: msgs}, nil
 	case *NickCommand:
 		formerName := s.identity.Name()
 		s.identity.name = msg.Name
-		if formerName != msg.Name {
-			s.room.RenameUser(s.ctx, s, formerName)
+		event, err := s.room.RenameUser(s.ctx, s, formerName)
+		if err != nil {
+			return nil, err
 		}
-		return msg, nil
+		return NickReply(*event), nil
 	case *WhoCommand:
-		return s.room.Listing(s.ctx)
+		listing, err := s.room.Listing(s.ctx)
+		if err != nil {
+			return nil, err
+		}
+		return WhoReply{Listing: listing}, nil
 	default:
 		return nil, fmt.Errorf("command type %T not implemented", payload)
 	}

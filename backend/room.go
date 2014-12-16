@@ -1,6 +1,7 @@
 package backend
 
 import (
+	"sort"
 	"sync"
 	"time"
 
@@ -11,6 +12,10 @@ var clock = func() int64 { return time.Now().Unix() }
 
 type Listing []IdentityView
 
+func (l Listing) Len() int           { return len(l) }
+func (l Listing) Less(i, j int) bool { return l[i].ID < l[j].ID }
+func (l Listing) Swap(i, j int)      { l[i], l[j] = l[j], l[i] }
+
 type Room interface {
 	Log
 
@@ -18,7 +23,7 @@ type Room interface {
 	Part(context.Context, Session) error
 	Send(context.Context, Session, Message) (Message, error)
 	Listing(context.Context) (Listing, error)
-	RenameUser(ctx context.Context, session Session, formerName string) error
+	RenameUser(ctx context.Context, session Session, formerName string) (*NickEvent, error)
 }
 
 type memRoom struct {
@@ -97,17 +102,19 @@ func (r *memRoom) Send(ctx context.Context, session Session, message Message) (M
 }
 
 func (r *memRoom) broadcast(
-	ctx context.Context, cmdType CommandType, payload interface{}, excluding ...Session) error {
+	ctx context.Context, cmdType PacketType, payload interface{}, excluding ...Session) error {
+
+	excMap := make(map[string]struct{}, len(excluding))
+	for _, x := range excluding {
+		excMap[x.ID()] = struct{}{}
+	}
 
 	for _, sessions := range r.live {
-	loop:
 		for _, session := range sessions {
-			for _, exc := range excluding {
-				if exc == session {
-					continue loop
-				}
+			if _, ok := excMap[session.ID()]; ok {
+				continue
 			}
-			if err := session.Send(ctx, cmdType, payload); err != nil {
+			if err := session.Send(ctx, cmdType.Event(), payload); err != nil {
 				// TODO: accumulate errors
 				return err
 			}
@@ -123,13 +130,17 @@ func (r *memRoom) Listing(ctx context.Context) (Listing, error) {
 			listing = append(listing, *session.Identity().View())
 		}
 	}
+	sort.Sort(listing)
 	return listing, nil
 }
 
-func (r *memRoom) RenameUser(ctx context.Context, session Session, formerName string) error {
-	payload := &NickCommand{
+func (r *memRoom) RenameUser(
+	ctx context.Context, session Session, formerName string) (*NickEvent, error) {
+	Logger(ctx).Printf("renaming %s from %s to %s\n", session.ID(), formerName, session.Identity().Name())
+	payload := &NickEvent{
+		ID:   session.Identity().ID(),
 		From: formerName,
-		Name: session.Identity().Name(),
+		To:   session.Identity().Name(),
 	}
-	return r.broadcast(ctx, NickType, payload, session)
+	return payload, r.broadcast(ctx, NickType, payload, session)
 }
