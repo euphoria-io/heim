@@ -86,6 +86,7 @@ module.exports.store = Reflux.createStore({
   closeNotification: function() {
     if (this.notification) {
       this.notification.close()
+      this.notification = null
     }
   },
 
