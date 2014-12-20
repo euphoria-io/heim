@@ -1,9 +1,7 @@
-var _ = require('lodash')
 var React = require('react')
 var Reflux = require('reflux')
 var moment = require('moment')
 
-var actions = require('../actions')
 var Message = require('./message')
 var ChatEntry = require('./chatentry')
 var NickEntry = require('./nickentry')

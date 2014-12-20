@@ -2,7 +2,6 @@ var React = require('react/addons')
 var Reflux = require('reflux')
 var cx = React.addons.classSet
 
-var actions = require('../actions')
 var Scroller = require('./scroller')
 var Messages = require('./messages')
 var UserList = require('./userlist')
@@ -44,7 +43,7 @@ module.exports = React.createClass({
     this.setState({formFocus: true})
   },
 
-  onMouseUp: function(ev) {
+  onMouseUp: function() {
     if (!this.refs.messages.isFocused()) {
       this.setState({formFocus: false})
     }
