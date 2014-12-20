@@ -43,7 +43,6 @@ module.exports = React.createClass({
         {this.state.messages.map(function(message, idx) {
           return <Message key={idx} message={message} />
         }, this).toArray()}
-        {entry}
         {disconnected ?
           <div key="status" className="line status disconnected">
             <time dateTime={now.toISOString()} title={now.format('MMMM Do YYYY, h:mm:ss a')}>
@@ -52,6 +51,7 @@ module.exports = React.createClass({
             <span className="message">reconnecting...</span>
           </div>
         : null}
+        {entry}
       </div>
     )
   },
