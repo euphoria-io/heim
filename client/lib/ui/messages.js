@@ -43,7 +43,7 @@ module.exports = React.createClass({
           return <Message key={idx} message={message} />
         }, this).toArray()}
         {entry}
-        {this.state.connected == false ?
+        {this.state.connected === false ?
           <div key="status" className="line status disconnected">
             <time dateTime={now.toISOString()} title={now.format('MMMM Do YYYY, h:mm:ss a')}>
               {now.format('h:mma')}

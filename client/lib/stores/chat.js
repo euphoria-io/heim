@@ -90,7 +90,9 @@ module.exports.store = Reflux.createStore({
     for (var i = 0; i < nick.length; i++) {
       val += nick.charCodeAt(i)
     }
-    return this.state.nickHues[nick] = val % 255
+    this.state.nickHues[nick] = val % 255
+
+    return this.state.nickHues[nick]
   },
 
   connect: function() {
