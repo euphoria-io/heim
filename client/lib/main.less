@@ -75,13 +75,13 @@ html, body, #container, .chat {
             background: fade(darkred, 5%);
           }
         }
-      }
 
-      time, .nick {
-        display: inline-block;
-        flex-shrink: 0;
-        margin-right: 8px;
-        font-size: .85em;
+        time, .nick {
+          display: inline-block;
+          flex-shrink: 0;
+          margin-right: 8px;
+          font-size: .85em;
+        }
       }
 
       time {
@@ -92,6 +92,11 @@ html, body, #container, .chat {
         padding-right: 10px;
         box-sizing: border-box;
         text-align: right;
+      }
+
+      & > .entry {
+        margin: -10px;
+        margin-top: 10px;
       }
     }
 
@@ -117,7 +122,7 @@ html, body, #container, .chat {
     .settings {
       position: absolute;
       left: @time-margin - 36px;
-      margin-top: 8px;
+      margin-top: -33px;
       border: none;
       background: none;
       padding: 0;
@@ -202,71 +207,71 @@ html, body, #container, .chat {
         margin-bottom: 38px;
       }
     }
-  }
 
-  form {
-    position: relative;
-    z-index: 2;
-    display: flex;
-    flex-direction: row;
-    box-sizing: border-box;
-    background: #eee;
-    border: none;
-    border-bottom: 3px solid transparent;
-    box-shadow: 0 0 10px fade(black, 10%) inset;
-    transition: all .15s ease;
-    .no-select;
-
-    & > * {
-      height: 38px;
-      padding: 10px;
+    form {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      flex-direction: row;
       box-sizing: border-box;
+      background: #eee;
+      border: none;
+      border-bottom: 3px solid transparent;
+      box-shadow: 0 0 10px fade(black, 10%) inset;
+      transition: all .15s ease;
+      .no-select;
+
+      & > * {
+        height: 38px;
+        padding: 10px;
+        box-sizing: border-box;
+      }
+
+      input {
+        flex: 1;
+        background: none;
+        border: none;
+        padding-left: 0;
+        padding-right: 0;
+      }
+
+      label {
+        opacity: .5;
+      }
+
+      .auto-size-container {
+        position: relative;
+
+        .nick {
+          box-sizing: border-box;
+        }
+
+        input.nick {
+          display: block;
+          position: absolute;
+          width: 100%;
+          box-shadow: 0 0 1px fade(black, 50%);
+
+          &:focus {
+            background: white;
+          }
+        }
+
+        span {
+          white-space: pre;
+        }
+      }
     }
 
-    &.focus {
+    &.form-focus form {
       @green: fade(green, 50%);
       border-bottom: 3px solid @green;
       background: white;
       box-shadow: 0 0 5px fade(black, 25%);
-    }
-
-    input {
-      flex: 1;
-      background: none;
-      border: none;
-      padding-left: 0;
-      padding-right: 0;
-    }
-
-    label {
-      opacity: .5;
-    }
-
-    .auto-size-container {
-      position: relative;
-
-      .nick {
-        box-sizing: border-box;
-      }
 
       input.nick {
-        display: block;
-        position: absolute;
-        width: 100%;
-        box-shadow: 0 0 1px fade(black, 50%);
-
-        &:focus {
-          background: white;
-        }
+        box-shadow: none;
       }
-
-      span {
-        white-space: pre;
-      }
-    }
-
-    &.focus input.nick {
-      box-shadow: none;
     }
   }
 }
@@ -280,14 +285,14 @@ html, body, #container, .chat {
         display: block;
         margin-left: .5em;
         text-indent: -.5em;
-      }
 
-      .nick {
-        text-indent: 0;
-      }
+        .nick {
+          text-indent: 0;
+        }
 
-      time {
-        display: none;
+        time {
+          display: none;
+        }
       }
     }
   }

@@ -8,6 +8,7 @@ var Messages = require('./messages')
 var UserList = require('./userlist')
 var NotifyToggle = require('./notifytoggle')
 
+
 module.exports = React.createClass({
   displayName: 'Main',
 
@@ -27,39 +28,12 @@ module.exports = React.createClass({
     return {formFocus: false, settingsOpen: false}
   },
 
-  send: function(ev) {
-    if (ev.which != '13') {
-      return
-    }
-
-    var input = this.refs.input.getDOMNode()
-    if (!input.value.length) {
-      return
-    }
-
-    actions.sendMessage(input.value)
-    input.value = ''
-    ev.preventDefault()
-  },
-
-  setNick: function(ev) {
-    var input = this.refs.nick.getDOMNode()
-    actions.setNick(input.value)
-    ev.preventDefault()
-  },
-
-  previewNick: function() {
-    var input = this.refs.nick.getDOMNode()
-    this.setState({nickText: input.value})
-  },
-
   focusInput: function(ev) {
     if (ev.target.nodeName == 'INPUT' || window.getSelection().type == 'Range') {
       return
     }
 
-    var input = this.refs.input || this.refs.nick
-    input.getDOMNode().focus()
+    this.refs.messages.focusInput()
   },
 
   onScrollbarSize: function(width) {
@@ -71,7 +45,7 @@ module.exports = React.createClass({
   },
 
   onMouseUp: function(ev) {
-    if (document.activeElement != this.refs.input.getDOMNode()) {
+    if (!this.refs.messages.isFocused()) {
       this.setState({formFocus: false})
     }
   },
@@ -85,38 +59,15 @@ module.exports = React.createClass({
   },
 
   render: function() {
-    var sendForm
-    if (this.state.chat.nick) {
-      sendForm = (
-        <form className={cx({'focus': this.state.formFocus})}>
-          <div className="nick-box">
-            <div className="auto-size-container">
-              <input className="nick" ref="nick" defaultValue={this.state.chat.nick} onBlur={this.setNick} onChange={this.previewNick} />
-              <span className="nick">{this.state.nickText || this.state.chat.nick}</span>
-            </div>
-          </div>
-          <input key="msg" ref="input" type="text" autoFocus disabled={this.state.chat.connected == false} onKeyDown={this.send} onFocus={this.onFormFocus} />
-        </form>
-      )
-    } else {
-      sendForm = (
-        <form onSubmit={this.setNick} className={cx({'focus': this.state.formFocus})}>
-          <label>choose a nickname to start chatting:</label>
-          <input key="nick" ref="nick" type="text" onFocus={this.onFormFocus} />
-        </form>
-      )
-    }
-
     return (
       <div className="chat" onMouseUp={this.onMouseUp}>
-        <Scroller className={cx({'messages-container': true, 'settings-open': this.state.settingsOpen})} onClick={this.focusInput} onScrollbarSize={this.onScrollbarSize}>
+        <Scroller className={cx({'messages-container': true, 'settings-open': this.state.settingsOpen, 'form-focus': this.state.formFocus})} onClick={this.focusInput} onScrollbarSize={this.onScrollbarSize}>
           <div className="messages-content">
-            {sendForm}
             <button type="button" className="settings" onClick={this.toggleSettings} />
             <div className="top-right" style={{marginRight: this.state.scrollbarWidth}}>
               <UserList users={this.state.chat.who} />
             </div>
-            <Messages messages={this.state.chat.messages} disconnected={this.state.chat.connected == false} />
+            <Messages ref="messages" onFormFocus={this.onFormFocus} />
           </div>
           <div className="settings-pane">
             <NotifyToggle />
