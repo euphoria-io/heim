@@ -41,7 +41,7 @@ gulp.task('html', function() {
 })
 
 gulp.task('lint', function() {
-  return gulp.src(['./lib/**/*.js', './lib/**/.jsx'])
+  return gulp.src('./lib/**/*.js')
     .pipe(react())
     .pipe(jshint())
     .pipe(jshint.reporter('default'))
