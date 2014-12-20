@@ -21,7 +21,7 @@ module.exports = React.createClass({
 
   render: function() {
     return (
-      <form className={entry} onSubmit={this.setNick}>
+      <form className="entry" onSubmit={this.setNick}>
         <label>choose a nickname to start chatting:</label>
         <input key="nick" ref="input" type="text" disabled={this.props.disabled} onFocus={this.props.onFormFocus} />
       </form>
