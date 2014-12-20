@@ -38,5 +38,5 @@ Run Backend
 ===========
 
 ```
-fit up backend
+fig up backend
 ```
