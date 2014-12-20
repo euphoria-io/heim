@@ -1,3 +1,22 @@
+psqldata:
+  build: containers/psql/data
+
+psql:
+  build: containers/psql
+  volumes:
+    - psqldata/data:/var/lib/postgresql/data
+
+psqlclient:
+  command: psql -h psql -p 5432 -U postgres heim
+  build: containers/psql/client
+  links:
+    - psql
+
+upgradedb:
+  build: backend/upgradedb
+  links:
+    - psql
+
 frontend:
   command: gulp build
   build: client
@@ -9,6 +28,8 @@ frontend:
 
 backend:
   build: backend
+  links:
+    - psql
   volumes:
     - backend/static:/go/src/heim/backend/static
   ports:

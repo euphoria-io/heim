@@ -12,6 +12,7 @@ import (
 type session struct {
 	sync.Mutex
 	id      string
+	name    string
 	history []message
 }
 
@@ -22,9 +23,17 @@ type message struct {
 
 func newSession(id string) *session { return &session{id: id} }
 
-func (s *session) ID() string         { return s.id }
-func (s *session) Close()             {}
-func (s *session) Identity() Identity { return newMemIdentity(s.id) }
+func (s *session) ID() string          { return s.id }
+func (s *session) Close()              {}
+func (s *session) SetName(name string) { s.name = name }
+
+func (s *session) Identity() Identity {
+	id := newMemIdentity(s.id)
+	if s.name != "" {
+		id.name = s.name
+	}
+	return id
+}
 
 func (s *session) Send(ctx context.Context, cmdType PacketType, payload interface{}) error {
 	s.Lock()

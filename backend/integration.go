@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gorilla/websocket"
 
@@ -66,7 +67,11 @@ func shouldReceive(actual interface{}, expected ...interface{}) string {
 	}
 	expectedPayload := expected[1]
 
+	fmt.Printf("%s should receive %v, %#v\n", conn.RemoteAddr(), expectedType, expectedPayload)
+
 	packetType, payload := readPacket(conn)
+	fmt.Printf("%s received %v, %#v\n", conn.RemoteAddr(), packetType, payload)
+
 	if packetType != expectedType {
 		return fmt.Sprintf("Expected: %s -> %#v\nActual:   %s -> %#v\n",
 			expectedType, expectedPayload, packetType, payload)
@@ -111,9 +116,13 @@ func testLurker(t testing.TB, s *serverUnderTest) {
 
 func testBroadcast(t testing.TB, s *serverUnderTest) {
 	Convey("Broadcast", t, func() {
-		saveClock := clock
-		clock = func() int64 { return 0 }
-		defer func() { clock = saveClock }()
+		saveClock := Clock
+		timer := int64(0)
+		Clock = func() time.Time {
+			defer func() { timer++ }()
+			return time.Unix(timer, 0)
+		}
+		defer func() { Clock = saveClock }()
 
 		conns := make([]*websocket.Conn, 3)
 
@@ -161,16 +170,16 @@ func testBroadcast(t testing.TB, s *serverUnderTest) {
 		So(err, ShouldBeNil)
 
 		So(conns[0], shouldReceive, SendEventType,
-			&SendEvent{UnixTime: 0, Sender: &ids[2], Content: "bye"})
+			&SendEvent{UnixTime: 1, Sender: &ids[2], Content: "bye"})
 
 		So(conns[1], shouldReceive, SendReplyType,
 			&SendReply{UnixTime: 0, Sender: &ids[1], Content: "hi"})
 		So(conns[1], shouldReceive, SendEventType,
-			&SendEvent{UnixTime: 0, Sender: &ids[2], Content: "bye"})
+			&SendEvent{UnixTime: 1, Sender: &ids[2], Content: "bye"})
 
 		So(conns[2], shouldReceive, SendEventType,
 			&SendEvent{UnixTime: 0, Sender: &ids[1], Content: "hi"})
 		So(conns[2], shouldReceive, SendReplyType,
-			&SendReply{UnixTime: 0, Sender: &ids[2], Content: "bye"})
+			&SendReply{UnixTime: 1, Sender: &ids[2], Content: "bye"})
 	})
 }

@@ -12,6 +12,7 @@ import (
 type Session interface {
 	ID() string
 	Identity() Identity
+	SetName(name string)
 	Send(context.Context, PacketType, interface{}) error
 	Close()
 }
@@ -45,9 +46,10 @@ func newMemSession(ctx context.Context, conn *websocket.Conn, room Room) *memSes
 	return session
 }
 
-func (s *memSession) ID() string         { return s.conn.RemoteAddr().String() }
-func (s *memSession) Close()             { s.cancel() }
-func (s *memSession) Identity() Identity { return s.identity }
+func (s *memSession) ID() string          { return s.conn.RemoteAddr().String() }
+func (s *memSession) Close()              { s.cancel() }
+func (s *memSession) Identity() Identity  { return s.identity }
+func (s *memSession) SetName(name string) { s.identity.name = name }
 
 func (s *memSession) Send(ctx context.Context, cmdType PacketType, payload interface{}) error {
 	encoded, err := json.Marshal(payload)

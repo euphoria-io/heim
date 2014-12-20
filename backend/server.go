@@ -53,9 +53,13 @@ func (s *Server) handleStatic(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
+	ctx := context.Background()
+	logger := Logger(ctx)
+
 	roomName := mux.Vars(r)["room"]
 	room, err := s.b.GetRoom(roomName)
 	if err != nil {
+		logger.Printf("get room %s: %s", roomName, err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -67,7 +71,6 @@ func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
 	}
 	defer conn.Close()
 
-	ctx := context.Background()
 	session := newMemSession(ctx, conn, room)
 	err = room.Join(ctx, session)
 	if err != nil {
