@@ -7,6 +7,8 @@ var uglify = require('gulp-uglify')
 var source = require('vinyl-source-stream')
 var watchify = require('watchify')
 var browserify = require('browserify')
+var react = require('gulp-react')
+var jshint = require('gulp-jshint')
 
 
 var dest = './build'
@@ -38,6 +40,14 @@ gulp.task('html', function() {
     .pipe(gulp.dest(dest))
 })
 
+gulp.task('lint', function() {
+  return gulp.src(['./lib/**/*.js', './lib/**/.jsx'])
+    .pipe(react())
+    .pipe(jshint())
+    .pipe(jshint.reporter('default'))
+    .pipe(jshint.reporter('fail'))
+})
+
 gulp.task('watchify', function() {
   // via https://github.com/gulpjs/gulp/blob/master/docs/recipes/fast-browserify-builds-with-watchify.md
   bundler = watchify(bundler(watchify.args))
@@ -61,5 +71,6 @@ gulp.task('watch', function () {
   gulp.watch('./lib/**/*.html', ['html'])
 })
 
+gulp.task('test', ['lint'])
 gulp.task('build', ['js', 'less', 'html'])
 gulp.task('default', ['less', 'html', 'watch', 'watchify'])
