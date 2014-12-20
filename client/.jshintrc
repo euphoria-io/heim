@@ -1,4 +1,16 @@
 {
   "asi": true,
-  "unused": true
+  "unused": true,
+  "curly": true,
+  "camelcase": true,
+  "forin": true,
+  "indent": 4,
+  "browser": true,
+  "node": true,
+  "undef": true,
+  "globals": {
+    "ReactPerf": true,
+    "Notification": false,
+    "Heim": true
+  }
 }
