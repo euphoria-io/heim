@@ -52,7 +52,7 @@ module.exports = React.createClass({
             <span className="nick">{this.state.nickText || this.props.nick}</span>
           </div>
         </div>
-        <input key="msg" ref="input" type="text" autoFocus disabled={this.state.connected === false} onKeyDown={this.send} onFocus={this.props.onFormFocus} />
+        <input key="msg" ref="input" type="text" autoFocus disabled={this.props.disabled} onKeyDown={this.send} onFocus={this.props.onFormFocus} />
       </form>
     )
   },

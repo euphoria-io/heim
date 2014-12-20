@@ -29,12 +29,13 @@ module.exports = React.createClass({
 
   render: function() {
     var now = moment()
+    var disconnected = this.state.connected === false
 
     var entry
     if (this.state.nick) {
-      entry = <ChatEntry ref="entry" nick={this.state.nick} onFormFocus={this.props.onFormFocus} />
+      entry = <ChatEntry ref="entry" nick={this.state.nick} onFormFocus={this.props.onFormFocus} disabled={disconnected} />
     } else {
-      entry = <NickEntry ref="entry" onFormFocus={this.props.onFormFocus} />
+      entry = <NickEntry ref="entry" onFormFocus={this.props.onFormFocus} disabled={this.disconnected} />
     }
 
     return (
@@ -43,7 +44,7 @@ module.exports = React.createClass({
           return <Message key={idx} message={message} />
         }, this).toArray()}
         {entry}
-        {this.state.connected === false ?
+        {disconnected ?
           <div key="status" className="line status disconnected">
             <time dateTime={now.toISOString()} title={now.format('MMMM Do YYYY, h:mm:ss a')}>
               {now.format('h:mma')}
