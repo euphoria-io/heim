@@ -1,4 +1,3 @@
-var _ = require('lodash')
 var gulp = require('gulp')
 var gutil = require('gulp-util')
 var streamify = require('gulp-streamify')
@@ -41,7 +40,7 @@ gulp.task('html', function() {
 })
 
 gulp.task('lint', function() {
-  return gulp.src('./lib/**/*.js')
+  return gulp.src(['./lib/**/*.js', './gulpfile.js'])
     .pipe(react())
     .pipe(jshint())
     .pipe(jshint.reporter('default'))
