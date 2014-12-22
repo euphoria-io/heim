@@ -40,7 +40,7 @@ gulp.task('html', function() {
 })
 
 gulp.task('lint', function() {
-  return gulp.src(['./lib/**/*.js', './gulpfile.js'])
+  return gulp.src(['./lib/**/*.js', './test/**/*.js', './gulpfile.js'])
     .pipe(react())
     .pipe(jshint())
     .pipe(jshint.reporter('default'))
@@ -70,6 +70,5 @@ gulp.task('watch', function () {
   gulp.watch('./lib/**/*.html', ['html'])
 })
 
-gulp.task('test', ['lint'])
 gulp.task('build', ['js', 'less', 'html'])
 gulp.task('default', ['less', 'html', 'watch', 'watchify'])
