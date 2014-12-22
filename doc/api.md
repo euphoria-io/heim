@@ -14,7 +14,7 @@ Every packet shares a common top-level structure. Here is an example packet sent
   id: "1",
   type: "send",
   data: {
-    content: "hello world!"
+    content: "hello ezzie!"
   }
 }
 ```
@@ -78,7 +78,7 @@ Response:
 
 Use the send command to send a message to the room's chat.
 
-Request: `{id: "1", type: "send", data: {content: "hello world"}}`
+Request: `{id: "1", type: "send", data: {content: "hello ezzie"}}`
 
 Response:
 ```
@@ -88,7 +88,7 @@ Response:
   data: {
     time: 1418585715,
     sender: {id: "logan", name: "Logan"},
-    content: "hello world"
+    content: "hello ezzie"
   }
 }
 ```
@@ -102,7 +102,7 @@ Broadcast:
   data: {
     time: 1418585715,
     sender: {id: "logan", name: "Logan"},
-    content: "hello world"
+    content: "hello ezzie"
   }
 }
 ```
