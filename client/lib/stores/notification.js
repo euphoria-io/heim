@@ -63,7 +63,7 @@ module.exports.store = Reflux.createStore({
   },
 
   onPermission: function(permission) {
-    if (permission === "granted") {
+    if (permission == "granted") {
       this.state.permission = true
       storage.set('notify', true)
     }
