@@ -27,7 +27,6 @@ module.exports.store = Reflux.createStore({
 
     this.focus = true
     this.notification = null
-    this.notificationTimeout = null
 
     if (this.state.supported) {
       this.state.permission = Notification.permission == 'granted'
@@ -93,10 +92,6 @@ module.exports.store = Reflux.createStore({
   notify: function(message, options) {
     if (this.focus || !this.state.enabled || this.notification) {
       return
-    }
-
-    if (this.notificationTimeout) {
-      clearTimeout(this.notificationTimeout)
     }
 
     this.notification = new Notification(message, options)
