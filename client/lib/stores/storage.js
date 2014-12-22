@@ -11,7 +11,7 @@ module.exports.store = Reflux.createStore({
   listenables: actions,
 
   init: function() {
-    this.state = JSON.parse(localStorage.data || '{}')
+    this.state = JSON.parse(localStorage.getItem('data') || '{}')
   },
 
   getInitialState: function() {
@@ -25,6 +25,6 @@ module.exports.store = Reflux.createStore({
   },
 
   _save: _.debounce(function() {
-    localStorage.data = JSON.stringify(this.state)
+    localStorage.setItem('data', JSON.stringify(this.state))
   }, 1000),
 })
