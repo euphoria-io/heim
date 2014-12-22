@@ -27,6 +27,7 @@ module.exports.store = Reflux.createStore({
 
     this.focus = true
     this.notification = null
+    this._lastMsg = null
 
     if (this.state.supported) {
       this.state.permission = Notification.permission == 'granted'
@@ -62,10 +63,11 @@ module.exports.store = Reflux.createStore({
   },
 
   onPermission: function(permission) {
-    if (permission == "granted") {
-      this.state.permission = true
+    this.state.permission = permission == 'granted'
+    if (this.state.permission) {
       storage.set('notify', true)
     }
+    this.trigger(this.state)
   },
 
   storageChange: function(data) {
@@ -75,7 +77,7 @@ module.exports.store = Reflux.createStore({
 
   chatUpdate: function(state) {
     var lastMsg = state.messages.last()
-    if (lastMsg == this._lastMsg) {
+    if (!lastMsg || lastMsg == this._lastMsg) {
       return
     }
     this._lastMsg = lastMsg
