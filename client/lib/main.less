@@ -25,6 +25,7 @@ html, body, #container, .chat {
 
 .chat {
   @time-margin: 70px;
+  @messages-padding: 10px;
   display: flex;
   flex-direction: column;
   background: gray;
@@ -55,9 +56,10 @@ html, body, #container, .chat {
     }
 
     .messages {
-      padding: 10px;
+      padding: @messages-padding;
 
       .line {
+        position: relative;
         display: flex;
         align-items: flex-start;
         margin: 2px 0;
@@ -86,13 +88,13 @@ html, body, #container, .chat {
 
       time {
         position: absolute;
-        left: 0;
+        left: -@time-margin - @messages-padding;
+        top: -1px;
+        bottom: -1px;
         color: #aaa;
         width: @time-margin;
         padding-right: 10px;
         padding-top: 3px;
-        padding-bottom: 3px;
-        margin-top: -3px;
         box-sizing: border-box;
         text-align: right;
       }
