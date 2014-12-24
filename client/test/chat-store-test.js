@@ -323,7 +323,7 @@ describe('chat store', function() {
       })
     })
 
-    it('should re-sort the list', function(done) {
+    it('should keep the list sorted', function(done) {
       handleSocket({status: 'receive', body: whoReply}, function() {
         handleSocket({status: 'receive', body: nickReply}, function(state) {
           checkWhoSorted(state.who)
