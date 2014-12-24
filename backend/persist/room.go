@@ -29,8 +29,10 @@ type RoomBinding struct {
 	*Room
 }
 
-func (rb *RoomBinding) Latest(ctx context.Context, n int) ([]backend.Message, error) {
-	return rb.Backend.latest(ctx, rb.Room, n)
+func (rb *RoomBinding) Latest(ctx context.Context, n int, before backend.Snowflake) (
+	[]backend.Message, error) {
+
+	return rb.Backend.latest(ctx, rb.Room, n, before)
 }
 
 func (rb *RoomBinding) Join(ctx context.Context, session backend.Session) error {

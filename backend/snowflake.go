@@ -98,3 +98,6 @@ func (s Snowflake) Time() time.Time {
 	timestampMillis := uint64(s) >> (gosnow.WorkerIdBits + gosnow.SequenceBits)
 	return Epoch.Add(time.Duration(timestampMillis) * time.Millisecond)
 }
+
+func (s Snowflake) IsZero() bool                    { return s == 0 }
+func (s Snowflake) Before(reference Snowflake) bool { return s < reference }

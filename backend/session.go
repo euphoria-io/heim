@@ -162,7 +162,7 @@ func (s *memSession) handleCommand(cmd *Packet) (interface{}, error) {
 		}
 		return SendReply(sent), nil
 	case *LogCommand:
-		msgs, err := s.room.Latest(s.ctx, msg.N)
+		msgs, err := s.room.Latest(s.ctx, msg.N, msg.Before)
 		if err != nil {
 			return nil, err
 		}

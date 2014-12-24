@@ -308,7 +308,9 @@ func (b *Backend) listing(ctx context.Context, room *Room) (backend.Listing, err
 	return result, nil
 }
 
-func (b *Backend) latest(ctx context.Context, room *Room, n int) ([]backend.Message, error) {
+func (b *Backend) latest(ctx context.Context, room *Room, n int, before backend.Snowflake) (
+	[]backend.Message, error) {
+
 	if n <= 0 {
 		return nil, nil
 	}
@@ -317,9 +319,16 @@ func (b *Backend) latest(ctx context.Context, room *Room, n int) ([]backend.Mess
 		n = 1000
 	}
 
-	msgs, err := b.DbMap.Select(
-		Message{}, "SELECT * FROM message WHERE room = $1 ORDER BY posted DESC LIMIT $2",
-		room.Name, n)
+	var query string
+	args := []interface{}{room.Name, n}
+	if before.IsZero() {
+		query = "SELECT * FROM message WHERE room = $1 ORDER BY id DESC LIMIT $2"
+	} else {
+		query = "SELECT * FROM message WHERE room = $1 AND id < $2 ORDER BY id DESC LIMIT $3"
+		args = append(args, before.String())
+	}
+
+	msgs, err := b.DbMap.Select(Message{}, query, args...)
 	if err != nil {
 		return nil, err
 	}

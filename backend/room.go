@@ -39,8 +39,8 @@ func newMemRoom(name string) *memRoom {
 	}
 }
 
-func (r *memRoom) Latest(ctx context.Context, n int) ([]Message, error) {
-	return r.log.Latest(ctx, n)
+func (r *memRoom) Latest(ctx context.Context, n int, before Snowflake) ([]Message, error) {
+	return r.log.Latest(ctx, n, before)
 }
 
 func (r *memRoom) Join(ctx context.Context, session Session) error {

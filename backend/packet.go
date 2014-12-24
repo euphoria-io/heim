@@ -45,7 +45,8 @@ type SendReply SendEvent
 type PresenceEvent IdentityView
 
 type LogCommand struct {
-	N int `json:"n"`
+	N      int       `json:"n"`
+	Before Snowflake `json:"before"`
 }
 
 type LogReply struct {
