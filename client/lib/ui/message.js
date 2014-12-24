@@ -18,7 +18,7 @@ module.exports = React.createClass({
     var bgLightness = (hour > 12 ? 24 - hour : hour) / 12
     var timeStyle = {
       background: 'hsla(0, 0%, ' + (100 * bgLightness).toFixed(2) + '%, .175)',
-      color: 'hsla(0, 0%, 100%, ' + (.3 + .2 * bgLightness).toFixed(2) + ')',
+      color: 'hsla(0, 0%, 100%, ' + (0.3 + 0.2 * bgLightness).toFixed(2) + ')',
     }
 
     return (
