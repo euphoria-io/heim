@@ -57,6 +57,13 @@ module.exports.store = Reflux.createStore({
             hue: this._getNickHue(ev.body.data.to),
           })
           .sortBy(function(user) { return user.get('name') })
+      } else if (ev.body.type == 'join-event') {
+        ev.body.data.hue = this._getNickHue(ev.body.data.name)
+        this.state.who = this.state.who
+          .set(ev.body.data.id, Immutable.fromJS(ev.body.data))
+          .sortBy(function(user) { return user.get('name') })
+      } else if (ev.body.type == 'part-event') {
+        this.state.who = this.state.who.delete(ev.body.data.id)
       }
     } else if (ev.status == 'open') {
       this.state.connected = true

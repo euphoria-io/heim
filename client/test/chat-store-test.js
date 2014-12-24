@@ -267,24 +267,28 @@ describe('chat store', function() {
     })
   })
 
-  describe('received nick changes', function() {
-    var whoReply = {
-      'id': '0',
-      'type': 'who-reply',
-      'data': {
-        'listing': [
-          {
-            'id': '32.64.96.128:12345',
-            'name': 'tester',
-          },
-          {
-            'id': '32.64.96.128:12346',
-            'name': 'tester2',
-          },
-        ]
-      }
+  var whoReply = {
+    'id': '0',
+    'type': 'who-reply',
+    'data': {
+      'listing': [
+        {
+          'id': '32.64.96.128:12344',
+          'name': '000tester',
+        },
+        {
+          'id': '32.64.96.128:12345',
+          'name': 'tester',
+        },
+        {
+          'id': '32.64.96.128:12346',
+          'name': 'tester2',
+        },
+      ]
     }
+  }
 
+  describe('received nick changes', function() {
     var nickReply = {
       'id': '1',
       'type': 'nick-reply',
@@ -336,6 +340,60 @@ describe('chat store', function() {
       handleSocket({status: 'receive', body: whoReply}, function() {
         handleSocket({status: 'receive', body: nonexistentNickEvent}, function(state) {
           assert(state.who.has(nonexistentNickEvent.data.id))
+          done()
+        })
+      })
+    })
+  })
+
+  describe('received join events', function() {
+    var joinEvent = {
+      'id': '1',
+      'type': 'join-event',
+      'data': {
+        'id': '32.64.96.128:12347',
+        'name': '32.64.96.128:12347',
+      }
+    }
+
+    it('should add to user list', function(done) {
+      handleSocket({status: 'receive', body: joinEvent}, function(state) {
+        assert(state.who.get(joinEvent.data.id).isSuperset(Immutable.fromJS(joinEvent.data)))
+        done()
+      })
+    })
+
+    it('should assign a hue', function(done) {
+      handleSocket({status: 'receive', body: joinEvent}, function(state) {
+        assert.equal(state.who.getIn([joinEvent.data.id, 'hue']), 161)
+        done()
+      })
+    })
+
+    it('should keep the list sorted', function(done) {
+      handleSocket({status: 'receive', body: whoReply}, function() {
+        handleSocket({status: 'receive', body: joinEvent}, function(state) {
+          checkWhoSorted(state.who)
+          done()
+        })
+      })
+    })
+  })
+
+  describe('received part events', function() {
+    var partEvent = {
+      'id': '1',
+      'type': 'part-event',
+      'data': {
+        'id': '32.64.96.128:12345',
+        'name': 'tester',
+      },
+    }
+
+    it('should remove from user list', function(done) {
+      handleSocket({status: 'receive', body: whoReply}, function() {
+        handleSocket({status: 'receive', body: partEvent}, function(state) {
+          assert(!state.who.has(partEvent.data.id))
           done()
         })
       })
