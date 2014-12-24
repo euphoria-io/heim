@@ -6,3 +6,7 @@ script:
   - go test -v
 services:
   - postgres
+notify:
+  email:
+    recipients:
+      - logan.hanks@gmail.com
