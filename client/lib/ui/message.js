@@ -14,7 +14,7 @@ module.exports = React.createClass({
   render: function() {
     var message = this.props.message
     var time = moment.unix(message.get('time'))
-    var hour = time.hour()
+    var hour = time.hour() + time.minute() / 60
     var bgLightness = (hour > 12 ? 24 - hour : hour) / 12
     var timeStyle = {
       background: 'hsla(0, 0%, ' + (100 * bgLightness).toFixed(2) + '%, .175)',
