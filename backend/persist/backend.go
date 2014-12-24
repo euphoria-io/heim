@@ -327,14 +327,7 @@ func (b *Backend) latest(ctx context.Context, room *Room, n int) ([]backend.Mess
 	results := make([]backend.Message, len(msgs))
 	for i, row := range msgs {
 		msg := row.(*Message)
-		results[len(msgs)-i-1] = backend.Message{
-			UnixTime: msg.Posted.Unix(),
-			Sender: &backend.IdentityView{
-				ID:   msg.SenderID,
-				Name: msg.SenderName,
-			},
-			Content: msg.Content,
-		}
+		results[len(msgs)-i-1] = msg.ToBackend()
 	}
 
 	return results, nil
