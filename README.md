@@ -16,7 +16,7 @@ Initialize Database
 fig run psqldata
 
 # Create tables.
-fig run upgradedb
+fig run --rm upgradedb
 ```
 
 
@@ -24,13 +24,13 @@ Compile Frontend
 ================
 
 ```
-fig run frontend
+fig run --rm frontend
 ```
 
 You can also get live recompiling by keeping this running in the background:
 
 ```
-fig run frontend gulp
+fig run --rm frontend gulp
 ```
 
 
