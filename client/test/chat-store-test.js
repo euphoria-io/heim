@@ -23,6 +23,11 @@ describe('chat store', function() {
     chat.store.socketEvent(ev)
   }
 
+  function checkWhoSorted(who) {
+    var sorted = who.sortBy(function(user) { return user.get('name') })
+    assert(who.equals(sorted))
+  }
+
   it('should initialize with null connected state', function() {
     assert.equal(chat.store.getInitialState().connected, null)
   })
@@ -256,8 +261,7 @@ describe('chat store', function() {
 
     it('should be sorted by name', function(done) {
       handleSocket({status: 'receive', body: whoReply}, function(state) {
-        var sorted = state.who.sortBy(function(user) { return user.get('name') })
-        assert(state.who.equals(sorted))
+        checkWhoSorted(state.who)
         done()
       })
     })
@@ -322,8 +326,7 @@ describe('chat store', function() {
     it('should re-sort the list', function(done) {
       handleSocket({status: 'receive', body: whoReply}, function() {
         handleSocket({status: 'receive', body: nickReply}, function(state) {
-          var sorted = state.who.sortBy(function(user) { return user.get('name') })
-          assert(state.who.equals(sorted))
+          checkWhoSorted(state.who)
           done()
         })
       })
