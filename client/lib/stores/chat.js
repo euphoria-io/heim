@@ -18,7 +18,7 @@ module.exports.store = Reflux.createStore({
       connected: null,
       messages: Immutable.List(),
       nickHues: {},
-      who: Immutable.List(),
+      who: Immutable.OrderedMap(),
     }
   },
 
