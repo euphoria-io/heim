@@ -107,8 +107,13 @@ func TestRoomBroadcast(t *testing.T) {
 
 	Convey("Multiple exclude", t, func() {
 		So(room.broadcast(ctx, SendType, Message{Content: "1"}, userA, userB), ShouldBeNil)
-		So(userA.history, ShouldBeNil)
-		So(userB.history, ShouldBeNil)
+		So(userA.history, ShouldResemble,
+			[]message{
+				{cmdType: JoinEventType, payload: PresenceEvent{ID: "B", Name: "B"}},
+				{cmdType: JoinEventType, payload: PresenceEvent{ID: "C", Name: "C"}},
+			})
+		So(userB.history, ShouldResemble,
+			[]message{{cmdType: JoinEventType, payload: PresenceEvent{ID: "C", Name: "C"}}})
 		So(userC.history, ShouldResemble,
 			[]message{{cmdType: SendEventType, payload: Message{Content: "1"}}})
 	})
@@ -116,9 +121,16 @@ func TestRoomBroadcast(t *testing.T) {
 	Convey("No exclude", t, func() {
 		So(room.broadcast(ctx, SendType, Message{Content: "2"}), ShouldBeNil)
 		So(userA.history, ShouldResemble,
-			[]message{{cmdType: SendEventType, payload: Message{Content: "2"}}})
+			[]message{
+				{cmdType: JoinEventType, payload: PresenceEvent{ID: "B", Name: "B"}},
+				{cmdType: JoinEventType, payload: PresenceEvent{ID: "C", Name: "C"}},
+				{cmdType: SendEventType, payload: Message{Content: "2"}},
+			})
 		So(userB.history, ShouldResemble,
-			[]message{{cmdType: SendEventType, payload: Message{Content: "2"}}})
+			[]message{
+				{cmdType: JoinEventType, payload: PresenceEvent{ID: "C", Name: "C"}},
+				{cmdType: SendEventType, payload: Message{Content: "2"}},
+			})
 		So(userC.history, ShouldResemble,
 			[]message{
 				{cmdType: SendEventType, payload: Message{Content: "1"}},

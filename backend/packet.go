@@ -15,6 +15,11 @@ var (
 	SendEventType = SendType.Event()
 	SendReplyType = SendType.Reply()
 
+	JoinType      = PacketType("join")
+	JoinEventType = JoinType.Event()
+	PartType      = PacketType("part")
+	PartEventType = PartType.Event()
+
 	LogType      = PacketType("log")
 	LogReplyType = LogType.Reply()
 
@@ -36,6 +41,8 @@ type SendCommand struct {
 
 type SendEvent Message
 type SendReply SendEvent
+
+type PresenceEvent IdentityView
 
 type LogCommand struct {
 	N int `json:"n"`
@@ -84,6 +91,8 @@ func (cmd *Packet) Payload() (interface{}, error) {
 		payload = &LogCommand{}
 	case LogReplyType:
 		payload = &LogReply{}
+	case JoinEventType, PartEventType:
+		payload = &PresenceEvent{}
 	case NickType:
 		payload = &NickCommand{}
 	case NickReplyType:

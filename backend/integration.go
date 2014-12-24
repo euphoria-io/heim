@@ -107,10 +107,9 @@ func testLurker(t testing.TB, s *serverUnderTest) {
 		So(err, ShouldBeNil)
 
 		id := conn2.LocalAddr().String()
-		So(conn2, shouldReceive,
-			NickReplyType, &NickReply{ID: id, From: id, To: "speaker"})
-		So(conn1, shouldReceive,
-			NickEventType, &NickEvent{ID: id, From: id, To: "speaker"})
+		So(conn2, shouldReceive, NickReplyType, &NickReply{ID: id, From: id, To: "speaker"})
+		So(conn1, shouldReceive, JoinEventType, &PresenceEvent{ID: id, Name: id})
+		So(conn1, shouldReceive, NickEventType, &NickEvent{ID: id, From: id, To: "speaker"})
 	})
 }
 
@@ -145,6 +144,7 @@ func testBroadcast(t testing.TB, s *serverUnderTest) {
 			So(conn, shouldReceive, WhoReplyType, &WhoReply{Listing: ids[:(i + 1)]})
 
 			for _, c := range conns[:i] {
+				So(c, shouldReceive, JoinEventType, &PresenceEvent{ID: ids[i].ID, Name: ids[i].ID})
 				So(c, shouldReceive, NickEventType,
 					&NickEvent{ID: ids[i].ID, From: ids[i].ID, To: fmt.Sprintf("user%d", i)})
 			}

@@ -65,7 +65,7 @@ func (r *memRoom) Join(ctx context.Context, session Session) error {
 	}
 
 	r.live[id] = append(r.live[id], session)
-	return nil
+	return r.broadcast(ctx, JoinType, PresenceEvent(*session.Identity().View()), session)
 }
 
 func (r *memRoom) Part(ctx context.Context, session Session) error {
@@ -85,7 +85,7 @@ func (r *memRoom) Part(ctx context.Context, session Session) error {
 		delete(r.live, id)
 		delete(r.identities, id)
 	}
-	return nil
+	return r.broadcast(ctx, PartType, PresenceEvent(*session.Identity().View()), session)
 }
 
 func (r *memRoom) Send(ctx context.Context, session Session, message Message) (Message, error) {

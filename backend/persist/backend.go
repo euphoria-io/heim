@@ -237,7 +237,8 @@ func (b *Backend) join(ctx context.Context, room *Room, session backend.Session)
 	}
 
 	rp.join(session)
-	return nil
+	return b.broadcast(ctx, room, session,
+		backend.JoinEventType, backend.PresenceEvent(*session.Identity().View()), session)
 }
 
 func (b *Backend) part(ctx context.Context, room *Room, session backend.Session) error {
@@ -247,8 +248,8 @@ func (b *Backend) part(ctx context.Context, room *Room, session backend.Session)
 	if rp, ok := b.presence[room.Name]; ok {
 		rp.part(session)
 	}
-	// TODO: broadcast part event
-	return nil
+	return b.broadcast(ctx, room, session,
+		backend.PartEventType, backend.PresenceEvent(*session.Identity().View()), session)
 }
 
 func (b *Backend) listing(ctx context.Context, room *Room) (backend.Listing, error) {
