@@ -20,7 +20,7 @@ func main() {
 	}
 
 	if err := b.UpgradeDB(); err != nil {
-		fmt.Print("error: %s\n", err)
+		fmt.Printf("error: %s\n", err)
 		os.Exit(1)
 	}
 }

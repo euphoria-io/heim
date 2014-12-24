@@ -66,7 +66,48 @@ func (b *Backend) start() {
 
 func (b *Backend) UpgradeDB() error {
 	// TODO: inspect existing schema and adapt; for now, assume empty DB
-	return b.createSchema()
+	//return b.createSchema()
+
+	// TEMPORARY HACK: upgrade older messages table
+	_, err := b.DbMap.Exec("ALTER TABLE message RENAME TO messagearchive")
+	if err != nil {
+		return err
+	}
+
+	_, err = b.DbMap.Exec("CREATE TABLE message (room text not null, id text not null, parent text, posted timestamp with time zone, sender_id text, sender_name text, content text, primary key (room, id))")
+	if err != nil {
+		return err
+	}
+
+	type oldmsg struct {
+		Room       string
+		Posted     time.Time
+		SenderID   string `db:"sender_id"`
+		SenderName string `db:"sender_name"`
+		Content    string
+	}
+
+	rows, err := b.DbMap.Select(oldmsg{}, "select * from messagearchive")
+	if err != nil {
+		return err
+	}
+
+	for _, row := range rows {
+		omsg := row.(*oldmsg)
+		msg := &Message{
+			ID:         backend.NewSnowflakeFromTime(omsg.Posted).String(),
+			Room:       omsg.Room,
+			Posted:     omsg.Posted,
+			SenderID:   omsg.SenderID,
+			SenderName: omsg.SenderName,
+			Content:    omsg.Content,
+		}
+		if err := b.DbMap.Insert(msg); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (b *Backend) createSchema() error {
