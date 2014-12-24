@@ -3,8 +3,10 @@ package backend
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -12,6 +14,46 @@ import (
 
 	. "github.com/smartystreets/goconvey/convey"
 )
+
+// TODO: move time mocking to snowflake_test?
+type testClock struct {
+	secs                  int64
+	savedClock            func() time.Time
+	savedSnowflaker       Snowflaker
+	savedEpoch            time.Time
+	savedFromTimeSequence uint64
+}
+
+func NewTestClock() io.Closer {
+	tc := &testClock{
+		savedClock:            Clock,
+		savedSnowflaker:       DefaultSnowflaker,
+		savedEpoch:            Epoch,
+		savedFromTimeSequence: fromTimeSequence,
+	}
+	Clock = tc.clock
+	DefaultSnowflaker = tc
+	Epoch = time.Unix(0, 0)
+	return tc
+}
+
+func (tc *testClock) Close() error {
+	Clock = tc.savedClock
+	DefaultSnowflaker = tc.savedSnowflaker
+	Epoch = tc.savedEpoch
+	fromTimeSequence = tc.savedFromTimeSequence
+	return nil
+}
+
+func (tc *testClock) Next() (uint64, error) {
+	sf := NewSnowflakeFromTime(tc.clock())
+	return uint64(sf), nil
+}
+
+func (tc *testClock) clock() time.Time {
+	secs := atomic.AddInt64(&tc.secs, 1)
+	return time.Unix(secs, 0)
+}
 
 type testSuite func(testing.TB, *serverUnderTest)
 
@@ -115,13 +157,8 @@ func testLurker(t testing.TB, s *serverUnderTest) {
 
 func testBroadcast(t testing.TB, s *serverUnderTest) {
 	Convey("Broadcast", t, func() {
-		saveClock := Clock
-		timer := int64(0)
-		Clock = func() time.Time {
-			defer func() { timer++ }()
-			return time.Unix(timer, 0)
-		}
-		defer func() { Clock = saveClock }()
+		tc := NewTestClock()
+		defer tc.Close()
 
 		conns := make([]*websocket.Conn, 3)
 
@@ -156,13 +193,20 @@ func testBroadcast(t testing.TB, s *serverUnderTest) {
 			}
 		}()
 
-		err := conns[1].WriteMessage(
+		fc := NewTestClock()
+		sf1, err := NewSnowflake()
+		So(err, ShouldBeNil)
+		sf2, err := NewSnowflake()
+		So(err, ShouldBeNil)
+		fc.Close()
+
+		err = conns[1].WriteMessage(
 			websocket.TextMessage,
 			[]byte(`{"id":"2","type":"send","data":{"content":"hi"}}`))
 		So(err, ShouldBeNil)
 
 		So(conns[0], shouldReceive, SendEventType,
-			&SendEvent{UnixTime: 0, Sender: &ids[1], Content: "hi"})
+			&SendEvent{ID: sf1, UnixTime: 1, Sender: &ids[1], Content: "hi"})
 
 		err = conns[2].WriteMessage(
 			websocket.TextMessage,
@@ -170,16 +214,16 @@ func testBroadcast(t testing.TB, s *serverUnderTest) {
 		So(err, ShouldBeNil)
 
 		So(conns[0], shouldReceive, SendEventType,
-			&SendEvent{UnixTime: 1, Sender: &ids[2], Content: "bye"})
+			&SendEvent{ID: sf2, UnixTime: 2, Sender: &ids[2], Content: "bye"})
 
 		So(conns[1], shouldReceive, SendReplyType,
-			&SendReply{UnixTime: 0, Sender: &ids[1], Content: "hi"})
+			&SendReply{ID: sf1, UnixTime: 1, Sender: &ids[1], Content: "hi"})
 		So(conns[1], shouldReceive, SendEventType,
-			&SendEvent{UnixTime: 1, Sender: &ids[2], Content: "bye"})
+			&SendEvent{ID: sf2, UnixTime: 2, Sender: &ids[2], Content: "bye"})
 
 		So(conns[2], shouldReceive, SendEventType,
-			&SendEvent{UnixTime: 0, Sender: &ids[1], Content: "hi"})
+			&SendEvent{ID: sf1, UnixTime: 1, Sender: &ids[1], Content: "hi"})
 		So(conns[2], shouldReceive, SendReplyType,
-			&SendReply{UnixTime: 1, Sender: &ids[2], Content: "bye"})
+			&SendReply{ID: sf2, UnixTime: 2, Sender: &ids[2], Content: "bye"})
 	})
 }

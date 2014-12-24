@@ -3,12 +3,9 @@ package backend
 import (
 	"sort"
 	"sync"
-	"time"
 
 	"golang.org/x/net/context"
 )
-
-var Clock = func() time.Time { return time.Now() }
 
 type Listing []IdentityView
 
@@ -92,8 +89,16 @@ func (r *memRoom) Send(ctx context.Context, session Session, message Message) (M
 	r.Lock()
 	defer r.Unlock()
 
+	// TODO: verify parent
+	msgID, err := NewSnowflake()
+	if err != nil {
+		return Message{}, err
+	}
+
 	msg := Message{
-		UnixTime: Clock().Unix(),
+		ID:       msgID,
+		UnixTime: msgID.Time().Unix(),
+		Parent:   message.Parent,
 		Sender:   session.Identity().View(),
 		Content:  message.Content,
 	}

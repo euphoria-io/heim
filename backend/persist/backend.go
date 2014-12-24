@@ -21,7 +21,7 @@ import (
 
 var schema = map[interface{}][]string{
 	Room{}:    []string{"Name"},
-	Message{}: []string{"Room", "Posted"},
+	Message{}: []string{"Room", "ID"},
 }
 
 type AfterCreateTabler interface {
@@ -76,6 +76,7 @@ func (b *Backend) createSchema() error {
 
 	for t, _ := range schema {
 		if after, ok := t.(AfterCreateTabler); ok {
+			fmt.Printf("after create tabler on %T\n", t)
 			if err := after.AfterCreateTable(b.DB); err != nil {
 				tableName := "???"
 				if table, err := b.DbMap.TableFor(reflect.TypeOf(t), false); err == nil {
@@ -178,15 +179,18 @@ func (b *Backend) sendMessageToRoom(
 	logger := backend.Logger(ctx)
 	logger.Printf("inserting message")
 
-	stored := NewMessage(room, backend.Clock(), session.Identity().View(), msg.Content)
+	stored, err := NewMessage(room, session.Identity().View(), msg.Parent, msg.Content)
+	if err != nil {
+		return backend.Message{}, err
+	}
+
 	if err := b.DbMap.Insert(stored); err != nil {
 		return backend.Message{}, err
 	}
 
 	result := stored.ToBackend()
 	event := backend.SendEvent(result)
-	err := b.broadcast(ctx, room, session, backend.SendEventType, &event, exclude...)
-	return result, err
+	return result, b.broadcast(ctx, room, session, backend.SendEventType, &event, exclude...)
 }
 
 func (b *Backend) broadcast(

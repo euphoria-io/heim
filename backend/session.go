@@ -100,6 +100,8 @@ func (s *memSession) serve() {
 				return
 			}
 
+			logger.Printf("responding: %s", string(data))
+
 			if err := s.conn.WriteMessage(websocket.TextMessage, data); err != nil {
 				logger.Printf("error: write message: %s", err)
 				return
