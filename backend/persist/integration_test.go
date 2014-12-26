@@ -1,15 +1,16 @@
 package persist
 
 import (
+	"flag"
 	"testing"
 
 	"heim/backend"
 )
 
+var dsn = flag.String("dsn", "postgres://heimtest:heimtest@localhost/heimtest", "")
+
 func TestBackend(t *testing.T) {
-	// TODO: get from environment somehow
-	dsn := "postgres://heimtest:heimtest@localhost/heimtest"
-	b, err := NewBackend(dsn)
+	b, err := NewBackend(*dsn)
 	if err != nil {
 		t.Fatal(err)
 	}
