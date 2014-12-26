@@ -1,13 +1,8 @@
-image: loganhanks/golang
+image: loganhanks/euphoria
 env:
   - GOPATH=/var/cache/drone
 script:
-  - ln -sf /var/cache/drone/src/github.com/euphoria-io/heim /var/cache/drone/src/heim
-  - go get -t heim/backend heim/backend/persist
-  - go test -v heim/backend
-  - apt-get install -y postgresql-client-9.3
-  - psql -c 'create database heimtest;' -U postgres -h $POSTGRES_PORT_5432_TCP_ADDR
-  - go test -v heim/backend/persist --dsn "postgres://postgres@$POSTGRES_PORT_5432_TCP_ADDR/heimtest?sslmode=disable"
+  - /var/cache/drone/src/github.com/euphoria-io/heim/test.sh
 services:
   - postgres
 notify:
