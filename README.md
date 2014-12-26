@@ -1,3 +1,5 @@
+[![Build Status](http://drone.euphoria.io/api/badge/github.com/euphoria-io/heim/status.svg?branch=master)](http://drone.euphoria.io/github.com/euphoria-io/heim)
+
 Getting Started
 ===============
 
