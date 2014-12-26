@@ -34,7 +34,7 @@
     "email": "c@chromakode.com"
   },
   "scripts": {
-    "test": "gulp lint && mochify --cover"
+    "test": "gulp lint && mochify"
   },
   "browserify": {
     "transform": [
