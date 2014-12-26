@@ -2,8 +2,9 @@ image: loganhanks/golang
 env:
   - GOPATH=/var/cache/drone
 script:
-  - go build
-  - go test -v
+  - ln -sf /var/cache/drone/src/github.com/euphoria-io/heim /var/cache/drone/src
+  - go build heim/...
+  - go test -v heim/...
 services:
   - postgres
 notify:
