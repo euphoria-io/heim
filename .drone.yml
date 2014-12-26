@@ -1,4 +1,4 @@
-image: golang:1.4
+image: tutum.co/logan/golang
 env:
   - GOPATH=/var/cache/drone
 script:
