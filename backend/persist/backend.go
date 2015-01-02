@@ -65,13 +65,19 @@ func (b *Backend) start() {
 }
 
 func (b *Backend) UpgradeDB() error {
-	// TODO: inspect existing schema and adapt; for now, assume empty DB
-	//return b.createSchema()
+	// TODO: inspect existing schema and adapt
 
 	// TEMPORARY HACK: upgrade older messages table
-	_, err := b.DbMap.Exec("ALTER TABLE message RENAME TO messagearchive")
+	oldExists, err := b.DbMap.SelectInt("SELECT 1 FROM pg_class WHERE relname = 'message'")
 	if err != nil {
 		return err
+	}
+
+	if oldExists == 1 {
+		_, err := b.DbMap.Exec("ALTER TABLE message RENAME TO messagearchive")
+		if err != nil {
+			return err
+		}
 	}
 
 	_, err = b.DbMap.Exec("CREATE TABLE message (room text not null, id text not null, parent text, posted timestamp with time zone, sender_id text, sender_name text, content text, primary key (room, id))")
@@ -79,30 +85,41 @@ func (b *Backend) UpgradeDB() error {
 		return err
 	}
 
-	type oldmsg struct {
-		Room       string
-		Posted     time.Time
-		SenderID   string `db:"sender_id"`
-		SenderName string `db:"sender_name"`
-		Content    string
-	}
+	b.DbMap.CreateTablesIfNotExists()
 
-	rows, err := b.DbMap.Select(oldmsg{}, "select * from messagearchive")
-	if err != nil {
-		return err
-	}
-
-	for _, row := range rows {
-		omsg := row.(*oldmsg)
-		msg := &Message{
-			ID:         backend.NewSnowflakeFromTime(omsg.Posted).String(),
-			Room:       omsg.Room,
-			Posted:     omsg.Posted,
-			SenderID:   omsg.SenderID,
-			SenderName: omsg.SenderName,
-			Content:    omsg.Content,
+	if oldExists == 1 {
+		type oldmsg struct {
+			Room       string
+			ID         string
+			Parent     string
+			Posted     time.Time
+			SenderID   string `db:"sender_id"`
+			SenderName string `db:"sender_name"`
+			Content    string
 		}
-		if err := b.DbMap.Insert(msg); err != nil {
+
+		rows, err := b.DbMap.Select(oldmsg{}, "SELECT * FROM messagearchive")
+		if err != nil {
+			return err
+		}
+
+		for _, row := range rows {
+			omsg := row.(*oldmsg)
+			msg := &Message{
+				ID:         backend.NewSnowflakeFromTime(omsg.Posted).String(),
+				Room:       omsg.Room,
+				Posted:     omsg.Posted,
+				SenderID:   omsg.SenderID,
+				SenderName: omsg.SenderName,
+				Content:    omsg.Content,
+			}
+			if err := b.DbMap.Insert(msg); err != nil {
+				return err
+			}
+		}
+
+		_, err = b.DbMap.Exec("DROP TABLE messagearchive")
+		if err != nil {
 			return err
 		}
 	}
