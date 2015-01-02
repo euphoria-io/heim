@@ -122,6 +122,38 @@ func shouldReceive(actual interface{}, expected ...interface{}) string {
 	return ShouldResemble(payload, expectedPayload)
 }
 
+func shouldSend(actual interface{}, expected ...interface{}) string {
+	conn, ok := actual.(*websocket.Conn)
+	if !ok {
+		return fmt.Sprintf("shouldSend expects a *websocket.Conn on the left, got %T", actual)
+	}
+	if len(expected) == 0 {
+		return "shouldSend expects format string and parameters on right"
+	}
+	format, ok := expected[0].(string)
+	if !ok {
+		return fmt.Sprintf("shouldSend expects format string on right, got %T", expected)
+	}
+	msg := fmt.Sprintf(format, expected[1:]...)
+	if err := conn.WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
+		return fmt.Sprintf("send error: %s\n   message: %s", err, msg)
+	}
+	return ""
+}
+
+func snowflakes(n int) []Snowflake {
+	fc := NewTestClock()
+	defer fc.Close()
+
+	snowflakes := make([]Snowflake, n)
+	for i := range snowflakes {
+		var err error
+		snowflakes[i], err = NewSnowflake()
+		So(err, ShouldBeNil)
+	}
+	return snowflakes
+}
+
 func IntegrationTest(t testing.TB, factory func() Backend) {
 	runTest := func(test testSuite) {
 		backend := factory()
@@ -133,6 +165,7 @@ func IntegrationTest(t testing.TB, factory func() Backend) {
 
 	runTest(testLurker)
 	runTest(testBroadcast)
+	runTest(testThreading)
 }
 
 func testLurker(t testing.TB, s *serverUnderTest) {
@@ -143,10 +176,7 @@ func testLurker(t testing.TB, s *serverUnderTest) {
 		conn2 := s.Connect("test")
 		defer closeConn(conn2)
 
-		err := conn2.WriteMessage(
-			websocket.TextMessage,
-			[]byte(`{"id":"1","type":"nick","data":{"name":"speaker"}}`))
-		So(err, ShouldBeNil)
+		So(conn2, shouldSend, `{"id":"1","type":"nick","data":{"name":"speaker"}}`)
 
 		id := conn2.LocalAddr().String()
 		So(conn2, shouldReceive, NickReplyType, &NickReply{ID: id, From: id, To: "speaker"})
@@ -168,13 +198,8 @@ func testBroadcast(t testing.TB, s *serverUnderTest) {
 			conn := s.Connect("test")
 			conns[i] = conn
 			ids[i] = IdentityView{ID: conn.LocalAddr().String(), Name: fmt.Sprintf("user%d", i)}
-			msg := fmt.Sprintf(`{"id":"1","type":"nick","data":{"name":"user%d"}}`, i)
-			err := conn.WriteMessage(websocket.TextMessage, []byte(msg))
-			So(err, ShouldBeNil)
-
-			msg = fmt.Sprintf(`{"id":"2","type":"who"}`)
-			err = conn.WriteMessage(websocket.TextMessage, []byte(msg))
-			So(err, ShouldBeNil)
+			So(conn, shouldSend, `{"id":"1","type":"nick","data":{"name":"user%d"}}`, i)
+			So(conn, shouldSend, `{"id":"2","type":"who"}`)
 
 			So(conn, shouldReceive, NickReplyType,
 				&NickReply{ID: ids[i].ID, From: ids[i].ID, To: fmt.Sprintf("user%d", i)})
@@ -193,25 +218,16 @@ func testBroadcast(t testing.TB, s *serverUnderTest) {
 			}
 		}()
 
-		fc := NewTestClock()
-		sf1, err := NewSnowflake()
-		So(err, ShouldBeNil)
-		sf2, err := NewSnowflake()
-		So(err, ShouldBeNil)
-		fc.Close()
+		sfs := snowflakes(2)
+		sf1 := sfs[0]
+		sf2 := sfs[1]
 
-		err = conns[1].WriteMessage(
-			websocket.TextMessage,
-			[]byte(`{"id":"2","type":"send","data":{"content":"hi"}}`))
-		So(err, ShouldBeNil)
+		So(conns[1], shouldSend, `{"id":"2","type":"send","data":{"content":"hi"}}`)
 
 		So(conns[0], shouldReceive, SendEventType,
 			&SendEvent{ID: sf1, UnixTime: 1, Sender: &ids[1], Content: "hi"})
 
-		err = conns[2].WriteMessage(
-			websocket.TextMessage,
-			[]byte(`{"id":"2","type":"send","data":{"content":"bye"}}`))
-		So(err, ShouldBeNil)
+		So(conns[2], shouldSend, `{"id":"2","type":"send","data":{"content":"bye"}}`)
 
 		So(conns[0], shouldReceive, SendEventType,
 			&SendEvent{ID: sf2, UnixTime: 2, Sender: &ids[2], Content: "bye"})
@@ -225,5 +241,50 @@ func testBroadcast(t testing.TB, s *serverUnderTest) {
 			&SendEvent{ID: sf1, UnixTime: 1, Sender: &ids[1], Content: "hi"})
 		So(conns[2], shouldReceive, SendReplyType,
 			&SendReply{ID: sf2, UnixTime: 2, Sender: &ids[2], Content: "bye"})
+	})
+}
+
+func testThreading(t testing.TB, s *serverUnderTest) {
+	Convey("Send with parent", t, func() {
+		tc := NewTestClock()
+		defer tc.Close()
+
+		conn := s.Connect("user")
+		defer closeConn(conn)
+
+		id := &IdentityView{ID: conn.LocalAddr().String(), Name: "user"}
+		id.Name = id.ID
+		sfs := snowflakes(2)
+		sf1 := sfs[0]
+		sf2 := sfs[1]
+
+		So(conn, shouldSend, `{"id":"1","type":"send","data":{"content":"root"}}`)
+		So(conn, shouldReceive, SendReplyType,
+			&SendReply{ID: sf1, UnixTime: 1, Sender: id, Content: "root"})
+
+		So(conn, shouldSend,
+			`{"id":"2","type":"send","data":{"parent":"%s","content":"child1"}}`, sf1)
+		So(conn, shouldReceive, SendReplyType,
+			&SendReply{ID: sf2, Parent: sf1, UnixTime: 2, Sender: id, Content: "child1"})
+
+		So(conn, shouldSend, `{"id":"3","type":"log","data":{"n":10}}`)
+		So(conn, shouldReceive, LogReplyType,
+			&LogReply{
+				Log: []Message{
+					{
+						ID:       sf1,
+						UnixTime: 1,
+						Sender:   id,
+						Content:  "root",
+					},
+					{
+						ID:       sf2,
+						Parent:   sf1,
+						UnixTime: 2,
+						Sender:   id,
+						Content:  "child1",
+					},
+				},
+			})
 	})
 }
