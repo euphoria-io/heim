@@ -36,7 +36,8 @@ type ErrorReply struct {
 }
 
 type SendCommand struct {
-	Content string `json:"content"`
+	Content string    `json:"content"`
+	Parent  Snowflake `json:"parent"`
 }
 
 type SendEvent Message

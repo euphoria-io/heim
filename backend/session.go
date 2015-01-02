@@ -156,7 +156,7 @@ func (s *memSession) handleCommand(cmd *Packet) (interface{}, error) {
 
 	switch msg := payload.(type) {
 	case *SendCommand:
-		sent, err := s.room.Send(s.ctx, s, Message{Content: msg.Content})
+		sent, err := s.room.Send(s.ctx, s, Message{Content: msg.Content, Parent: msg.Parent})
 		if err != nil {
 			return nil, err
 		}
