@@ -1,4 +1,5 @@
 var React = require('react')
+var Reflux = require('reflux')
 
 var actions = require('../actions')
 
@@ -8,7 +9,7 @@ module.exports = React.createClass({
 
   mixins: [
     require('react-immutable-render-mixin'),
-    require('./entrymixin')
+    Reflux.connect(require('../stores/chat').store),
   ],
 
   setNick: function(ev) {
@@ -21,7 +22,7 @@ module.exports = React.createClass({
     return (
       <form className="entry" onSubmit={this.setNick}>
         <label>choose a nickname to start chatting:</label>
-        <input key="nick" ref="input" type="text" disabled={this.props.disabled} onFocus={this.props.onFormFocus} />
+        <input key="nick" ref="input" type="text" autoFocus disabled={this.state.connected === false} />
       </form>
     )
   },

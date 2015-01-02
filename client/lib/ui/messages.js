@@ -1,13 +1,11 @@
-var React = require('react')
+var React = require('react/addons')
 var Reflux = require('reflux')
 var moment = require('moment')
 
-var Message = require('./message')
+var MessageList = require('./messagelist')
 var ChatEntry = require('./chatentry')
 var NickEntry = require('./nickentry')
 
-
-module.exports = {}
 
 module.exports = React.createClass({
   displayName: 'Messages',
@@ -17,30 +15,20 @@ module.exports = React.createClass({
     Reflux.connect(require('../stores/chat').store),
   ],
 
-  focusInput: function() {
-    this.refs.entry.focusInput()
-  },
-
-  isFocused: function() {
-    return this.refs.entry.isFocused()
-  },
-
   render: function() {
     var now = moment()
     var disconnected = this.state.connected === false
 
     var entry
-    if (this.state.nick) {
-      entry = <ChatEntry ref="entry" nick={this.state.nick} onFormFocus={this.props.onFormFocus} disabled={disconnected} />
-    } else {
-      entry = <NickEntry ref="entry" onFormFocus={this.props.onFormFocus} disabled={this.disconnected} />
+    if (!this.state.nick) {
+      entry = <NickEntry />
+    } else if (!this.state.focusedMessage) {
+      entry = <ChatEntry />
     }
 
-    return (
+    var rendered = (
       <div className="messages">
-        {this.state.messages.map(function(message, idx) {
-          return <Message key={idx} message={message} />
-        }, this).toArray()}
+        <MessageList tree={this.state.messages} />
         {disconnected ?
           <div key="status" className="line status disconnected">
             <time dateTime={now.toISOString()} title={now.format('MMMM Do YYYY, h:mm:ss a')}>
@@ -52,5 +40,7 @@ module.exports = React.createClass({
         {entry}
       </div>
     )
+
+    return rendered
   },
 })

@@ -2,6 +2,7 @@ var React = require('react/addons')
 var Reflux = require('reflux')
 var cx = React.addons.classSet
 
+var actions = require('../actions')
 var Scroller = require('./scroller')
 var Messages = require('./messages')
 var UserList = require('./userlist')
@@ -13,63 +14,51 @@ module.exports = React.createClass({
 
   mixins: [
     Reflux.connect(require('../stores/chat').store, 'chat'),
+    Reflux.connect(require('../stores/focus').store, 'focus'),
   ],
-
-  componentDidMount: function() {
-    window.addEventListener('blur', this.onWindowBlur, false)
-  },
-
-  componentWillUnmount: function() {
-    window.removeEventListener('blur', this.onWindowBlur, false)
-  },
-
-  getInitialState: function() {
-    return {formFocus: false, settingsOpen: false}
-  },
-
-  focusInput: function(ev) {
-    if (ev.target.nodeName == 'INPUT' || window.getSelection().type == 'Range') {
-      return
-    }
-
-    this.refs.messages.focusInput()
-  },
 
   onScrollbarSize: function(width) {
     this.setState({scrollbarWidth: width})
-  },
-
-  onFormFocus: function() {
-    this.setState({formFocus: true})
-  },
-
-  onMouseUp: function() {
-    if (!this.refs.messages.isFocused()) {
-      this.setState({formFocus: false})
-    }
-  },
-
-  onWindowBlur: function() {
-    this.setState({formFocus: false})
   },
 
   toggleSettings: function() {
     this.setState({settingsOpen: !this.state.settingsOpen})
   },
 
+  onMouseDown: function() {
+    // FIXME: preventing/canceling a mousedown in React doesn't seem to stop
+    // the subsequent click event, so we have to resort to this hack.
+    this._isFocusClick = Date.now() - this.state.focus.focusChangedAt < 50
+  },
+
+  onClick: function(ev) {
+    // prevent clicks to focus window and link clicks from triggering elements
+    if (this._isFocusClick || ev.target.nodeName == 'A') {
+      actions.focusEntry()
+      ev.stopPropagation()
+      return
+    }
+
+    if (ev.target.nodeName == 'INPUT' || window.getSelection().type == 'Range') {
+      return
+    }
+
+    actions.focusEntry()
+  },
+
   render: function() {
     return (
-      <div className="chat" onMouseUp={this.onMouseUp}>
-        <Scroller className={cx({'messages-container': true, 'settings-open': this.state.settingsOpen, 'form-focus': this.state.formFocus})} onClick={this.focusInput} onScrollbarSize={this.onScrollbarSize}>
-          <div className="messages-content">
-            <button type="button" className="settings" onClick={this.toggleSettings} />
+      <div className="chat">
+        <Scroller target=".entry" bottomSpace={75} className={cx({'messages-container': true, 'form-focus': this.state.focus.windowFocused})} onScrollbarSize={this.onScrollbarSize}>
+          <div className="messages-content" onMouseDownCapture={this.onMouseDown} onClickCapture={this.onClick}>
             <div className="top-right" style={{marginRight: this.state.scrollbarWidth}}>
+              <div className="settings-pane">
+                {this.state.settingsOpen && <NotifyToggle />}
+                <button type="button" className="settings" onClick={this.toggleSettings} />
+              </div>
               <UserList users={this.state.chat.who} />
             </div>
-            <Messages ref="messages" onFormFocus={this.onFormFocus} />
-          </div>
-          <div className="settings-pane">
-            <NotifyToggle />
+            <Messages ref="messages" />
           </div>
         </Scroller>
       </div>

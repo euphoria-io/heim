@@ -5,6 +5,7 @@ var Immutable = require('immutable')
 
 
 describe('chat store', function() {
+  var actions = require('../lib/actions')
   var chat = require('../lib/stores/chat')
   var socket = require('../lib/stores/socket')
   var storage = require('../lib/stores/storage')
@@ -90,7 +91,75 @@ describe('chat store', function() {
       chat.store.sendMessage(testContent)
       sinon.assert.calledWithExactly(socket.send, {
         type: 'send',
-        data: {content: testContent},
+        data: {content: testContent, parent: null},
+      })
+    })
+
+    it('should send a message with a parent', function() {
+      var testContent = 'hello, ezzie!'
+      chat.store.sendMessage(testContent, '123test')
+      sinon.assert.calledWithExactly(socket.send, {
+        type: 'send',
+        data: {content: testContent, parent: '123test'},
+      })
+    })
+  })
+
+  describe('setEntryText action', function() {
+    it('should update entryText', function(done) {
+      var text = 'hello, ezzie!'
+
+      support.listenOnce(chat.store, function(state) {
+        assert.equal(state.entryText, text)
+        done()
+      })
+
+      chat.store.setEntryText(text)
+    })
+  })
+
+  describe('toggleFocusMessage action', function() {
+    beforeEach(function() {
+      sinon.stub(actions, 'focusMessage')
+    })
+
+    afterEach(function() {
+      actions.focusMessage.restore()
+    })
+
+    describe('on a top-level message', function() {
+      describe('if not already focused', function() {
+        it('should focus', function() {
+          chat.store.toggleFocusMessage('id1', '__root')
+          sinon.assert.calledOnce(actions.focusMessage)
+          sinon.assert.calledWithExactly(actions.focusMessage, 'id1')
+        })
+      })
+
+      describe('if already focused', function() {
+        it('should reset focus', function() {
+          chat.store.state.focusedMessage = 'id1'
+          chat.store.toggleFocusMessage('id1', '__root')
+          sinon.assert.calledOnce(actions.focusMessage)
+          sinon.assert.calledWithExactly(actions.focusMessage, null)
+        })
+      })
+    })
+
+    describe('on a child message', function() {
+      describe('if parent not already focused', function() {
+        it('should focus parent', function() {
+          chat.store.toggleFocusMessage('id2', 'id1')
+          sinon.assert.calledOnce(actions.focusMessage)
+          sinon.assert.calledWithExactly(actions.focusMessage, 'id1')
+        })
+
+        it('should focus child', function() {
+          chat.store.state.focusedMessage = 'id1'
+          chat.store.toggleFocusMessage('id2', 'id1')
+          sinon.assert.calledOnce(actions.focusMessage)
+          sinon.assert.calledWithExactly(actions.focusMessage, 'id2')
+        })
       })
     })
   })
@@ -139,10 +208,26 @@ describe('chat store', function() {
   })
 
   describe('received messages', function() {
-    var sendReply = {
+    var sendEvent = {
       'id': '0',
-      'type': 'send-reply',
+      'type': 'send-event',
       'data': {
+        'id': 'id1',
+        'time': 123456,
+        'sender': {
+          'id': '32.64.96.128:12345',
+          'name': 'tester',
+        },
+        'content': 'test',
+      }
+    }
+
+    var sendReplyEvent = {
+      'id': '1',
+      'type': 'send-event',
+      'data': {
+        'id': 'id2',
+        'parent': 'id1',
         'time': 123456,
         'sender': {
           'id': '32.64.96.128:12345',
@@ -153,50 +238,69 @@ describe('chat store', function() {
     }
 
     it('should be appended to log', function(done) {
-      handleSocket({status: 'receive', body: sendReply}, function(state) {
-        assert(state.messages.last().isSuperset(Immutable.fromJS(sendReply.data)))
+      handleSocket({status: 'receive', body: sendEvent}, function(state) {
+        assert(state.messages.last().isSuperset(Immutable.fromJS(sendEvent.data)))
         done()
       })
     })
 
     it('should be assigned a hue', function(done) {
-      handleSocket({status: 'receive', body: sendReply}, function(state) {
+      handleSocket({status: 'receive', body: sendEvent}, function(state) {
         assert.equal(state.messages.last().getIn(['sender', 'hue']), 153)
         done()
+      })
+    })
+
+    it('should be stored as children of parent', function(done) {
+      handleSocket({status: 'receive', body: sendEvent}, function() {
+        handleSocket({status: 'receive', body: sendReplyEvent}, function(state) {
+          assert(state.messages.get('id1').get('children').contains('id2'))
+          done()
+        })
       })
     })
   })
 
   describe('received logs', function() {
+    var message1 = {
+      'id': 'id1',
+      'time': 123456,
+      'sender': {
+        'id': '32.64.96.128:12345',
+        'name': 'tester',
+      },
+      'content': 'test',
+    }
+
+    var message2 = {
+      'id': 'id2',
+      'time': 123457,
+      'sender': {
+        'id': '32.64.96.128:12345',
+        'name': 'tester',
+      },
+      'content': 'test2',
+    }
+
+    var message3 = {
+      'id': 'id3',
+      'parent': 'id2',
+      'time': 123458,
+      'sender': {
+        'id': '32.64.96.128:12346',
+        'name': 'tester2',
+      },
+      'content': 'test3',
+    }
+
     var logReply = {
       'id': '0',
       'type': 'log-reply',
       'data': {
         'log': [
-          {
-            'time': 123456,
-            'sender': {
-              'id': '32.64.96.128:12345',
-              'name': 'tester',
-            },
-            'content': 'test',
-          },
-          {
-            'time': 123457,
-            'sender': {
-              'id': '32.64.96.128:12345',
-              'name': 'tester',
-            },
-            'content': 'test2',
-          },
-          {
-            'time': 123458,
-            'sender': {
-              'id': '32.64.96.128:12346',
-              'name': 'tester2',
-            },
-            'content': 'test3',
-          },
+          message1,
+          message2,
+          message3,
         ]
       }
     }
@@ -204,19 +308,69 @@ describe('chat store', function() {
     it('should be assigned to log', function(done) {
       handleSocket({status: 'receive', body: logReply}, function(state) {
         assert.equal(state.messages.size, logReply.data.log.length)
-        assert(state.messages.every(function(message, idx) {
-          return message.isSuperset(Immutable.fromJS(logReply.data.log[idx]))
-        }))
+        assert(state.messages.get('id1').isSuperset(Immutable.fromJS(message1)))
+        assert(state.messages.get('id2').isSuperset(Immutable.fromJS(message2)))
+        assert(state.messages.get('id3').isSuperset(Immutable.fromJS(message3)))
+        assert(state.messages.get('id2').get('children').contains('id3'))
         done()
       })
     })
 
     it('should all be assigned hues', function(done) {
       handleSocket({status: 'receive', body: logReply}, function(state) {
-        assert(state.messages.every(function(message) {
-          return message.hasIn(['sender', 'hue'])
+        assert(state.messages.mapDFS(function(message, children, depth) {
+          var childrenOk = children.every(function(v) { return v })
+          return childrenOk && (depth === 0 || message.hasIn(['sender', 'hue']))
         }))
         done()
+      })
+    })
+
+    describe('focusMessage action', function() {
+      beforeEach(function() {
+        chat.store.state.nick = 'test'
+        chat.store.socketEvent({status: 'receive', body: logReply})
+      })
+
+      it('should enable entry on specified message and disable entry on previously focused message', function(done) {
+        support.listenOnce(chat.store, function(state) {
+          assert.equal(state.messages.get('id1').get('entry'), true)
+
+          support.listenOnce(chat.store, function(state) {
+            assert.equal(state.messages.get('id1').get('entry'), false)
+            assert.equal(state.messages.get('id2').get('entry'), true)
+            done()
+          })
+
+          chat.store.focusMessage('id2')
+        })
+
+        chat.store.focusMessage('id1')
+      })
+
+      it('should update focusedMessage value', function(done) {
+        support.listenOnce(chat.store, function(state) {
+          assert.equal(state.focusedMessage, 'id1')
+          done()
+        })
+
+        chat.store.focusMessage('id1')
+      })
+
+      it('should not update if specified message already focused', function() {
+        sinon.stub(chat.store, 'trigger')
+        chat.store.focusMessage('id1')
+        chat.store.focusMessage('id1')
+        sinon.assert.calledOnce(chat.store.trigger)
+        chat.store.trigger.restore()
+      })
+
+      it('should not update if no nick set', function() {
+        chat.store.state.nick = null
+        sinon.stub(chat.store, 'trigger')
+        chat.store.focusMessage('id1')
+        sinon.assert.notCalled(chat.store.trigger)
+        chat.store.trigger.restore()
       })
     })
   })

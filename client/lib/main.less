@@ -58,6 +58,11 @@ html, body, #container, .chat {
     .messages {
       padding: @messages-padding;
 
+      .replies {
+        border-left: 2px solid #c7c7c7;
+        padding-left: 8px;
+      }
+
       .line {
         position: relative;
         display: flex;
@@ -99,11 +104,6 @@ html, body, #container, .chat {
         box-sizing: border-box;
         text-align: right;
       }
-
-      & > .entry {
-        margin: -10px;
-        margin-top: 10px;
-      }
     }
 
     .top-right {
@@ -125,68 +125,32 @@ html, body, #container, .chat {
       }
     }
 
-    .settings {
-      position: absolute;
-      left: @time-margin - 36px;
-      margin-top: -33px;
-      border: none;
-      background: none;
-      padding: 0;
-      opacity: .25;
-      cursor: pointer;
+    .settings-pane {
+      height: 24px;
+      text-align: right;
+      margin-bottom: 5px;
+      transition: all .25s ease;
 
-      &, &:before, &:after {
-        width: 24px;
-        height: 24px;
-        transition: all .15s ease;
-      }
-
-      &:before, &:after {
-        position: absolute;
-        top: 0;
-        left: 0;
-        content: '';
-        display: block;
-      }
-
-      &:before {
+      .settings {
+        display: inline-block;
+        width: 18px;
+        height: 18px;
+        border: none;
         background: data-uri('../static/cog.svg') no-repeat center center;
         background-size: 24px;
-        -webkit-filter: blur(1px);
-      }
+        padding: 0;
+        opacity: .15;
+        cursor: pointer;
+        transition: all .15s ease;
 
-      &:after {
-        background: data-uri('../static/cog-white.svg') no-repeat center center;
-        background-size: 24px;
-      }
-
-      &:hover {
-        opacity: .4;
-
-        &:after {
-          margin-top: -1px;
-        }
-      }
-
-      &:active {
-        &:before {
-          -webkit-filter: blur(2px);
+        &:hover {
+          opacity: .25;
         }
 
-        &:after {
-          margin-top: 0;
+        &:active {
+          opacity: .3;
         }
       }
-    }
-
-    .settings-pane {
-      position: absolute;
-      z-index: 1;
-      height: 38px;
-      line-height: 38px;
-      margin-top: -38px;
-      box-sizing: border-box;
-      transition: all .25s ease;
 
       * {
         vertical-align: middle;
@@ -195,26 +159,10 @@ html, body, #container, .chat {
       label {
         padding: 10px;
         font-size: .8em;
-        color: white;
       }
     }
 
-    &.settings-open {
-      .settings {
-        opacity: .65;
-
-        &:after {
-          margin-top: -1px;
-        }
-      }
-
-      .messages-content {
-        margin-top: -38px;
-        margin-bottom: 38px;
-      }
-    }
-
-    form {
+    .entry {
       position: relative;
       z-index: 2;
       display: flex;
@@ -224,7 +172,10 @@ html, body, #container, .chat {
       border: none;
       border-bottom: 3px solid transparent;
       box-shadow: 0 0 10px fade(black, 10%) inset;
-      transition: all .15s ease;
+      transition:
+        box-shadow .15s ease,
+        border .15s ease,
+        background .15s ease;
       .no-select;
 
       & > * {
@@ -235,8 +186,11 @@ html, body, #container, .chat {
 
       input {
         flex: 1;
-        background: none;
         border: none;
+      }
+
+      & > input {
+        background: none;
         padding-left: 0;
         padding-right: 0;
       }
@@ -269,11 +223,42 @@ html, body, #container, .chat {
       }
     }
 
-    &.form-focus form {
-      @green: fade(green, 50%);
-      border-bottom: 3px solid @green;
+    .messages > .entry {
+      margin: -10px;
+      margin-top: 10px;
+    }
+
+    .replies > .entry {
+      margin: 5px;
+      margin-left: -10px;
+
+      &:last-child:not(:first-child) {
+        margin-left: -8px;
+      }
+
+      .nick-box {
+        padding-left: 8px;
+        padding-right: 8px;
+      }
+
+      & > * {
+        height: 32px;
+        padding-top: 6px;
+        padding-bottom: 6px;
+      }
+    }
+
+    .messages > .message-list > .message-node:last-child .entry:last-child {
+      // spacing tweak so messages don't shift down when switching from bottom
+      // top level entry box to replying to latest message.
+      margin-bottom: 1px;
+    }
+
+    &.form-focus .entry {
+      @focusgreen: fade(green, 50%);
       background: white;
       box-shadow: 0 0 5px fade(black, 25%);
+      border-bottom: 3px solid @focusgreen;
 
       input.nick {
         box-shadow: none;

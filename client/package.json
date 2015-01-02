@@ -10,7 +10,8 @@
     "moment": "~2.8.4",
     "autolinker": "~0.15.0",
     "immutable": "~3.4.1",
-    "react-immutable-render-mixin": "~0.7.0"
+    "react-immutable-render-mixin": "~0.7.0",
+    "eventemitter3": "~0.1.6"
   },
   "devDependencies": {
     "browserify": "~6.1.0",

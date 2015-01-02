@@ -22,4 +22,5 @@ Heim = {
   socket: require('./stores/socket'),
   chat: require('./stores/chat'),
   storage: require('./stores/storage'),
+  focus: require('./stores/focus'),
 }

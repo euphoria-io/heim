@@ -2,13 +2,15 @@ var _ = require('lodash')
 var Reflux = require('reflux')
 var Immutable = require('immutable')
 
+var actions = require('../actions')
+var Tree = require('../tree')
 var storage = require('./storage')
 var socket = require('./socket')
 
 
 module.exports.store = Reflux.createStore({
   listenables: [
-    require('../actions'),
+    actions,
     {socketEvent: socket.store},
     {storageChange: storage.store},
   ],
@@ -16,9 +18,14 @@ module.exports.store = Reflux.createStore({
   init: function() {
     this.state = {
       connected: null,
-      messages: Immutable.List(),
+      nick: null,
+      messages: new Tree(),
       nickHues: {},
       who: Immutable.OrderedMap(),
+      focusedMessage: null,
+      entryText: '',
+      entrySelectionStart: null,
+      entrySelectionEnd: null,
     }
   },
 
@@ -31,15 +38,13 @@ module.exports.store = Reflux.createStore({
       if (ev.body.type == 'send-event' || ev.body.type == 'send-reply') {
         var message = ev.body.data
         message.sender.hue = this._getNickHue(message.sender.name)
-        this.state.messages = this.state.messages.push(Immutable.fromJS(ev.body.data))
+        this.state.messages.add(message)
 
       } else if (ev.body.type == 'log-reply' && ev.body.data) {
-        this.state.messages = Immutable.Seq(ev.body.data.log)
-          .map(function(message) {
-            message.sender.hue = this._getNickHue(message.sender.name)
-            return Immutable.fromJS(message)
-          }, this)
-          .toList()
+        _.each(ev.body.data.log, function(message) {
+          message.sender.hue = this._getNickHue(message.sender.name)
+        }, this)
+        this.state.messages.reset(ev.body.data.log)
 
       } else if (ev.body.type == 'who-reply') {
         this.state.who = Immutable.OrderedMap(
@@ -124,11 +129,51 @@ module.exports.store = Reflux.createStore({
     })
   },
 
-  sendMessage: function(content) {
+  focusMessage: function(messageId) {
+    messageId = messageId || null
+    if (!this.state.nick || messageId == this.state.focusedMessage) {
+      return
+    }
+
+    if (this.state.focusedMessage) {
+      this.state.messages.mergeNode(this.state.focusedMessage, {entry: false})
+    }
+    if (messageId) {
+      this.state.messages.mergeNode(messageId, {entry: true})
+    }
+    this.state.focusedMessage = messageId
+    this.trigger(this.state)
+  },
+
+  toggleFocusMessage: function(messageId, parentId) {
+    var focusParent
+    if (parentId == '__root') {
+      parentId = null
+      focusParent = this.state.focusedMessage == messageId
+    } else {
+      focusParent = this.state.focusedMessage != parentId
+    }
+
+    if (focusParent) {
+      actions.focusMessage(parentId)
+    } else {
+      actions.focusMessage(messageId)
+    }
+  },
+
+  setEntryText: function(text, selectionStart, selectionEnd) {
+    this.state.entryText = text
+    this.state.entrySelectionStart = selectionStart
+    this.state.entrySelectionEnd = selectionEnd
+    this.trigger(this.state)
+  },
+
+  sendMessage: function(content, parent) {
     socket.send({
       type: 'send',
       data: {
-        content: content
+        content: content,
+        parent: parent || null,
       },
     })
   },

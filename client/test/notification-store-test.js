@@ -147,35 +147,35 @@ describe('notification store', function() {
       })
 
       it('should set focused when window focused', function() {
-        notification.store.onFocus()
+        notification.store.focusChange({windowFocused: true})
         assert.equal(notification.store.focus, true)
       })
 
       it('should set unfocused when window blurred', function() {
-        notification.store.onBlur()
+        notification.store.focusChange({windowFocused: false})
         assert.equal(notification.store.focus, false)
       })
 
       it('should not open notifications when focused', function() {
-        notification.store.onFocus()
+        notification.store.focusChange({windowFocused: true})
         notification.store.storageChange({notify: true})
         notification.store.chatUpdate(mockChatState)
         sinon.assert.notCalled(Notification)
       })
 
       it('should close notification when window focused', function() {
-        notification.store.onBlur()
+        notification.store.focusChange({windowFocused: false})
         notification.store.storageChange({notify: true})
         notification.store.chatUpdate(mockChatState)
         sinon.assert.calledOnce(Notification)
-        notification.store.onFocus()
+        notification.store.focusChange({windowFocused: true})
         sinon.assert.calledOnce(fakeNotification.close)
       })
     })
 
     describe('with a notification showing', function() {
       beforeEach(function() {
-        notification.store.onBlur()
+        notification.store.focusChange({windowFocused: false})
         notification.store.storageChange({notify: true})
         notification.store.chatUpdate(mockChatState)
         sinon.stub(window, 'focus')

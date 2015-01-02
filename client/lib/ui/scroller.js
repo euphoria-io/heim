@@ -8,7 +8,12 @@ module.exports = React.createClass({
   componentWillMount: function() {
     window.addEventListener('resize', this.onResize)
     this._checkScroll = _.debounce(this.checkScroll, 150, {leading: false})
-    this._atBottom = true
+    this._targetLocked = false
+    this._targetPos = 0
+  },
+
+  componentDidMount: function() {
+    this.checkScroll()
   },
 
   componentWillUnmount: function() {
@@ -27,13 +32,16 @@ module.exports = React.createClass({
   },
 
   componentDidUpdate: function() {
+    this._checkScroll()
     this.scroll()
   },
 
   checkScroll: function() {
     // via http://blog.vjeux.com/2013/javascript/scroll-position-with-react.html
     var node = this.refs.scroller.getDOMNode()
-    this._atBottom = node.scrollTop + node.offsetHeight >= node.scrollHeight
+    var target = node.querySelector(this.props.target)
+    this._targetPos = node.scrollTop + node.offsetHeight - target.offsetTop
+    this._targetLocked = this._targetPos >= target.offsetHeight && this._targetPos < node.offsetHeight
   },
 
   checkScrollbar: function() {
@@ -48,15 +56,18 @@ module.exports = React.createClass({
   },
 
   scroll: function() {
-    if (this._atBottom) {
+    if (this._targetLocked) {
       var node = this.refs.scroller.getDOMNode()
-      node.scrollTop = 99999
+      var target = node.querySelector(this.props.target)
+      node.scrollTop = Math.max(this.props.bottomSpace, this._targetPos) - node.offsetHeight + target.offsetTop
     }
   },
 
   render: function() {
     return (
-      <div ref="scroller" onScroll={this.onScroll} {...this.props} />
+      <div ref="scroller" onScroll={this.onScroll} className={this.props.className}>
+        {this.props.children}
+      </div>
     )
   },
 })

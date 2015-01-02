@@ -17,6 +17,7 @@ module.exports.store = Reflux.createStore({
     actions,
     {storageChange: storage.store},
     {chatUpdate: require('./chat').store},
+    {focusChange: require('./focus').store},
   ],
 
   init: function() {
@@ -25,25 +26,19 @@ module.exports.store = Reflux.createStore({
       supported: 'Notification' in window
     }
 
-    this.focus = true
     this.notification = null
     this._lastMsg = null
 
     if (this.state.supported) {
       this.state.permission = Notification.permission == 'granted'
     }
-
-    window.addEventListener('focus', this.onFocus.bind(this), false)
-    window.addEventListener('blur', this.onBlur.bind(this), false)
   },
 
-  onFocus: function() {
-    this.focus = true
-    this.closeNotification()
-  },
-
-  onBlur: function() {
-    this.focus = false
+  focusChange: function(state) {
+    this.focus = state.windowFocused
+    if (this.focus) {
+      this.closeNotification()
+    }
   },
 
   getInitialState: function() {
