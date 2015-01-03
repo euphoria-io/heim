@@ -85,7 +85,7 @@ describe('chat store', function() {
   })
 
   describe('sendMessage action', function() {
-    it('should send a nick change', function() {
+    it('should send a message', function() {
       var testContent = 'hello, ezzie!'
       chat.store.sendMessage(testContent)
       sinon.assert.calledWithExactly(socket.send, {
