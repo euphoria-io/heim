@@ -34,5 +34,10 @@ backend:
     - psql
   volumes:
     - backend:/go/src/heim/backend
+
+haproxy:
+  build: containers/haproxy
+  links:
+    - backend:dev1
   ports:
     - "8080:80"
