@@ -90,7 +90,7 @@ func extract(hzp string) (string, error) {
 	for _, file := range zr.File {
 		extractFile(root, file)
 	}
-	return filepath.Join(root, zr.File[0].Name), nil
+	return filepath.Abs(filepath.Join(root, zr.File[0].Name))
 }
 
 func extractFile(root string, file *patchzip.File) error {
