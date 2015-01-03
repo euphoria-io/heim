@@ -120,13 +120,13 @@ func extractFile(root string, file *patchzip.File) error {
 	return r.Close()
 }
 
-func extractAndRun(hzp string, args []string) error {
+func extractAndRun(hzp string, args []string, env []string) error {
 	exePath, err := extract(hzp)
 	if err != nil {
 		return err
 	}
 	fmt.Printf("executing: %s %s\n", exePath, strings.Join(args, " "))
-	return syscall.Exec(exePath, args, os.Environ())
+	return syscall.Exec(exePath, args, env)
 }
 
 func usage() {
@@ -136,7 +136,7 @@ func usage() {
 
 func main() {
 	if strings.HasSuffix(os.Args[0], ".hzp") {
-		if err := extractAndRun(os.Args[0], os.Args[1:]); err != nil {
+		if err := extractAndRun(os.Args[0], os.Args, os.Environ()); err != nil {
 			fmt.Printf("extract error: %s\n", err)
 			os.Exit(1)
 		}
