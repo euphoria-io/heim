@@ -8,4 +8,5 @@ RUN sed -i 's/^ENABLED=.*/ENABLED=1/' /etc/default/haproxy
 ADD haproxy.cfg /etc/haproxy/haproxy.cfg
 
 EXPOSE 80
+EXPOSE 8055
 CMD /etc/init.d/rsyslog start && /etc/init.d/haproxy start && tail -f /var/log/haproxy.log
