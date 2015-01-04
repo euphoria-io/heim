@@ -10,9 +10,13 @@ import (
 	"heim/backend/persist"
 )
 
-var addr = flag.String("http", ":8080", "")
-var psql = flag.String("psql", "psql", "")
-var static = flag.String("static", "", "")
+var (
+	addr   = flag.String("http", ":8080", "")
+	psql   = flag.String("psql", "psql", "")
+	static = flag.String("static", "", "")
+)
+
+var version string
 
 func main() {
 	flag.Parse()
@@ -24,5 +28,24 @@ func main() {
 	}
 	server := backend.NewServer(b, *static)
 	fmt.Printf("serving on %s\n", *addr)
-	http.ListenAndServe(*addr, server)
+	http.ListenAndServe(*addr, newVersioningHandler(server))
+}
+
+type versioningHandler struct {
+	version string
+	handler http.Handler
+}
+
+func newVersioningHandler(handler http.Handler) http.Handler {
+	return &versioningHandler{
+		version: version,
+		handler: handler,
+	}
+}
+
+func (vh *versioningHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if vh.version != "" {
+		w.Header().Set("X-Heim-Version", vh.version)
+	}
+	vh.handler.ServeHTTP(w, r)
 }
