@@ -170,18 +170,33 @@ func IntegrationTest(t testing.TB, factory func() Backend) {
 
 func testLurker(t testing.TB, s *serverUnderTest) {
 	Convey("Lurker", t, func() {
-		conn1 := s.Connect("test")
+		conn1 := s.Connect("lurker")
 		defer closeConn(conn1)
+		id1 := conn1.LocalAddr().String()
 
-		conn2 := s.Connect("test")
+		So(conn1, shouldReceive, SnapshotEventType,
+			&SnapshotEvent{
+				Version: s.backend.Version(),
+				Listing: Listing{},
+				Log:     []Message{},
+			})
+
+		conn2 := s.Connect("lurker")
 		defer closeConn(conn2)
+		id2 := conn2.LocalAddr().String()
+
+		So(conn2, shouldReceive, SnapshotEventType,
+			&SnapshotEvent{
+				Version: s.backend.Version(),
+				Listing: Listing{IdentityView{ID: id1, Name: id1}},
+				Log:     []Message{},
+			})
 
 		So(conn2, shouldSend, `{"id":"1","type":"nick","data":{"name":"speaker"}}`)
+		So(conn2, shouldReceive, NickReplyType, &NickReply{ID: id2, From: id2, To: "speaker"})
 
-		id := conn2.LocalAddr().String()
-		So(conn2, shouldReceive, NickReplyType, &NickReply{ID: id, From: id, To: "speaker"})
-		So(conn1, shouldReceive, JoinEventType, &PresenceEvent{ID: id, Name: id})
-		So(conn1, shouldReceive, NickEventType, &NickEvent{ID: id, From: id, To: "speaker"})
+		So(conn1, shouldReceive, JoinEventType, &PresenceEvent{ID: id2, Name: id2})
+		So(conn1, shouldReceive, NickEventType, &NickEvent{ID: id2, From: id2, To: "speaker"})
 	})
 }
 
@@ -195,11 +210,19 @@ func testBroadcast(t testing.TB, s *serverUnderTest) {
 		ids := make(Listing, len(conns))
 
 		for i := range conns {
-			conn := s.Connect("test")
+			conn := s.Connect("broadcast")
 			conns[i] = conn
-			ids[i] = IdentityView{ID: conn.LocalAddr().String(), Name: fmt.Sprintf("user%d", i)}
+			me := conn.LocalAddr().String()
+			ids[i] = IdentityView{ID: me, Name: fmt.Sprintf("user%d", i)}
 			So(conn, shouldSend, `{"id":"1","type":"nick","data":{"name":"user%d"}}`, i)
 			So(conn, shouldSend, `{"id":"2","type":"who"}`)
+
+			So(conn, shouldReceive, SnapshotEventType,
+				&SnapshotEvent{
+					Version: s.backend.Version(),
+					Listing: ids[:i],
+					Log:     []Message{},
+				})
 
 			So(conn, shouldReceive, NickReplyType,
 				&NickReply{ID: ids[i].ID, From: ids[i].ID, To: fmt.Sprintf("user%d", i)})
@@ -249,7 +272,7 @@ func testThreading(t testing.TB, s *serverUnderTest) {
 		tc := NewTestClock()
 		defer tc.Close()
 
-		conn := s.Connect("user")
+		conn := s.Connect("threading")
 		defer closeConn(conn)
 
 		id := &IdentityView{ID: conn.LocalAddr().String(), Name: "user"}
@@ -257,6 +280,13 @@ func testThreading(t testing.TB, s *serverUnderTest) {
 		sfs := snowflakes(2)
 		sf1 := sfs[0]
 		sf2 := sfs[1]
+
+		So(conn, shouldReceive, SnapshotEventType,
+			&SnapshotEvent{
+				Version: s.backend.Version(),
+				Listing: Listing{},
+				Log:     []Message{},
+			})
 
 		So(conn, shouldSend, `{"id":"1","type":"send","data":{"content":"root"}}`)
 		So(conn, shouldReceive, SendReplyType,

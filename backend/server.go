@@ -72,13 +72,25 @@ func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
 	defer conn.Close()
 
 	session := newMemSession(ctx, conn, room)
+
+	if err := session.sendSnapshot(); err != nil {
+		logger.Printf("snapshot failed: %s", err)
+		// TODO: send an error packet
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	err = room.Join(ctx, session)
 	if err != nil {
 		// TODO: error handling
 		return
 	}
 
-	session.serve()
+	if err = session.serve(); err != nil {
+		// TODO: error handling
+		return
+	}
+
 	err = room.Part(ctx, session)
 	if err != nil {
 		// TODO: error handling

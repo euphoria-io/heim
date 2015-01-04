@@ -10,7 +10,7 @@ import (
 var dsn = flag.String("dsn", "postgres://heimtest:heimtest@localhost/heimtest", "")
 
 func TestBackend(t *testing.T) {
-	b, err := NewBackend(*dsn)
+	b, err := NewBackend(*dsn, "testver")
 	if err != nil {
 		t.Fatal(err)
 	}

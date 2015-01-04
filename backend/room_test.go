@@ -54,7 +54,7 @@ func TestRoomPresence(t *testing.T) {
 	userB := newSession("B")
 
 	ctx := context.Background()
-	room := newMemRoom("test")
+	room := newMemRoom("test", "testver")
 
 	Convey("First join", t, func() {
 		So(room.Join(ctx, userA), ShouldBeNil)
@@ -97,7 +97,7 @@ func TestRoomBroadcast(t *testing.T) {
 	userC := newSession("C")
 
 	ctx := context.Background()
-	room := newMemRoom("test")
+	room := newMemRoom("test", "testver")
 
 	Convey("Setup", t, func() {
 		So(room.Join(ctx, userA), ShouldBeNil)

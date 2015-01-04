@@ -21,7 +21,7 @@ var version string
 func main() {
 	flag.Parse()
 
-	b, err := persist.NewBackend(*psql)
+	b, err := persist.NewBackend(*psql, version)
 	if err != nil {
 		fmt.Printf("error: %s\n", err)
 		os.Exit(1)

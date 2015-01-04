@@ -34,18 +34,19 @@ type Backend struct {
 	*gorp.DbMap
 
 	dsn       string
+	version   string
 	cancel    context.CancelFunc
 	presence  map[string]roomPresence
 	liveNicks map[string]string
 }
 
-func NewBackend(dsn string) (*Backend, error) {
+func NewBackend(dsn, version string) (*Backend, error) {
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("sql.Open: %s", err)
 	}
 
-	b := &Backend{DB: db, dsn: dsn}
+	b := &Backend{DB: db, dsn: dsn, version: version}
 	b.start()
 	return b, nil
 }
@@ -90,7 +91,8 @@ func (b *Backend) createSchema() error {
 	return nil
 }
 
-func (b *Backend) Close() { b.cancel() }
+func (b *Backend) Version() string { return b.version }
+func (b *Backend) Close()          { b.cancel() }
 
 func (b *Backend) background(ctx context.Context) {
 	logger := backend.Logger(ctx)

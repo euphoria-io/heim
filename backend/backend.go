@@ -6,12 +6,16 @@ import (
 
 type Backend interface {
 	GetRoom(name string) (Room, error)
+	Version() string
 }
 
 type TestBackend struct {
 	sync.Mutex
-	rooms map[string]Room
+	rooms   map[string]Room
+	version string
 }
+
+func (b *TestBackend) Version() string { return b.version }
 
 func (b *TestBackend) GetRoom(name string) (Room, error) {
 	b.Lock()
@@ -25,7 +29,7 @@ func (b *TestBackend) GetRoom(name string) (Room, error) {
 		b.rooms = map[string]Room{}
 	}
 
-	room := newMemRoom(name)
+	room := newMemRoom(name, b.version)
 	b.rooms[name] = room
 	return room, nil
 }

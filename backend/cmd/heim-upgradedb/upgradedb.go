@@ -13,7 +13,7 @@ var psql = flag.String("psql", "psql", "")
 func main() {
 	flag.Parse()
 
-	b, err := persist.NewBackend(*psql)
+	b, err := persist.NewBackend(*psql, "upgradedb")
 	if err != nil {
 		fmt.Printf("error: %s\n", err)
 		os.Exit(1)

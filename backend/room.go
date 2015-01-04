@@ -21,23 +21,28 @@ type Room interface {
 	Send(context.Context, Session, Message) (Message, error)
 	Listing(context.Context) (Listing, error)
 	RenameUser(ctx context.Context, session Session, formerName string) (*NickEvent, error)
+	Version() string
 }
 
 type memRoom struct {
 	sync.Mutex
 
 	name       string
+	version    string
 	log        *memLog
 	identities map[string]Identity
 	live       map[string][]Session
 }
 
-func newMemRoom(name string) *memRoom {
+func newMemRoom(name, version string) *memRoom {
 	return &memRoom{
-		name: name,
-		log:  newMemLog(),
+		name:    name,
+		version: version,
+		log:     newMemLog(),
 	}
 }
+
+func (r *memRoom) Version() string { return r.version }
 
 func (r *memRoom) Latest(ctx context.Context, n int, before Snowflake) ([]Message, error) {
 	return r.log.Latest(ctx, n, before)

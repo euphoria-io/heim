@@ -69,7 +69,7 @@ func (s *memSession) Send(ctx context.Context, cmdType PacketType, payload inter
 	return nil
 }
 
-func (s *memSession) serve() {
+func (s *memSession) serve() error {
 	go s.readMessages()
 
 	logger := Logger(s.ctx)
@@ -78,7 +78,7 @@ func (s *memSession) serve() {
 	for {
 		select {
 		case <-s.ctx.Done():
-			return
+			return s.ctx.Err()
 		case cmd := <-s.incoming:
 			logger.Printf("received command: id=%s, type=%s", cmd.ID, cmd.Type)
 
@@ -88,37 +88,39 @@ func (s *memSession) serve() {
 				reply = ErrorReply{Error: err.Error()}
 			}
 
-			resp, err := Response(cmd.ID, cmd.Type, reply)
+			resp, err := MakeResponse(cmd.ID, cmd.Type, reply)
 			if err != nil {
 				logger.Printf("error: Response: %s", err)
-				return
+				return err
 			}
 
 			data, err := resp.Encode()
 			if err != nil {
 				logger.Printf("error: Response encode: %s", err)
-				return
+				return err
 			}
 
 			logger.Printf("responding: %s", string(data))
 
 			if err := s.conn.WriteMessage(websocket.TextMessage, data); err != nil {
 				logger.Printf("error: write message: %s", err)
-				return
+				return err
 			}
 		case cmd := <-s.outgoing:
 			data, err := cmd.Encode()
 			if err != nil {
 				logger.Printf("error: push message encode: %s", err)
-				return
+				return err
 			}
 
+			logger.Printf("sending: %s", string(data))
 			if err := s.conn.WriteMessage(websocket.TextMessage, data); err != nil {
 				logger.Printf("error: write message: %s", err)
-				return
+				return err
 			}
 		}
 	}
+	return nil
 }
 
 func (s *memSession) readMessages() {
@@ -166,7 +168,7 @@ func (s *memSession) handleCommand(cmd *Packet) (interface{}, error) {
 		if err != nil {
 			return nil, err
 		}
-		return LogReply{Log: msgs}, nil
+		return &LogReply{Log: msgs}, nil
 	case *NickCommand:
 		formerName := s.identity.Name()
 		s.identity.name = msg.Name
@@ -180,8 +182,32 @@ func (s *memSession) handleCommand(cmd *Packet) (interface{}, error) {
 		if err != nil {
 			return nil, err
 		}
-		return WhoReply{Listing: listing}, nil
+		return &WhoReply{Listing: listing}, nil
 	default:
 		return nil, fmt.Errorf("command type %T not implemented", payload)
 	}
+}
+
+func (s *memSession) sendSnapshot() error {
+	msgs, err := s.room.Latest(s.ctx, 100, 0)
+	if err != nil {
+		return err
+	}
+	listing, err := s.room.Listing(s.ctx)
+	if err != nil {
+		return err
+	}
+
+	snapshot := &SnapshotEvent{
+		Version: s.room.Version(),
+		Listing: listing,
+		Log:     msgs,
+	}
+
+	event, err := MakeEvent(snapshot)
+	if err != nil {
+		return err
+	}
+	s.outgoing <- event
+	return nil
 }
