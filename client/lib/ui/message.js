@@ -4,8 +4,6 @@ var moment = require('moment')
 var autolinker = require('autolinker')
 
 
-module.exports = {}
-
 module.exports = React.createClass({
   displayName: 'Message',
 

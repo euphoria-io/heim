@@ -1,8 +1,6 @@
 var React = require('react')
 
 
-module.exports = {}
-
 module.exports = React.createClass({
   displayName: 'UserList',
 

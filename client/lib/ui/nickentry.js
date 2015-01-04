@@ -3,8 +3,6 @@ var React = require('react')
 var actions = require('../actions')
 
 
-module.exports = {}
-
 module.exports = React.createClass({
   displayName: 'NickEntry',
 

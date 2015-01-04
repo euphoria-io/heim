@@ -2,8 +2,6 @@ var _ = require('lodash')
 var React = require('react')
 
 
-module.exports = {}
-
 module.exports = React.createClass({
   displayName: 'Scroller',
 
