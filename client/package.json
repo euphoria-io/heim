@@ -25,7 +25,7 @@
     "gulp-streamify": "~0.0.5",
     "gulp-jshint": "~1.9.0",
     "gulp-react": "~2.0.0",
-    "mochify": "~2.1.0",
+    "mochify": "~2.1.1",
     "sinon": "~1.12.2",
     "phantomjs": "~1.9.13"
   },
@@ -34,7 +34,8 @@
     "email": "c@chromakode.com"
   },
   "scripts": {
-    "test": "gulp lint && mochify"
+    "test": "gulp lint && mochify",
+    "cover": "find ./test/ -maxdepth 1 -name '*.js' -not -name '*ui*' | xargs mochify --cover -R spec"
   },
   "browserify": {
     "transform": [
