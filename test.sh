@@ -51,6 +51,10 @@ EOF
   if [ ${DRONE_BRANCH%/*} == logan ]; then
     s3cmd cp s3://heim-release/${DRONE_COMMIT} s3://heim-release/${DRONE_BRANCH}
   fi
+
+  if [ ${DRONE_BRANCH%/*} == chromakode ]; then
+    s3cmd cp s3://heim-release/${DRONE_COMMIT} s3://heim-release/${DRONE_BRANCH}
+  fi
 }
 
 test_backend
