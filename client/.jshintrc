@@ -6,7 +6,7 @@
   "forin": true,
   "indent": 4,
   "browser": true,
-  "node": true,
+  "browserify": true,
   "mocha": true,
   "undef": true,
   "globals": {
