@@ -131,6 +131,9 @@ func (b *Backend) background(ctx context.Context) {
 					logger.Printf("         payload: %#v", notice.Extra)
 				} else {
 					b.Lock()
+					if b.presence == nil {
+						b.presence = map[string]roomPresence{}
+					}
 					rp := b.presence[msg.Room]
 					if rp == nil {
 						rp = roomPresence{}
