@@ -25,7 +25,7 @@ test_client() {
 }
 
 build_release() {
-  export NODE_ENV=
+  export NODE_ENV=production
   cd ${SRCDIR}/heim/client
   gulp build
 
