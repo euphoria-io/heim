@@ -47,6 +47,8 @@ heim:
 haproxy:
   build: containers/haproxy
   links:
-    - backend:dev1
+    - backend:DEV_HEIM_1
   ports:
     - "8080:80"
+  volumes:
+    - ~/euphoria/cert/euphoria.io.pem:/etc/haproxy/cert.pem

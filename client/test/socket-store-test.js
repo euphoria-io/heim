@@ -20,8 +20,19 @@ describe('socket store', function() {
     window.WebSocket = realWebSocket
   })
 
+  describe('_wsurl', function() {
+    it('should return wss:host/path/ws if protocol is https', function() {
+      var loc = {protocol: 'https', host: 'host', pathname: '/path/'}
+      assert.equal(socket.store._wsurl(loc), 'wss:host/path/ws')
+    })
+    it('should return ws:host/path/ws if protocol is NOT https', function() {
+      var loc = {protocol: 'http', host: 'host', pathname: '/path/'}
+      assert.equal(socket.store._wsurl(loc), 'ws:host/path/ws')
+    })
+  })
+
   describe('connect action', function() {
-    it('should connect to ws:host/path/ps with heim1 protocol', function() {
+    it('should connect to ws:host/path/ws with heim1 protocol', function() {
       socket.store.connect()
       var expectedPath = 'ws:' + location.host + location.pathname + 'ws'
       sinon.assert.calledWithExactly(fakeWebSocketContructor, expectedPath, 'heim1')

@@ -1,6 +1,8 @@
 FROM ubuntu:14.04
 MAINTAINER Logan Hanks <logan.hanks@gmail.com>
 
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y software-properties-common
+RUN add-apt-repository ppa:vbernat/haproxy-1.5
 RUN apt-get update
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y haproxy rsyslog
 RUN sed -i 's/^ENABLED=.*/ENABLED=1/' /etc/default/haproxy

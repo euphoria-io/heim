@@ -17,12 +17,19 @@ module.exports.store = Reflux.createStore({
   },
 
   connect: function() {
-    var url = 'ws:' + location.host + location.pathname + 'ws'
-    this.ws = new WebSocket(url, 'heim1')
+    this.ws = new WebSocket(this._wsurl(location), 'heim1')
     this.ws.onopen = this._open
     this.ws.onclose = this._close
     this.ws.onmessage = this._message
     this.connected = true
+  },
+
+  _wsurl: function(loc) {
+    var scheme = 'ws'
+    if (loc.protocol == 'https') {
+      scheme = 'wss'
+    }
+    return scheme + ':' + loc.host + loc.pathname + 'ws'
   },
 
   _open: function() {
