@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"heim/backend"
+	"heim/backend/control"
 	"heim/backend/persist"
 )
 
@@ -14,6 +15,10 @@ var (
 	addr   = flag.String("http", ":8080", "")
 	psql   = flag.String("psql", "psql", "")
 	static = flag.String("static", "", "")
+
+	ctrlAddr     = flag.String("control", ":2222", "")
+	ctrlHostKey  = flag.String("control-hostkey", "", "")
+	ctrlAuthKeys = flag.String("control-authkeys", "", "")
 )
 
 var version string
@@ -26,9 +31,39 @@ func main() {
 		fmt.Printf("error: %s\n", err)
 		os.Exit(1)
 	}
+
 	server := backend.NewServer(b, *static)
+	if err := controller(server); err != nil {
+		fmt.Printf("error: %s\n", err)
+		os.Exit(1)
+	}
+
 	fmt.Printf("serving on %s\n", *addr)
 	http.ListenAndServe(*addr, newVersioningHandler(server))
+}
+
+func controller(server *backend.Server) error {
+	if *ctrlAddr != "" {
+		ctrl, err := control.NewController(*ctrlAddr, server)
+		if err != nil {
+			return err
+		}
+
+		if *ctrlHostKey != "" {
+			if err := ctrl.AddHostKey(*ctrlHostKey); err != nil {
+				return err
+			}
+		}
+
+		if *ctrlAuthKeys != "" {
+			if err := ctrl.AddAuthorizedKeys(*ctrlAuthKeys); err != nil {
+				return err
+			}
+		}
+
+		go ctrl.Serve()
+	}
+	return nil
 }
 
 type versioningHandler struct {

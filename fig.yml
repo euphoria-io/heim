@@ -35,6 +35,15 @@ backend:
   volumes:
     - backend:/go/src/heim/backend
 
+heim:
+  build: containers/heim
+  links:
+    - psql
+  ports:
+    - "2222:22"
+  volumes:
+    - ${GOPATH}/bin/heim-backend:/hzp/backend.hzp
+
 haproxy:
   build: containers/haproxy
   links:
