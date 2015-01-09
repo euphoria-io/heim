@@ -29,7 +29,7 @@ build_release() {
   cd ${SRCDIR}/heim/client
   gulp build
 
-  go get heim/backend/cmd/heimlich
+  go get heim/backend/cmd/heimlich heim/backend/cmd/heim-backend
   go install -ldflags "-X main.version ${DRONE_COMMIT}" heim/backend/cmd/heim-backend
   go install heim/backend/cmd/heimlich
 
