@@ -168,7 +168,7 @@ func (s *memSession) handleCommand(cmd *Packet) (interface{}, error) {
 		if err != nil {
 			return nil, err
 		}
-		return &LogReply{Log: msgs}, nil
+		return &LogReply{Log: msgs, Before: msg.Before}, nil
 	case *NickCommand:
 		formerName := s.identity.Name()
 		s.identity.name = msg.Name

@@ -56,6 +56,7 @@ type LogCommand struct {
 
 type LogReply struct {
 	Log []Message `json:"log"`
+	Before Snowflake `json:"before"`
 }
 
 type LogEvent LogReply
