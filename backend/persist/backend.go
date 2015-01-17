@@ -41,6 +41,8 @@ type Backend struct {
 }
 
 func NewBackend(dsn, version string) (*Backend, error) {
+	log.Printf("persistence backend %s on %s", version, dsn)
+
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("sql.Open: %s", err)
