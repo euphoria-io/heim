@@ -22,11 +22,11 @@ describe('socket store', function() {
 
   describe('_wsurl', function() {
     it('should return wss:host/path/ws if protocol is https', function() {
-      var loc = {protocol: 'https', host: 'host', pathname: '/path/'}
+      var loc = {protocol: 'https:', host: 'host', pathname: '/path/'}
       assert.equal(socket.store._wsurl(loc), 'wss:host/path/ws')
     })
     it('should return ws:host/path/ws if protocol is NOT https', function() {
-      var loc = {protocol: 'http', host: 'host', pathname: '/path/'}
+      var loc = {protocol: 'http:', host: 'host', pathname: '/path/'}
       assert.equal(socket.store._wsurl(loc), 'ws:host/path/ws')
     })
   })

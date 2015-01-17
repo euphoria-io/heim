@@ -26,7 +26,7 @@ module.exports.store = Reflux.createStore({
 
   _wsurl: function(loc) {
     var scheme = 'ws'
-    if (loc.protocol == 'https') {
+    if (loc.protocol == 'https:') {
       scheme = 'wss'
     }
     return scheme + ':' + loc.host + loc.pathname + 'ws'
