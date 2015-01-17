@@ -288,7 +288,7 @@ func (b *Backend) latest(ctx context.Context, room *Room, n int, before backend.
 	if before.IsZero() {
 		query = "SELECT * FROM message WHERE room = $1 ORDER BY id DESC LIMIT $2"
 	} else {
-		query = "SELECT * FROM message WHERE room = $1 AND id < $2 ORDER BY id DESC LIMIT $3"
+		query = "SELECT * FROM message WHERE room = $1 AND id < $3 ORDER BY id DESC LIMIT $2"
 		args = append(args, before.String())
 	}
 
