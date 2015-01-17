@@ -11,7 +11,7 @@ describe('<Message>', function() {
   var testTree
 
   it('automatically links urls', function() {
-    testTree = new Tree([
+    testTree = new Tree('time').reset([
       {
         'id': 'id1',
         'time': 123456,
@@ -33,7 +33,7 @@ describe('<Message>', function() {
   })
 
   it('truncates long urls', function() {
-    var testTree = new Tree([
+    var testTree = new Tree('time').reset([
       {
         'id': 'id1',
         'time': 123456,

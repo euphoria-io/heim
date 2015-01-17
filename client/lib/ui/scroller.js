@@ -8,8 +8,10 @@ module.exports = React.createClass({
   componentWillMount: function() {
     window.addEventListener('resize', this.onResize)
     this._checkScroll = _.debounce(this.checkScroll, 150, {leading: false})
+    this._checkPos = _.throttle(this.checkPos, 150)
     this._targetLocked = false
     this._targetPos = 0
+    this._lastHeight = 0
   },
 
   componentDidMount: function() {
@@ -27,26 +29,34 @@ module.exports = React.createClass({
   },
 
   onScroll: function() {
-    this._checkScroll()
-    this.checkScrollbar()
+    this._checkPos()
   },
 
   componentDidUpdate: function() {
-    this._checkScroll()
     this.scroll()
+    this._checkPos()
   },
 
   checkScroll: function() {
     // via http://blog.vjeux.com/2013/javascript/scroll-position-with-react.html
     var node = this.refs.scroller.getDOMNode()
     var target = node.querySelector(this.props.target)
-    this._targetPos = node.scrollTop + node.offsetHeight - target.offsetTop
-    this._targetLocked = this._targetPos >= target.offsetHeight && this._targetPos < node.offsetHeight
+    var displayHeight = node.offsetHeight
+    this._targetPos = node.scrollTop + displayHeight - target.offsetTop
+    this._targetLocked = this._targetPos >= target.offsetHeight && this._targetPos < displayHeight
   },
 
-  checkScrollbar: function() {
+  checkPos: function() {
+    this.checkScroll()
+
+    var node = this.refs.scroller.getDOMNode()
+
+    var displayHeight = node.offsetHeight
+    if (this.props.onNearTop && node.scrollTop < displayHeight * 2) {
+      this.props.onNearTop()
+    }
+
     if (this.props.onScrollbarSize) {
-      var node = this.refs.scroller.getDOMNode()
       var scrollbarWidth = node.offsetWidth - node.clientWidth
       if (scrollbarWidth != this.scrollbarWidth) {
         this.scrollbarWidth = scrollbarWidth
@@ -56,11 +66,20 @@ module.exports = React.createClass({
   },
 
   scroll: function() {
+    var node = this.refs.scroller.getDOMNode()
+    var height = node.scrollHeight
     if (this._targetLocked) {
-      var node = this.refs.scroller.getDOMNode()
       var target = node.querySelector(this.props.target)
       node.scrollTop = Math.max(this.props.bottomSpace, this._targetPos) - node.offsetHeight + target.offsetTop
+    } else {
+      if (height > this._lastHeight) {
+        var delta = height - this._lastHeight
+        window.requestAnimationFrame(function() {
+          node.scrollTop += delta
+        })
+      }
     }
+    this._lastHeight = height
   },
 
   render: function() {

@@ -29,6 +29,100 @@ describe('chat store', function() {
     assert(who.equals(sorted))
   }
 
+  var message1 = {
+    'id': 'id1',
+    'time': 123456,
+    'sender': {
+      'id': '32.64.96.128:12345',
+      'name': 'tester',
+    },
+    'content': 'test',
+  }
+
+  var message2 = {
+    'id': 'id2',
+    'time': 123457,
+    'sender': {
+      'id': '32.64.96.128:12345',
+      'name': 'tester',
+    },
+    'content': 'test2',
+  }
+
+  var message3 = {
+    'id': 'id3',
+    'parent': 'id2',
+    'time': 123458,
+    'sender': {
+      'id': '32.64.96.128:12346',
+      'name': 'tester2',
+    },
+    'content': 'test3',
+  }
+
+  var logReply = {
+    'id': '0',
+    'type': 'log-reply',
+    'data': {
+      'log': [
+        message1,
+        message2,
+        message3,
+      ]
+    }
+  }
+
+  var message0 = {
+    'id': 'id0',
+    'time': 123456,
+    'sender': {
+      'id': '32.64.96.128:12345',
+      'name': 'tester',
+    },
+    'content': 'test',
+  }
+
+  var moreLogReply = {
+    'id': '0',
+    'type': 'log-reply',
+    'data': {
+      'log': [
+        message0,
+      ],
+      'before': 'id1',
+    }
+  }
+
+  var whoReply = {
+    'id': '0',
+    'type': 'who-reply',
+    'data': {
+      'listing': [
+        {
+          'id': '32.64.96.128:12344',
+          'name': '000tester',
+        },
+        {
+          'id': '32.64.96.128:12345',
+          'name': 'tester',
+        },
+        {
+          'id': '32.64.96.128:12346',
+          'name': 'tester2',
+        },
+      ]
+    }
+  }
+
+  var snapshotReply = {
+    'id': '',
+    'type': 'snapshot-event',
+    'data': {
+      'listing': whoReply.data.listing,
+      'log': logReply.data.log,
+    }
+  }
+
   it('should initialize with null connected state', function() {
     assert.equal(chat.store.getInitialState().connected, null)
   })
@@ -171,19 +265,6 @@ describe('chat store', function() {
       })
     })
 
-    it('should fetch logs and users upon connecting', function(done) {
-      handleSocket({status: 'open'}, function() {
-        sinon.assert.calledWithExactly(socket.send, {
-          type: 'log',
-          data: {n: 1000},
-        })
-        sinon.assert.calledWithExactly(socket.send, {
-          type: 'who',
-        })
-        done()
-      })
-    })
-
     it('should send stored nick upon connecting', function(done) {
       var mockStorage = {
         nick: 'test-nick',
@@ -261,52 +342,16 @@ describe('chat store', function() {
     })
   })
 
-  describe('received logs', function() {
-    var message1 = {
-      'id': 'id1',
-      'time': 123456,
-      'sender': {
-        'id': '32.64.96.128:12345',
-        'name': 'tester',
-      },
-      'content': 'test',
-    }
+  function assertMessagesHaveHues(messages) {
+    assert(messages.mapDFS(function(message, children, depth) {
+      var childrenOk = children.every(function(v) { return v })
+      return childrenOk && (depth === 0 || message.hasIn(['sender', 'hue']))
+    }))
+  }
 
-    var message2 = {
-      'id': 'id2',
-      'time': 123457,
-      'sender': {
-        'id': '32.64.96.128:12345',
-        'name': 'tester',
-      },
-      'content': 'test2',
-    }
-
-    var message3 = {
-      'id': 'id3',
-      'parent': 'id2',
-      'time': 123458,
-      'sender': {
-        'id': '32.64.96.128:12346',
-        'name': 'tester2',
-      },
-      'content': 'test3',
-    }
-
-    var logReply = {
-      'id': '0',
-      'type': 'log-reply',
-      'data': {
-        'log': [
-          message1,
-          message2,
-          message3,
-        ]
-      }
-    }
-
-    it('should be assigned to log', function(done) {
-      handleSocket({status: 'receive', body: logReply}, function(state) {
+  function checkLogs(msgBody) {
+    it('messages should be assigned to log', function(done) {
+      handleSocket({status: 'receive', body: msgBody}, function(state) {
         assert.equal(state.messages.size, logReply.data.log.length)
         assert(state.messages.get('id1').isSuperset(Immutable.fromJS(message1)))
         assert(state.messages.get('id2').isSuperset(Immutable.fromJS(message2)))
@@ -316,13 +361,76 @@ describe('chat store', function() {
       })
     })
 
-    it('should all be assigned hues', function(done) {
-      handleSocket({status: 'receive', body: logReply}, function(state) {
-        assert(state.messages.mapDFS(function(message, children, depth) {
-          var childrenOk = children.every(function(v) { return v })
-          return childrenOk && (depth === 0 || message.hasIn(['sender', 'hue']))
-        }))
+    it('messages should all be assigned hues', function(done) {
+      handleSocket({status: 'receive', body: msgBody}, function(state) {
+        assertMessagesHaveHues(state.messages)
         done()
+      })
+    })
+
+    it('should update earliestLog', function(done) {
+      handleSocket({status: 'receive', body: msgBody}, function(state) {
+        assert.equal(state.earliestLog, 'id1')
+        done()
+      })
+    })
+  }
+
+  describe('received logs', function() {
+    checkLogs(logReply)
+
+    it('should ignore empty logs', function(done) {
+      var emptyLogReply = {
+        'id': '0',
+        'type': 'log-reply',
+        'data': {
+          'log': []
+        }
+      }
+
+      handleSocket({status: 'receive', body: emptyLogReply}, function(state) {
+        assert.equal(state.messages.size, 0)
+        done()
+      })
+    })
+
+    describe('receiving more logs', function() {
+      it('messages should be added to logs', function(done) {
+        handleSocket({status: 'receive', body: logReply}, function() {
+          handleSocket({status: 'receive', body: moreLogReply}, function(state) {
+            assert.equal(state.messages.size, logReply.data.log.length + 1)
+            assert(state.messages.get('id0').isSuperset(Immutable.fromJS(message0)))
+            done()
+          })
+        })
+      })
+
+      it('messages should all be assigned hues', function(done) {
+        handleSocket({status: 'receive', body: logReply}, function() {
+          handleSocket({status: 'receive', body: moreLogReply}, function(state) {
+            assertMessagesHaveHues(state.messages)
+            done()
+          })
+        })
+      })
+
+      it('should update earliestLog', function(done) {
+        handleSocket({status: 'receive', body: logReply}, function() {
+          handleSocket({status: 'receive', body: moreLogReply}, function(state) {
+            assert.equal(state.earliestLog, 'id0')
+            done()
+          })
+        })
+      })
+    })
+
+    describe('receiving redundant logs', function() {
+      beforeEach(function() {
+        chat.store.socketEvent({status: 'receive', body: logReply})
+      })
+
+      describe('should not change', function() {
+        checkLogs(logReply)
       })
     })
 
@@ -373,28 +481,39 @@ describe('chat store', function() {
         chat.store.trigger.restore()
       })
     })
+
+    describe('loadMoreLogs action', function() {
+      it('should not make a request if initial logs not loaded yet', function() {
+        chat.store.loadMoreLogs()
+        sinon.assert.notCalled(socket.send)
+      })
+
+      it('should request 100 more logs before the earliest message', function() {
+        chat.store.socketEvent({status: 'receive', body: logReply})
+        chat.store.loadMoreLogs()
+        sinon.assert.calledWithExactly(socket.send, {
+          type: 'log',
+          data: {n: 100, before: 'id1'},
+        })
+      })
+
+      it('should not make a request if one already in flight', function(done) {
+        chat.store.socketEvent({status: 'receive', body: logReply})
+        chat.store.loadMoreLogs()
+        chat.store.loadMoreLogs()
+        sinon.assert.calledOnce(socket.send)
+        handleSocket({status: 'receive', body: moreLogReply}, function() {
+          chat.store.loadMoreLogs()
+          sinon.assert.calledTwice(socket.send)
+          done()
+        })
+      })
+    })
   })
 
-  describe('received users', function() {
-    var whoReply = {
-      'id': '0',
-      'type': 'who-reply',
-      'data': {
-        'listing': [
-          {
-            'id': '32.64.96.128:12345',
-            'name': 'tester',
-          },
-          {
-            'id': '32.64.96.128:12346',
-            'name': 'tester2',
-          },
-        ]
-      }
-    }
-
-    it('should be assigned to user list', function(done) {
-      handleSocket({status: 'receive', body: whoReply}, function(state) {
+  function checkUsers(msgBody) {
+    it('users should be assigned to user list', function(done) {
+      handleSocket({status: 'receive', body: msgBody}, function(state) {
         assert.equal(state.who.size, whoReply.data.listing.length)
         assert(Immutable.Iterable(whoReply.data.listing).every(function(user) {
           var whoEntry = state.who.get(user.id)
@@ -404,8 +523,8 @@ describe('chat store', function() {
       })
     })
 
-    it('should all be assigned hues', function(done) {
-      handleSocket({status: 'receive', body: whoReply}, function(state) {
+    it('users should all be assigned hues', function(done) {
+      handleSocket({status: 'receive', body: msgBody}, function(state) {
         assert(state.who.every(function(whoEntry) {
           return !!whoEntry.has('hue')
         }))
@@ -413,34 +532,22 @@ describe('chat store', function() {
       })
     })
 
-    it('should be sorted by name', function(done) {
-      handleSocket({status: 'receive', body: whoReply}, function(state) {
+    it('users should be sorted by name', function(done) {
+      handleSocket({status: 'receive', body: msgBody}, function(state) {
         checkWhoSorted(state.who)
         done()
       })
     })
+  }
+
+  describe('received users', function() {
+    checkUsers(whoReply)
   })
 
-  var whoReply = {
-    'id': '0',
-    'type': 'who-reply',
-    'data': {
-      'listing': [
-        {
-          'id': '32.64.96.128:12344',
-          'name': '000tester',
-        },
-        {
-          'id': '32.64.96.128:12345',
-          'name': 'tester',
-        },
-        {
-          'id': '32.64.96.128:12346',
-          'name': 'tester2',
-        },
-      ]
-    }
-  }
+  describe('received snapshots', function() {
+    checkLogs(snapshotReply)
+    checkUsers(snapshotReply)
+  })
 
   describe('received nick changes', function() {
     var nickReply = {

@@ -3,20 +3,21 @@ var Immutable = require('immutable')
 var EventEmitter = require('eventemitter3')
 
 
-function Tree(entries) {
+function Tree(sortProp) {
+  this.sortProp = sortProp
   this.changes = new EventEmitter()
-  this.reset(entries || [])
+  this.reset()
 }
 
 _.extend(Tree.prototype, {
   _node: function(entry) {
-    return Immutable.fromJS(entry)
+    return Immutable.fromJS(entry || {})
       .merge({
         'children': Immutable.OrderedSet(),
       })
   },
 
-  add: function(entry, silent) {
+  add: function(entry, _silent) {
     if (!entry.parent) {
       entry.parent = '__root'
     }
@@ -26,17 +27,54 @@ _.extend(Tree.prototype, {
 
     var parentId = newNode.get('parent')
     var parentNode = this.index[parentId]
-    if (!parentNode) {
-      // FIXME: just throwing away nodes with missing parents for now.
-      return
+    if (parentNode) {
+      parentNode = this.index[parentId] = parentNode.mergeIn(['children'], [newId])
+    } else {
+      // create unreachable orphan parent
+      parentNode = this.index[parentId] = this._node().mergeIn(['children'], [newId])
     }
-    parentNode = this.index[parentId] = parentNode.mergeIn(['children'], [newId])
+
+    if (_.has(this.index, newId)) {
+      // merge in orphans
+      newNode = this.index[newId].mergeDeep(newNode)
+    }
+
     this.index[newId] = newNode
-    this._lastId = newId
     this.size++
 
-    if (!silent) {
+    if (entry[this.sortProp] > this._lastValue) {
+      this._lastId = newId
+      this._lastValue = entry[this.sortProp]
+    }
+
+    if (!_silent) {
       this.changes.emit(parentId, parentNode)
+    }
+  },
+
+  addAll: function(entries, _silent) {
+    var changed = {}
+    _.each(entries, function(entry) {
+      var parentId = entry.parent || '__root'
+      if (_.has(this.index, parentId)) {
+        changed[parentId] = true
+      }
+    }, this)
+
+    _.each(entries, function(entry) {
+      this.add(entry, true)
+    }, this)
+
+    // NOTE: we do not re-sort children if _silent. currently, _silent
+    // is only intended to be used internally, specifically by reset().
+    if (!_silent) {
+      _.each(changed, function(item, id) {
+        var resorted = this.index[id].get('children').sortBy(function(childId) {
+          return this.index[childId].get(this.sortProp)
+        }.bind(this))
+        this.index[id] = this.index[id].set('children', resorted)
+        this.changes.emit(id, this.index[id])
+      }, this)
     }
   },
 
@@ -49,12 +87,14 @@ _.extend(Tree.prototype, {
     this.index = {}
     this.index.__root = this._node({id: '__root'})
     this._lastId = null
+    this._lastValue = null
     this.size = 0
 
-    _.each(entries, function(entry) {
-      this.add(entry, true)
-    }, this)
+    if (entries) {
+      this.addAll(entries, null, true)
+    }
     this.changes.emit('__root', this.index.__root)
+    return this
   },
 
   get: function(id) {

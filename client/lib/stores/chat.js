@@ -19,7 +19,8 @@ module.exports.store = Reflux.createStore({
     this.state = {
       connected: null,
       nick: null,
-      messages: new Tree(),
+      messages: new Tree('time'),
+      earliestLog: null,
       nickHues: {},
       who: Immutable.OrderedMap(),
       focusedMessage: null,
@@ -39,22 +40,13 @@ module.exports.store = Reflux.createStore({
         var message = ev.body.data
         message.sender.hue = this._getNickHue(message.sender.name)
         this.state.messages.add(message)
-
+      } else if (ev.body.type == 'snapshot-event') {
+        this._handleWhoReply(ev.body.data)
+        this._handleLogReply(ev.body.data)
       } else if (ev.body.type == 'log-reply' && ev.body.data) {
-        _.each(ev.body.data.log, function(message) {
-          message.sender.hue = this._getNickHue(message.sender.name)
-        }, this)
-        this.state.messages.reset(ev.body.data.log)
-
+        this._handleLogReply(ev.body.data)
       } else if (ev.body.type == 'who-reply') {
-        this.state.who = Immutable.OrderedMap(
-          Immutable.Seq(ev.body.data.listing)
-            .sortBy(function(user) { return user.name })
-            .map(function(user) {
-              user.hue = this._getNickHue(user.name)
-              return [user.id, Immutable.Map(user)]
-            }, this)
-        )
+        this._handleWhoReply(ev.body.data)
       } else if (ev.body.type == 'nick-reply' || ev.body.type == 'nick-event') {
         this.state.who = this.state.who
           .mergeIn([ev.body.data.id], {
@@ -73,13 +65,6 @@ module.exports.store = Reflux.createStore({
       }
     } else if (ev.status == 'open') {
       this.state.connected = true
-      socket.send({
-        type: 'log',
-        data: {n: 1000},
-      })
-      socket.send({
-        type: 'who',
-      })
       if (this.state.nick) {
         this._sendNick(this.state.nick)
       }
@@ -87,6 +72,33 @@ module.exports.store = Reflux.createStore({
       this.state.connected = false
     }
     this.trigger(this.state)
+  },
+
+  _handleLogReply: function(data) {
+    if (!data.log.length) {
+      return
+    }
+    this._loadingLogs = false
+    this.state.earliestLog = data.log[0].id
+    _.each(data.log, function(message) {
+      message.sender.hue = this._getNickHue(message.sender.name)
+    }, this)
+    if (data.before) {
+      this.state.messages.addAll(data.log)
+    } else {
+      this.state.messages.reset(data.log)
+    }
+  },
+
+  _handleWhoReply: function(data) {
+    this.state.who = Immutable.OrderedMap(
+      Immutable.Seq(data.listing)
+        .sortBy(function(user) { return user.name })
+        .map(function(user) {
+          user.hue = this._getNickHue(user.name)
+          return [user.id, Immutable.Map(user)]
+        }, this)
+    )
   },
 
   storageChange: function(data) {
@@ -127,6 +139,19 @@ module.exports.store = Reflux.createStore({
       data: {
         name: nick
       },
+    })
+  },
+
+  loadMoreLogs: function() {
+    if (!this.state.earliestLog || this._loadingLogs) {
+      return
+    }
+
+    this._loadingLogs = true
+
+    socket.send({
+      type: 'log',
+      data: {n: 100, before: this.state.earliestLog},
     })
   },
 
