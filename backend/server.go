@@ -86,13 +86,14 @@ func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = session.serve(); err != nil {
-		// TODO: error handling
-		return
-	}
+	defer func() {
+		if err := room.Part(ctx, session); err != nil {
+			// TODO: error handling
+			return
+		}
+	}()
 
-	err = room.Part(ctx, session)
-	if err != nil {
+	if err = session.serve(); err != nil {
 		// TODO: error handling
 		return
 	}
