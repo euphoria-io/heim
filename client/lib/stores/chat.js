@@ -58,6 +58,7 @@ module.exports.store = Reflux.createStore({
       } else if (ev.body.type == 'nick-reply' || ev.body.type == 'nick-event') {
         this.state.who = this.state.who
           .mergeIn([ev.body.data.id], {
+            id: ev.body.data.id,
             name: ev.body.data.to,
             hue: this._getNickHue(ev.body.data.to),
           })
