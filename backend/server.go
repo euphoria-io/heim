@@ -32,12 +32,18 @@ func NewServer(backend Backend, staticPath string) *Server {
 
 func (s *Server) route() {
 	s.r = mux.NewRouter()
+	s.r.Path("/").Methods("OPTIONS").HandlerFunc(s.handleProbe)
 	s.r.HandleFunc("/room/{room:[a-z0-9]+}/ws", s.handleRoom)
 	s.r.PathPrefix("/room/{room:[a-z0-9]+}/").HandlerFunc(s.handleStatic)
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.r.ServeHTTP(w, r)
+}
+
+func (s *Server) handleProbe(w http.ResponseWriter, r *http.Request) {
+	// TODO: determine if we're really healthy
+	w.WriteHeader(http.StatusOK)
 }
 
 func (s *Server) handleStatic(w http.ResponseWriter, r *http.Request) {
