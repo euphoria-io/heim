@@ -37,14 +37,45 @@ module.exports = React.createClass({
     switch (dir) {
       case 'up':
         if (idx === 0) {
+          // at beginning
           return
         }
-        target = elems[idx - 1]
+        var steps = 0
+        do {
+          // find prev leaf
+          idx--
+          target = elems[idx]
+          target = target && target.parentNode
+          steps++
+        } while (target.querySelectorAll('.replies').length)
+        if (steps > 1) {
+          // if we descended deeply, focus parent of leaf
+          idx++
+        }
+        target = elems[idx]
         target = target && target.parentNode
         break
       case 'down':
-        target = elems[idx + 2]
+        if (idx == elems.length - 1) {
+          // at end
+          return
+        }
+        idx++
+        target = elems[idx]
         target = target && target.parentNode
+        if (!target.querySelectorAll('.replies .message-node').length) {
+          // last focused was a leaf
+          idx++
+          target = elems[idx]
+          target = target && target.parentNode
+        } else {
+          // find next leaf
+          do {
+            idx++
+            target = elems[idx]
+            target = target && target.parentNode
+          } while (target && target.querySelectorAll('.replies').length)
+        }
         break
       case 'left':
         target = elems[idx]
