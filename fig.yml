@@ -1,17 +1,18 @@
-psqldata:
-  build: containers/psql/data
-
+# The psql container runs the postgres server from the psqldata/data directory.
 psql:
   build: containers/psql
   volumes:
     - psqldata/data:/var/lib/postgresql/data
 
+# The psqlclient container provides a client connection to the psql container.
+# TODO: add volume for persistent readline history, sql dumps, etc.
 psqlclient:
   command: psql -h psql -p 5432 -U postgres heim
   build: containers/psql/client
   links:
     - psql
 
+# The upgradedb container runs the upgradedb command against the psql container.
 upgradedb:
   build: backend/upgradedb
   links:
@@ -19,6 +20,7 @@ upgradedb:
   volumes:
     - backend:/go/src/heim/backend
 
+# The frontend container runs an ongoing gulp build.
 frontend:
   command: gulp build
   build: client
@@ -28,27 +30,13 @@ frontend:
   environment:
     NODE_ENV: production
 
+# The backend container runs the backend server against the psql container.
 backend:
   build: backend
   links:
     - psql
   volumes:
     - backend:/go/src/heim/backend
-
-heim:
-  build: containers/heim
-  links:
-    - psql
-  ports:
-    - "2222:22"
-  volumes:
-    - ${GOPATH}/bin/heim-backend:/hzp/backend.hzp
-
-haproxy:
-  build: containers/haproxy
-  links:
-    - backend:DEV_HEIM_1
   ports:
     - "8080:80"
-  volumes:
-    - ~/euphoria/cert/euphoria.io.pem:/etc/haproxy/cert.pem
+    - "2222:22"
