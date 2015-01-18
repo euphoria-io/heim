@@ -115,8 +115,6 @@ func (s *memSession) serve() error {
 			}
 
 		case cmd := <-s.incoming:
-			logger.Printf("received command: id=%s, type=%s", cmd.ID, cmd.Type)
-
 			keepalive.Stop()
 
 			reply, err := s.handleCommand(cmd)
@@ -137,8 +135,6 @@ func (s *memSession) serve() error {
 				return err
 			}
 
-			logger.Printf("responding: %s", string(data))
-
 			if err := s.conn.WriteMessage(websocket.TextMessage, data); err != nil {
 				logger.Printf("error: write message: %s", err)
 				return err
@@ -153,7 +149,6 @@ func (s *memSession) serve() error {
 				return err
 			}
 
-			logger.Printf("sending: %s", string(data))
 			if err := s.conn.WriteMessage(websocket.TextMessage, data); err != nil {
 				logger.Printf("error: write message: %s", err)
 				return err
