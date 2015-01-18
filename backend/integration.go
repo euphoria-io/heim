@@ -68,21 +68,32 @@ func (s *serverUnderTest) Close() {
 	s.server.Close()
 }
 
-func (s *serverUnderTest) Connect(roomName string) *websocket.Conn {
+func (s *serverUnderTest) Connect(roomName string) *testConn {
 	url := strings.Replace(s.server.URL, "http:", "ws:", 1) + "/room/" + roomName + "/ws"
 	conn, _, err := websocket.DefaultDialer.Dial(url, nil)
 	So(err, ShouldBeNil)
-	return conn
+	return &testConn{conn}
 }
 
-func closeConn(conn *websocket.Conn) {
-	conn.WriteMessage(
-		websocket.CloseMessage,
-		websocket.FormatCloseMessage(websocket.CloseNormalClosure, "normal closure"))
+type testConn struct {
+	*websocket.Conn
 }
 
-func readPacket(conn *websocket.Conn) (PacketType, interface{}) {
-	msgType, data, err := conn.ReadMessage()
+func (tc *testConn) send(id, cmdType, data string, args ...interface{}) {
+	if len(args) > 0 {
+		data = fmt.Sprintf(data, args...)
+	}
+	var msg string
+	if data == "" {
+		msg = fmt.Sprintf(`{"id":"%s","type":"%s"}`, id, cmdType)
+	} else {
+		msg = fmt.Sprintf(`{"id":"%s","type":"%s","data":%s}`, id, cmdType, data)
+	}
+	So(tc.Conn.WriteMessage(websocket.TextMessage, []byte(msg)), ShouldBeNil)
+}
+
+func (tc *testConn) readPacket() (PacketType, interface{}) {
+	msgType, data, err := tc.Conn.ReadMessage()
 	So(err, ShouldBeNil)
 	So(msgType, ShouldEqual, websocket.TextMessage)
 
@@ -94,51 +105,33 @@ func readPacket(conn *websocket.Conn) (PacketType, interface{}) {
 	return packet.Type, payload
 }
 
-func shouldReceive(actual interface{}, expected ...interface{}) string {
-	conn, ok := actual.(*websocket.Conn)
-	if !ok {
-		return fmt.Sprintf("shouldReceive expects a *websocket.Conn on the left, got %T", actual)
-	}
-	if len(expected) != 2 {
-		return "shouldReceive expects string, payload on right"
-	}
-	expectedType, ok := expected[0].(PacketType)
-	if !ok {
-		return fmt.Sprintf(
-			"shouldReceive expects string, payload on right, got %T, %T", expected...)
-	}
-	expectedPayload := expected[1]
-
-	fmt.Printf("%s should receive %v, %#v\n", conn.RemoteAddr(), expectedType, expectedPayload)
-
-	packetType, payload := readPacket(conn)
-	fmt.Printf("%s received %v, %#v\n", conn.RemoteAddr(), packetType, payload)
-
-	if packetType != expectedType {
-		return fmt.Sprintf("Expected: %s -> %#v\nActual:   %s -> %#v\n",
-			expectedType, expectedPayload, packetType, payload)
+func (tc *testConn) expect(id, cmdType, data string, args ...interface{}) {
+	if len(args) > 0 {
+		data = fmt.Sprintf(data, args...)
 	}
 
-	return ShouldResemble(payload, expectedPayload)
+	packetType, payload := tc.readPacket()
+	fmt.Printf("%s received %v, %#v\n", tc.RemoteAddr(), packetType, payload)
+	So(packetType, ShouldEqual, cmdType)
+
+	var expected Packet
+	expectedString := fmt.Sprintf(`{"id":"%s","type":"%s","data":%s}`, id, cmdType, data)
+	So(json.Unmarshal([]byte(expectedString), &expected), ShouldBeNil)
+	expectedPayload, err := expected.Payload()
+	So(err, ShouldBeNil)
+
+	So(payload, ShouldResemble, expectedPayload)
 }
 
-func shouldSend(actual interface{}, expected ...interface{}) string {
-	conn, ok := actual.(*websocket.Conn)
-	if !ok {
-		return fmt.Sprintf("shouldSend expects a *websocket.Conn on the left, got %T", actual)
-	}
-	if len(expected) == 0 {
-		return "shouldSend expects format string and parameters on right"
-	}
-	format, ok := expected[0].(string)
-	if !ok {
-		return fmt.Sprintf("shouldSend expects format string on right, got %T", expected)
-	}
-	msg := fmt.Sprintf(format, expected[1:]...)
-	if err := conn.WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
-		return fmt.Sprintf("send error: %s\n   message: %s", err, msg)
-	}
-	return ""
+func (tc *testConn) expectSnapshot(version string, listingParts []string, logParts []string) {
+	tc.expect("", "snapshot-event", `{"version":"%s","listing":[%s],"log":[%s]}`,
+		version, strings.Join(listingParts, ","), strings.Join(logParts, ","))
+}
+
+func (tc *testConn) Close() {
+	tc.Conn.WriteMessage(
+		websocket.CloseMessage,
+		websocket.FormatCloseMessage(websocket.CloseNormalClosure, "normal closure"))
 }
 
 func snowflakes(n int) []Snowflake {
@@ -171,32 +164,24 @@ func IntegrationTest(t testing.TB, factory func() Backend) {
 func testLurker(t testing.TB, s *serverUnderTest) {
 	Convey("Lurker", t, func() {
 		conn1 := s.Connect("lurker")
-		defer closeConn(conn1)
+		defer conn1.Close()
 		id1 := conn1.LocalAddr().String()
 
-		So(conn1, shouldReceive, SnapshotEventType,
-			&SnapshotEvent{
-				Version: s.backend.Version(),
-				Listing: Listing{},
-				Log:     []Message{},
-			})
+		conn1.expectSnapshot(s.backend.Version(), nil, nil)
 
 		conn2 := s.Connect("lurker")
-		defer closeConn(conn2)
+		defer conn2.Close()
 		id2 := conn2.LocalAddr().String()
 
-		So(conn2, shouldReceive, SnapshotEventType,
-			&SnapshotEvent{
-				Version: s.backend.Version(),
-				Listing: Listing{IdentityView{ID: id1, Name: id1}},
-				Log:     []Message{},
-			})
+		conn2.expectSnapshot(s.backend.Version(),
+			[]string{fmt.Sprintf(`{"id":"%s","name":"%s"}`, id1, id1)},
+			nil)
 
-		So(conn2, shouldSend, `{"id":"1","type":"nick","data":{"name":"speaker"}}`)
-		So(conn2, shouldReceive, NickReplyType, &NickReply{ID: id2, From: id2, To: "speaker"})
+		conn2.send("1", "nick", `{"name":"speaker"}`)
+		conn2.expect("1", "nick-reply", `{"id":"%s","from":"%s","to":"speaker"}`, id2, id2)
 
-		So(conn1, shouldReceive, JoinEventType, &PresenceEvent{ID: id2, Name: id2})
-		So(conn1, shouldReceive, NickEventType, &NickEvent{ID: id2, From: id2, To: "speaker"})
+		conn1.expect("", "join-event", `{"id":"%s","name":"%s"}`, id2, id2)
+		conn1.expect("", "nick-event", `{"id":"%s","from":"%s","to":"speaker"}`, id2, id2)
 	})
 }
 
@@ -205,39 +190,38 @@ func testBroadcast(t testing.TB, s *serverUnderTest) {
 		tc := NewTestClock()
 		defer tc.Close()
 
-		conns := make([]*websocket.Conn, 3)
+		conns := make([]*testConn, 3)
 
 		ids := make(Listing, len(conns))
+
+		listingParts := []string{}
 
 		for i := range conns {
 			conn := s.Connect("broadcast")
 			conns[i] = conn
 			me := conn.LocalAddr().String()
 			ids[i] = IdentityView{ID: me, Name: fmt.Sprintf("user%d", i)}
-			So(conn, shouldSend, `{"id":"1","type":"nick","data":{"name":"user%d"}}`, i)
-			So(conn, shouldSend, `{"id":"2","type":"who"}`)
+			conn.send("1", "nick", `{"name":"user%d"}`, i)
+			conn.send("2", "who", "")
 
-			So(conn, shouldReceive, SnapshotEventType,
-				&SnapshotEvent{
-					Version: s.backend.Version(),
-					Listing: ids[:i],
-					Log:     []Message{},
-				})
+			conn.expectSnapshot(s.backend.Version(), listingParts, nil)
+			listingParts = append(listingParts,
+				fmt.Sprintf(`{"id":"%s","name":"%s"}`, ids[i].ID, ids[i].Name))
 
-			So(conn, shouldReceive, NickReplyType,
-				&NickReply{ID: ids[i].ID, From: ids[i].ID, To: fmt.Sprintf("user%d", i)})
-			So(conn, shouldReceive, WhoReplyType, &WhoReply{Listing: ids[:(i + 1)]})
+			conn.expect("1", "nick-reply",
+				`{"id":"%s","from":"%s","to":"%s"}`, ids[i].ID, ids[i].ID, ids[i].Name)
+			conn.expect("2", "who-reply", `{"listing":[%s]}`, strings.Join(listingParts, ","))
 
 			for _, c := range conns[:i] {
-				So(c, shouldReceive, JoinEventType, &PresenceEvent{ID: ids[i].ID, Name: ids[i].ID})
-				So(c, shouldReceive, NickEventType,
-					&NickEvent{ID: ids[i].ID, From: ids[i].ID, To: fmt.Sprintf("user%d", i)})
+				c.expect("", "join-event", `{"id":"%s","name":"%s"}`, ids[i].ID, ids[i].ID)
+				c.expect("", "nick-event",
+					`{"id":"%s","from":"%s","to":"%s"}`, ids[i].ID, ids[i].ID, ids[i].Name)
 			}
 		}
 
 		defer func() {
 			for _, conn := range conns {
-				defer closeConn(conn)
+				defer conn.Close()
 			}
 		}()
 
@@ -245,25 +229,29 @@ func testBroadcast(t testing.TB, s *serverUnderTest) {
 		sf1 := sfs[0]
 		sf2 := sfs[1]
 
-		So(conns[1], shouldSend, `{"id":"2","type":"send","data":{"content":"hi"}}`)
+		conns[1].send("2", "send", `{"content":"hi"}`)
+		conns[0].expect("", "send-event",
+			`{"id":"%s","time":1,"sender":{"id":"%s","name":"%s"},"content":"hi"}`,
+			sf1, ids[1].ID, ids[1].Name)
 
-		So(conns[0], shouldReceive, SendEventType,
-			&SendEvent{ID: sf1, UnixTime: 1, Sender: &ids[1], Content: "hi"})
+		conns[2].send("2", "send", `{"content":"bye"}`)
+		conns[0].expect("", "send-event",
+			`{"id":"%s","time":2,"sender":{"id":"%s","name":"%s"},"content":"bye"}`,
+			sf2, ids[2].ID, ids[2].Name)
 
-		So(conns[2], shouldSend, `{"id":"2","type":"send","data":{"content":"bye"}}`)
+		conns[1].expect("2", "send-reply",
+			`{"id":"%s","time":1,"sender":{"id":"%s","name":"%s"},"content":"hi"}`,
+			sf1, ids[1].ID, ids[1].Name)
+		conns[1].expect("", "send-event",
+			`{"id":"%s","time":2,"sender":{"id":"%s","name":"%s"},"content":"bye"}`,
+			sf2, ids[2].ID, ids[2].Name)
 
-		So(conns[0], shouldReceive, SendEventType,
-			&SendEvent{ID: sf2, UnixTime: 2, Sender: &ids[2], Content: "bye"})
-
-		So(conns[1], shouldReceive, SendReplyType,
-			&SendReply{ID: sf1, UnixTime: 1, Sender: &ids[1], Content: "hi"})
-		So(conns[1], shouldReceive, SendEventType,
-			&SendEvent{ID: sf2, UnixTime: 2, Sender: &ids[2], Content: "bye"})
-
-		So(conns[2], shouldReceive, SendEventType,
-			&SendEvent{ID: sf1, UnixTime: 1, Sender: &ids[1], Content: "hi"})
-		So(conns[2], shouldReceive, SendReplyType,
-			&SendReply{ID: sf2, UnixTime: 2, Sender: &ids[2], Content: "bye"})
+		conns[2].expect("", "send-event",
+			`{"id":"%s","time":1,"sender":{"id":"%s","name":"%s"},"content":"hi"}`,
+			sf1, ids[1].ID, ids[1].Name)
+		conns[2].expect("2", "send-reply",
+			`{"id":"%s","time":2,"sender":{"id":"%s","name":"%s"},"content":"bye"}`,
+			sf2, ids[2].ID, ids[2].Name)
 	})
 }
 
@@ -273,7 +261,7 @@ func testThreading(t testing.TB, s *serverUnderTest) {
 		defer tc.Close()
 
 		conn := s.Connect("threading")
-		defer closeConn(conn)
+		defer conn.Close()
 
 		id := &IdentityView{ID: conn.LocalAddr().String(), Name: "user"}
 		id.Name = id.ID
@@ -281,40 +269,69 @@ func testThreading(t testing.TB, s *serverUnderTest) {
 		sf1 := sfs[0]
 		sf2 := sfs[1]
 
-		So(conn, shouldReceive, SnapshotEventType,
-			&SnapshotEvent{
-				Version: s.backend.Version(),
-				Listing: Listing{},
-				Log:     []Message{},
-			})
+		conn.expectSnapshot(s.backend.Version(), nil, nil)
 
-		So(conn, shouldSend, `{"id":"1","type":"send","data":{"content":"root"}}`)
-		So(conn, shouldReceive, SendReplyType,
-			&SendReply{ID: sf1, UnixTime: 1, Sender: id, Content: "root"})
+		conn.send("1", "send", `{"content":"root"}`)
+		conn.expect("1", "send-reply",
+			`{"id":"%s","time":1,"sender":{"id":"%s","name":"%s"},"content":"root"}`,
+			sf1, id.ID, id.Name)
 
-		So(conn, shouldSend,
-			`{"id":"2","type":"send","data":{"parent":"%s","content":"child1"}}`, sf1)
-		So(conn, shouldReceive, SendReplyType,
-			&SendReply{ID: sf2, Parent: sf1, UnixTime: 2, Sender: id, Content: "child1"})
+		conn.send("2", "send", `{"parent":"%s","content":"ch1"}`, sf1)
+		conn.expect("2", "send-reply",
+			`{"id":"%s","parent":"%s","time":2,"sender":{"id":"%s","name":"%s"},"content":"ch1"}`,
+			sf2, sf1, id.ID, id.Name)
 
-		So(conn, shouldSend, `{"id":"3","type":"log","data":{"n":10}}`)
-		So(conn, shouldReceive, LogReplyType,
-			&LogReply{
-				Log: []Message{
-					{
-						ID:       sf1,
-						UnixTime: 1,
-						Sender:   id,
-						Content:  "root",
-					},
-					{
-						ID:       sf2,
-						Parent:   sf1,
-						UnixTime: 2,
-						Sender:   id,
-						Content:  "child1",
-					},
-				},
-			})
+		conn.send("3", "log", `{"n":10}`)
+		conn.expect("3", "log-reply",
+			`{"log":[`+
+				`{"id":"%s","time":1,"sender":{"id":"%s","name":"%s"},"content":"root"},`+
+				`{"id":"%s","parent":"%s","time":2,"sender":{"id":"%s","name":"%s"},"content":"ch1"}]}`,
+			sf1, id.ID, id.Name, sf2, sf1, id.ID, id.Name)
+	})
+}
+
+func testPresence(t testing.TB, s *serverUnderTest) {
+	Convey("Other party joins then parts", t, func() {
+		self := s.Connect("presence")
+		defer self.Close()
+		self.expectSnapshot(s.backend.Version(), nil, nil)
+		selfID := self.LocalAddr().String()
+
+		other := s.Connect("presence")
+		other.expectSnapshot(s.backend.Version(),
+			[]string{fmt.Sprintf(`{"id":"%s","name":"%s"}`, selfID, selfID)}, nil)
+		otherID := other.LocalAddr().String()
+
+		self.expect("", "join-event", `{"id":"%s","name":"%s"}`, otherID, otherID)
+		self.send("1", "who", "")
+		self.expect("1", "who-reply", `{"listing":[{"id":"%s","name":"%s"}]}`, otherID, otherID)
+
+		other.Close()
+		self.expect("", "part-event", `{"id":"%s","name":"%s"}`, otherID, otherID)
+
+		self.send("2", "who", "")
+		self.expect("2", "who-reply", `{"listing":[]}`)
+	})
+
+	Convey("Join after other party, other party parts", t, func() {
+		other := s.Connect("presence")
+		other.expectSnapshot(s.backend.Version(), nil, nil)
+		otherID := other.LocalAddr().String()
+
+		self := s.Connect("presence")
+		defer self.Close()
+		self.expectSnapshot(s.backend.Version(),
+			[]string{fmt.Sprintf(`{"id":"%s","name":"%s"}`, otherID, otherID)}, nil)
+		selfID := self.LocalAddr().String()
+
+		other.expect("", "join-event", `{"id":"%s","name":"%s"}`, selfID, selfID)
+		self.send("1", "who", "")
+		self.expect("1", "who-reply", `{"listing":[{"id":"%s","name":"%s"}]}`, otherID, otherID)
+
+		other.Close()
+		self.expect("", "part-event", `{"id":"%s","name":"%s"}`, otherID, otherID)
+
+		self.send("2", "who", "")
+		self.expect("2", "who-reply", `{"listing":[]}`)
 	})
 }
