@@ -79,7 +79,6 @@ func (b *Backend) createSchema() error {
 
 	for t, _ := range schema {
 		if after, ok := t.(AfterCreateTabler); ok {
-			fmt.Printf("after create tabler on %T\n", t)
 			if err := after.AfterCreateTable(b.DB); err != nil {
 				tableName := "???"
 				if table, err := b.DbMap.TableFor(reflect.TypeOf(t), false); err == nil {
@@ -116,7 +115,6 @@ func (b *Backend) background(ctx context.Context) {
 				continue
 			}
 
-			logger.Printf("notify: %s\n", notice.Extra)
 			var msg BroadcastMessage
 
 			if err := json.Unmarshal([]byte(notice.Extra), &msg); err != nil {
@@ -183,9 +181,6 @@ func (b *Backend) sendMessageToRoom(
 	ctx context.Context, room *Room, session backend.Session, msg backend.Message,
 	exclude ...backend.Session) (backend.Message, error) {
 
-	logger := backend.Logger(ctx)
-	logger.Printf("inserting message")
-
 	stored, err := NewMessage(room, session.Identity().View(), msg.Parent, msg.Content)
 	if err != nil {
 		return backend.Message{}, err
@@ -203,10 +198,6 @@ func (b *Backend) sendMessageToRoom(
 func (b *Backend) broadcast(
 	ctx context.Context, room *Room, session backend.Session,
 	packetType backend.PacketType, payload interface{}, exclude ...backend.Session) error {
-
-	logger := backend.Logger(ctx)
-	logger.Printf("broadcast [%s:%s] %v %#v (ex. %#v)",
-		room.Name, session.ID(), packetType, payload, exclude)
 
 	encodedPayload, err := json.Marshal(payload)
 	if err != nil {
