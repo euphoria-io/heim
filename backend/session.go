@@ -60,8 +60,13 @@ func newMemSession(ctx context.Context, conn *websocket.Conn, room Room) *memSes
 	return session
 }
 
+func (s *memSession) Close() {
+	logger := Logger(s.ctx)
+	logger.Printf("closing session")
+	s.cancel()
+}
+
 func (s *memSession) ID() string          { return s.conn.RemoteAddr().String() }
-func (s *memSession) Close()              { s.cancel() }
 func (s *memSession) Identity() Identity  { return s.identity }
 func (s *memSession) SetName(name string) { s.identity.name = name }
 
