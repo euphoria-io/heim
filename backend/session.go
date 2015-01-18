@@ -4,9 +4,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"sync/atomic"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"golang.org/x/net/context"
+)
+
+const MaxKeepAliveMisses = 3
+
+var (
+	KeepAlive       = 20 * time.Second
+	ErrUnresponsive = fmt.Errorf("connection unresponsive")
 )
 
 type Session interface {
@@ -26,6 +35,8 @@ type memSession struct {
 
 	incoming chan *Packet
 	outgoing chan *Packet
+
+	outstandingPings uint32
 }
 
 func newMemSession(ctx context.Context, conn *websocket.Conn, room Room) *memSession {
@@ -43,6 +54,9 @@ func newMemSession(ctx context.Context, conn *websocket.Conn, room Room) *memSes
 		incoming: make(chan *Packet),
 		outgoing: make(chan *Packet, 100),
 	}
+
+	conn.SetPongHandler(session.handlePong)
+
 	return session
 }
 
@@ -69,18 +83,41 @@ func (s *memSession) Send(ctx context.Context, cmdType PacketType, payload inter
 	return nil
 }
 
+func (s *memSession) handlePong(string) error {
+	atomic.StoreUint32(&s.outstandingPings, 0)
+	return nil
+}
+
 func (s *memSession) serve() error {
 	go s.readMessages()
 
 	logger := Logger(s.ctx)
 	logger.Printf("client connected")
 
+	keepalive := time.NewTimer(KeepAlive)
+	defer keepalive.Stop()
+
 	for {
 		select {
+
 		case <-s.ctx.Done():
+			// connection forced to close
 			return s.ctx.Err()
+
+		case <-keepalive.C:
+			// keepalive expired
+			if pings := atomic.AddUint32(&s.outstandingPings, 1); pings > MaxKeepAliveMisses {
+				return ErrUnresponsive
+			}
+
+			if err := s.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+				return err
+			}
+
 		case cmd := <-s.incoming:
 			logger.Printf("received command: id=%s, type=%s", cmd.ID, cmd.Type)
+
+			keepalive.Stop()
 
 			reply, err := s.handleCommand(cmd)
 			if err != nil {
@@ -106,6 +143,9 @@ func (s *memSession) serve() error {
 				logger.Printf("error: write message: %s", err)
 				return err
 			}
+
+			keepalive.Reset(KeepAlive)
+
 		case cmd := <-s.outgoing:
 			data, err := cmd.Encode()
 			if err != nil {
@@ -128,7 +168,7 @@ func (s *memSession) readMessages() {
 	defer s.Close()
 
 	for s.ctx.Err() == nil {
-		_, data, err := s.conn.ReadMessage()
+		messageType, data, err := s.conn.ReadMessage()
 		if err != nil {
 			if err == io.EOF {
 				logger.Printf("client disconnected")
@@ -138,15 +178,18 @@ func (s *memSession) readMessages() {
 			return
 		}
 
-		// TODO: check messageType
-
-		cmd, err := ParseRequest(data)
-		if err != nil {
-			logger.Printf("error: ParseRequest: %s", err)
+		switch messageType {
+		case websocket.TextMessage:
+			cmd, err := ParseRequest(data)
+			if err != nil {
+				logger.Printf("error: ParseRequest: %s", err)
+				return
+			}
+			s.incoming <- cmd
+		default:
+			logger.Printf("error: unsupported message type: %v", messageType)
 			return
 		}
-
-		s.incoming <- cmd
 	}
 }
 
