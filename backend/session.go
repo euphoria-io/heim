@@ -112,6 +112,7 @@ func (s *memSession) serve() error {
 		case <-keepalive.C:
 			// keepalive expired
 			if pings := atomic.AddUint32(&s.outstandingPings, 1); pings > MaxKeepAliveMisses {
+				logger.Printf("connection timed out")
 				return ErrUnresponsive
 			}
 
