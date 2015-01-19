@@ -26,3 +26,9 @@ Heim = {
   storage: require('./stores/storage'),
   focus: require('./stores/focus'),
 }
+
+document.body.addEventListener('keydown', function(ev) {
+  if (ev.target == document.body && ev.which == 8) {
+    ev.preventDefault()
+  }
+}, false)
