@@ -34,6 +34,11 @@ gulp.task('less', function() {
     .pipe(gulp.dest(dest))
 })
 
+gulp.task('static', function() {
+  return gulp.src('./static/**/*')
+    .pipe(gulp.dest(dest))
+})
+
 gulp.task('html', function() {
   return gulp.src('./lib/index.html')
     .pipe(gulp.dest(dest))
@@ -67,8 +72,10 @@ gulp.task('watchify', function() {
 
 gulp.task('watch', function () {
   gulp.watch('./lib/**/*.less', ['less'])
+  gulp.watch('./res/**/*', ['less'])
   gulp.watch('./lib/**/*.html', ['html'])
+  gulp.watch('./static/**/*', ['static'])
 })
 
-gulp.task('build', ['js', 'less', 'html'])
-gulp.task('default', ['less', 'html', 'watch', 'watchify'])
+gulp.task('build', ['js', 'less', 'static', 'html'])
+gulp.task('default', ['less', 'static', 'html', 'watch', 'watchify'])
