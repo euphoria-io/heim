@@ -10,7 +10,12 @@ module.exports = React.createClass({
   mixins: [
     require('react-immutable-render-mixin'),
     Reflux.connect(require('../stores/chat').store),
+    Reflux.listenTo(actions.focusEntry, 'focus'),
   ],
+
+  focus: function() {
+    this.refs.input.getDOMNode().focus()
+  },
 
   setNick: function(ev) {
     var input = this.refs.input.getDOMNode()
