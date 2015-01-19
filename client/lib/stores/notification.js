@@ -38,6 +38,7 @@ module.exports.store = Reflux.createStore({
   focusChange: function(state) {
     this.focus = state.windowFocused
     if (this.focus) {
+      this.setFavicon('/static/favicon.png')
       this.closeNotification()
     }
   },
@@ -100,7 +101,13 @@ module.exports.store = Reflux.createStore({
   },
 
   notify: function(message, options) {
-    if (this.focus || !this.state.enabled || this.notification) {
+    if (this.focus) {
+      return
+    }
+
+    this.setFavicon('/static/favicon-active.png')
+
+    if (!this.state.enabled || this.notification) {
       return
     }
 
@@ -110,4 +117,6 @@ module.exports.store = Reflux.createStore({
     }
     this.notification.onclose = this.onNotificationClose
   },
+
+  setFavicon: require('favicon-setter'),
 })

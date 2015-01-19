@@ -174,6 +174,16 @@ describe('notification store', function() {
             body: 'logan: hello, ezzie!',
           })
         })
+
+        it('should change to active favicon', function() {
+          sinon.stub(notification.store, 'setFavicon')
+
+          notification.store.chatUpdate(mockChatState)
+          sinon.assert.calledOnce(notification.store.setFavicon)
+          sinon.assert.calledWithExactly(notification.store.setFavicon, '/static/favicon-active.png')
+
+          notification.store.setFavicon.restore()
+        })
       })
 
       describe('receiving the same message again', function() {
@@ -224,6 +234,22 @@ describe('notification store', function() {
         sinon.assert.calledOnce(Notification)
         notification.store.focusChange({windowFocused: true})
         sinon.assert.calledOnce(fakeNotification.close)
+      })
+
+      it('should reset favicon when window focused', function() {
+        sinon.stub(notification.store, 'setFavicon')
+
+        notification.store.focusChange({windowFocused: false})
+        notification.store.storageChange({notify: true})
+        notification.store.chatUpdate(mockChatState)
+        sinon.assert.calledOnce(notification.store.setFavicon)
+        notification.store.setFavicon.reset()
+
+        notification.store.focusChange({windowFocused: true})
+        sinon.assert.calledOnce(notification.store.setFavicon)
+        sinon.assert.calledWithExactly(notification.store.setFavicon, '/static/favicon.png')
+
+        notification.store.setFavicon.restore()
       })
     })
 
