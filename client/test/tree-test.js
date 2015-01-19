@@ -202,7 +202,7 @@ describe('Tree', function() {
         assert.equal(tree.get('2').get('value'), 'dawg')
       })
 
-      it('should only trigger a root change event', function() {
+      it('should trigger a change event', function() {
         sinon.assert.calledOnce(tree.changes.emit)
         sinon.assert.calledWithExactly(tree.changes.emit, '2', tree.get('2'))
       })
