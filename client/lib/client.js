@@ -3,6 +3,8 @@ var React = require('react/addons')
 var Main = require('./ui/main')
 
 
+document.title = location.pathname.match(/(\w+)\/$/)[1]
+
 if (React.addons && React.addons.Perf) {
   ReactPerf = React.addons.Perf
   if (location.hash == '#perf') {
@@ -24,5 +26,3 @@ Heim = {
   storage: require('./stores/storage'),
   focus: require('./stores/focus'),
 }
-
-document.title = location.pathname.match(/(\/\w+)\/$/)[1]
