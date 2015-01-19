@@ -17,18 +17,36 @@ module.exports = React.createClass({
     this.refs.input.getDOMNode().focus()
   },
 
+  getInitialState: function() {
+    return {nickText: ''}
+  },
+
   setNick: function(ev) {
     var input = this.refs.input.getDOMNode()
     actions.setNick(input.value)
     ev.preventDefault()
   },
 
+  previewNick: function() {
+    var input = this.refs.input.getDOMNode()
+    this.setState({nickText: input.value})
+  },
+
   render: function() {
+    // http://stackoverflow.com/a/6447935
+    var isTouchDevice = 'ontouchstart' in window
+
     return (
-      <form className="entry" onSubmit={this.setNick}>
-        <label>choose a nickname to start chatting:</label>
-        <input key="nick" ref="input" type="text" autoFocus disabled={this.state.connected === false} />
-      </form>
+      <div className="welcome">
+        <div className="message">
+          <h1><strong>Hello{this.state.nickText ? ' ' + this.state.nickText : ''}!</strong> <span className="no-break">Welcome to our discussion.</span></h1>
+          <p>To reply to a message directly, {isTouchDevice ? 'tap' : 'use the arrow keys or click on'} it.</p>
+        </div>
+        <form className="entry" onSubmit={this.setNick}>
+          <label>choose your name to begin:</label>
+          <input key="nick" ref="input" type="text" autoFocus disabled={this.state.connected === false} onChange={this.previewNick} />
+        </form>
+      </div>
     )
   },
 })

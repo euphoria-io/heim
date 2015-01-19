@@ -196,7 +196,8 @@ html, body, #container, .chat {
       }
 
       label {
-        opacity: .5;
+        color: gray;
+        transition: color .15s ease;
       }
 
       .auto-size-container {
@@ -223,12 +224,12 @@ html, body, #container, .chat {
       }
     }
 
-    .messages > .entry {
+    .messages .entry {
       margin: -10px;
       margin-top: 10px;
     }
 
-    .replies > .entry {
+    .replies .entry {
       margin: 5px;
       margin-left: -10px;
 
@@ -263,6 +264,49 @@ html, body, #container, .chat {
       input.nick {
         box-shadow: none;
       }
+
+      label {
+        color: darkgreen;
+      }
+    }
+
+    .welcome {
+      margin: -10px;
+      margin-top: 10px;
+      padding: 10px;
+      background: fade(green, 10%);
+
+      h1 {
+        font-size: 1.5em;
+        font-weight: normal;
+        margin: 0;
+
+        strong {
+          margin-right: .15em;
+        }
+      }
+
+      p {
+        margin: .25em 0;
+        color: fade(black, 65%);
+
+        &:last-child {
+          margin-bottom: 0;
+        }
+      }
+
+      .no-break {
+        white-space: nowrap;
+      }
+
+      label {
+        color: black;
+
+        input {
+          margin-right: .35em;
+          vertical-align: middle;
+        }
+      }
     }
   }
 }
@@ -285,6 +329,10 @@ html, body, #container, .chat {
           display: none;
         }
       }
+    }
+
+    .welcome > .message {
+      font-size: .8em;
     }
   }
 }
