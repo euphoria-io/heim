@@ -92,6 +92,9 @@ module.exports = React.createClass({
   },
 
   chatSend: function(text) {
+    if (!this.state.connected) {
+      return
+    }
     actions.sendMessage(text, this.state.focusedMessage)
     actions.setEntryText('')
     this.refs.input.getDOMNode().value = ''
@@ -158,7 +161,7 @@ module.exports = React.createClass({
             <span className="nick">{this.state.nickText || this.state.nick}</span>
           </div>
         </div>
-        <input key="msg" ref="input" type="text" autoFocus defaultValue={this.state.entryText} onChange={this.onTextChange} disabled={this.state.connected === false} onKeyDown={this.onKeyDown} onClick={this.onTextChange} />
+        <input key="msg" ref="input" type="text" autoFocus defaultValue={this.state.entryText} onChange={this.onTextChange} onKeyDown={this.onKeyDown} onClick={this.onTextChange} />
       </form>
     )
   },
