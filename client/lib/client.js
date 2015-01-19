@@ -24,3 +24,5 @@ Heim = {
   storage: require('./stores/storage'),
   focus: require('./stores/focus'),
 }
+
+document.title = location.pathname.match(/(\/\w+)\/$/)[1]
