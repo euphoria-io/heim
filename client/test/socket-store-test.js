@@ -21,20 +21,20 @@ describe('socket store', function() {
   })
 
   describe('_wsurl', function() {
-    it('should return wss:host/path/ws if protocol is https', function() {
+    it('should return wss:host/room/name/ws if protocol is https', function() {
       var loc = {protocol: 'https:', host: 'host', pathname: '/path/'}
-      assert.equal(socket.store._wsurl(loc), 'wss:host/path/ws')
+      assert.equal(socket.store._wsurl(loc, 'ezzie'), 'wss:host/room/ezzie/ws')
     })
-    it('should return ws:host/path/ws if protocol is NOT https', function() {
+    it('should return ws:host/room/name/ws if protocol is NOT https', function() {
       var loc = {protocol: 'http:', host: 'host', pathname: '/path/'}
-      assert.equal(socket.store._wsurl(loc), 'ws:host/path/ws')
+      assert.equal(socket.store._wsurl(loc, 'ezzie'), 'ws:host/room/ezzie/ws')
     })
   })
 
   describe('connect action', function() {
-    it('should connect to ws:host/path/ws with heim1 protocol', function() {
-      socket.store.connect()
-      var expectedPath = 'ws:' + location.host + location.pathname + 'ws'
+    it('should connect to ws:host/room/name/ws with heim1 protocol', function() {
+      socket.store.connect('ezzie')
+      var expectedPath = 'ws:' + location.host + '/room/ezzie/ws'
       sinon.assert.calledWithExactly(fakeWebSocketContructor, expectedPath, 'heim1')
     })
 
@@ -69,7 +69,7 @@ describe('socket store', function() {
 
     describe('while connected', function() {
       beforeEach(function() {
-        socket.store.connect()
+        socket.store.connect('ezzie')
         sinon.stub(socket.store, 'connect')
       })
 
@@ -80,7 +80,8 @@ describe('socket store', function() {
       it('should attempt to reconnect within 5s', function() {
         socket.store._close()
         support.clock.tick(5000)
-        assert(socket.store.connect.called)
+        sinon.assert.calledOnce(socket.store.connect)
+        sinon.assert.calledWithExactly(socket.store.connect, 'ezzie')
       })
     })
   })

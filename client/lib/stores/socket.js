@@ -16,20 +16,21 @@ module.exports.store = Reflux.createStore({
     this.seq = 0
   },
 
-  connect: function() {
-    this.ws = new WebSocket(this._wsurl(location), 'heim1')
+  connect: function(roomName) {
+    this.roomName = roomName
+    this.ws = new WebSocket(this._wsurl(location, this.roomName), 'heim1')
     this.ws.onopen = this._open
     this.ws.onclose = this._close
     this.ws.onmessage = this._message
     this.connected = true
   },
 
-  _wsurl: function(loc) {
+  _wsurl: function(loc, roomName) {
     var scheme = 'ws'
     if (loc.protocol == 'https:') {
       scheme = 'wss'
     }
-    return scheme + ':' + loc.host + loc.pathname + 'ws'
+    return scheme + ':' + loc.host + '/room/' + roomName + '/ws'
   },
 
   _open: function() {
@@ -44,7 +45,8 @@ module.exports.store = Reflux.createStore({
     })
 
     if (this.connected) {
-      setTimeout(this.connect, 2000 + 3000 * Math.random())
+      var delay = 2000 + 3000 * Math.random()
+      setTimeout(_.partial(this.connect, this.roomName), delay)
     }
   },
 

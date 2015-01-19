@@ -11,3 +11,5 @@ module.exports = Reflux.createActions([
   'setNick',
   'connect',
 ])
+
+module.exports.connect.sync = true

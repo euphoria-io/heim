@@ -2,8 +2,9 @@ var React = require('react/addons')
 
 var Main = require('./ui/main')
 
-
-document.title = location.pathname.match(/(\w+)\/$/)[1]
+var roomName = location.pathname.match(/(\w+)\/$/)[1]
+document.title = roomName
+require('./actions').connect(roomName)
 
 if (React.addons && React.addons.Perf) {
   ReactPerf = React.addons.Perf
@@ -16,8 +17,6 @@ React.render(
   <Main />,
   document.getElementById('container')
 )
-
-require('./actions').connect()
 
 Heim = {
   actions: require('./actions'),

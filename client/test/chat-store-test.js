@@ -137,45 +137,63 @@ describe('chat store', function() {
   describe('connect action', function() {
     beforeEach(function() {
       sinon.stub(socket, 'connect')
+      sinon.stub(storage, 'load')
     })
 
     afterEach(function() {
       socket.connect.restore()
+      storage.load.restore()
     })
 
-    it('should connect socket', function() {
-      chat.store.connect()
-      assert(socket.connect.called)
-    })
-  })
-
-  describe('setNick action', function() {
-    var testNick = 'test-nick'
-
-    beforeEach(function() {
-      sinon.stub(storage, 'set')
-      chat.store.setNick(testNick)
+    it('should connect socket with room name', function() {
+      chat.store.connect('ezzie')
+      sinon.assert.calledOnce(socket.connect)
+      sinon.assert.calledWithExactly(socket.connect, 'ezzie')
     })
 
-    afterEach(function() {
-      storage.set.restore()
-    })
-
-    it('should send a nick change', function() {
-      sinon.assert.calledWithExactly(socket.send, {
-        type: 'nick',
-        data: {name: testNick},
+    it('should save room name', function(done) {
+      support.listenOnce(chat.store, function(state) {
+        assert.equal(state.roomName, 'ezzie')
+        done()
       })
+
+      chat.store.connect('ezzie')
     })
 
-    it('should update stored nick', function() {
-      sinon.assert.calledWithExactly(storage.set, 'nick', testNick)
+    it('should load storage', function() {
+      chat.store.connect('ezzie')
+      sinon.assert.calledOnce(storage.load)
     })
 
-    it('should avoid re-sending same nick', function() {
-      chat.store.storageChange({nick: testNick})
-      chat.store.setNick(testNick)
-      assert(socket.send.calledOnce)
+    describe('then setNick action', function() {
+      var testNick = 'test-nick'
+
+      beforeEach(function() {
+        sinon.stub(storage, 'setRoom')
+        chat.store.connect('ezzie')
+        chat.store.setNick(testNick)
+      })
+
+      afterEach(function() {
+        storage.setRoom.restore()
+      })
+
+      it('should send a nick change', function() {
+        sinon.assert.calledWithExactly(socket.send, {
+          type: 'nick',
+          data: {name: testNick},
+        })
+      })
+
+      it('should update stored nick', function() {
+        sinon.assert.calledWithExactly(storage.setRoom, 'ezzie', 'nick', testNick)
+      })
+
+      it('should avoid re-sending same nick', function() {
+        chat.store.storageChange({room: {ezzie: {nick: testNick}}})
+        chat.store.setNick(testNick)
+        assert(socket.send.calledOnce)
+      })
     })
   })
 
@@ -267,14 +285,31 @@ describe('chat store', function() {
 
     it('should send stored nick upon connecting', function(done) {
       var mockStorage = {
-        nick: 'test-nick',
+        room: {
+          ezzie: {
+            nick: 'test-nick',
+          }
+        }
       }
+      chat.store.state.roomName = 'ezzie'
       chat.store.storageChange(mockStorage)
       handleSocket({status: 'open'}, function() {
         sinon.assert.calledWithExactly(socket.send, {
           type: 'nick',
-          data: {name: mockStorage.nick},
+          data: {name: mockStorage.room.ezzie.nick},
         })
+        done()
+      })
+    })
+
+    it('should not send stored nick if unset', function(done) {
+      var mockStorage = {
+        room: {}
+      }
+      chat.store.state.roomName = 'ezzie'
+      chat.store.storageChange(mockStorage)
+      handleSocket({status: 'open'}, function() {
+        sinon.assert.notCalled(socket.send)
         done()
       })
     })

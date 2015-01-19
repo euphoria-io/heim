@@ -106,7 +106,8 @@ module.exports.store = Reflux.createStore({
   },
 
   storageChange: function(data) {
-    this.state.nick = data.nick
+    var roomStorage = data.room[this.state.roomName] || {}
+    this.state.nick = roomStorage.nick
     this.trigger(this.state)
   },
 
@@ -124,8 +125,11 @@ module.exports.store = Reflux.createStore({
     return this.state.nickHues[nick]
   },
 
-  connect: function() {
-    socket.connect()
+  connect: function(roomName) {
+    socket.connect(roomName)
+    this.state.roomName = roomName
+    storage.load()
+    this.trigger(this.state)
   },
 
   setNick: function(nick) {
@@ -133,7 +137,7 @@ module.exports.store = Reflux.createStore({
       return
     }
 
-    storage.set('nick', nick)
+    storage.setRoom(this.state.roomName, 'nick', nick)
     this._sendNick(nick)
   },
 

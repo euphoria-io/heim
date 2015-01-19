@@ -26,22 +26,38 @@ describe('storage store', function() {
     localStorage.setItem = setItem
   })
 
-  it('should load JSON from localStorage upon init', function() {
-    var data = {it: 'works'}
-    fakeStorage.data = JSON.stringify(data)
-    storage.store.init()
-    assert.deepEqual(storage.store.getInitialState(), data)
+  describe('load action', function() {
+    it('should be synchronous', function() {
+      assert.equal(storage.load.sync, true)
+    })
+  })
+
+  it('should load JSON from localStorage upon load with default empty room index', function(done) {
+    fakeStorage.data = JSON.stringify({it: 'works'})
+
+    support.listenOnce(storage.store, function(state) {
+      assert.deepEqual(state, {it: 'works', room: {}})
+      done()
+    })
+
+    storage.store.load()
   })
 
   describe('set action', function() {
     var testKey = 'testKey'
     var testValue = {test: true}
 
+    beforeEach(function() {
+      fakeStorage.data = JSON.stringify({})
+      storage.store.load()
+    })
+
     it('should save JSON to localStorage', function() {
       storage.store.set(testKey, testValue)
       support.clock.tick(1000)
       sinon.assert.calledWithExactly(localStorage.setItem, 'data', JSON.stringify({
-        'testKey': testValue
+        'room': {},
+        'testKey': testValue,
       }))
     })
 
@@ -52,6 +68,38 @@ describe('storage store', function() {
       })
 
       storage.store.set(testKey, testValue)
+    })
+  })
+
+  describe('setRoom action', function() {
+    var testRoom = 'ezzie'
+    var testKey = 'testKey'
+    var testValue = {test: true}
+
+    beforeEach(function() {
+      fakeStorage.data = JSON.stringify({})
+      storage.store.load()
+    })
+
+    it('should save JSON to localStorage', function() {
+      storage.store.setRoom(testRoom, testKey, testValue)
+      support.clock.tick(1000)
+      sinon.assert.calledWithExactly(localStorage.setItem, 'data', JSON.stringify({
+        'room': {
+          'ezzie': {
+            'testKey': testValue
+          }
+        }
+      }))
+    })
+
+    it('should create room config object and trigger an update event', function(done) {
+      support.listenOnce(storage.store, function(state) {
+        assert.equal(state.room.ezzie[testKey], testValue)
+        done()
+      })
+
+      storage.store.setRoom(testRoom, testKey, testValue)
     })
   })
 })
