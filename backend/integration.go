@@ -55,6 +55,7 @@ func (tc *testClock) clock() time.Time {
 	return time.Unix(secs, 0)
 }
 
+type factoryTestSuite func(t testing.TB, factory func() Backend)
 type testSuite func(testing.TB, *serverUnderTest)
 
 type serverUnderTest struct {
@@ -110,6 +111,7 @@ func (tc *testConn) expect(id, cmdType, data string, args ...interface{}) {
 		data = fmt.Sprintf(data, args...)
 	}
 
+	fmt.Printf("reading packet, expecting %s\n", cmdType)
 	packetType, payload := tc.readPacket()
 	fmt.Printf("%s received %v, %#v\n", tc.RemoteAddr(), packetType, payload)
 	So(packetType, ShouldEqual, cmdType)
@@ -156,9 +158,13 @@ func IntegrationTest(t testing.TB, factory func() Backend) {
 		test(t, &serverUnderTest{backend, app, server})
 	}
 
+	runTestWithFactory := func(test factoryTestSuite) { test(t, factory) }
+
 	runTest(testLurker)
 	runTest(testBroadcast)
 	runTest(testThreading)
+
+	runTestWithFactory(testPresence)
 }
 
 func testLurker(t testing.TB, s *serverUnderTest) {
@@ -290,7 +296,13 @@ func testThreading(t testing.TB, s *serverUnderTest) {
 	})
 }
 
-func testPresence(t testing.TB, s *serverUnderTest) {
+func testPresence(t testing.TB, factory func() Backend) {
+	backend := factory()
+	app := NewServer(backend, "")
+	server := httptest.NewServer(app)
+	defer server.Close()
+	s := &serverUnderTest{backend, app, server}
+
 	Convey("Other party joins then parts", t, func() {
 		self := s.Connect("presence")
 		defer self.Close()
@@ -304,34 +316,68 @@ func testPresence(t testing.TB, s *serverUnderTest) {
 
 		self.expect("", "join-event", `{"id":"%s","name":"guest"}`, otherID)
 		self.send("1", "who", "")
-		self.expect("1", "who-reply", `{"listing":[{"id":"%s","name":"guest"}]}`, otherID)
+		self.expect("1", "who-reply",
+			`{"listing":[{"id":"%s","name":"guest"},{"id":"%s","name":"guest"}]}`, selfID, otherID)
 
 		other.Close()
 		self.expect("", "part-event", `{"id":"%s","name":"guest"}`, otherID)
 
 		self.send("2", "who", "")
-		self.expect("2", "who-reply", `{"listing":[]}`)
+		self.expect("2", "who-reply", `{"listing":[{"id":"%s","name":"guest"}]}`, selfID)
 	})
 
 	Convey("Join after other party, other party parts", t, func() {
-		other := s.Connect("presence")
-		other.expectSnapshot(s.backend.Version(), nil, nil)
+		other := s.Connect("presence2")
 		otherID := other.LocalAddr().String()
+		other.expectSnapshot(s.backend.Version(), nil, nil)
 
-		self := s.Connect("presence")
+		self := s.Connect("presence2")
 		defer self.Close()
-		self.expectSnapshot(s.backend.Version(),
-			[]string{fmt.Sprintf(`{"id":"%s","name":"guest"}`, otherID)}, nil)
 		selfID := self.LocalAddr().String()
+		self.expectSnapshot(s.backend.Version(),
+			[]string{fmt.Sprintf(`{"id":"%s","name":"guest"}`, otherID)},
+			nil)
 
 		other.expect("", "join-event", `{"id":"%s","name":"guest"}`, selfID)
 		self.send("1", "who", "")
-		self.expect("1", "who-reply", `{"listing":[{"id":"%s","name":"guest"}]}`, otherID)
+		self.expect("1", "who-reply",
+			`{"listing":[{"id":"%s","name":"guest"},{"id":"%s","name":"guest"}]}`, otherID, selfID)
 
 		other.Close()
 		self.expect("", "part-event", `{"id":"%s","name":"guest"}`, otherID)
 
 		self.send("2", "who", "")
-		self.expect("2", "who-reply", `{"listing":[]}`)
+		self.expect("2", "who-reply",
+			`{"listing":[{"id":"%s","name":"guest"}]}`, selfID)
 	})
+
+	// Only run the following against distributed backends.
+	if _, ok := backend.(*TestBackend); ok {
+		return
+	}
+
+	backend2 := factory()
+	app2 := NewServer(backend2, "")
+	server2 := httptest.NewServer(app2)
+	defer server2.Close()
+	s2 := &serverUnderTest{backend2, app2, server2}
+
+	Convey("Learns presence on startup", t, func() {
+		self1 := s.Connect("presence3")
+		defer self1.Close()
+		self1.expectSnapshot(s.backend.Version(), nil, nil)
+		id1 := self1.LocalAddr().String()
+
+		self2 := s2.Connect("presence3")
+		defer self2.Close()
+		self2.expectSnapshot(s.backend.Version(),
+			[]string{fmt.Sprintf(`{"id":"%s","name":"guest"}`, id1)}, nil)
+		fmt.Printf("ok!\n")
+		//id2 := self2.LocalAddr().String()
+	})
+
+	// TODO:
+	SkipConvey("Loses presence on shutdown", t, func() {
+	})
+
 }

@@ -20,8 +20,9 @@ import (
 )
 
 var schema = map[interface{}][]string{
-	Room{}:    []string{"Name"},
-	Message{}: []string{"Room", "ID"},
+	Room{}:     []string{"Name"},
+	Message{}:  []string{"Room", "ID"},
+	Presence{}: []string{"Room", "SessionID"},
 }
 
 type AfterCreateTabler interface {
@@ -228,6 +229,8 @@ func (b *Backend) join(ctx context.Context, room *Room, session backend.Session)
 	b.Lock()
 	defer b.Unlock()
 
+	logger := backend.Logger(ctx)
+
 	if b.presence == nil {
 		b.presence = map[string]roomPresence{}
 	}
@@ -236,9 +239,31 @@ func (b *Backend) join(ctx context.Context, room *Room, session backend.Session)
 	if rp == nil {
 		rp = roomPresence{}
 		b.presence[room.Name] = rp
+		rows, err := b.DbMap.Select(Presence{}, "SELECT * FROM presence WHERE room = $1", room.Name)
+		if err != nil {
+			logger.Printf("error loading presence for %s: %s", room.Name, err)
+		} else {
+			for _, row := range rows {
+				p := row.(*Presence)
+				rp.load(p.SessionID, p.UserID, p.Name)
+			}
+		}
+		_ = rows
 	}
 
 	rp.join(session)
+
+	if err := b.DbMap.Insert(&Presence{
+		Room:         room.Name,
+		SessionID:    session.ID(),
+		UserID:       session.Identity().ID(),
+		Name:         session.Identity().Name(),
+		Connected:    true,
+		LastActivity: time.Now(),
+	}); err != nil {
+		logger.Printf("failed to persist join: %s", err)
+	}
+
 	return b.broadcast(ctx, room, session,
 		backend.JoinEventType, backend.PresenceEvent(*session.Identity().View()), session)
 }
@@ -250,6 +275,14 @@ func (b *Backend) part(ctx context.Context, room *Room, session backend.Session)
 	if rp, ok := b.presence[room.Name]; ok {
 		rp.part(session)
 	}
+
+	_, err := b.DbMap.Exec(
+		"UPDATE presence SET connected = false WHERE room = $1 AND session_id = $2",
+		room.Name, session.ID())
+	if err != nil {
+		backend.Logger(ctx).Printf("failed to persist departure: %s", err)
+	}
+
 	return b.broadcast(ctx, room, session,
 		backend.PartEventType, backend.PresenceEvent(*session.Identity().View()), session)
 }
@@ -303,74 +336,4 @@ type BroadcastMessage struct {
 	Room    string
 	Exclude []string
 	Event   *backend.Packet
-}
-
-type roomConn struct {
-	sessions map[string]backend.Session
-	nicks    map[string]string
-}
-
-type roomPresence map[string]roomConn
-
-func (rp roomPresence) join(session backend.Session) {
-	rc, ok := rp[session.Identity().ID()]
-	if !ok {
-		rc = roomConn{
-			sessions: map[string]backend.Session{},
-			nicks:    map[string]string{},
-		}
-		rp[session.Identity().ID()] = rc
-	}
-
-	rc.sessions[session.ID()] = session
-	rc.nicks[session.ID()] = session.Identity().Name()
-}
-
-func (rp roomPresence) part(session backend.Session) { delete(rp, session.ID()) }
-
-func (rp roomPresence) broadcast(
-	ctx context.Context, event *backend.Packet, exclude ...string) error {
-
-	payload, err := event.Payload()
-	if err != nil {
-		return err
-	}
-
-	exc := make(map[string]struct{}, len(exclude))
-	for _, x := range exclude {
-		exc[x] = struct{}{}
-	}
-
-	for _, rc := range rp {
-		for _, session := range rc.sessions {
-			if _, ok := exc[session.ID()]; ok {
-				continue
-			}
-
-			if err := session.Send(ctx, event.Type, payload); err != nil {
-				// TODO: accumulate errors
-				return fmt.Errorf("send message to %s: %s", session.ID(), err)
-			}
-		}
-	}
-
-	return nil
-}
-
-func (rp roomPresence) rename(nickEvent *backend.NickEvent) {
-	rc, ok := rp[nickEvent.ID]
-	if !ok {
-		rc = roomConn{
-			sessions: map[string]backend.Session{},
-			nicks:    map[string]string{},
-		}
-		rp[nickEvent.ID] = rc
-	}
-
-	for _, session := range rc.sessions {
-		if session.Identity().Name() == nickEvent.From {
-			session.SetName(nickEvent.To)
-			rc.nicks[session.ID()] = nickEvent.To
-		}
-	}
 }
