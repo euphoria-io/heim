@@ -135,20 +135,29 @@ html, body, #container, .chat {
         display: inline-block;
         width: 18px;
         height: 18px;
+        background: white;
         border: none;
-        background: data-uri('../res/cog.svg') no-repeat center center;
-        background-size: 24px;
+        border-radius: 5px;
         padding: 0;
-        opacity: .15;
         cursor: pointer;
         transition: all .15s ease;
 
-        &:hover {
-          opacity: .25;
-        }
+        &:after {
+          content: '';
+          display: block;
+          width: 18px;
+          height: 18px;
+          background: data-uri('../res/cog.svg') no-repeat center center;
+          background-size: 24px;
+          opacity: .15;
 
-        &:active {
-          opacity: .3;
+          &:hover {
+            opacity: .25;
+          }
+
+          &:active {
+            opacity: .3;
+          }
         }
       }
 
