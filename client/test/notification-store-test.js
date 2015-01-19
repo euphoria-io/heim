@@ -4,6 +4,7 @@ var sinon = require('sinon')
 var Immutable = require('immutable')
 
 describe('notification store', function() {
+  var Tree = require('../lib/tree')
   var notification = require('../lib/stores/notification')
   var storage = require('../lib/stores/storage')
   var _Notification = window.Notification
@@ -80,28 +81,43 @@ describe('notification store', function() {
   })
 
   describe('when supported and permitted', function() {
+    var message1 = {
+      'id': 'id1',
+      'time': 123456,
+      'sender': {
+        'id': '32.64.96.128:12345',
+        'name': 'logan',
+      },
+      'content': 'hello, ezzie!',
+    }
+
+    var message2 = {
+      'id': 'id2',
+      'time': 123457,
+      'sender': {
+        'id': '32.64.96.128:12345',
+        'name': 'ezzie',
+      },
+      'content': 'woof!',
+    }
+
     var mockChatState = {
-      messages: Immutable.fromJS([
-        {
-          'time': 123456,
-          'sender': {
-            'id': '32.64.96.128:12345',
-            'name': 'logan',
-          },
-          'content': 'hello, ezzie!',
-        }
+      messages: new Tree('time').reset([
+        message1,
+      ])
+    }
+
+    var mockChatStateDupe = {
+      messages: new Tree('time').reset([
+        message1,
       ])
     }
 
     var mockChatState2 = {
-      messages: mockChatState.messages.push(Immutable.fromJS({
-        'time': 123456,
-        'sender': {
-          'id': '32.64.96.128:12345',
-          'name': 'ezzie',
-        },
-        'content': 'woof!',
-      }))
+      messages: new Tree('time').reset([
+        message1,
+        message2,
+      ])
     }
 
     var mockChatStateEmpty = {
@@ -112,7 +128,9 @@ describe('notification store', function() {
 
     beforeEach(function() {
       window.Notification = sinon.spy(function() {
-        this.close = sinon.spy()
+        this.close = sinon.spy(function() {
+          this.onclose()
+        })
         fakeNotification = this
       })
       Notification.permission = 'granted'
@@ -132,11 +150,23 @@ describe('notification store', function() {
         notification.store.enable()
         sinon.assert.calledWithExactly(storage.set, 'notify', true)
       })
+    })
+
+    describe('disabling', function() {
+      it('should store disabled', function() {
+        notification.store.disable()
+        sinon.assert.calledWithExactly(storage.set, 'notify', false)
+      })
+    })
+
+    describe('when enabled', function() {
+      beforeEach(function() {
+        notification.store.focusChange({windowFocused: false})
+        notification.store.storageChange({notify: true})
+      })
 
       describe('receiving a message', function() {
         it('should display a notification', function() {
-          notification.store.focusChange({windowFocused: false})
-          notification.store.storageChange({notify: true})
           notification.store.chatUpdate(mockChatState)
           sinon.assert.calledOnce(Notification)
           sinon.assert.calledWithExactly(Notification, 'new message', {
@@ -145,12 +175,23 @@ describe('notification store', function() {
           })
         })
       })
-    })
 
-    describe('disabling', function() {
-      it('should store disabled', function() {
-        notification.store.disable()
-        sinon.assert.calledWithExactly(storage.set, 'notify', false)
+      describe('receiving the same message again', function() {
+        it('should not display a notification', function() {
+          notification.store.chatUpdate(mockChatState)
+          fakeNotification.close()
+          notification.store.chatUpdate(mockChatStateDupe)
+          sinon.assert.calledOnce(Notification)
+        })
+      })
+
+      describe('closing and receiving a new message', function() {
+        it('should display a second notification', function() {
+          notification.store.chatUpdate(mockChatState)
+          fakeNotification.close()
+          notification.store.chatUpdate(mockChatState2)
+          sinon.assert.calledTwice(Notification)
+        })
       })
     })
 

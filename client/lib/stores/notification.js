@@ -28,7 +28,7 @@ module.exports.store = Reflux.createStore({
 
     this.focus = true
     this.notification = null
-    this._lastMsg = null
+    this._lastMsgId = null
 
     if (this.state.supported) {
       this.state.permission = Notification.permission == 'granted'
@@ -73,10 +73,15 @@ module.exports.store = Reflux.createStore({
 
   chatUpdate: function(state) {
     var lastMsg = state.messages.last()
-    if (!lastMsg || lastMsg == this._lastMsg) {
+    if (!lastMsg) {
       return
     }
-    this._lastMsg = lastMsg
+
+    var lastMsgId = lastMsg.get('id')
+    if (lastMsgId == this._lastMsgId) {
+      return
+    }
+    this._lastMsgId = lastMsgId
     this.notify('new message', {
       icon: '/static/icon.png',
       body: lastMsg.getIn(['sender', 'name']) + ': ' + lastMsg.get('content'),
@@ -86,8 +91,12 @@ module.exports.store = Reflux.createStore({
   closeNotification: function() {
     if (this.notification) {
       this.notification.close()
-      this.notification = null
+      this.onNotificationClose()
     }
+  },
+
+  onNotificationClose: function() {
+    this.notification = null
   },
 
   notify: function(message, options) {
@@ -99,5 +108,6 @@ module.exports.store = Reflux.createStore({
     this.notification.onclick = function() {
       window.focus()
     }
+    this.notification.onclose = this.onNotificationClose
   },
 })
