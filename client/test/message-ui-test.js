@@ -3,10 +3,9 @@ var assert = require('assert')
 var React = require('react/addons')
 var TestUtils = React.addons.TestUtils
 
-var Tree = require('../lib/tree')
-
 
 describe('<Message>', function() {
+  var Tree = require('../lib/tree')
   var Message = require('../lib/ui/message')
   var testTree
 
