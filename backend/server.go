@@ -2,6 +2,7 @@ package backend
 
 import (
 	"net/http"
+	"path"
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
@@ -33,8 +34,9 @@ func NewServer(backend Backend, staticPath string) *Server {
 func (s *Server) route() {
 	s.r = mux.NewRouter()
 	s.r.Path("/").Methods("OPTIONS").HandlerFunc(s.handleProbe)
+	s.r.PathPrefix("/static/").HandlerFunc(s.handleStatic)
 	s.r.HandleFunc("/room/{room:[a-z0-9]+}/ws", s.handleRoom)
-	s.r.PathPrefix("/room/{room:[a-z0-9]+}/").HandlerFunc(s.handleStatic)
+	s.r.HandleFunc("/room/{room:[a-z0-9]+}/", s.handleRoomStatic)
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -47,15 +49,17 @@ func (s *Server) handleProbe(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleStatic(w http.ResponseWriter, r *http.Request) {
-	if s.staticPath == "" {
+	if s.staticPath == "" || r.URL.Path == "/static/" {
 		http.NotFound(w, r)
 		return
 	}
 
-	roomName := mux.Vars(r)["room"]
-	handler := http.StripPrefix(
-		"/room/"+roomName+"/", http.FileServer(http.Dir(s.staticPath)))
+	handler := http.StripPrefix("/static/", http.FileServer(http.Dir(s.staticPath)))
 	handler.ServeHTTP(w, r)
+}
+
+func (s *Server) handleRoomStatic(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, path.Join(s.staticPath, "index.html"))
 }
 
 func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
