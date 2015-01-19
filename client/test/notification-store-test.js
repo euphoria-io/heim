@@ -132,6 +132,19 @@ describe('notification store', function() {
         notification.store.enable()
         sinon.assert.calledWithExactly(storage.set, 'notify', true)
       })
+
+      describe('receiving a message', function() {
+        it('should display a notification', function() {
+          notification.store.focusChange({windowFocused: false})
+          notification.store.storageChange({notify: true})
+          notification.store.chatUpdate(mockChatState)
+          sinon.assert.calledOnce(Notification)
+          sinon.assert.calledWithExactly(Notification, 'new message', {
+            icon: '/static/icon.png',
+            body: 'logan: hello, ezzie!',
+          })
+        })
+      })
     })
 
     describe('disabling', function() {
