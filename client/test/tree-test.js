@@ -194,17 +194,20 @@ describe('Tree', function() {
     })
 
     describe('after merging an update to a node', function() {
-      beforeEach(function() {
-        tree.mergeNode('2', {value: 'dawg'})
-      })
-
       it('should update the node', function() {
+        tree.mergeNode('2', {value: 'dawg'})
         assert.equal(tree.get('2').get('value'), 'dawg')
       })
 
       it('should trigger a change event', function() {
+        tree.mergeNode('2', {value: 'dawg'})
         sinon.assert.calledOnce(tree.changes.emit)
         sinon.assert.calledWithExactly(tree.changes.emit, '2', tree.get('2'))
+      })
+
+      it('should not trigger a change event if unchanged', function() {
+        tree.mergeNode('2', {value: 'world'})
+        sinon.assert.notCalled(tree.changes.emit)
       })
     })
 

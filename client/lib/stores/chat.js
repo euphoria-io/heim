@@ -88,6 +88,10 @@ module.exports.store = Reflux.createStore({
     } else {
       this.state.messages.reset(data.log)
     }
+
+    if (this.state.focusedMessage) {
+      this.state.messages.mergeNode(this.state.focusedMessage, {entry: true})
+    }
   },
 
   _handleWhoReply: function(data) {

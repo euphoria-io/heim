@@ -79,8 +79,11 @@ _.extend(Tree.prototype, {
   },
 
   mergeNode: function(id, data) {
+    var old = this.index[id]
     this.index[id] = this.index[id].merge(data)
-    this.changes.emit(id, this.index[id])
+    if (old != this.index[id]) {
+      this.changes.emit(id, this.index[id])
+    }
   },
 
   reset: function(entries) {
