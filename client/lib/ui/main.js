@@ -1,4 +1,5 @@
 var React = require('react/addons')
+var ReactCSSTransitionGroup = React.addons.CSSTransitionGroup
 var Reflux = require('reflux')
 var cx = React.addons.classSet
 
@@ -15,6 +16,7 @@ module.exports = React.createClass({
   mixins: [
     Reflux.connect(require('../stores/chat').store, 'chat'),
     Reflux.connect(require('../stores/focus').store, 'focus'),
+    Reflux.listenTo(actions.showSettings, 'showSettings'),
   ],
 
   onScrollbarSize: function(width) {
@@ -23,6 +25,10 @@ module.exports = React.createClass({
 
   toggleSettings: function() {
     this.setState({settingsOpen: !this.state.settingsOpen})
+  },
+
+  showSettings: function() {
+    this.setState({settingsOpen: true})
   },
 
   onMouseDown: function() {
@@ -53,8 +59,14 @@ module.exports = React.createClass({
           <div className="messages-content" onMouseDownCapture={this.onMouseDown} onClickCapture={this.onClick}>
             <div className="top-right" style={{marginRight: this.state.scrollbarWidth}}>
               <div className="settings-pane">
-                {this.state.settingsOpen && <NotifyToggle />}
-                <button type="button" className="settings" onClick={this.toggleSettings} />
+                <ReactCSSTransitionGroup transitionName="settings">
+                  {this.state.settingsOpen &&
+                    <span key="content" className="settings-content">
+                      <NotifyToggle />
+                    </span>
+                  }
+                </ReactCSSTransitionGroup>
+                <button type="button" className="settings" onClick={this.toggleSettings} tabIndex="-1" />
               </div>
               <UserList users={this.state.chat.who} />
             </div>

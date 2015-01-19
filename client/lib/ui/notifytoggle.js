@@ -21,7 +21,7 @@ module.exports = React.createClass({
 
   render: function() {
     return (
-      <label><input type="checkbox" checked={this.state.enabled} onChange={this.onChange} />notify new messages</label>
+      <label><input type="checkbox" checked={this.state.enabled} onChange={this.onChange} />notify new messages?</label>
     )
   },
 })

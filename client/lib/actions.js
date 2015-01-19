@@ -7,6 +7,7 @@ module.exports = Reflux.createActions([
   'setEntryText',
   'focusEntry',
   'loadMoreLogs',
+  'showSettings',
   'setNick',
   'connect',
 ])

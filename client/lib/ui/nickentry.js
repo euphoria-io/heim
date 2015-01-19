@@ -24,6 +24,9 @@ module.exports = React.createClass({
   setNick: function(ev) {
     var input = this.refs.input.getDOMNode()
     actions.setNick(input.value)
+    setTimeout(function() {
+      actions.showSettings()
+    }, 250)
     ev.preventDefault()
   },
 

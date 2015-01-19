@@ -156,9 +156,36 @@ html, body, #container, .chat {
         vertical-align: middle;
       }
 
-      label {
-        padding: 10px;
-        font-size: .8em;
+      .settings-content {
+        transition: all .15s ease;
+
+        &.settings-enter {
+          opacity: 0;
+          transform: translateX(30px);
+
+          &.settings-enter-active {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+
+        &.settings-leave {
+          opacity: 1;
+          transform: translateX(0);
+
+          &.settings-leave-active {
+            opacity: 0;
+            transform: translateX(30px);
+          }
+        }
+
+        label {
+          padding: 5px;
+          margin-right: 5px;
+          font-size: .8em;
+          background: fade(white, 95%);
+          border-radius: 3px;
+        }
       }
     }
 
