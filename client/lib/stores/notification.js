@@ -26,6 +26,7 @@ module.exports.store = Reflux.createStore({
       supported: 'Notification' in window
     }
 
+    this.focus = true
     this.notification = null
     this._lastMsg = null
 
