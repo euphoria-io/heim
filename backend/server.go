@@ -34,6 +34,7 @@ func NewServer(backend Backend, staticPath string) *Server {
 func (s *Server) route() {
 	s.r = mux.NewRouter()
 	s.r.Path("/").Methods("OPTIONS").HandlerFunc(s.handleProbe)
+	s.r.Path("/robots.txt").HandlerFunc(s.handleRobotsTxt)
 	s.r.PathPrefix("/static/").HandlerFunc(s.handleStatic)
 	s.r.HandleFunc("/room/{room:[a-z0-9]+}/ws", s.handleRoom)
 	s.r.HandleFunc("/room/{room:[a-z0-9]+}/", s.handleRoomStatic)
@@ -60,6 +61,10 @@ func (s *Server) handleStatic(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleRoomStatic(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, path.Join(s.staticPath, "index.html"))
+}
+
+func (s *Server) handleRobotsTxt(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, path.Join(s.staticPath, "robots.txt"))
 }
 
 func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
