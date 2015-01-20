@@ -174,14 +174,14 @@ func testLurker(t testing.TB, s *serverUnderTest) {
 		id2 := conn2.LocalAddr().String()
 
 		conn2.expectSnapshot(s.backend.Version(),
-			[]string{fmt.Sprintf(`{"id":"%s","name":"%s"}`, id1, id1)},
+			[]string{fmt.Sprintf(`{"id":"%s","name":"guest"}`, id1)},
 			nil)
 
 		conn2.send("1", "nick", `{"name":"speaker"}`)
-		conn2.expect("1", "nick-reply", `{"id":"%s","from":"%s","to":"speaker"}`, id2, id2)
+		conn2.expect("1", "nick-reply", `{"id":"%s","from":"guest","to":"speaker"}`, id2)
 
-		conn1.expect("", "join-event", `{"id":"%s","name":"%s"}`, id2, id2)
-		conn1.expect("", "nick-event", `{"id":"%s","from":"%s","to":"speaker"}`, id2, id2)
+		conn1.expect("", "join-event", `{"id":"%s","name":"guest"}`, id2)
+		conn1.expect("", "nick-event", `{"id":"%s","from":"guest","to":"speaker"}`, id2)
 	})
 }
 
@@ -209,13 +209,13 @@ func testBroadcast(t testing.TB, s *serverUnderTest) {
 				fmt.Sprintf(`{"id":"%s","name":"%s"}`, ids[i].ID, ids[i].Name))
 
 			conn.expect("1", "nick-reply",
-				`{"id":"%s","from":"%s","to":"%s"}`, ids[i].ID, ids[i].ID, ids[i].Name)
+				`{"id":"%s","from":"guest","to":"%s"}`, ids[i].ID, ids[i].Name)
 			conn.expect("2", "who-reply", `{"listing":[%s]}`, strings.Join(listingParts, ","))
 
 			for _, c := range conns[:i] {
-				c.expect("", "join-event", `{"id":"%s","name":"%s"}`, ids[i].ID, ids[i].ID)
+				c.expect("", "join-event", `{"id":"%s","name":"guest"}`, ids[i].ID)
 				c.expect("", "nick-event",
-					`{"id":"%s","from":"%s","to":"%s"}`, ids[i].ID, ids[i].ID, ids[i].Name)
+					`{"id":"%s","from":"guest","to":"%s"}`, ids[i].ID, ids[i].Name)
 			}
 		}
 
@@ -273,20 +273,20 @@ func testThreading(t testing.TB, s *serverUnderTest) {
 
 		conn.send("1", "send", `{"content":"root"}`)
 		conn.expect("1", "send-reply",
-			`{"id":"%s","time":1,"sender":{"id":"%s","name":"%s"},"content":"root"}`,
-			sf1, id.ID, id.Name)
+			`{"id":"%s","time":1,"sender":{"id":"%s","name":"guest"},"content":"root"}`,
+			sf1, id.ID)
 
 		conn.send("2", "send", `{"parent":"%s","content":"ch1"}`, sf1)
 		conn.expect("2", "send-reply",
-			`{"id":"%s","parent":"%s","time":2,"sender":{"id":"%s","name":"%s"},"content":"ch1"}`,
-			sf2, sf1, id.ID, id.Name)
+			`{"id":"%s","parent":"%s","time":2,"sender":{"id":"%s","name":"guest"},"content":"ch1"}`,
+			sf2, sf1, id.ID)
 
 		conn.send("3", "log", `{"n":10}`)
 		conn.expect("3", "log-reply",
 			`{"log":[`+
-				`{"id":"%s","time":1,"sender":{"id":"%s","name":"%s"},"content":"root"},`+
-				`{"id":"%s","parent":"%s","time":2,"sender":{"id":"%s","name":"%s"},"content":"ch1"}]}`,
-			sf1, id.ID, id.Name, sf2, sf1, id.ID, id.Name)
+				`{"id":"%s","time":1,"sender":{"id":"%s","name":"guest"},"content":"root"},`+
+				`{"id":"%s","parent":"%s","time":2,"sender":{"id":"%s","name":"guest"},"content":"ch1"}]}`,
+			sf1, id.ID, sf2, sf1, id.ID)
 	})
 }
 
@@ -299,15 +299,15 @@ func testPresence(t testing.TB, s *serverUnderTest) {
 
 		other := s.Connect("presence")
 		other.expectSnapshot(s.backend.Version(),
-			[]string{fmt.Sprintf(`{"id":"%s","name":"%s"}`, selfID, selfID)}, nil)
+			[]string{fmt.Sprintf(`{"id":"%s","name":"guest"}`, selfID)}, nil)
 		otherID := other.LocalAddr().String()
 
-		self.expect("", "join-event", `{"id":"%s","name":"%s"}`, otherID, otherID)
+		self.expect("", "join-event", `{"id":"%s","name":"guest"}`, otherID)
 		self.send("1", "who", "")
-		self.expect("1", "who-reply", `{"listing":[{"id":"%s","name":"%s"}]}`, otherID, otherID)
+		self.expect("1", "who-reply", `{"listing":[{"id":"%s","name":"guest"}]}`, otherID)
 
 		other.Close()
-		self.expect("", "part-event", `{"id":"%s","name":"%s"}`, otherID, otherID)
+		self.expect("", "part-event", `{"id":"%s","name":"guest"}`, otherID)
 
 		self.send("2", "who", "")
 		self.expect("2", "who-reply", `{"listing":[]}`)
@@ -321,15 +321,15 @@ func testPresence(t testing.TB, s *serverUnderTest) {
 		self := s.Connect("presence")
 		defer self.Close()
 		self.expectSnapshot(s.backend.Version(),
-			[]string{fmt.Sprintf(`{"id":"%s","name":"%s"}`, otherID, otherID)}, nil)
+			[]string{fmt.Sprintf(`{"id":"%s","name":"guest"}`, otherID)}, nil)
 		selfID := self.LocalAddr().String()
 
-		other.expect("", "join-event", `{"id":"%s","name":"%s"}`, selfID, selfID)
+		other.expect("", "join-event", `{"id":"%s","name":"guest"}`, selfID)
 		self.send("1", "who", "")
-		self.expect("1", "who-reply", `{"listing":[{"id":"%s","name":"%s"}]}`, otherID, otherID)
+		self.expect("1", "who-reply", `{"listing":[{"id":"%s","name":"guest"}]}`, otherID)
 
 		other.Close()
-		self.expect("", "part-event", `{"id":"%s","name":"%s"}`, otherID, otherID)
+		self.expect("", "part-event", `{"id":"%s","name":"guest"}`, otherID)
 
 		self.send("2", "who", "")
 		self.expect("2", "who-reply", `{"listing":[]}`)

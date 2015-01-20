@@ -17,7 +17,7 @@ type memIdentity struct {
 }
 
 func newMemIdentity(id string) *memIdentity {
-	return &memIdentity{id: id, name: id}
+	return &memIdentity{id: id, name: "guest"}
 }
 
 func (s *memIdentity) ID() string   { return s.id }

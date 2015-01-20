@@ -109,11 +109,11 @@ func TestRoomBroadcast(t *testing.T) {
 		So(room.broadcast(ctx, SendType, Message{Content: "1"}, userA, userB), ShouldBeNil)
 		So(userA.history, ShouldResemble,
 			[]message{
-				{cmdType: JoinEventType, payload: PresenceEvent{ID: "B", Name: "B"}},
-				{cmdType: JoinEventType, payload: PresenceEvent{ID: "C", Name: "C"}},
+				{cmdType: JoinEventType, payload: PresenceEvent{ID: "B", Name: "guest"}},
+				{cmdType: JoinEventType, payload: PresenceEvent{ID: "C", Name: "guest"}},
 			})
 		So(userB.history, ShouldResemble,
-			[]message{{cmdType: JoinEventType, payload: PresenceEvent{ID: "C", Name: "C"}}})
+			[]message{{cmdType: JoinEventType, payload: PresenceEvent{ID: "C", Name: "guest"}}})
 		So(userC.history, ShouldResemble,
 			[]message{{cmdType: SendEventType, payload: Message{Content: "1"}}})
 	})
@@ -122,13 +122,13 @@ func TestRoomBroadcast(t *testing.T) {
 		So(room.broadcast(ctx, SendType, Message{Content: "2"}), ShouldBeNil)
 		So(userA.history, ShouldResemble,
 			[]message{
-				{cmdType: JoinEventType, payload: PresenceEvent{ID: "B", Name: "B"}},
-				{cmdType: JoinEventType, payload: PresenceEvent{ID: "C", Name: "C"}},
+				{cmdType: JoinEventType, payload: PresenceEvent{ID: "B", Name: "guest"}},
+				{cmdType: JoinEventType, payload: PresenceEvent{ID: "C", Name: "guest"}},
 				{cmdType: SendEventType, payload: Message{Content: "2"}},
 			})
 		So(userB.history, ShouldResemble,
 			[]message{
-				{cmdType: JoinEventType, payload: PresenceEvent{ID: "C", Name: "C"}},
+				{cmdType: JoinEventType, payload: PresenceEvent{ID: "C", Name: "guest"}},
 				{cmdType: SendEventType, payload: Message{Content: "2"}},
 			})
 		So(userC.history, ShouldResemble,
