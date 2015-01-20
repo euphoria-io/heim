@@ -32,7 +32,7 @@ func NewServer(backend Backend, staticPath string) *Server {
 }
 
 func (s *Server) route() {
-	s.r = mux.NewRouter()
+	s.r = mux.NewRouter().StrictSlash(true)
 	s.r.Path("/").Methods("OPTIONS").HandlerFunc(s.handleProbe)
 	s.r.Path("/robots.txt").HandlerFunc(s.handleRobotsTxt)
 	s.r.PathPrefix("/static/").HandlerFunc(s.handleStatic)
