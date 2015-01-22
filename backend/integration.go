@@ -7,7 +7,6 @@ import (
 	"net/http/httptest"
 	"strings"
 	"sync/atomic"
-	"testing"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -55,8 +54,8 @@ func (tc *testClock) clock() time.Time {
 	return time.Unix(secs, 0)
 }
 
-type factoryTestSuite func(t testing.TB, factory func() Backend)
-type testSuite func(testing.TB, *serverUnderTest)
+type factoryTestSuite func(factory func() Backend)
+type testSuite func(*serverUnderTest)
 
 type serverUnderTest struct {
 	backend Backend
@@ -149,16 +148,16 @@ func snowflakes(n int) []Snowflake {
 	return snowflakes
 }
 
-func IntegrationTest(t testing.TB, factory func() Backend) {
+func IntegrationTest(factory func() Backend) {
 	runTest := func(test testSuite) {
 		backend := factory()
 		app := NewServer(backend, "")
 		server := httptest.NewServer(app)
 		defer server.Close()
-		test(t, &serverUnderTest{backend, app, server})
+		test(&serverUnderTest{backend, app, server})
 	}
 
-	runTestWithFactory := func(test factoryTestSuite) { test(t, factory) }
+	runTestWithFactory := func(test factoryTestSuite) { test(factory) }
 
 	runTest(testLurker)
 	runTest(testBroadcast)
@@ -167,8 +166,8 @@ func IntegrationTest(t testing.TB, factory func() Backend) {
 	runTestWithFactory(testPresence)
 }
 
-func testLurker(t testing.TB, s *serverUnderTest) {
-	Convey("Lurker", t, func() {
+func testLurker(s *serverUnderTest) {
+	Convey("Lurker", func() {
 		conn1 := s.Connect("lurker")
 		defer conn1.Close()
 		id1 := conn1.LocalAddr().String()
@@ -191,8 +190,8 @@ func testLurker(t testing.TB, s *serverUnderTest) {
 	})
 }
 
-func testBroadcast(t testing.TB, s *serverUnderTest) {
-	Convey("Broadcast", t, func() {
+func testBroadcast(s *serverUnderTest) {
+	Convey("Broadcast", func() {
 		tc := NewTestClock()
 		defer tc.Close()
 
@@ -261,8 +260,8 @@ func testBroadcast(t testing.TB, s *serverUnderTest) {
 	})
 }
 
-func testThreading(t testing.TB, s *serverUnderTest) {
-	Convey("Send with parent", t, func() {
+func testThreading(s *serverUnderTest) {
+	Convey("Send with parent", func() {
 		tc := NewTestClock()
 		defer tc.Close()
 
@@ -296,14 +295,14 @@ func testThreading(t testing.TB, s *serverUnderTest) {
 	})
 }
 
-func testPresence(t testing.TB, factory func() Backend) {
+func testPresence(factory func() Backend) {
 	backend := factory()
 	app := NewServer(backend, "")
 	server := httptest.NewServer(app)
 	defer server.Close()
 	s := &serverUnderTest{backend, app, server}
 
-	Convey("Other party joins then parts", t, func() {
+	Convey("Other party joins then parts", func() {
 		self := s.Connect("presence")
 		defer self.Close()
 		self.expectSnapshot(s.backend.Version(), nil, nil)
@@ -326,7 +325,7 @@ func testPresence(t testing.TB, factory func() Backend) {
 		self.expect("2", "who-reply", `{"listing":[{"id":"%s","name":"guest"}]}`, selfID)
 	})
 
-	Convey("Join after other party, other party parts", t, func() {
+	Convey("Join after other party, other party parts", func() {
 		other := s.Connect("presence2")
 		otherID := other.LocalAddr().String()
 		other.expectSnapshot(s.backend.Version(), nil, nil)
@@ -362,7 +361,7 @@ func testPresence(t testing.TB, factory func() Backend) {
 	defer server2.Close()
 	s2 := &serverUnderTest{backend2, app2, server2}
 
-	Convey("Learns presence on startup", t, func() {
+	Convey("Learns presence on startup", func() {
 		self1 := s.Connect("presence3")
 		defer self1.Close()
 		self1.expectSnapshot(s.backend.Version(), nil, nil)
@@ -377,7 +376,7 @@ func testPresence(t testing.TB, factory func() Backend) {
 	})
 
 	// TODO:
-	SkipConvey("Loses presence on shutdown", t, func() {
+	SkipConvey("Loses presence on shutdown", func() {
 	})
 
 }
