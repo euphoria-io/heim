@@ -4,6 +4,8 @@ import (
 	"sync"
 	"testing"
 
+	"heim/backend/proto"
+
 	"golang.org/x/net/context"
 
 	. "github.com/smartystreets/goconvey/convey"
@@ -17,7 +19,7 @@ type session struct {
 }
 
 type message struct {
-	cmdType PacketType
+	cmdType proto.PacketType
 	payload interface{}
 }
 
@@ -28,7 +30,7 @@ func (s *session) ID() string          { return s.id }
 func (s *session) Close()              {}
 func (s *session) SetName(name string) { s.name = name }
 
-func (s *session) Identity() Identity {
+func (s *session) Identity() proto.Identity {
 	id := newMemIdentity(s.id)
 	if s.name != "" {
 		id.name = s.name
@@ -36,7 +38,7 @@ func (s *session) Identity() Identity {
 	return id
 }
 
-func (s *session) Send(ctx context.Context, cmdType PacketType, payload interface{}) error {
+func (s *session) Send(ctx context.Context, cmdType proto.PacketType, payload interface{}) error {
 	s.Lock()
 	s.history = append(s.history, message{cmdType, payload})
 	s.Unlock()
@@ -60,26 +62,26 @@ func TestRoomPresence(t *testing.T) {
 	Convey("First join", t, func() {
 		So(room.Join(ctx, userA), ShouldBeNil)
 		So(room.identities, ShouldResemble,
-			map[string]Identity{"A": userA.Identity()})
+			map[string]proto.Identity{"A": userA.Identity()})
 		So(room.live, ShouldResemble,
-			map[string][]Session{"A": []Session{userA}})
+			map[string][]proto.Session{"A": []proto.Session{userA}})
 	})
 
 	Convey("Second join", t, func() {
 		So(room.Join(ctx, userB), ShouldBeNil)
 		So(room.identities["B"], ShouldResemble, userB.Identity())
-		So(room.live["B"], ShouldResemble, []Session{userB})
+		So(room.live["B"], ShouldResemble, []proto.Session{userB})
 	})
 
 	Convey("Duplicate join", t, func() {
 		So(room.Join(ctx, userA2), ShouldBeNil)
-		So(room.live["A"], ShouldResemble, []Session{userA, userA2})
+		So(room.live["A"], ShouldResemble, []proto.Session{userA, userA2})
 	})
 
 	Convey("Deduplicate part", t, func() {
 		So(room.Part(ctx, userA), ShouldBeNil)
 		So(room.identities["A"], ShouldResemble, userA.Identity())
-		So(room.live["A"], ShouldResemble, []Session{userA2})
+		So(room.live["A"], ShouldResemble, []proto.Session{userA2})
 	})
 
 	Convey("More parts", t, func() {
@@ -107,35 +109,59 @@ func TestRoomBroadcast(t *testing.T) {
 	})
 
 	Convey("Multiple exclude", t, func() {
-		So(room.broadcast(ctx, SendType, Message{Content: "1"}, userA, userB), ShouldBeNil)
+		So(room.broadcast(ctx, proto.SendType, proto.Message{Content: "1"}, userA, userB),
+			ShouldBeNil)
 		So(userA.history, ShouldResemble,
 			[]message{
-				{cmdType: JoinEventType, payload: PresenceEvent{ID: "B", Name: "guest"}},
-				{cmdType: JoinEventType, payload: PresenceEvent{ID: "C", Name: "guest"}},
+				{
+					cmdType: proto.JoinEventType,
+					payload: proto.PresenceEvent{ID: "B", Name: "guest"},
+				},
+				{
+					cmdType: proto.JoinEventType,
+					payload: proto.PresenceEvent{ID: "C", Name: "guest"},
+				},
 			})
 		So(userB.history, ShouldResemble,
-			[]message{{cmdType: JoinEventType, payload: PresenceEvent{ID: "C", Name: "guest"}}})
+			[]message{
+				{
+					cmdType: proto.JoinEventType,
+					payload: proto.PresenceEvent{ID: "C", Name: "guest"},
+				},
+			})
 		So(userC.history, ShouldResemble,
-			[]message{{cmdType: SendEventType, payload: Message{Content: "1"}}})
+			[]message{{cmdType: proto.SendEventType, payload: proto.Message{Content: "1"}}})
 	})
 
 	Convey("No exclude", t, func() {
-		So(room.broadcast(ctx, SendType, Message{Content: "2"}), ShouldBeNil)
+		So(room.broadcast(ctx, proto.SendType, proto.Message{Content: "2"}), ShouldBeNil)
 		So(userA.history, ShouldResemble,
 			[]message{
-				{cmdType: JoinEventType, payload: PresenceEvent{ID: "B", Name: "guest"}},
-				{cmdType: JoinEventType, payload: PresenceEvent{ID: "C", Name: "guest"}},
-				{cmdType: SendEventType, payload: Message{Content: "2"}},
+				{
+					cmdType: proto.JoinEventType,
+					payload: proto.PresenceEvent{ID: "B", Name: "guest"},
+				},
+				{
+					cmdType: proto.JoinEventType,
+					payload: proto.PresenceEvent{ID: "C", Name: "guest"},
+				},
+				{
+					cmdType: proto.SendEventType,
+					payload: proto.Message{Content: "2"},
+				},
 			})
 		So(userB.history, ShouldResemble,
 			[]message{
-				{cmdType: JoinEventType, payload: PresenceEvent{ID: "C", Name: "guest"}},
-				{cmdType: SendEventType, payload: Message{Content: "2"}},
+				{
+					cmdType: proto.JoinEventType,
+					payload: proto.PresenceEvent{ID: "C", Name: "guest"},
+				},
+				{cmdType: proto.SendEventType, payload: proto.Message{Content: "2"}},
 			})
 		So(userC.history, ShouldResemble,
 			[]message{
-				{cmdType: SendEventType, payload: Message{Content: "1"}},
-				{cmdType: SendEventType, payload: Message{Content: "2"}},
+				{cmdType: proto.SendEventType, payload: proto.Message{Content: "1"}},
+				{cmdType: proto.SendEventType, payload: proto.Message{Content: "2"}},
 			})
 	})
 }

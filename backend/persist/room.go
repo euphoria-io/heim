@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"heim/backend"
+	"heim/backend/proto"
 
 	"golang.org/x/net/context"
 )
@@ -29,38 +30,38 @@ type RoomBinding struct {
 	*Room
 }
 
-func (rb *RoomBinding) Latest(ctx context.Context, n int, before backend.Snowflake) (
-	[]backend.Message, error) {
+func (rb *RoomBinding) Latest(ctx context.Context, n int, before proto.Snowflake) (
+	[]proto.Message, error) {
 
 	return rb.Backend.latest(ctx, rb.Room, n, before)
 }
 
-func (rb *RoomBinding) Join(ctx context.Context, session backend.Session) error {
+func (rb *RoomBinding) Join(ctx context.Context, session proto.Session) error {
 	return rb.Backend.join(ctx, rb.Room, session)
 }
 
-func (rb *RoomBinding) Part(ctx context.Context, session backend.Session) error {
+func (rb *RoomBinding) Part(ctx context.Context, session proto.Session) error {
 	return rb.Backend.part(ctx, rb.Room, session)
 }
 
-func (rb *RoomBinding) Send(ctx context.Context, session backend.Session, msg backend.Message) (
-	backend.Message, error) {
+func (rb *RoomBinding) Send(ctx context.Context, session proto.Session, msg proto.Message) (
+	proto.Message, error) {
 
 	logger(ctx).Printf("Send\n")
 	return rb.Backend.sendMessageToRoom(ctx, rb.Room, session, msg, session)
 }
 
-func (rb *RoomBinding) Listing(ctx context.Context) (backend.Listing, error) {
+func (rb *RoomBinding) Listing(ctx context.Context) (proto.Listing, error) {
 	return rb.Backend.listing(ctx, rb.Room)
 }
 
-func (rb *RoomBinding) RenameUser(ctx context.Context, session backend.Session, formerName string) (
-	*backend.NickEvent, error) {
+func (rb *RoomBinding) RenameUser(ctx context.Context, session proto.Session, formerName string) (
+	*proto.NickEvent, error) {
 
-	event := &backend.NickEvent{
+	event := &proto.NickEvent{
 		ID:   session.Identity().ID(),
 		From: formerName,
 		To:   session.Identity().Name(),
 	}
-	return event, rb.Backend.broadcast(ctx, rb.Room, session, backend.NickEventType, event, session)
+	return event, rb.Backend.broadcast(ctx, rb.Room, session, proto.NickEventType, event, session)
 }

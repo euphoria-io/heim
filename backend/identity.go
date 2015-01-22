@@ -1,15 +1,8 @@
 package backend
 
-type Identity interface {
-	ID() string
-	Name() string
-	View() *IdentityView
-}
-
-type IdentityView struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
-}
+import (
+	"heim/backend/proto"
+)
 
 type memIdentity struct {
 	id   string
@@ -23,6 +16,6 @@ func newMemIdentity(id string) *memIdentity {
 func (s *memIdentity) ID() string   { return s.id }
 func (s *memIdentity) Name() string { return s.name }
 
-func (s *memIdentity) View() *IdentityView {
-	return &IdentityView{ID: s.id, Name: s.name}
+func (s *memIdentity) View() *proto.IdentityView {
+	return &proto.IdentityView{ID: s.id, Name: s.name}
 }

@@ -4,25 +4,10 @@ import (
 	"sort"
 	"sync"
 
+	"heim/backend/proto"
+
 	"golang.org/x/net/context"
 )
-
-type Listing []IdentityView
-
-func (l Listing) Len() int           { return len(l) }
-func (l Listing) Less(i, j int) bool { return l[i].ID < l[j].ID }
-func (l Listing) Swap(i, j int)      { l[i], l[j] = l[j], l[i] }
-
-type Room interface {
-	Log
-
-	Join(context.Context, Session) error
-	Part(context.Context, Session) error
-	Send(context.Context, Session, Message) (Message, error)
-	Listing(context.Context) (Listing, error)
-	RenameUser(ctx context.Context, session Session, formerName string) (*NickEvent, error)
-	Version() string
-}
 
 type memRoom struct {
 	sync.Mutex
@@ -30,8 +15,8 @@ type memRoom struct {
 	name       string
 	version    string
 	log        *memLog
-	identities map[string]Identity
-	live       map[string][]Session
+	identities map[string]proto.Identity
+	live       map[string][]proto.Session
 }
 
 func newMemRoom(name, version string) *memRoom {
@@ -44,19 +29,21 @@ func newMemRoom(name, version string) *memRoom {
 
 func (r *memRoom) Version() string { return r.version }
 
-func (r *memRoom) Latest(ctx context.Context, n int, before Snowflake) ([]Message, error) {
+func (r *memRoom) Latest(ctx context.Context, n int, before proto.Snowflake) (
+	[]proto.Message, error) {
+
 	return r.log.Latest(ctx, n, before)
 }
 
-func (r *memRoom) Join(ctx context.Context, session Session) error {
+func (r *memRoom) Join(ctx context.Context, session proto.Session) error {
 	r.Lock()
 	defer r.Unlock()
 
 	if r.identities == nil {
-		r.identities = map[string]Identity{}
+		r.identities = map[string]proto.Identity{}
 	}
 	if r.live == nil {
-		r.live = map[string][]Session{}
+		r.live = map[string][]proto.Session{}
 	}
 
 	ident := session.Identity()
@@ -67,10 +54,11 @@ func (r *memRoom) Join(ctx context.Context, session Session) error {
 	}
 
 	r.live[id] = append(r.live[id], session)
-	return r.broadcast(ctx, JoinType, PresenceEvent(*session.Identity().View()), session)
+	return r.broadcast(ctx, proto.JoinType,
+		proto.PresenceEvent(*session.Identity().View()), session)
 }
 
-func (r *memRoom) Part(ctx context.Context, session Session) error {
+func (r *memRoom) Part(ctx context.Context, session proto.Session) error {
 	r.Lock()
 	defer r.Unlock()
 
@@ -87,20 +75,23 @@ func (r *memRoom) Part(ctx context.Context, session Session) error {
 		delete(r.live, id)
 		delete(r.identities, id)
 	}
-	return r.broadcast(ctx, PartType, PresenceEvent(*session.Identity().View()), session)
+	return r.broadcast(ctx, proto.PartType,
+		proto.PresenceEvent(*session.Identity().View()), session)
 }
 
-func (r *memRoom) Send(ctx context.Context, session Session, message Message) (Message, error) {
+func (r *memRoom) Send(ctx context.Context, session proto.Session, message proto.Message) (
+	proto.Message, error) {
+
 	r.Lock()
 	defer r.Unlock()
 
 	// TODO: verify parent
-	msgID, err := NewSnowflake()
+	msgID, err := proto.NewSnowflake()
 	if err != nil {
-		return Message{}, err
+		return proto.Message{}, err
 	}
 
-	msg := Message{
+	msg := proto.Message{
 		ID:       msgID,
 		UnixTime: msgID.Time().Unix(),
 		Parent:   message.Parent,
@@ -108,11 +99,12 @@ func (r *memRoom) Send(ctx context.Context, session Session, message Message) (M
 		Content:  message.Content,
 	}
 	r.log.post(&msg)
-	return msg, r.broadcast(ctx, SendType, msg, session)
+	return msg, r.broadcast(ctx, proto.SendType, msg, session)
 }
 
 func (r *memRoom) broadcast(
-	ctx context.Context, cmdType PacketType, payload interface{}, excluding ...Session) error {
+	ctx context.Context, cmdType proto.PacketType, payload interface{},
+	excluding ...proto.Session) error {
 
 	excMap := make(map[string]struct{}, len(excluding))
 	for _, x := range excluding {
@@ -133,8 +125,8 @@ func (r *memRoom) broadcast(
 	return nil
 }
 
-func (r *memRoom) Listing(ctx context.Context) (Listing, error) {
-	listing := Listing{}
+func (r *memRoom) Listing(ctx context.Context) (proto.Listing, error) {
+	listing := proto.Listing{}
 	for _, sessions := range r.live {
 		for _, session := range sessions {
 			listing = append(listing, *session.Identity().View())
@@ -145,12 +137,12 @@ func (r *memRoom) Listing(ctx context.Context) (Listing, error) {
 }
 
 func (r *memRoom) RenameUser(
-	ctx context.Context, session Session, formerName string) (*NickEvent, error) {
+	ctx context.Context, session proto.Session, formerName string) (*proto.NickEvent, error) {
 	Logger(ctx).Printf("renaming %s from %s to %s\n", session.ID(), formerName, session.Identity().Name())
-	payload := &NickEvent{
+	payload := &proto.NickEvent{
 		ID:   session.Identity().ID(),
 		From: formerName,
 		To:   session.Identity().Name(),
 	}
-	return payload, r.broadcast(ctx, NickType, payload, session)
+	return payload, r.broadcast(ctx, proto.NickType, payload, session)
 }

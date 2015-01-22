@@ -7,6 +7,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"heim/backend/proto"
+
 	"github.com/gorilla/websocket"
 	"golang.org/x/net/context"
 )
@@ -18,31 +20,22 @@ var (
 	ErrUnresponsive = fmt.Errorf("connection unresponsive")
 )
 
-type Session interface {
-	ID() string
-	ServerID() string
-	Identity() Identity
-	SetName(name string)
-	Send(context.Context, PacketType, interface{}) error
-	Close()
-}
-
 type memSession struct {
 	ctx      context.Context
 	cancel   context.CancelFunc
 	conn     *websocket.Conn
 	identity *memIdentity
 	serverID string
-	room     Room
+	room     proto.Room
 
-	incoming chan *Packet
-	outgoing chan *Packet
+	incoming chan *proto.Packet
+	outgoing chan *proto.Packet
 
 	outstandingPings uint32
 }
 
 func newMemSession(
-	ctx context.Context, conn *websocket.Conn, serverID string, room Room) *memSession {
+	ctx context.Context, conn *websocket.Conn, serverID string, room proto.Room) *memSession {
 
 	id := conn.RemoteAddr().String()
 	loggingCtx := LoggingContext(ctx, fmt.Sprintf("[%s] ", id))
@@ -56,8 +49,8 @@ func newMemSession(
 		serverID: serverID,
 		room:     room,
 
-		incoming: make(chan *Packet),
-		outgoing: make(chan *Packet, 100),
+		incoming: make(chan *proto.Packet),
+		outgoing: make(chan *proto.Packet, 100),
 	}
 
 	conn.SetPongHandler(session.handlePong)
@@ -71,18 +64,20 @@ func (s *memSession) Close() {
 	s.cancel()
 }
 
-func (s *memSession) ID() string          { return s.conn.RemoteAddr().String() }
-func (s *memSession) ServerID() string    { return s.serverID }
-func (s *memSession) Identity() Identity  { return s.identity }
-func (s *memSession) SetName(name string) { s.identity.name = name }
+func (s *memSession) ID() string               { return s.conn.RemoteAddr().String() }
+func (s *memSession) ServerID() string         { return s.serverID }
+func (s *memSession) Identity() proto.Identity { return s.identity }
+func (s *memSession) SetName(name string)      { s.identity.name = name }
 
-func (s *memSession) Send(ctx context.Context, cmdType PacketType, payload interface{}) error {
+func (s *memSession) Send(
+	ctx context.Context, cmdType proto.PacketType, payload interface{}) error {
+
 	encoded, err := json.Marshal(payload)
 	if err != nil {
 		return err
 	}
 
-	cmd := &Packet{
+	cmd := &proto.Packet{
 		Type: cmdType,
 		Data: encoded,
 	}
@@ -132,10 +127,10 @@ func (s *memSession) serve() error {
 			reply, err := s.handleCommand(cmd)
 			if err != nil {
 				logger.Printf("error: handleCommand: %s", err)
-				reply = ErrorReply{Error: err.Error()}
+				reply = proto.ErrorReply{Error: err.Error()}
 			}
 
-			resp, err := MakeResponse(cmd.ID, cmd.Type, reply)
+			resp, err := proto.MakeResponse(cmd.ID, cmd.Type, reply)
 			if err != nil {
 				logger.Printf("error: Response: %s", err)
 				return err
@@ -187,7 +182,7 @@ func (s *memSession) readMessages() {
 
 		switch messageType {
 		case websocket.TextMessage:
-			cmd, err := ParseRequest(data)
+			cmd, err := proto.ParseRequest(data)
 			if err != nil {
 				logger.Printf("error: ParseRequest: %s", err)
 				return
@@ -200,39 +195,39 @@ func (s *memSession) readMessages() {
 	}
 }
 
-func (s *memSession) handleCommand(cmd *Packet) (interface{}, error) {
+func (s *memSession) handleCommand(cmd *proto.Packet) (interface{}, error) {
 	payload, err := cmd.Payload()
 	if err != nil {
 		return nil, fmt.Errorf("payload: %s", err)
 	}
 
 	switch msg := payload.(type) {
-	case *SendCommand:
-		sent, err := s.room.Send(s.ctx, s, Message{Content: msg.Content, Parent: msg.Parent})
+	case *proto.SendCommand:
+		sent, err := s.room.Send(s.ctx, s, proto.Message{Content: msg.Content, Parent: msg.Parent})
 		if err != nil {
 			return nil, err
 		}
-		return SendReply(sent), nil
-	case *LogCommand:
+		return proto.SendReply(sent), nil
+	case *proto.LogCommand:
 		msgs, err := s.room.Latest(s.ctx, msg.N, msg.Before)
 		if err != nil {
 			return nil, err
 		}
-		return &LogReply{Log: msgs, Before: msg.Before}, nil
-	case *NickCommand:
+		return &proto.LogReply{Log: msgs, Before: msg.Before}, nil
+	case *proto.NickCommand:
 		formerName := s.identity.Name()
 		s.identity.name = msg.Name
 		event, err := s.room.RenameUser(s.ctx, s, formerName)
 		if err != nil {
 			return nil, err
 		}
-		return NickReply(*event), nil
-	case *WhoCommand:
+		return proto.NickReply(*event), nil
+	case *proto.WhoCommand:
 		listing, err := s.room.Listing(s.ctx)
 		if err != nil {
 			return nil, err
 		}
-		return &WhoReply{Listing: listing}, nil
+		return &proto.WhoReply{Listing: listing}, nil
 	default:
 		return nil, fmt.Errorf("command type %T not implemented", payload)
 	}
@@ -248,13 +243,13 @@ func (s *memSession) sendSnapshot() error {
 		return err
 	}
 
-	snapshot := &SnapshotEvent{
+	snapshot := &proto.SnapshotEvent{
 		Version: s.room.Version(),
 		Listing: listing,
 		Log:     msgs,
 	}
 
-	event, err := MakeEvent(snapshot)
+	event, err := proto.MakeEvent(snapshot)
 	if err != nil {
 		return err
 	}

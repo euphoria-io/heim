@@ -2,22 +2,19 @@ package backend
 
 import (
 	"sync"
-)
 
-type Backend interface {
-	GetRoom(name string) (Room, error)
-	Version() string
-}
+	"heim/backend/proto"
+)
 
 type TestBackend struct {
 	sync.Mutex
-	rooms   map[string]Room
+	rooms   map[string]proto.Room
 	version string
 }
 
 func (b *TestBackend) Version() string { return b.version }
 
-func (b *TestBackend) GetRoom(name string) (Room, error) {
+func (b *TestBackend) GetRoom(name string) (proto.Room, error) {
 	b.Lock()
 	defer b.Unlock()
 
@@ -26,7 +23,7 @@ func (b *TestBackend) GetRoom(name string) (Room, error) {
 	}
 
 	if b.rooms == nil {
-		b.rooms = map[string]Room{}
+		b.rooms = map[string]proto.Room{}
 	}
 
 	room := newMemRoom(name, b.version)

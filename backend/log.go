@@ -3,28 +3,28 @@ package backend
 import (
 	"sync"
 
+	"heim/backend/proto"
+
 	"golang.org/x/net/context"
 )
 
-type Log interface {
-	Latest(context.Context, int, Snowflake) ([]Message, error)
-}
-
 type memLog struct {
 	sync.Mutex
-	msgs []*Message
+	msgs []*proto.Message
 }
 
-func newMemLog() *memLog { return &memLog{msgs: []*Message{}} }
+func newMemLog() *memLog { return &memLog{msgs: []*proto.Message{}} }
 
-func (log *memLog) post(msg *Message) {
+func (log *memLog) post(msg *proto.Message) {
 	log.Lock()
 	defer log.Unlock()
 
 	log.msgs = append(log.msgs, msg)
 }
 
-func (log *memLog) Latest(ctx context.Context, n int, before Snowflake) ([]Message, error) {
+func (log *memLog) Latest(ctx context.Context, n int, before proto.Snowflake) (
+	[]proto.Message, error) {
+
 	log.Lock()
 	defer log.Unlock()
 
@@ -42,10 +42,10 @@ func (log *memLog) Latest(ctx context.Context, n int, before Snowflake) ([]Messa
 
 	slice := log.msgs[start:end]
 	if len(slice) == 0 {
-		return []Message{}, nil
+		return []proto.Message{}, nil
 	}
 
-	messages := make([]Message, len(slice))
+	messages := make([]proto.Message, len(slice))
 	for i, msg := range slice {
 		messages[i] = *msg
 	}

@@ -9,6 +9,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"heim/backend/proto"
+
 	"github.com/gorilla/websocket"
 
 	. "github.com/smartystreets/goconvey/convey"
@@ -16,36 +18,36 @@ import (
 
 // TODO: move time mocking to snowflake_test?
 type testClock struct {
-	secs                  int64
-	savedClock            func() time.Time
-	savedSnowflaker       Snowflaker
-	savedEpoch            time.Time
-	savedFromTimeSequence uint64
+	secs                     int64
+	savedClock               func() time.Time
+	savedSnowflaker          proto.Snowflaker
+	savedEpoch               time.Time
+	savedSnowflakeSeqCounter uint64
 }
 
 func NewTestClock() io.Closer {
 	tc := &testClock{
-		savedClock:            Clock,
-		savedSnowflaker:       DefaultSnowflaker,
-		savedEpoch:            Epoch,
-		savedFromTimeSequence: fromTimeSequence,
+		savedClock:               proto.Clock,
+		savedSnowflaker:          proto.DefaultSnowflaker,
+		savedEpoch:               proto.Epoch,
+		savedSnowflakeSeqCounter: proto.SnowflakeSeqCounter,
 	}
-	Clock = tc.clock
-	DefaultSnowflaker = tc
-	Epoch = time.Unix(0, 0)
+	proto.Clock = tc.clock
+	proto.DefaultSnowflaker = tc
+	proto.Epoch = time.Unix(0, 0)
 	return tc
 }
 
 func (tc *testClock) Close() error {
-	Clock = tc.savedClock
-	DefaultSnowflaker = tc.savedSnowflaker
-	Epoch = tc.savedEpoch
-	fromTimeSequence = tc.savedFromTimeSequence
+	proto.Clock = tc.savedClock
+	proto.DefaultSnowflaker = tc.savedSnowflaker
+	proto.Epoch = tc.savedEpoch
+	proto.SnowflakeSeqCounter = tc.savedSnowflakeSeqCounter
 	return nil
 }
 
 func (tc *testClock) Next() (uint64, error) {
-	sf := NewSnowflakeFromTime(tc.clock())
+	sf := proto.NewSnowflakeFromTime(tc.clock())
 	return uint64(sf), nil
 }
 
@@ -54,11 +56,11 @@ func (tc *testClock) clock() time.Time {
 	return time.Unix(secs, 0)
 }
 
-type factoryTestSuite func(factory func() Backend)
+type factoryTestSuite func(factory func() proto.Backend)
 type testSuite func(*serverUnderTest)
 
 type serverUnderTest struct {
-	backend Backend
+	backend proto.Backend
 	app     *Server
 	server  *httptest.Server
 }
@@ -92,12 +94,12 @@ func (tc *testConn) send(id, cmdType, data string, args ...interface{}) {
 	So(tc.Conn.WriteMessage(websocket.TextMessage, []byte(msg)), ShouldBeNil)
 }
 
-func (tc *testConn) readPacket() (PacketType, interface{}) {
+func (tc *testConn) readPacket() (proto.PacketType, interface{}) {
 	msgType, data, err := tc.Conn.ReadMessage()
 	So(err, ShouldBeNil)
 	So(msgType, ShouldEqual, websocket.TextMessage)
 
-	var packet Packet
+	var packet proto.Packet
 	So(json.Unmarshal(data, &packet), ShouldBeNil)
 	payload, err := packet.Payload()
 	So(err, ShouldBeNil)
@@ -115,7 +117,7 @@ func (tc *testConn) expect(id, cmdType, data string, args ...interface{}) {
 	fmt.Printf("%s received %v, %#v\n", tc.RemoteAddr(), packetType, payload)
 	So(packetType, ShouldEqual, cmdType)
 
-	var expected Packet
+	var expected proto.Packet
 	expectedString := fmt.Sprintf(`{"id":"%s","type":"%s","data":%s}`, id, cmdType, data)
 	So(json.Unmarshal([]byte(expectedString), &expected), ShouldBeNil)
 	expectedPayload, err := expected.Payload()
@@ -135,20 +137,20 @@ func (tc *testConn) Close() {
 		websocket.FormatCloseMessage(websocket.CloseNormalClosure, "normal closure"))
 }
 
-func snowflakes(n int) []Snowflake {
+func snowflakes(n int) []proto.Snowflake {
 	fc := NewTestClock()
 	defer fc.Close()
 
-	snowflakes := make([]Snowflake, n)
+	snowflakes := make([]proto.Snowflake, n)
 	for i := range snowflakes {
 		var err error
-		snowflakes[i], err = NewSnowflake()
+		snowflakes[i], err = proto.NewSnowflake()
 		So(err, ShouldBeNil)
 	}
 	return snowflakes
 }
 
-func IntegrationTest(factory func() Backend) {
+func IntegrationTest(factory func() proto.Backend) {
 	runTest := func(test testSuite) {
 		backend := factory()
 		app := NewServer(backend, "test1", "")
@@ -197,7 +199,7 @@ func testBroadcast(s *serverUnderTest) {
 
 		conns := make([]*testConn, 3)
 
-		ids := make(Listing, len(conns))
+		ids := make(proto.Listing, len(conns))
 
 		listingParts := []string{}
 
@@ -205,7 +207,7 @@ func testBroadcast(s *serverUnderTest) {
 			conn := s.Connect("broadcast")
 			conns[i] = conn
 			me := conn.LocalAddr().String()
-			ids[i] = IdentityView{ID: me, Name: fmt.Sprintf("user%d", i)}
+			ids[i] = proto.IdentityView{ID: me, Name: fmt.Sprintf("user%d", i)}
 			conn.send("1", "nick", `{"name":"user%d"}`, i)
 			conn.send("2", "who", "")
 
@@ -268,7 +270,7 @@ func testThreading(s *serverUnderTest) {
 		conn := s.Connect("threading")
 		defer conn.Close()
 
-		id := &IdentityView{ID: conn.LocalAddr().String(), Name: "user"}
+		id := &proto.IdentityView{ID: conn.LocalAddr().String(), Name: "user"}
 		id.Name = id.ID
 		sfs := snowflakes(2)
 		sf1 := sfs[0]
@@ -295,7 +297,7 @@ func testThreading(s *serverUnderTest) {
 	})
 }
 
-func testPresence(factory func() Backend) {
+func testPresence(factory func() proto.Backend) {
 	backend := factory()
 	app := NewServer(backend, "test1", "")
 	server := httptest.NewServer(app)

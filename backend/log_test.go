@@ -3,6 +3,8 @@ package backend
 import (
 	"testing"
 
+	"heim/backend/proto"
+
 	"golang.org/x/net/context"
 
 	. "github.com/smartystreets/goconvey/convey"
@@ -10,7 +12,7 @@ import (
 
 func TestMemLogLatest(t *testing.T) {
 	ctx := context.Background()
-	msgs := []Message{
+	msgs := []proto.Message{
 		{ID: 1, Content: "A"},
 		{ID: 2, Content: "B"},
 		{ID: 15, Content: "C"},

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"heim/backend"
+	"heim/backend/proto"
 
 	"github.com/coopernurse/gorp"
 	"github.com/lib/pq"
@@ -124,9 +125,9 @@ func (b *Backend) background(ctx context.Context) {
 				continue
 			}
 
-			if msg.Event.Type == backend.NickEventType {
+			if msg.Event.Type == proto.NickEventType {
 				payload, err := msg.Event.Payload()
-				nickEvent, ok := payload.(*backend.NickEvent)
+				nickEvent, ok := payload.(*proto.NickEvent)
 				if err != nil || !ok {
 					logger.Printf("error: pq listen: invalid nick event: %s", err)
 					logger.Printf("         payload: %#v", notice.Extra)
@@ -157,7 +158,7 @@ func (b *Backend) background(ctx context.Context) {
 	}
 }
 
-func (b *Backend) GetRoom(name string) (backend.Room, error) {
+func (b *Backend) GetRoom(name string) (proto.Room, error) {
 	obj, err := b.DbMap.Get(Room{}, name)
 	if err != nil {
 		return nil, err
@@ -179,33 +180,33 @@ func (b *Backend) GetRoom(name string) (backend.Room, error) {
 }
 
 func (b *Backend) sendMessageToRoom(
-	ctx context.Context, room *Room, session backend.Session, msg backend.Message,
-	exclude ...backend.Session) (backend.Message, error) {
+	ctx context.Context, room *Room, session proto.Session, msg proto.Message,
+	exclude ...proto.Session) (proto.Message, error) {
 
 	stored, err := NewMessage(room, session.Identity().View(), msg.Parent, msg.Content)
 	if err != nil {
-		return backend.Message{}, err
+		return proto.Message{}, err
 	}
 
 	if err := b.DbMap.Insert(stored); err != nil {
-		return backend.Message{}, err
+		return proto.Message{}, err
 	}
 
 	result := stored.ToBackend()
-	event := backend.SendEvent(result)
-	return result, b.broadcast(ctx, room, session, backend.SendEventType, &event, exclude...)
+	event := proto.SendEvent(result)
+	return result, b.broadcast(ctx, room, session, proto.SendEventType, &event, exclude...)
 }
 
 func (b *Backend) broadcast(
-	ctx context.Context, room *Room, session backend.Session,
-	packetType backend.PacketType, payload interface{}, exclude ...backend.Session) error {
+	ctx context.Context, room *Room, session proto.Session, packetType proto.PacketType,
+	payload interface{}, exclude ...proto.Session) error {
 
 	encodedPayload, err := json.Marshal(payload)
 	if err != nil {
 		return err
 	}
 
-	packet := &backend.Packet{Type: packetType, Data: json.RawMessage(encodedPayload)}
+	packet := &proto.Packet{Type: packetType, Data: json.RawMessage(encodedPayload)}
 	broadcastMsg := BroadcastMessage{
 		Room:    room.Name,
 		Event:   packet,
@@ -225,7 +226,7 @@ func (b *Backend) broadcast(
 	return err
 }
 
-func (b *Backend) join(ctx context.Context, room *Room, session backend.Session) error {
+func (b *Backend) join(ctx context.Context, room *Room, session proto.Session) error {
 	b.Lock()
 	defer b.Unlock()
 
@@ -266,10 +267,10 @@ func (b *Backend) join(ctx context.Context, room *Room, session backend.Session)
 	}
 
 	return b.broadcast(ctx, room, session,
-		backend.JoinEventType, backend.PresenceEvent(*session.Identity().View()), session)
+		proto.JoinEventType, proto.PresenceEvent(*session.Identity().View()), session)
 }
 
-func (b *Backend) part(ctx context.Context, room *Room, session backend.Session) error {
+func (b *Backend) part(ctx context.Context, room *Room, session proto.Session) error {
 	b.Lock()
 	defer b.Unlock()
 
@@ -285,11 +286,11 @@ func (b *Backend) part(ctx context.Context, room *Room, session backend.Session)
 	}
 
 	return b.broadcast(ctx, room, session,
-		backend.PartEventType, backend.PresenceEvent(*session.Identity().View()), session)
+		proto.PartEventType, proto.PresenceEvent(*session.Identity().View()), session)
 }
 
-func (b *Backend) listing(ctx context.Context, room *Room) (backend.Listing, error) {
-	result := backend.Listing{}
+func (b *Backend) listing(ctx context.Context, room *Room) (proto.Listing, error) {
+	result := proto.Listing{}
 	for _, rc := range b.presence[room.Name] {
 		for _, session := range rc.sessions {
 			result = append(result, *session.Identity().View())
@@ -299,8 +300,8 @@ func (b *Backend) listing(ctx context.Context, room *Room) (backend.Listing, err
 	return result, nil
 }
 
-func (b *Backend) latest(ctx context.Context, room *Room, n int, before backend.Snowflake) (
-	[]backend.Message, error) {
+func (b *Backend) latest(ctx context.Context, room *Room, n int, before proto.Snowflake) (
+	[]proto.Message, error) {
 
 	if n <= 0 {
 		return nil, nil
@@ -324,7 +325,7 @@ func (b *Backend) latest(ctx context.Context, room *Room, n int, before backend.
 		return nil, err
 	}
 
-	results := make([]backend.Message, len(msgs))
+	results := make([]proto.Message, len(msgs))
 	for i, row := range msgs {
 		msg := row.(*Message)
 		results[len(msgs)-i-1] = msg.ToBackend()
@@ -336,5 +337,5 @@ func (b *Backend) latest(ctx context.Context, room *Room, n int, before backend.
 type BroadcastMessage struct {
 	Room    string
 	Exclude []string
-	Event   *backend.Packet
+	Event   *proto.Packet
 }

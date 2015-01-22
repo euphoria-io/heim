@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"heim/backend"
+	"heim/backend/proto"
 
 	"golang.org/x/net/context"
 )
@@ -31,7 +31,7 @@ func (Presence) AfterCreateTable(db *sql.DB) error {
 }
 
 type roomConn struct {
-	sessions map[string]backend.Session
+	sessions map[string]proto.Session
 	nicks    map[string]string
 }
 
@@ -41,7 +41,7 @@ func (rp roomPresence) load(sessionID, userID, nick string) {
 	rc, ok := rp[userID]
 	if !ok {
 		rc = roomConn{
-			sessions: map[string]backend.Session{},
+			sessions: map[string]proto.Session{},
 			nicks:    map[string]string{},
 		}
 		rp[userID] = rc
@@ -49,15 +49,15 @@ func (rp roomPresence) load(sessionID, userID, nick string) {
 	rc.nicks[sessionID] = nick
 }
 
-func (rp roomPresence) join(session backend.Session) {
+func (rp roomPresence) join(session proto.Session) {
 	rp.load(session.ID(), session.Identity().ID(), session.Identity().Name())
 	rp[session.Identity().ID()].sessions[session.ID()] = session
 }
 
-func (rp roomPresence) part(session backend.Session) { delete(rp, session.ID()) }
+func (rp roomPresence) part(session proto.Session) { delete(rp, session.ID()) }
 
 func (rp roomPresence) broadcast(
-	ctx context.Context, event *backend.Packet, exclude ...string) error {
+	ctx context.Context, event *proto.Packet, exclude ...string) error {
 
 	payload, err := event.Payload()
 	if err != nil {
@@ -85,11 +85,11 @@ func (rp roomPresence) broadcast(
 	return nil
 }
 
-func (rp roomPresence) rename(nickEvent *backend.NickEvent) {
+func (rp roomPresence) rename(nickEvent *proto.NickEvent) {
 	rc, ok := rp[nickEvent.ID]
 	if !ok {
 		rc = roomConn{
-			sessions: map[string]backend.Session{},
+			sessions: map[string]proto.Session{},
 			nicks:    map[string]string{},
 		}
 		rp[nickEvent.ID] = rc

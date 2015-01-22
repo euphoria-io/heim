@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"path"
 
+	"heim/backend/proto"
+
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 
@@ -19,11 +21,11 @@ var upgrader = websocket.Upgrader{
 type Server struct {
 	ID         string
 	r          *mux.Router
-	b          Backend
+	b          proto.Backend
 	staticPath string
 }
 
-func NewServer(backend Backend, id, staticPath string) *Server {
+func NewServer(backend proto.Backend, id, staticPath string) *Server {
 	s := &Server{
 		ID:         id,
 		b:          backend,

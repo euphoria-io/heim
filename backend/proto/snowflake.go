@@ -1,4 +1,4 @@
-package backend
+package proto
 
 import (
 	"encoding/json"
@@ -18,7 +18,7 @@ var Clock = func() time.Time { return time.Now() }
 var Epoch = time.Date(2014, 12, 0, 0, 0, 0, 0, time.UTC)
 var DefaultSnowflaker Snowflaker
 
-var fromTimeSequence uint64
+var SnowflakeSeqCounter uint64
 
 const seqIDMask = (1 << gosnow.SequenceBits) - 1
 
@@ -44,7 +44,7 @@ func NewSnowflake() (Snowflake, error) {
 func NewSnowflakeFromTime(t time.Time) Snowflake {
 	timestampMillis := (t.UnixNano() - Epoch.UnixNano()) / int64(time.Millisecond)
 	workerID := gosnow.DefaultWorkId()
-	seqID := atomic.AddUint64(&fromTimeSequence, 1)
+	seqID := atomic.AddUint64(&SnowflakeSeqCounter, 1)
 
 	return Snowflake(
 		(uint64(timestampMillis) << (gosnow.WorkerIdBits + gosnow.SequenceBits)) |

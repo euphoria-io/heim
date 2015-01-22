@@ -1,4 +1,4 @@
-package backend
+package proto
 
 import (
 	"encoding/json"

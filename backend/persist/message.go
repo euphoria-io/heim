@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"time"
 
-	"heim/backend"
+	"heim/backend/proto"
 )
 
 type Message struct {
@@ -23,10 +23,10 @@ func (Message) AfterCreateTable(db *sql.DB) error {
 }
 
 func NewMessage(
-	room *Room, idView *backend.IdentityView, parent backend.Snowflake, content string) (
+	room *Room, idView *proto.IdentityView, parent proto.Snowflake, content string) (
 	*Message, error) {
 
-	id, err := backend.NewSnowflake()
+	id, err := proto.NewSnowflake()
 	if err != nil {
 		return nil, err
 	}
@@ -42,10 +42,10 @@ func NewMessage(
 	}, nil
 }
 
-func (m *Message) ToBackend() backend.Message {
-	msg := backend.Message{
+func (m *Message) ToBackend() proto.Message {
+	msg := proto.Message{
 		UnixTime: m.Posted.Unix(),
-		Sender:   &backend.IdentityView{ID: m.SenderID, Name: m.SenderName},
+		Sender:   &proto.IdentityView{ID: m.SenderID, Name: m.SenderName},
 		Content:  m.Content,
 	}
 

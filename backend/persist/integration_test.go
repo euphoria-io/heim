@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"heim/backend"
+	"heim/backend/proto"
 
 	. "github.com/smartystreets/goconvey/convey"
 )
@@ -27,10 +28,6 @@ func TestBackend(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		factory := func() backend.Backend {
-			return b
-		}
-
-		backend.IntegrationTest(factory)
+		backend.IntegrationTest(func() proto.Backend { return b })
 	})
 }
