@@ -23,6 +23,7 @@ type message struct {
 
 func newSession(id string) *session { return &session{id: id} }
 
+func (s *session) ServerID() string    { return "test" }
 func (s *session) ID() string          { return s.id }
 func (s *session) Close()              {}
 func (s *session) SetName(name string) { s.name = name }

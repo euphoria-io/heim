@@ -257,6 +257,7 @@ func (b *Backend) join(ctx context.Context, room *Room, session backend.Session)
 		Room:         room.Name,
 		SessionID:    session.ID(),
 		UserID:       session.Identity().ID(),
+		ServerID:     session.ServerID(),
 		Name:         session.Identity().Name(),
 		Connected:    true,
 		LastActivity: time.Now(),

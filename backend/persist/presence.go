@@ -14,6 +14,7 @@ type Presence struct {
 	Room         string
 	UserID       string `db:"user_id"`
 	SessionID    string `db:"session_id"`
+	ServerID     string `db:"server_id"`
 	Name         string
 	Connected    bool
 	LastActivity time.Time `db:"last_activity"`

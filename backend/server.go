@@ -17,13 +17,15 @@ var upgrader = websocket.Upgrader{
 }
 
 type Server struct {
+	ID         string
 	r          *mux.Router
 	b          Backend
 	staticPath string
 }
 
-func NewServer(backend Backend, staticPath string) *Server {
+func NewServer(backend Backend, id, staticPath string) *Server {
 	s := &Server{
+		ID:         id,
 		b:          backend,
 		staticPath: staticPath,
 	}
@@ -86,7 +88,7 @@ func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
 	}
 	defer conn.Close()
 
-	session := newMemSession(ctx, conn, room)
+	session := newMemSession(ctx, conn, s.ID, room)
 
 	if err := session.sendSnapshot(); err != nil {
 		logger.Printf("snapshot failed: %s", err)

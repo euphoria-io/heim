@@ -20,6 +20,7 @@ var (
 
 type Session interface {
 	ID() string
+	ServerID() string
 	Identity() Identity
 	SetName(name string)
 	Send(context.Context, PacketType, interface{}) error
@@ -31,6 +32,7 @@ type memSession struct {
 	cancel   context.CancelFunc
 	conn     *websocket.Conn
 	identity *memIdentity
+	serverID string
 	room     Room
 
 	incoming chan *Packet
@@ -39,7 +41,9 @@ type memSession struct {
 	outstandingPings uint32
 }
 
-func newMemSession(ctx context.Context, conn *websocket.Conn, room Room) *memSession {
+func newMemSession(
+	ctx context.Context, conn *websocket.Conn, serverID string, room Room) *memSession {
+
 	id := conn.RemoteAddr().String()
 	loggingCtx := LoggingContext(ctx, fmt.Sprintf("[%s] ", id))
 	cancellableCtx, cancel := context.WithCancel(loggingCtx)
@@ -49,6 +53,7 @@ func newMemSession(ctx context.Context, conn *websocket.Conn, room Room) *memSes
 		cancel:   cancel,
 		conn:     conn,
 		identity: newMemIdentity(id),
+		serverID: serverID,
 		room:     room,
 
 		incoming: make(chan *Packet),
@@ -67,6 +72,7 @@ func (s *memSession) Close() {
 }
 
 func (s *memSession) ID() string          { return s.conn.RemoteAddr().String() }
+func (s *memSession) ServerID() string    { return s.serverID }
 func (s *memSession) Identity() Identity  { return s.identity }
 func (s *memSession) SetName(name string) { s.identity.name = name }
 

@@ -151,7 +151,7 @@ func snowflakes(n int) []Snowflake {
 func IntegrationTest(factory func() Backend) {
 	runTest := func(test testSuite) {
 		backend := factory()
-		app := NewServer(backend, "")
+		app := NewServer(backend, "test1", "")
 		server := httptest.NewServer(app)
 		defer server.Close()
 		test(&serverUnderTest{backend, app, server})
@@ -297,7 +297,7 @@ func testThreading(s *serverUnderTest) {
 
 func testPresence(factory func() Backend) {
 	backend := factory()
-	app := NewServer(backend, "")
+	app := NewServer(backend, "test1", "")
 	server := httptest.NewServer(app)
 	defer server.Close()
 	s := &serverUnderTest{backend, app, server}
@@ -356,7 +356,7 @@ func testPresence(factory func() Backend) {
 	}
 
 	backend2 := factory()
-	app2 := NewServer(backend2, "")
+	app2 := NewServer(backend2, "tes2", "")
 	server2 := httptest.NewServer(app2)
 	defer server2.Close()
 	s2 := &serverUnderTest{backend2, app2, server2}
