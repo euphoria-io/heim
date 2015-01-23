@@ -38,6 +38,10 @@ module.exports = React.createClass({
   render: function() {
     var html = _.escape(this.props.content)
 
+    html = html.replace(/(^|\s)&amp;(\w+)($|[^\w;])/g, function(match, before, name, after) {
+      return before + React.renderToStaticMarkup(<a href={'/room/' + name} target="_blank">&amp;{name}</a>) + after
+    })
+
     html = autolinker.link(html)
 
     return <span className={this.props.className} style={this.props.style} dangerouslySetInnerHTML={{

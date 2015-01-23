@@ -41,6 +41,12 @@ describe('<Message>', function() {
       '<a href="http://google.com/abcdefghijklmnopqrstuvwxyz1234567890" target="_blank" rel="noreferrer">google.com/abcdefghijklmnopqrstuvwxyz1..</a>')
   })
 
+  it('linkifies &room references', function() {
+    var messageContent = renderMessage('hello &space! foo&bar')
+    assert.equal(messageContent.getDOMNode().innerHTML,
+      'hello <a href="/room/space" target="_blank">&amp;space</a>! foo&amp;bar')
+  })
+
   it('doesn\'t linkify javascript:// links', function() {
     // note: jshint warns about javascript:// URLs
     var messageContent = renderMessage('Javascript://hello javascript://world')  // jshint ignore:line
