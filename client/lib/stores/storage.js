@@ -19,6 +19,10 @@ module.exports.store = Reflux.createStore({
   },
 
   load: function() {
+    if (this.state) {
+      return
+    }
+
     this.state = JSON.parse(localStorage.getItem('data') || '{}')
 
     if (!this.state.room) {

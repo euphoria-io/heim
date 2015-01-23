@@ -30,17 +30,23 @@ describe('storage store', function() {
     it('should be synchronous', function() {
       assert.equal(storage.load.sync, true)
     })
-  })
 
-  it('should load JSON from localStorage upon load with default empty room index', function(done) {
-    fakeStorage.data = JSON.stringify({it: 'works'})
+    it('should load JSON from localStorage upon load with default empty room index', function(done) {
+      fakeStorage.data = JSON.stringify({it: 'works'})
 
-    support.listenOnce(storage.store, function(state) {
-      assert.deepEqual(state, {it: 'works', room: {}})
-      done()
+      support.listenOnce(storage.store, function(state) {
+        assert.deepEqual(state, {it: 'works', room: {}})
+        done()
+      })
+
+      storage.store.load()
     })
 
-    storage.store.load()
+    it('should only load once', function() {
+      storage.store.load()
+      storage.store.load()
+      sinon.assert.calledOnce(localStorage.getItem)
+    })
   })
 
   describe('set action', function() {
