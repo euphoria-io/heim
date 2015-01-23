@@ -25,7 +25,7 @@ describe('chat store', function() {
   }
 
   function checkWhoSorted(who) {
-    var sorted = who.sortBy(function(user) { return user.get('name') })
+    var sorted = who.sortBy(function(user) { return user.get('name').toLowerCase() })
     assert(who.equals(sorted))
   }
 
@@ -104,7 +104,7 @@ describe('chat store', function() {
         },
         {
           'id': '32.64.96.128:12345',
-          'name': 'tester',
+          'name': 'Ztester',
         },
         {
           'id': '32.64.96.128:12346',

@@ -54,12 +54,12 @@ module.exports.store = Reflux.createStore({
             name: ev.body.data.to,
             hue: this._getNickHue(ev.body.data.to),
           })
-          .sortBy(function(user) { return user.get('name') })
+          .sortBy(function(user) { return user.get('name').toLowerCase() })
       } else if (ev.body.type == 'join-event') {
         ev.body.data.hue = this._getNickHue(ev.body.data.name)
         this.state.who = this.state.who
           .set(ev.body.data.id, Immutable.fromJS(ev.body.data))
-          .sortBy(function(user) { return user.get('name') })
+          .sortBy(function(user) { return user.get('name').toLowerCase() })
       } else if (ev.body.type == 'part-event') {
         this.state.who = this.state.who.delete(ev.body.data.id)
       }
@@ -97,7 +97,7 @@ module.exports.store = Reflux.createStore({
   _handleWhoReply: function(data) {
     this.state.who = Immutable.OrderedMap(
       Immutable.Seq(data.listing)
-        .sortBy(function(user) { return user.name })
+        .sortBy(function(user) { return user.name.toLowerCase() })
         .map(function(user) {
           user.hue = this._getNickHue(user.name)
           return [user.id, Immutable.Map(user)]
