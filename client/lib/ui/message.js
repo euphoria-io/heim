@@ -58,7 +58,7 @@ var Message = module.exports = React.createClass({
     if (/^\/me/.test(content)) {
       content = content.replace(/^\/me ?/, '')
       messageRender = (
-        <span className="message message-emote" style={{background: 'hsl(' + message.getIn(['sender', 'hue']) + ', 65%, 90%)'}} dangerouslySetInnerHTML={{
+        <span className="message message-emote" style={{background: 'hsl(' + message.getIn(['sender', 'hue']) + ', 65%, 95%)'}} dangerouslySetInnerHTML={{
           __html: autolinker.link(_.escape(content))
         }} />
       )
