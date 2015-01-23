@@ -28,7 +28,7 @@ describe('<Message>', function() {
 
     var messageContent = TestUtils.findRenderedDOMComponentWithClass(message, 'message')
     assert.equal(messageContent.getDOMNode().innerHTML,
-      '<a href="http://google.com" target="_blank">google.com</a>')
+      '<a href="http://google.com" target="_blank" rel="noreferrer">google.com</a>')
   })
 
   it('truncates long urls', function() {
@@ -50,6 +50,6 @@ describe('<Message>', function() {
 
     var messageContent = TestUtils.findRenderedDOMComponentWithClass(message, 'message')
     assert.equal(messageContent.getDOMNode().innerHTML,
-      '<a href="http://google.com/abcdefghijklmnopqrstuvwxyz1234567890" target="_blank">google.com/abcdefghijklmnopqrstuvwxyz1..</a>')
+      '<a href="http://google.com/abcdefghijklmnopqrstuvwxyz1234567890" target="_blank" rel="noreferrer">google.com/abcdefghijklmnopqrstuvwxyz1..</a>')
   })
 })

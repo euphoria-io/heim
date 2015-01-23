@@ -1,11 +1,31 @@
 var _ = require('lodash')
 var React = require('react')
 var moment = require('moment')
-var autolinker = require('autolinker')
+var Autolinker = require('autolinker')
 
 var actions = require('../actions')
 var ChatEntry = require('./chatentry')
 
+
+var autolinker = new Autolinker({
+  twitter: false,
+  truncate: 40,
+  replaceFn: function(autolinker, match) {
+    if (match.getType() == 'url') {
+      var url = match.getUrl()
+      var tag = autolinker.getTagBuilder().build(match)
+
+      if (location.protocol == 'https:' && RegExp('^https?:\/\/' + location.hostname).test(url)) {
+        // self-link securely
+        tag.setAttr('href', url.replace(/^http:/, 'https:'))
+      } else {
+        tag.setAttr('rel', 'noreferrer')
+      }
+
+      return tag
+    }
+  },
+})
 
 var Message = module.exports = React.createClass({
   displayName: 'Message',
@@ -41,7 +61,7 @@ var Message = module.exports = React.createClass({
           </time>
           <span className="nick" style={{background: 'hsl(' + message.getIn(['sender', 'hue']) + ', 65%, 85%)'}}>{message.getIn(['sender', 'name'])}</span>
           <span className="message" dangerouslySetInnerHTML={{
-            __html: autolinker.link(_.escape(message.get('content')), {twitter: false, truncate: 40})
+            __html: autolinker.link(_.escape(message.get('content')))
           }} />
         </div>
         {(children.size > 0 || entry) &&
