@@ -140,7 +140,6 @@ html, body, #container, .chat {
         border-radius: 5px;
         padding: 0;
         cursor: pointer;
-        transition: all .15s ease;
 
         &:after {
           content: '';
@@ -150,14 +149,15 @@ html, body, #container, .chat {
           background: data-uri('../res/cog.svg') no-repeat center center;
           background-size: 24px;
           opacity: .15;
+          transition: all .15s ease;
+        }
 
-          &:hover {
-            opacity: .25;
-          }
+        &:hover:after {
+          opacity: .25;
+        }
 
-          &:active {
-            opacity: .3;
-          }
+        &:active:after {
+          opacity: .3;
         }
       }
 
