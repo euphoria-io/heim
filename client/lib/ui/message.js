@@ -53,6 +53,21 @@ var Message = module.exports = React.createClass({
       marginLeft: -this.props.depth * 10,
     }
 
+    var content = message.get('content')
+    var messageRender
+    if (/^\/me/.test(content)) {
+      content = content.replace(/^\/me ?/, '')
+      messageRender = (
+        <span className="message message-emote" style={{background: 'hsl(' + message.getIn(['sender', 'hue']) + ', 65%, 90%)'}} dangerouslySetInnerHTML={{
+          __html: autolinker.link(_.escape(content))
+        }} />
+      )
+    } else {
+      messageRender = <span className="message" dangerouslySetInnerHTML={{
+        __html: autolinker.link(_.escape(content))
+      }} />
+    }
+
     return (
       <div data-message-id={message.get('id')} className="message-node">
         <div className="line" onClick={this.focusMessage}>
@@ -60,9 +75,7 @@ var Message = module.exports = React.createClass({
             {time.format('h:mma')}
           </time>
           <span className="nick" style={{background: 'hsl(' + message.getIn(['sender', 'hue']) + ', 65%, 85%)'}}>{message.getIn(['sender', 'name'])}</span>
-          <span className="message" dangerouslySetInnerHTML={{
-            __html: autolinker.link(_.escape(message.get('content')))
-          }} />
+          {messageRender}
         </div>
         {(children.size > 0 || entry) &&
           <div className="replies">
