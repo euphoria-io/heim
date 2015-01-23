@@ -1,36 +1,10 @@
-var _ = require('lodash')
 var React = require('react')
 var moment = require('moment')
-var Autolinker = require('autolinker')
 
 var actions = require('../actions')
+var MessageText = require('./messagetext')
 var ChatEntry = require('./chatentry')
 
-
-var autolinker = new Autolinker({
-  twitter: false,
-  truncate: 40,
-  replaceFn: function(autolinker, match) {
-    if (match.getType() == 'url') {
-      var url = match.getUrl()
-      var tag = autolinker.getTagBuilder().build(match)
-
-      if (/^javascript/.test(url.toLowerCase())) {
-        // Thanks, Jordan!
-        return false
-      }
-
-      if (location.protocol == 'https:' && RegExp('^https?:\/\/' + location.hostname).test(url)) {
-        // self-link securely
-        tag.setAttr('href', url.replace(/^http:/, 'https:'))
-      } else {
-        tag.setAttr('rel', 'noreferrer')
-      }
-
-      return tag
-    }
-  },
-})
 
 var Message = module.exports = React.createClass({
   displayName: 'Message',
@@ -62,15 +36,9 @@ var Message = module.exports = React.createClass({
     var messageRender
     if (/^\/me/.test(content)) {
       content = content.replace(/^\/me ?/, '')
-      messageRender = (
-        <span className="message message-emote" style={{background: 'hsl(' + message.getIn(['sender', 'hue']) + ', 65%, 95%)'}} dangerouslySetInnerHTML={{
-          __html: autolinker.link(_.escape(content))
-        }} />
-      )
+      messageRender = <MessageText content={content} className="message message-emote" style={{background: 'hsl(' + message.getIn(['sender', 'hue']) + ', 65%, 95%)'}} />
     } else {
-      messageRender = <span className="message" dangerouslySetInnerHTML={{
-        __html: autolinker.link(_.escape(content))
-      }} />
+      messageRender = <MessageText content={content} className="message" />
     }
 
     return (
