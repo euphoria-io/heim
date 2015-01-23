@@ -52,4 +52,27 @@ describe('<Message>', function() {
     assert.equal(messageContent.getDOMNode().innerHTML,
       '<a href="http://google.com/abcdefghijklmnopqrstuvwxyz1234567890" target="_blank" rel="noreferrer">google.com/abcdefghijklmnopqrstuvwxyz1..</a>')
   })
+
+  it('doesn\'t linkify javascript:// links', function() {
+    // note: jshint warns about javascript:// URLs
+    var testTree = new Tree('time').reset([
+      {
+        'id': 'id1',
+        'time': 123456,
+        'sender': {
+          'id': '32.64.96.128:12345',
+          'name': 'tester',
+        },
+        'content': 'Javascript://hello javascript://world',  // jshint ignore:line
+      }
+    ])
+
+    var message = TestUtils.renderIntoDocument(
+      <Message tree={testTree} nodeId="id1" depth={0} />
+    )
+
+    var messageContent = TestUtils.findRenderedDOMComponentWithClass(message, 'message')
+    assert.equal(messageContent.getDOMNode().innerHTML,
+      'Javascript://hello javascript://world')  // jshint ignore:line
+  })
 })

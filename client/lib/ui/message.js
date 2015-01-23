@@ -15,6 +15,11 @@ var autolinker = new Autolinker({
       var url = match.getUrl()
       var tag = autolinker.getTagBuilder().build(match)
 
+      if (/^javascript/.test(url.toLowerCase())) {
+        // Thanks, Jordan!
+        return false
+      }
+
       if (location.protocol == 'https:' && RegExp('^https?:\/\/' + location.hostname).test(url)) {
         // self-link securely
         tag.setAttr('href', url.replace(/^http:/, 'https:'))
