@@ -285,10 +285,10 @@ html, body, #container, .chat {
       }
     }
 
-    .messages > .message-list > .message-node:last-child .entry:last-child {
+    .message-list:last-child {
       // spacing tweak so messages don't shift down when switching from bottom
       // top level entry box to replying to latest message.
-      margin-bottom: 1px;
+      margin-bottom: -4px;
     }
 
     &.form-focus .entry {
