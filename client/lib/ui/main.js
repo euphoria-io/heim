@@ -1,7 +1,7 @@
 var React = require('react/addons')
 var ReactCSSTransitionGroup = React.addons.CSSTransitionGroup
-var Reflux = require('reflux')
 var cx = React.addons.classSet
+var Reflux = require('reflux')
 
 var actions = require('../actions')
 var Scroller = require('./scroller')
