@@ -83,7 +83,7 @@ module.exports.store = Reflux.createStore({
       return
     }
     this._lastMsgId = lastMsgId
-    this.notify('new message', {
+    this.notify(state.roomName, {
       icon: '/static/icon.png',
       body: lastMsg.getIn(['sender', 'name']) + ': ' + lastMsg.get('content'),
     })

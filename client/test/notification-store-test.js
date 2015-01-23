@@ -102,6 +102,7 @@ describe('notification store', function() {
     }
 
     var mockChatState = {
+      roomName: 'ezzie',
       messages: new Tree('time').reset([
         message1,
       ])
@@ -169,7 +170,7 @@ describe('notification store', function() {
         it('should display a notification', function() {
           notification.store.chatUpdate(mockChatState)
           sinon.assert.calledOnce(Notification)
-          sinon.assert.calledWithExactly(Notification, 'new message', {
+          sinon.assert.calledWithExactly(Notification, 'ezzie', {
             icon: '/static/icon.png',
             body: 'logan: hello, ezzie!',
           })
