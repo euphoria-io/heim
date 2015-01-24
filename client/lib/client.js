@@ -22,6 +22,7 @@ Heim = {
   actions: require('./actions'),
   socket: require('./stores/socket'),
   chat: require('./stores/chat'),
+  notification: require('./stores/notification'),
   storage: require('./stores/storage'),
   focus: require('./stores/focus'),
 }
