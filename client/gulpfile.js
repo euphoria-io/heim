@@ -18,6 +18,13 @@ function bundler(args) {
 
 gulp.task('js', function() {
   return bundler()
+    // share some libraries with the global namespace
+    // doing this here because these exposes trip up watchify atm
+    .require('lodash', {expose: 'lodash'})
+    .require('react', {expose: 'react'})
+    .require('reflux', {expose: 'reflux'})
+    .require('immutable', {expose: 'immutable'})
+    .require('moment', {expose: 'moment'})
     .bundle()
     .pipe(source('main.js'))
     .pipe(process.env.NODE_ENV == 'production' ? streamify(uglify()) : gutil.noop())

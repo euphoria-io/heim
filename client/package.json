@@ -15,7 +15,7 @@
     "favicon-setter": "~0.1.1"
   },
   "devDependencies": {
-    "browserify": "~6.1.0",
+    "browserify": "~8.1.1",
     "watchify": "~2.1.1",
     "reactify": "~0.16.0",
     "envify": "~3.0.0",
