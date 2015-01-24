@@ -1,6 +1,7 @@
 var _ = require('lodash')
 var Reflux = require('reflux')
 
+var actions = require('../actions')
 var storage = require('./storage')
 
 
@@ -83,7 +84,7 @@ module.exports.store = Reflux.createStore({
       return
     }
     this._lastMsgId = lastMsgId
-    this.notify(state.roomName, {
+    this.notify(state.roomName, lastMsgId, {
       icon: '/static/icon.png',
       body: lastMsg.getIn(['sender', 'name']) + ': ' + lastMsg.get('content'),
     })
@@ -100,7 +101,7 @@ module.exports.store = Reflux.createStore({
     this.notification = null
   },
 
-  notify: function(message, options) {
+  notify: function(message, messageId, options) {
     if (this.focus) {
       return
     }
@@ -114,6 +115,7 @@ module.exports.store = Reflux.createStore({
     this.notification = new Notification(message, options)
     this.notification.onclick = function() {
       window.focus()
+      actions.focusMessage(messageId)
     }
     this.notification.onclose = this.onNotificationClose
   },

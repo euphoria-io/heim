@@ -4,6 +4,7 @@ var sinon = require('sinon')
 var Immutable = require('immutable')
 
 describe('notification store', function() {
+  var actions = require('../lib/actions')
   var Tree = require('../lib/tree')
   var notification = require('../lib/stores/notification')
   var storage = require('../lib/stores/storage')
@@ -259,10 +260,12 @@ describe('notification store', function() {
         notification.store.focusChange({windowFocused: false})
         notification.store.storageChange({notify: true})
         notification.store.chatUpdate(mockChatState)
+        sinon.stub(actions, 'focusMessage')
         sinon.stub(window, 'focus')
       })
 
       afterEach(function() {
+        actions.focusMessage.restore()
         window.focus.restore()
       })
 
@@ -276,9 +279,11 @@ describe('notification store', function() {
         sinon.assert.calledOnce(Notification)
       })
 
-      it('should focus window when clicked', function() {
+      it('should focus window and notification when clicked', function() {
         fakeNotification.onclick()
         sinon.assert.calledOnce(window.focus)
+        sinon.assert.calledOnce(actions.focusMessage)
+        sinon.assert.calledWithExactly(actions.focusMessage, 'id1')
       })
     })
   })
