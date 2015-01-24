@@ -42,9 +42,9 @@ describe('<Message>', function() {
   })
 
   it('linkifies &room references', function() {
-    var messageContent = renderMessage('hello &space! foo&bar')
+    var messageContent = renderMessage('hello &space! foo&bar &bar &baz')
     assert.equal(messageContent.getDOMNode().innerHTML,
-      'hello <a href="/room/space" target="_blank">&amp;space</a>! foo&amp;bar')
+      'hello <a href="/room/space" target="_blank">&amp;space</a>! foo&amp;bar <a href="/room/bar" target="_blank">&amp;bar</a> <a href="/room/baz" target="_blank">&amp;baz</a>')
   })
 
   it('doesn\'t linkify javascript:// links', function() {

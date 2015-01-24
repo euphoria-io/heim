@@ -38,8 +38,8 @@ module.exports = React.createClass({
   render: function() {
     var html = _.escape(this.props.content)
 
-    html = html.replace(/(^|\s)&amp;(\w+)($|[^\w;])/g, function(match, before, name, after) {
-      return before + React.renderToStaticMarkup(<a href={'/room/' + name} target="_blank">&amp;{name}</a>) + after
+    html = html.replace(/(^|\s)&amp;(\w+)(?=$|[^\w;])/g, function(match, before, name) {
+      return before + React.renderToStaticMarkup(<a href={'/room/' + name} target="_blank">&amp;{name}</a>)
     })
 
     html = autolinker.link(html)
