@@ -4,17 +4,17 @@ var Reflux = require('reflux')
 var storage = require('./storage')
 
 
-var actions = Reflux.createActions([
+var storeActions = Reflux.createActions([
   'enable',
   'disable',
 ])
-_.extend(module.exports, actions)
+_.extend(module.exports, storeActions)
 
-actions.enable.sync = true
+storeActions.enable.sync = true
 
 module.exports.store = Reflux.createStore({
   listenables: [
-    actions,
+    storeActions,
     {storageChange: storage.store},
     {chatUpdate: require('./chat').store},
     {focusChange: require('./focus').store},

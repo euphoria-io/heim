@@ -2,14 +2,14 @@ var _ = require('lodash')
 var Reflux = require('reflux')
 
 
-var actions = Reflux.createActions([
+var storeActions = Reflux.createActions([
   'send',
   'connect',
 ])
-_.extend(module.exports, actions)
+_.extend(module.exports, storeActions)
 
 module.exports.store = Reflux.createStore({
-  listenables: actions,
+  listenables: storeActions,
 
   init: function() {
     this.ws = null

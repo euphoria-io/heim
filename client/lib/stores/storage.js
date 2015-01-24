@@ -2,17 +2,17 @@ var _ = require('lodash')
 var Reflux = require('reflux')
 
 
-var actions = Reflux.createActions([
+var storeActions = Reflux.createActions([
   'load',
   'set',
   'setRoom',
 ])
-_.extend(module.exports, actions)
+_.extend(module.exports, storeActions)
 
-actions.load.sync = true
+storeActions.load.sync = true
 
 module.exports.store = Reflux.createStore({
-  listenables: actions,
+  listenables: storeActions,
 
   init: function() {
     this.state = null
