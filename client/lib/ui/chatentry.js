@@ -120,7 +120,6 @@ module.exports = React.createClass({
         case 37:
           this.chatMove('left')
           return
-        case 27:  // ESC
         case 39:
           this.chatMove('right')
           return
@@ -128,6 +127,9 @@ module.exports = React.createClass({
     }
 
     switch (ev.which) {
+      case 27:  // ESC
+        this.chatMove('right')
+        break
       case 38:
         this.chatMove('up')
         ev.preventDefault()
