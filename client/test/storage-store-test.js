@@ -101,11 +101,60 @@ describe('storage store', function() {
 
     it('should create room config object and trigger an update event', function(done) {
       support.listenOnce(storage.store, function(state) {
-        assert.equal(state.room.ezzie[testKey], testValue)
+        assert.deepEqual(state.room.ezzie[testKey], testValue)
         done()
       })
 
       storage.store.setRoom(testRoom, testKey, testValue)
+    })
+  })
+
+  describe('receiving a storage event', function() {
+    beforeEach(function() {
+      fakeStorage.data = JSON.stringify({})
+      storage.store.load()
+    })
+
+    it('should update state and trigger an update', function(done) {
+      support.listenOnce(storage.store, function(state) {
+        assert.equal(state.hello, 'ezzie')
+        done()
+      })
+      storage.store.onStorageUpdate({key: 'data', newValue: JSON.stringify({'hello': 'ezzie'})})
+    })
+
+    it('should ignore changes to unknown storage keys', function() {
+      sinon.stub(storage.store, 'trigger')
+      storage.store.onStorageUpdate({key: 'ezzie', newValue: 'bark!'})
+      sinon.assert.notCalled(storage.store.trigger)
+      storage.store.trigger.restore()
+    })
+
+    it('should not trigger an update if unchanged', function() {
+      storage.store.set('hello', 'ezzie')
+      sinon.stub(storage.store, 'trigger')
+      storage.store.onStorageUpdate({key: 'data', newValue: JSON.stringify({'hello': 'ezzie'})})
+      sinon.assert.notCalled(storage.store.trigger)
+      storage.store.trigger.restore()
+    })
+
+    it('should not change dirty values pending save', function(done) {
+      storage.store.set('hello', 'ezzie')
+      support.listenOnce(storage.store, function(state) {
+        assert.equal(state.hello, 'ezzie')
+        done()
+      })
+      storage.store.onStorageUpdate({key: 'data', newValue: JSON.stringify({'hello': 'max', 'test': 'abcdef'})})
+    })
+
+    it('should change previously dirty values after a save', function(done) {
+      storage.store.set('hello', 'ezzie')
+      support.clock.tick(1000)
+      support.listenOnce(storage.store, function(state) {
+        assert.equal(state.hello, 'max')
+        done()
+      })
+      storage.store.onStorageUpdate({key: 'data', newValue: JSON.stringify({'hello': 'max'})})
     })
   })
 })
