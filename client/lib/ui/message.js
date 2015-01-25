@@ -15,6 +15,10 @@ var Message = module.exports = React.createClass({
   ],
 
   focusMessage: function() {
+    if (window.getSelection().type == 'Range') {
+      return
+    }
+
     actions.toggleFocusMessage(this.props.nodeId, this.state.node.get('parent'))
   },
 
