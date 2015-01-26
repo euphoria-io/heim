@@ -105,36 +105,34 @@ module.exports = React.createClass({
       return
     }
 
-    this.onTextChange(ev)
-
     var input = this.refs.input.getDOMNode()
     var length = input.value.length
 
     if (length) {
-      if (ev.which == 13) {
+      if (ev.key == 'Enter') {
         this.chatSend(input.value)
         ev.preventDefault()
       }
     } else {
-      switch (ev.which) {
-        case 37:
+      switch (ev.key) {
+        case 'ArrowLeft':
           this.chatMove('left')
           return
-        case 39:
+        case 'ArrowRight':
           this.chatMove('right')
           return
       }
     }
 
-    switch (ev.which) {
-      case 27:  // ESC
+    switch (ev.key) {
+      case 'Escape':
         this.chatMove('right')
         break
-      case 38:
+      case 'ArrowUp':
         this.chatMove('up')
         ev.preventDefault()
         break
-      case 40:
+      case 'ArrowDown':
         this.chatMove('down')
         ev.preventDefault()
         break
