@@ -42,6 +42,10 @@ module.exports = React.createClass({
     if (this._isFocusClick || ev.target.nodeName == 'A') {
       ev.stopPropagation()
     }
+
+    if (this._isFocusClick) {
+      actions.focusEntry()
+    }
   },
 
   render: function() {
