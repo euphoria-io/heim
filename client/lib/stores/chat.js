@@ -199,7 +199,8 @@ module.exports.store = Reflux.createStore({
     this.state.entryText = text
     this.state.entrySelectionStart = selectionStart
     this.state.entrySelectionEnd = selectionEnd
-    this.trigger(this.state)
+    // Note: no need to trigger here as nothing updates from this; this data is
+    // used to persist entry state across focus changes.
   },
 
   sendMessage: function(content, parent) {

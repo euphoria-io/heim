@@ -218,15 +218,10 @@ describe('chat store', function() {
   })
 
   describe('setEntryText action', function() {
-    it('should update entryText', function(done) {
+    it('should update entryText in next getInitialState', function() {
       var text = 'hello, ezzie!'
-
-      support.listenOnce(chat.store, function(state) {
-        assert.equal(state.entryText, text)
-        done()
-      })
-
       chat.store.setEntryText(text)
+      assert.equal(chat.store.getInitialState().entryText, text)
     })
   })
 
