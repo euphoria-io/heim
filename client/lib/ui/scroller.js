@@ -11,10 +11,12 @@ module.exports = React.createClass({
 
   componentWillMount: function() {
     window.addEventListener('resize', this.onResize)
-    this._checkScroll = _.debounce(this.checkScroll, 150, {leading: false})
     this._checkPos = _.throttle(this.checkPos, 150)
-    this._targetLocked = false
-    this._lastHeight = 0
+    this._finishResize = _.debounce(this.finishResize, 150)
+    this._resizing = false
+    this._targetInView = false
+    this._anchor = null
+    this._anchorPos = null
   },
 
   componentDidMount: function() {
@@ -26,32 +28,57 @@ module.exports = React.createClass({
   },
 
   onResize: function() {
-    // delay scroll check via debounce
-    this._checkScroll()
+    this._resizing = true
     this.scroll()
+    this._finishResize()
+  },
+
+  finishResize: function() {
+    this._resizing = false
+    this.checkScroll()
   },
 
   onScroll: function() {
     this._checkPos()
+
+    if (!this._resizing) {
+      // while resizing the window, we trigger our own scroll events. if we
+      // re-measure anchor/target position at this point it may be slightly out
+      // of date by the time we scroll again.
+      this.checkScroll()
+    }
   },
 
   componentDidUpdate: function() {
     this.scroll()
     this._checkPos()
+    this.checkScroll()
   },
 
   checkScroll: function() {
-    // via http://blog.vjeux.com/2013/javascript/scroll-position-with-react.html
     var node = this.refs.scroller.getDOMNode()
-    var target = node.querySelector(this.props.target)
     var displayHeight = node.offsetHeight
+
+    var target = node.querySelector(this.props.target)
     var targetPos = node.scrollTop + displayHeight - target.offsetTop
-    this._targetLocked = targetPos >= target.offsetHeight && targetPos < displayHeight
+    this._targetInView = targetPos >= target.offsetHeight && targetPos < displayHeight
+
+    var anchor
+    if (this._targetInView) {
+      this._anchor = target
+      this._anchorPos = targetPos
+    } else {
+      var box = this.getDOMNode().getBoundingClientRect()
+      anchor = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2)
+      if (!anchor) {
+        console.warn('scroller: unable to find anchor')  // jshint ignore:line
+      }
+      this._anchor = anchor
+      this._anchorPos = anchor && node.scrollTop + displayHeight - anchor.offsetTop
+    }
   },
 
   checkPos: function() {
-    this.checkScroll()
-
     var node = this.refs.scroller.getDOMNode()
 
     var displayHeight = node.offsetHeight
@@ -70,22 +97,23 @@ module.exports = React.createClass({
 
   scroll: function() {
     var node = this.refs.scroller.getDOMNode()
-    var height = node.scrollHeight
-    if (this._targetLocked) {
-      var target = node.querySelector(this.props.target)
-      var displayHeight = node.offsetHeight
+    var displayHeight = node.offsetHeight
+    var target = node.querySelector(this.props.target)
+
+    var newScrollTop = null
+    if (this._targetInView && this._anchor != target) {
       var targetPos = node.scrollTop + displayHeight - target.offsetTop
       var clampedPos = clamp(this.props.edgeSpace, targetPos, displayHeight - this.props.edgeSpace)
-      node.scrollTop = clampedPos - displayHeight + target.offsetTop
-    } else {
-      if (height > this._lastHeight) {
-        var delta = height - this._lastHeight
-        window.requestAnimationFrame(function() {
-          node.scrollTop += delta
-        })
-      }
+      newScrollTop = clampedPos - displayHeight + target.offsetTop
+    } else if (this._anchor) {
+      newScrollTop = this._anchorPos - displayHeight + this._anchor.offsetTop
     }
-    this._lastHeight = height
+
+    if (newScrollTop) {
+      window.requestAnimationFrame(function() {
+        node.scrollTop = newScrollTop
+      })
+    }
   },
 
   render: function() {
