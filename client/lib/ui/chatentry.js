@@ -105,6 +105,8 @@ module.exports = React.createClass({
       return
     }
 
+    this.onTextChange(ev)
+
     var input = this.refs.input.getDOMNode()
     var length = input.value.length
 
