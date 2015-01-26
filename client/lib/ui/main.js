@@ -38,6 +38,10 @@ module.exports = React.createClass({
   },
 
   onClick: function(ev) {
+    if (window.getSelection().type == 'Range') {
+      return
+    }
+
     // prevent clicks to focus window and link clicks from triggering elements
     if (this._isFocusClick || ev.target.nodeName == 'A') {
       ev.stopPropagation()
