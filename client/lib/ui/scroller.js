@@ -2,6 +2,10 @@ var _ = require('lodash')
 var React = require('react')
 
 
+function clamp(min, v, max) {
+  return Math.min(Math.max(min, v), max)
+}
+
 module.exports = React.createClass({
   displayName: 'Scroller',
 
@@ -10,7 +14,6 @@ module.exports = React.createClass({
     this._checkScroll = _.debounce(this.checkScroll, 150, {leading: false})
     this._checkPos = _.throttle(this.checkPos, 150)
     this._targetLocked = false
-    this._targetPos = 0
     this._lastHeight = 0
   },
 
@@ -42,8 +45,8 @@ module.exports = React.createClass({
     var node = this.refs.scroller.getDOMNode()
     var target = node.querySelector(this.props.target)
     var displayHeight = node.offsetHeight
-    this._targetPos = node.scrollTop + displayHeight - target.offsetTop
-    this._targetLocked = this._targetPos >= target.offsetHeight && this._targetPos < displayHeight
+    var targetPos = node.scrollTop + displayHeight - target.offsetTop
+    this._targetLocked = targetPos >= target.offsetHeight && targetPos < displayHeight
   },
 
   checkPos: function() {
@@ -70,7 +73,10 @@ module.exports = React.createClass({
     var height = node.scrollHeight
     if (this._targetLocked) {
       var target = node.querySelector(this.props.target)
-      node.scrollTop = Math.max(this.props.bottomSpace, this._targetPos) - node.offsetHeight + target.offsetTop
+      var displayHeight = node.offsetHeight
+      var targetPos = node.scrollTop + displayHeight - target.offsetTop
+      var clampedPos = clamp(this.props.edgeSpace, targetPos, displayHeight - this.props.edgeSpace)
+      node.scrollTop = clampedPos - displayHeight + target.offsetTop
     } else {
       if (height > this._lastHeight) {
         var delta = height - this._lastHeight
