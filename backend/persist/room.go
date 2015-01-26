@@ -3,9 +3,11 @@ package persist
 import (
 	"database/sql"
 	"fmt"
+	"time"
 
 	"heim/backend"
 	"heim/backend/proto"
+	"heim/backend/proto/security"
 
 	"golang.org/x/net/context"
 )
@@ -23,11 +25,25 @@ func (Room) AfterCreateTable(db *sql.DB) error {
 	return err
 }
 
-func (r *Room) Bind(b *Backend) *RoomBinding { return &RoomBinding{b, r} }
+func (r *Room) Bind(b *Backend) *RoomBinding {
+	return &RoomBinding{
+		Backend: b,
+		Room:    r,
+	}
+}
+
+type RoomKey struct {
+	Room         string
+	Timestamp    time.Time
+	Nonce        []byte
+	IV           []byte
+	EncryptedKey []byte `db:"encrypted_key"`
+}
 
 type RoomBinding struct {
 	*Backend
 	*Room
+	key *RoomKey
 }
 
 func (rb *RoomBinding) Latest(ctx context.Context, n int, before proto.Snowflake) (
@@ -64,4 +80,52 @@ func (rb *RoomBinding) RenameUser(ctx context.Context, session proto.Session, fo
 		To:   session.Identity().Name(),
 	}
 	return event, rb.Backend.broadcast(ctx, rb.Room, session, proto.NickEventType, event, session)
+}
+
+func (rb *RoomBinding) GenerateMasterKey(
+	ctx context.Context, kms security.KMS) (proto.RoomKey, error) {
+
+	nonce, err := kms.GenerateNonce(security.AES128.KeySize())
+	if err != nil {
+		return nil, err
+	}
+
+	mkey, err := kms.GenerateEncryptedKey(security.AES256)
+	if err != nil {
+		return nil, err
+	}
+
+	roomKey := &RoomKey{
+		Room:         rb.Name,
+		Timestamp:    time.Now(),
+		Nonce:        nonce,
+		IV:           mkey.IV,
+		EncryptedKey: mkey.Ciphertext,
+	}
+
+	if err := rb.DbMap.Insert(roomKey); err != nil {
+		return nil, err
+	}
+
+	rb.key = roomKey
+	return rb, nil
+}
+
+func (rb *RoomBinding) RoomKey() proto.RoomKey { return rb }
+
+func (rb *RoomBinding) Timestamp() time.Time { return rb.key.Timestamp }
+func (rb *RoomBinding) Nonce() []byte        { return rb.key.Nonce }
+
+func (rb *RoomBinding) ManagedKey() *security.ManagedKey {
+	dup := func(v []byte) []byte {
+		w := make([]byte, len(v))
+		copy(w, v)
+		return w
+	}
+
+	return &security.ManagedKey{
+		KeyType:    security.AES256,
+		IV:         dup(rb.key.IV),
+		Ciphertext: dup(rb.key.EncryptedKey),
+	}
 }

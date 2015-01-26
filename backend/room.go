@@ -3,8 +3,10 @@ package backend
 import (
 	"sort"
 	"sync"
+	"time"
 
 	"heim/backend/proto"
+	"heim/backend/proto/security"
 
 	"golang.org/x/net/context"
 )
@@ -17,6 +19,8 @@ type memRoom struct {
 	log        *memLog
 	identities map[string]proto.Identity
 	live       map[string][]proto.Session
+
+	key *roomKey
 }
 
 func newMemRoom(name, version string) *memRoom {
@@ -145,4 +149,40 @@ func (r *memRoom) RenameUser(
 		To:   session.Identity().Name(),
 	}
 	return payload, r.broadcast(ctx, proto.NickType, payload, session)
+}
+
+func (r *memRoom) RoomKey() proto.RoomKey { return r.key }
+
+func (r *memRoom) GenerateMasterKey(ctx context.Context, kms security.KMS) (proto.RoomKey, error) {
+	nonce, err := kms.GenerateNonce(security.AES128.KeySize())
+	if err != nil {
+		return nil, err
+	}
+
+	mkey, err := kms.GenerateEncryptedKey(security.AES256)
+	if err != nil {
+		return nil, err
+	}
+
+	r.key = &roomKey{
+		timestamp: time.Now(),
+		nonce:     nonce,
+		key:       *mkey,
+	}
+	return r.key, nil
+}
+
+type roomKey struct {
+	timestamp time.Time
+	nonce     []byte
+	key       security.ManagedKey
+}
+
+func (k *roomKey) Timestamp() time.Time { return k.timestamp }
+func (k *roomKey) Nonce() []byte        { return k.nonce }
+
+func (k *roomKey) ManagedKey() *security.ManagedKey {
+	mk := &security.ManagedKey{}
+	*mk = k.key
+	return mk
 }

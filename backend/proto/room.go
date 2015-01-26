@@ -1,6 +1,10 @@
 package proto
 
 import (
+	"time"
+
+	"heim/backend/proto/security"
+
 	"golang.org/x/net/context"
 )
 
@@ -35,4 +39,23 @@ type Room interface {
 
 	// Version returns the version of the server hosting this Room.
 	Version() string
+
+	// GenerateMasterKey generates and stores a new key and nonce
+	// for the room. This invalidates all grants made with the
+	// previous key.
+	GenerateMasterKey(ctx context.Context, kms security.KMS) (RoomKey, error)
+
+	// RoomKey returns the room's master key.
+	RoomKey() RoomKey
+}
+
+type RoomKey interface {
+	// Timestamp returns when the key was generated.
+	Timestamp() time.Time
+
+	// Nonce returns the current 128-bit nonce for the room.
+	Nonce() []byte
+
+	// ManagedKey returns the current encrypted ManagedKey for the room.
+	ManagedKey() *security.ManagedKey
 }
