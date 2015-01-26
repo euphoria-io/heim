@@ -50,9 +50,11 @@ module.exports = React.createClass({
   },
 
   componentDidUpdate: function() {
-    this.scroll()
+    if (!this.scroll()) {
+      // if we scrolled checkScroll will get called after the scroll.
+      this.checkScroll()
+    }
     this._checkPos()
-    this.checkScroll()
   },
 
   checkScroll: function() {
@@ -109,10 +111,11 @@ module.exports = React.createClass({
       newScrollTop = this._anchorPos - displayHeight + this._anchor.offsetTop
     }
 
-    if (newScrollTop) {
+    if (newScrollTop != node.scrollTop) {
       window.requestAnimationFrame(function() {
         node.scrollTop = newScrollTop
       })
+      return true
     }
   },
 
