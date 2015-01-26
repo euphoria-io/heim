@@ -27,8 +27,20 @@ Heim = {
   focus: require('./stores/focus'),
 }
 
+document.body.addEventListener('keypress', function(ev) {
+  if (ev.target.nodeName == 'INPUT' && ev.target.type == 'text') {
+    return
+  }
+
+  var character = String.fromCharCode(ev.which)
+  if (character) {
+    Heim.actions.focusEntry(character)
+  }
+}, true)
+
+// prevent backspace from navigating the page
 document.body.addEventListener('keydown', function(ev) {
-  if (ev.target == document.body && ev.which == 8) {
+  if (ev.target.nodeName != 'INPUT' && ev.which == 8) {
     ev.preventDefault()
   }
 }, false)

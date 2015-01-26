@@ -14,8 +14,13 @@ module.exports = React.createClass({
     Reflux.listenTo(actions.focusEntry, 'focus'),
   ],
 
-  focus: function() {
-    this.refs.input.getDOMNode().focus()
+  focus: function(withChar) {
+    var node = this.refs.input.getDOMNode()
+    if (withChar) {
+      node.value += withChar
+      this.saveEntryState()
+    }
+    node.focus()
   },
 
   setNick: function(ev) {
@@ -105,7 +110,7 @@ module.exports = React.createClass({
       return
     }
 
-    this.onTextChange(ev)
+    this.saveEntryState()
 
     var input = this.refs.input.getDOMNode()
     var length = input.value.length
@@ -146,8 +151,9 @@ module.exports = React.createClass({
     this.setState({nickText: input.value})
   },
 
-  onTextChange: function(ev) {
-    actions.setEntryText(ev.target.value, ev.target.selectionStart, ev.target.selectionEnd)
+  saveEntryState: function() {
+    var input = this.refs.input.getDOMNode()
+    actions.setEntryText(input.value, input.selectionStart, input.selectionEnd)
   },
 
   componentDidMount: function() {
@@ -163,7 +169,7 @@ module.exports = React.createClass({
             <span className="nick">{this.state.nickText || this.state.nick}</span>
           </div>
         </div>
-        <input key="msg" ref="input" type="text" autoFocus defaultValue={this.state.entryText} onChange={this.onTextChange} onKeyDown={this.onKeyDown} onClick={this.onTextChange} />
+        <input key="msg" ref="input" type="text" autoFocus defaultValue={this.state.entryText} onChange={this.saveEntryState} onKeyDown={this.onKeyDown} onClick={this.saveEntryState} />
       </form>
     )
   },
