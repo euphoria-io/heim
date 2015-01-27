@@ -32,8 +32,12 @@ document.body.addEventListener('keypress', function(ev) {
     return
   }
 
+  if (!ev.which) {
+    return
+  }
+
   var character = String.fromCharCode(ev.which)
-  if (character) {
+  if (character && /\S/.test(character)) {
     Heim.actions.focusEntry(character)
   }
 }, true)
