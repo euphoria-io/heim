@@ -12,6 +12,7 @@ module.exports = React.createClass({
     require('react-immutable-render-mixin'),
     Reflux.connect(require('../stores/chat').store),
     Reflux.listenTo(actions.focusEntry, 'focus'),
+    Reflux.listenTo(actions.keydownOnEntry, 'onKeyDown'),
   ],
 
   focus: function(withChar) {
@@ -43,7 +44,8 @@ module.exports = React.createClass({
       case 'up':
         if (idx === 0) {
           // at beginning
-          return
+          target = elems[idx].parentNode
+          break
         }
         var steps = 0
         do {
@@ -63,7 +65,8 @@ module.exports = React.createClass({
       case 'down':
         if (idx == elems.length - 1) {
           // at end
-          return
+          target = elems[idx].parentNode
+          break
         }
         idx++
         target = elems[idx]
@@ -106,8 +109,6 @@ module.exports = React.createClass({
   },
 
   onKeyDown: function(ev) {
-    actions.scrollToEntry()
-
     if (ev.shiftKey) {
       return
     }
@@ -171,7 +172,7 @@ module.exports = React.createClass({
             <span className="nick">{this.state.nickText || this.state.nick}</span>
           </div>
         </div>
-        <input key="msg" ref="input" type="text" autoFocus defaultValue={this.state.entryText} onChange={this.saveEntryState} onKeyDown={this.onKeyDown} onClick={this.saveEntryState} onFocus={actions.scrollToEntry} />
+        <input key="msg" ref="input" type="text" autoFocus defaultValue={this.state.entryText} onChange={this.saveEntryState} onKeyDown={this.onKeyDown} onClick={this.saveEntryState} onFocus={actions.scrollToEntry} onKeyPress={actions.scrollToEntry} />
       </form>
     )
   },

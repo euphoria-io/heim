@@ -7,6 +7,7 @@ module.exports = Reflux.createActions([
   'setEntryText',
   'focusEntry',
   'scrollToEntry',
+  'keydownOnEntry',
   'loadMoreLogs',
   'showSettings',
   'setNick',
@@ -14,3 +15,4 @@ module.exports = Reflux.createActions([
 ])
 
 module.exports.connect.sync = true
+module.exports.keydownOnEntry.sync = true

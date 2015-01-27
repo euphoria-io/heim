@@ -484,6 +484,11 @@ describe('chat store', function() {
       beforeEach(function() {
         chat.store.state.nick = 'test'
         chat.store.socketEvent({status: 'receive', body: logReply})
+        sinon.stub(actions, 'focusEntry')
+      })
+
+      afterEach(function() {
+        actions.focusEntry.restore()
       })
 
       it('should enable entry on specified message and disable entry on previously focused message', function(done) {
@@ -511,11 +516,17 @@ describe('chat store', function() {
         chat.store.focusMessage('id1')
       })
 
-      it('should not update if specified message already focused', function() {
+      it('should trigger focus to entry', function() {
+        chat.store.focusMessage('id1')
+        sinon.assert.calledOnce(actions.focusEntry)
+      })
+
+      it('should just focus entry if specified message already focused', function() {
         sinon.stub(chat.store, 'trigger')
         chat.store.focusMessage('id1')
         chat.store.focusMessage('id1')
         sinon.assert.calledOnce(chat.store.trigger)
+        sinon.assert.calledTwice(actions.focusEntry)
         chat.store.trigger.restore()
       })
 

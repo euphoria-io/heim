@@ -1,4 +1,5 @@
 var React = require('react/addons')
+var SyntheticKeyboardEvent = require('react/lib/SyntheticKeyboardEvent')
 
 var Main = require('./ui/main')
 
@@ -42,9 +43,13 @@ document.body.addEventListener('keypress', function(ev) {
   }
 }, true)
 
-// prevent backspace from navigating the page
 document.body.addEventListener('keydown', function(ev) {
+  // prevent backspace from navigating the page
   if (ev.target.nodeName != 'INPUT' && ev.which == 8) {
     ev.preventDefault()
   }
+
+  // dig into React a little so it normalizes the event (namely ev.key).
+  var reactEvent = new SyntheticKeyboardEvent(null, null, ev)
+  Heim.actions.keydownOnEntry(reactEvent)
 }, false)

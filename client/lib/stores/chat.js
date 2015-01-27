@@ -164,8 +164,13 @@ module.exports.store = Reflux.createStore({
   },
 
   focusMessage: function(messageId) {
+    if (!this.state.nick) {
+      return
+    }
+
     messageId = messageId || null
-    if (!this.state.nick || messageId == this.state.focusedMessage) {
+    if (messageId == this.state.focusedMessage) {
+      actions.focusEntry()
       return
     }
 
@@ -177,6 +182,7 @@ module.exports.store = Reflux.createStore({
     }
     this.state.focusedMessage = messageId
     this.trigger(this.state)
+    actions.focusEntry()
   },
 
   toggleFocusMessage: function(messageId, parentId) {
