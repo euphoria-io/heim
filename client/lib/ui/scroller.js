@@ -11,7 +11,7 @@ module.exports = React.createClass({
 
   componentWillMount: function() {
     window.addEventListener('resize', this.onResize)
-    this._checkPos = _.throttle(this.checkPos, 150)
+    this._checkScroll = _.throttle(this.checkScroll, 150)
     this._finishResize = _.debounce(this.finishResize, 150)
     this._resizing = false
     this._targetInView = false
@@ -20,7 +20,7 @@ module.exports = React.createClass({
   },
 
   componentDidMount: function() {
-    this.checkScroll()
+    this.updateAnchorPos()
   },
 
   componentWillUnmount: function() {
@@ -28,6 +28,14 @@ module.exports = React.createClass({
   },
 
   onResize: function() {
+    // When resizing, the goal is to keep the entry onscreen in the same
+    // position, if possible. This is accomplished by scrolling relative to the
+    // previous display height factored into the pos recorded by updateAnchorPos.
+    // However, those scrolls will trigger scroll events (and updateAnchorPos in
+    // return), which leads to measurement bugs when the window is resizing
+    // constantly (I think it's a timing issue). It's much simpler if we
+    // disable updateAnchorPos via flag while drag resizing is occurring, so that
+    // everything is in reference to the original display height.
     this._resizing = true
     this.scroll()
     this._finishResize()
@@ -35,29 +43,32 @@ module.exports = React.createClass({
 
   finishResize: function() {
     this._resizing = false
-    this.checkScroll()
+    this.updateAnchorPos()
   },
 
   onScroll: function() {
-    this._checkPos()
+    this._checkScroll()
 
     if (!this._resizing) {
-      // while resizing the window, we trigger our own scroll events. if we
+      // While resizing the window, we trigger our own scroll events. If we
       // re-measure anchor/target position at this point it may be slightly out
       // of date by the time we scroll again.
-      this.checkScroll()
+      this.updateAnchorPos()
     }
   },
 
   componentDidUpdate: function() {
     if (!this.scroll()) {
-      // if we scrolled checkScroll will get called after the scroll.
-      this.checkScroll()
+      // If we scrolled, updateAnchorPos will get called after the scroll.
+      // If we didn't scroll, we need to updateAnchorPos here.
+      this.updateAnchorPos()
     }
-    this._checkPos()
+    this._checkScroll()
   },
 
-  checkScroll: function() {
+  updateAnchorPos: function() {
+    // Record the position of our point of reference. Either the target (if
+    // it's in view), or the centermost child element.
     var node = this.refs.scroller.getDOMNode()
     var displayHeight = node.offsetHeight
 
@@ -80,7 +91,9 @@ module.exports = React.createClass({
     }
   },
 
-  checkPos: function() {
+  checkScroll: function() {
+    // Checks based on content / scroll position, to be updated when either
+    // changes. Ratelimited to not burden browser while scrolling.
     var node = this.refs.scroller.getDOMNode()
 
     var displayHeight = node.offsetHeight
@@ -98,20 +111,29 @@ module.exports = React.createClass({
   },
 
   scroll: function() {
+    // Scroll so our point of interest (target or anchor) is in the right place.
     var node = this.refs.scroller.getDOMNode()
     var displayHeight = node.offsetHeight
     var target = node.querySelector(this.props.target)
 
     var newScrollTop = null
     if (this._targetInView && this._anchor != target) {
+      // If the target is onscreen, make sure it's within this.props.edgeSpace
+      // from the top or bottom.
       var targetPos = node.scrollTop + displayHeight - target.offsetTop
       var clampedPos = clamp(this.props.edgeSpace, targetPos, displayHeight - this.props.edgeSpace)
       newScrollTop = clampedPos - displayHeight + target.offsetTop
     } else if (this._anchor) {
+      // Otherwise, try to keep the anchor element in the same place it was when
+      // we last saw it via updateAnchorPos.
       newScrollTop = this._anchorPos - displayHeight + this._anchor.offsetTop
     }
 
     if (newScrollTop != node.scrollTop) {
+      // Note: mobile Webkit does this funny thing where getting/setting
+      // scrollTop doesn't happen promptly during inertial scrolling. It turns
+      // out that setting scrollTop inside a requestAnimationFrame callback
+      // circumvents this issue.
       window.requestAnimationFrame(function() {
         node.scrollTop = newScrollTop
       })
