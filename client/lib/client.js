@@ -44,8 +44,12 @@ document.body.addEventListener('keypress', function(ev) {
 }, true)
 
 document.body.addEventListener('keydown', function(ev) {
+  if (ev.target.nodeName == 'INPUT') {
+    return
+  }
+
   // prevent backspace from navigating the page
-  if (ev.target.nodeName != 'INPUT' && ev.which == 8) {
+  if (ev.which == 8) {
     ev.preventDefault()
   }
 
