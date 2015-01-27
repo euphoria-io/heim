@@ -14,5 +14,8 @@ module.exports = Reflux.createActions([
   'connect',
 ])
 
+// sync so that we connect in the load tick
 module.exports.connect.sync = true
+
+// sync to allow entry to preventDefault keydown events
 module.exports.keydownOnEntry.sync = true
