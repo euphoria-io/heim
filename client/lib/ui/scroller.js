@@ -16,10 +16,12 @@ module.exports = React.createClass({
     window.addEventListener('resize', this.onResize)
     this._checkScroll = _.throttle(this.checkScroll, 150)
     this._finishResize = _.debounce(this.finishResize, 150)
+    this._finishScroll = _.debounce(this.finishScroll, 100)
     this._resizing = false
     this._targetInView = false
     this._anchor = null
     this._anchorPos = null
+    this._scrollQueued = false
   },
 
   componentDidMount: function() {
@@ -49,6 +51,11 @@ module.exports = React.createClass({
     this.updateAnchorPos()
   },
 
+  finishScroll: function() {
+    this._scrollQueued = false
+    this.updateAnchorPos()
+  },
+
   onScroll: function() {
     this._checkScroll()
 
@@ -61,15 +68,18 @@ module.exports = React.createClass({
   },
 
   componentDidUpdate: function() {
-    if (!this.scroll()) {
-      // If we scrolled, updateAnchorPos will get called after the scroll.
-      // If we didn't scroll, we need to updateAnchorPos here.
-      this.updateAnchorPos()
-    }
+    this.scroll()
+    this.updateAnchorPos()
     this._checkScroll()
   },
 
   updateAnchorPos: function() {
+    if (this._scrollQueued) {
+      // If we're waiting on a scroll, re-measuring the anchor position may
+      // lose track of it if we're in the process of scrolling it onscreen.
+      return
+    }
+
     // Record the position of our point of reference. Either the target (if
     // it's in view), or the centermost child element.
     var node = this.refs.scroller.getDOMNode()
@@ -144,7 +154,8 @@ module.exports = React.createClass({
       } else {
         node.scrollTop = newScrollTop
       }
-      return true
+      this._scrollQueued = true
+      this._finishScroll()
     }
   },
 
