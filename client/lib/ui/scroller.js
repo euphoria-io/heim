@@ -2,6 +2,9 @@ var _ = require('lodash')
 var React = require('react')
 
 
+// http://stackoverflow.com/a/16459606
+var isWebkit = 'WebkitAppearance' in document.documentElement.style
+
 function clamp(min, v, max) {
   return Math.min(Math.max(min, v), max)
 }
@@ -130,13 +133,17 @@ module.exports = React.createClass({
     }
 
     if (newScrollTop != node.scrollTop) {
-      // Note: mobile Webkit does this funny thing where getting/setting
-      // scrollTop doesn't happen promptly during inertial scrolling. It turns
-      // out that setting scrollTop inside a requestAnimationFrame callback
-      // circumvents this issue.
-      window.requestAnimationFrame(function() {
+      if (isWebkit) {
+        // Note: mobile Webkit does this funny thing where getting/setting
+        // scrollTop doesn't happen promptly during inertial scrolling. It turns
+        // out that setting scrollTop inside a requestAnimationFrame callback
+        // circumvents this issue.
+        window.requestAnimationFrame(function() {
+          node.scrollTop = newScrollTop
+        })
+      } else {
         node.scrollTop = newScrollTop
-      })
+      }
       return true
     }
   },
