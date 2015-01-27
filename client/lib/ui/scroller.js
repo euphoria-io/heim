@@ -132,7 +132,7 @@ module.exports = React.createClass({
       newScrollTop = this._anchorPos - displayHeight + this._anchor.offsetTop
     }
 
-    if (newScrollTop != node.scrollTop) {
+    if (newScrollTop != node.scrollTop && displayHeight != node.scrollHeight) {
       if (isWebkit) {
         // Note: mobile Webkit does this funny thing where getting/setting
         // scrollTop doesn't happen promptly during inertial scrolling. It turns
