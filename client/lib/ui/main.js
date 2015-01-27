@@ -17,6 +17,7 @@ module.exports = React.createClass({
     Reflux.connect(require('../stores/chat').store, 'chat'),
     Reflux.connect(require('../stores/focus').store, 'focus'),
     Reflux.listenTo(actions.showSettings, 'showSettings'),
+    Reflux.listenTo(actions.scrollToEntry, 'scrollToEntry'),
   ],
 
   onScrollbarSize: function(width) {
@@ -29,6 +30,10 @@ module.exports = React.createClass({
 
   showSettings: function() {
     this.setState({settingsOpen: true})
+  },
+
+  scrollToEntry: function() {
+    this.refs.scroller.scrollToTarget()
   },
 
   onMouseDown: function() {
@@ -55,7 +60,7 @@ module.exports = React.createClass({
   render: function() {
     return (
       <div className="chat">
-        <Scroller target=".entry" edgeSpace={100} className={cx({'messages-container': true, 'form-focus': this.state.focus.windowFocused && this.state.chat.connected})} onScrollbarSize={this.onScrollbarSize} onNearTop={actions.loadMoreLogs}>
+        <Scroller ref="scroller" target=".entry" edgeSpace={100} className={cx({'messages-container': true, 'form-focus': this.state.focus.windowFocused && this.state.chat.connected})} onScrollbarSize={this.onScrollbarSize} onNearTop={actions.loadMoreLogs}>
           <div className="messages-content" onMouseDownCapture={this.onMouseDown} onClickCapture={this.onClick}>
             <div className="top-right" style={{marginRight: this.state.scrollbarWidth}}>
               <div className="settings-pane">

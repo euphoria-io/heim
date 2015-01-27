@@ -6,6 +6,7 @@ module.exports = Reflux.createActions([
   'toggleFocusMessage',
   'setEntryText',
   'focusEntry',
+  'scrollToEntry',
   'loadMoreLogs',
   'showSettings',
   'setNick',

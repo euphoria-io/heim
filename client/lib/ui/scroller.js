@@ -113,14 +113,14 @@ module.exports = React.createClass({
     }
   },
 
-  scroll: function() {
+  scroll: function(forceTargetInView) {
     // Scroll so our point of interest (target or anchor) is in the right place.
     var node = this.refs.scroller.getDOMNode()
     var displayHeight = node.offsetHeight
     var target = node.querySelector(this.props.target)
 
     var newScrollTop = null
-    if (this._targetInView && this._anchor != target) {
+    if (forceTargetInView || (this._targetInView && this._anchor != target)) {
       // If the target is onscreen, make sure it's within this.props.edgeSpace
       // from the top or bottom.
       var targetPos = node.scrollTop + displayHeight - target.offsetTop
@@ -146,6 +146,10 @@ module.exports = React.createClass({
       }
       return true
     }
+  },
+
+  scrollToTarget: function() {
+    this.scroll(true)
   },
 
   render: function() {

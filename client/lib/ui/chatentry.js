@@ -106,6 +106,8 @@ module.exports = React.createClass({
   },
 
   onKeyDown: function(ev) {
+    actions.scrollToEntry()
+
     if (ev.shiftKey) {
       return
     }
@@ -169,7 +171,7 @@ module.exports = React.createClass({
             <span className="nick">{this.state.nickText || this.state.nick}</span>
           </div>
         </div>
-        <input key="msg" ref="input" type="text" autoFocus defaultValue={this.state.entryText} onChange={this.saveEntryState} onKeyDown={this.onKeyDown} onClick={this.saveEntryState} />
+        <input key="msg" ref="input" type="text" autoFocus defaultValue={this.state.entryText} onChange={this.saveEntryState} onKeyDown={this.onKeyDown} onClick={this.saveEntryState} onFocus={actions.scrollToEntry} />
       </form>
     )
   },
