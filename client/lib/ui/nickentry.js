@@ -9,7 +9,7 @@ module.exports = React.createClass({
 
   mixins: [
     require('react-immutable-render-mixin'),
-    Reflux.connect(require('../stores/chat').store),
+    Reflux.connect(require('../stores/chat').store, 'chat'),
     Reflux.listenTo(actions.focusEntry, 'focus'),
   ],
 
@@ -47,7 +47,7 @@ module.exports = React.createClass({
         </div>
         <form className="entry" onSubmit={this.setNick}>
           <label>choose your name to begin:</label>
-          <input key="nick" ref="input" type="text" autoFocus disabled={this.state.connected === false} onChange={this.previewNick} />
+          <input key="nick" ref="input" type="text" autoFocus disabled={this.state.chat.connected === false} onChange={this.previewNick} />
         </form>
       </div>
     )
