@@ -13,7 +13,8 @@
     "immutable": "~3.4.1",
     "react-immutable-render-mixin": "~0.7.0",
     "eventemitter3": "~0.1.6",
-    "setimmediate": "~1.0.2"
+    "setimmediate": "~1.0.2",
+    "triejs": "~0.1.5"
   },
   "devDependencies": {
     "browserify": "~8.1.1",

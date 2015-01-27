@@ -27,6 +27,11 @@ module.exports = function(roomName) {
             background: #f3f3f3 !important;
           }
 
+          .mention-nick {
+            color: #000 !important;
+            font-weight: bold;
+          }
+
           a {
             color: #444;
             text-decoration: none;

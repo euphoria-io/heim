@@ -41,6 +41,7 @@ var Message = module.exports = React.createClass({
     var lineClasses = {
       'line': true,
       'focus-highlight': entry || this.props.displayFocusHighlight,
+      'mention': message.get('mention'),
     }
 
     var content = message.get('content')

@@ -167,7 +167,47 @@ module.exports = React.createClass({
         this.chatMove('down')
         ev.preventDefault()
         break
+      case 'Tab':
+        this.complete()
+        ev.preventDefault()
+        break
     }
+  },
+
+  complete: function() {
+    var input = this.refs.input.getDOMNode()
+    var text = input.value
+    var charRe = /\w/
+
+    var wordEnd = input.selectionStart
+    if (wordEnd < 1) {
+      return
+    }
+
+    for (var wordStart = wordEnd - 1; wordStart >= 0; wordStart--) {
+      if (!charRe.test(text[wordStart])) {
+        break
+      }
+    }
+    wordStart++
+
+    for (; wordEnd < text.length; wordEnd++) {
+      if (!charRe.test(text[wordEnd])) {
+        break
+      }
+    }
+
+    if (wordStart >= wordEnd) {
+      return
+    }
+
+    var word = text.substring(wordStart, wordEnd)
+    var match = this.state.chat.nickTrie.find(word)
+    if (!match) {
+      return
+    }
+    var completed = (text[wordStart - 1] != '@' ? '@' : '') + match[0]
+    input.value = input.value.substring(0, wordStart) + completed + input.value.substring(wordEnd)
   },
 
   onNickChange: function(ev) {

@@ -2,6 +2,9 @@ var _ = require('lodash')
 var React = require('react')
 var Autolinker = require('autolinker')
 
+var chat = require('../stores/chat')
+var hueHash = require('../huehash')
+
 
 var autolinker = new Autolinker({
   twitter: false,
@@ -40,6 +43,11 @@ module.exports = React.createClass({
 
     html = html.replace(/(^|\s)&amp;(\w+)(?=$|[^\w;])/g, function(match, before, name) {
       return before + React.renderToStaticMarkup(<a href={'/room/' + name} target="_blank">&amp;{name}</a>)
+    })
+
+    html = html.replace(chat.mentionRe, function(match, name) {
+      var color = 'hsl(' + hueHash(name) + ', 50%, 42%)'
+      return React.renderToStaticMarkup(<span style={{color: color}} className="mention-nick">@{name}</span>)
     })
 
     html = autolinker.link(html)

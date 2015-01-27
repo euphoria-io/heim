@@ -200,6 +200,20 @@ iframe.js {
           }
         }
 
+        &.mention {
+          .message {
+            padding: 0 3px;
+            border-radius: 3px;
+            background: hsl(50, 85%, 95%);
+            box-shadow: 0 0 1px hsl(50, 62%, 38%) inset;
+            vertical-align: middle;  // line up with nick color box
+          }
+
+          time {
+            color: hsl(56, 60%, 78%) !important;
+          }
+        }
+
         time, .nick {
           display: inline-block;
           flex-shrink: 0;

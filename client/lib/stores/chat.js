@@ -1,13 +1,32 @@
 var _ = require('lodash')
 var Reflux = require('reflux')
 var Immutable = require('immutable')
+var Trie = require('triejs')
 
 var actions = require('../actions')
 var Tree = require('../tree')
 var storage = require('./storage')
 var socket = require('./socket')
 var plugins = require('./plugins')
+var hueHash = require('../huehash')
 
+
+var normalizeNick = module.exports.normalizeNick = function(nick) {
+  return nick.replace(/[^\w_-]/g, '')
+}
+
+function NickTrie() {
+  var trie = new Trie({enableCache: false})
+  // normalize nicks going into the trie
+  _.each(['add', 'remove', 'contains'], function(n) {
+    trie[n] = _.wrap(trie[n], function(f, word) {
+      return f.call(this, normalizeNick(word))
+    })
+  })
+  return trie
+}
+
+var mentionRe = module.exports.mentionRe = /@([^\s]+?(?=$|[,.!;\s]|&#39;|&quot;|&amp;))/g
 
 module.exports.store = Reflux.createStore({
   listenables: [
@@ -33,6 +52,7 @@ module.exports.store = Reflux.createStore({
       earliestLog: null,
       nickHues: {},
       who: Immutable.Map(),
+      nickTrie: NickTrie(),
       focusedMessage: null,
       entryText: '',
       entrySelectionStart: null,
@@ -78,21 +98,32 @@ module.exports.store = Reflux.createStore({
             .mergeIn([ev.body.data.id], {
               id: ev.body.data.id,
               name: ev.body.data.to,
-              hue: this._getNickHue(ev.body.data.to),
+              hue: hueHash(ev.body.data.to),
             })
+          this.state.nickTrie.remove(ev.body.data.from)
+          this.state.nickTrie.add(ev.body.data.to)
         }
       } else if (ev.body.type == 'join-event') {
-        ev.body.data.hue = this._getNickHue(ev.body.data.name)
+        ev.body.data.hue = hueHash(ev.body.data.name)
         this.state.who = this.state.who
           .set(ev.body.data.id, Immutable.fromJS(ev.body.data))
+        this.state.nickTrie.add(ev.body.data.name)
       } else if (ev.body.type == 'part-event') {
         this.state.who = this.state.who.delete(ev.body.data.id)
+        this.state.nickTrie.remove(ev.body.data.name)
       } else if (ev.body.type == 'network-event') {
         if (ev.body.data.type == 'partition') {
           // jshint camelcase: false
           var id = ev.body.data.server_id
           var era = ev.body.data.server_era
-          this.state.who = this.state.who.filter(v => v.get('server_id') != id || v.get('server_era') != era)
+          this.state.who = this.state.who.filter(v => {
+            if (v.get('server_id') != id || v.get('server_era') != era) {
+              return true
+            } else {
+              this.state.nickTrie.remove(v.get('name'))
+              return false
+            }
+          })
         }
       }
     } else if (ev.status == 'open') {
@@ -112,7 +143,11 @@ module.exports.store = Reflux.createStore({
   _handleMessagesData: function(messages) {
     this.state.who = this.state.who.withMutations(who => {
       _.each(messages, message => {
-        message.sender.hue = this._getNickHue(message.sender.name)
+        var mention = message.content.match(mentionRe)
+        if (mention && mention[0].substr(1) == (this.state.nick || this.state.tentativeNick)) {
+          message.mention = true
+        }
+        message.sender.hue = hueHash(message.sender.name)
         who.mergeIn([message.sender.id], {
           lastSent: message.time
         })
@@ -142,10 +177,12 @@ module.exports.store = Reflux.createStore({
 
   _handleWhoReply: function(data) {
     // TODO: merge instead of reset so we don't lose lastSent
+    this.state.nickTrie = NickTrie()
     this.state.who = Immutable.OrderedMap(
       Immutable.Seq(data.listing)
         .map(function(user) {
-          user.hue = this._getNickHue(user.name)
+          this.state.nickTrie.add(user.name)
+          user.hue = hueHash(user.name)
           return [user.id, Immutable.Map(user)]
         }, this)
     )
@@ -213,21 +250,6 @@ module.exports.store = Reflux.createStore({
     if (focusState.windowFocused && this.state.connected) {
       socket.pingIfIdle()
     }
-  },
-
-  _getNickHue: function(nick) {
-    if (_.has(this.state.nickHues, nick)) {
-      return this.state.nickHues[nick]
-    }
-
-    // DJBX33A
-    var val = 0
-    for (var i = 0; i < nick.length; i++) {
-      val = val * 33 + nick.charCodeAt(i)
-    }
-    this.state.nickHues[nick] = (val + 155) % 255
-
-    return this.state.nickHues[nick]
   },
 
   connect: function(roomName) {
