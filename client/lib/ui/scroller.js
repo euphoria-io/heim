@@ -15,9 +15,7 @@ module.exports = React.createClass({
   componentWillMount: function() {
     window.addEventListener('resize', this.onResize)
     this._checkScroll = _.throttle(this.checkScroll, 150)
-    this._finishResize = _.debounce(this.finishResize, 150)
     this._finishScroll = _.debounce(this.finishScroll, 100)
-    this._resizing = false
     this._targetInView = false
     this._anchor = null
     this._anchorPos = null
@@ -36,19 +34,7 @@ module.exports = React.createClass({
     // When resizing, the goal is to keep the entry onscreen in the same
     // position, if possible. This is accomplished by scrolling relative to the
     // previous display height factored into the pos recorded by updateAnchorPos.
-    // However, those scrolls will trigger scroll events (and updateAnchorPos in
-    // return), which leads to measurement bugs when the window is resizing
-    // constantly (I think it's a timing issue). It's much simpler if we
-    // disable updateAnchorPos via flag while drag resizing is occurring, so that
-    // everything is in reference to the original display height.
-    this._resizing = true
     this.scroll()
-    this._finishResize()
-  },
-
-  finishResize: function() {
-    this._resizing = false
-    this.updateAnchorPos()
   },
 
   finishScroll: function() {
@@ -58,13 +44,7 @@ module.exports = React.createClass({
 
   onScroll: function() {
     this._checkScroll()
-
-    if (!this._resizing) {
-      // While resizing the window, we trigger our own scroll events. If we
-      // re-measure anchor/target position at this point it may be slightly out
-      // of date by the time we scroll again.
-      this.updateAnchorPos()
-    }
+    this.updateAnchorPos()
   },
 
   componentDidUpdate: function() {
