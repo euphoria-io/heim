@@ -44,7 +44,7 @@ module.exports = React.createClass({
       case 'up':
         if (idx === 0) {
           // at beginning
-          target = elems[idx].parentNode
+          target = elems[idx + 1].parentNode
           break
         }
         var steps = 0
