@@ -17,6 +17,7 @@ module.exports = React.createClass({
     this._checkScroll = _.throttle(this.checkScroll, 150)
     this._finishScroll = _.debounce(this.finishScroll, 100)
     this._targetInView = false
+    this._lastScrollHeight = 0
     this._anchor = null
     this._anchorPos = null
     this._scrollQueued = false
@@ -82,6 +83,7 @@ module.exports = React.createClass({
       this._anchor = anchor
       this._anchorPos = anchor && node.scrollTop + displayHeight - anchor.offsetTop
     }
+    this._lastScrollHeight = node.scrollHeight
   },
 
   checkScrollbar: function() {
@@ -109,13 +111,18 @@ module.exports = React.createClass({
     // Scroll so our point of interest (target or anchor) is in the right place.
     var node = this.refs.scroller.getDOMNode()
     var displayHeight = node.offsetHeight
+    var scrollHeight = node.scrollHeight
     var target = node.querySelector(this.props.target)
 
     var newScrollTop = null
-    if (forceTargetInView || (this._targetInView && this._anchor != target)) {
+    if (forceTargetInView || this._targetInView) {
       // If the target is onscreen, make sure it's within this.props.edgeSpace
       // from the top or bottom.
       var targetPos = node.scrollTop + displayHeight - target.offsetTop
+      if (this._targetInView && scrollHeight > this._lastScrollHeight) {
+        // If content has grown, allow target to get shifted up, but not down.
+        targetPos = Math.max(targetPos, this._anchorPos)
+      }
       var clampedPos = clamp(this.props.edgeSpace, targetPos, displayHeight - this.props.edgeSpace)
       newScrollTop = clampedPos - displayHeight + target.offsetTop
     } else if (this._anchor) {
@@ -124,7 +131,7 @@ module.exports = React.createClass({
       newScrollTop = this._anchorPos - displayHeight + this._anchor.offsetTop
     }
 
-    if (newScrollTop != node.scrollTop && displayHeight != node.scrollHeight) {
+    if (newScrollTop != node.scrollTop && displayHeight != scrollHeight) {
       if (isWebkit) {
         // Note: mobile Webkit does this funny thing where getting/setting
         // scrollTop doesn't happen promptly during inertial scrolling. It turns
