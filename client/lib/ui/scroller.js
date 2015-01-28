@@ -50,7 +50,7 @@ module.exports = React.createClass({
   componentDidUpdate: function() {
     this.scroll()
     this.updateAnchorPos()
-    this._checkScroll()
+    this.checkScrollbar()
   },
 
   updateAnchorPos: function() {
@@ -84,15 +84,8 @@ module.exports = React.createClass({
     }
   },
 
-  checkScroll: function() {
-    // Checks based on content / scroll position, to be updated when either
-    // changes. Ratelimited to not burden browser while scrolling.
+  checkScrollbar: function() {
     var node = this.refs.scroller.getDOMNode()
-
-    var displayHeight = node.offsetHeight
-    if (this.props.onNearTop && node.scrollTop < displayHeight * 2) {
-      this.props.onNearTop()
-    }
 
     if (this.props.onScrollbarSize) {
       var scrollbarWidth = node.offsetWidth - node.clientWidth
@@ -100,6 +93,15 @@ module.exports = React.createClass({
         this.scrollbarWidth = scrollbarWidth
         this.props.onScrollbarSize(scrollbarWidth)
       }
+    }
+  },
+
+  checkScroll: function() {
+    var node = this.refs.scroller.getDOMNode()
+
+    var displayHeight = node.offsetHeight
+    if (this.props.onNearTop && node.scrollTop < displayHeight * 2) {
+      this.props.onNearTop()
     }
   },
 
