@@ -109,29 +109,59 @@ module.exports = React.createClass({
 
   scroll: function(forceTargetInView) {
     // Scroll so our point of interest (target or anchor) is in the right place.
+    //
+    // Desired behavior:
+    //
+    // If forceTargetInView is set, ensure that the target is onscreen. If it
+    // is not, move it within edgeSpace of the top or bottom.
+    //
+    // If the target was previously in view, we want to ensure it still is. If
+    // we're at the bottom of the page, new content should be able to push the
+    // target up to edgeSpace. If we're jumping several rows, we want to make
+    // sure we end up within edgeSpace. Otherwise, movements that would take us
+    // past edgeSpace should scroll to keep the target within edgeSpace.
+    //
+    // If the target was not previously in view, maintain the position of the
+    // anchor element.
+    //
     var node = this.refs.scroller.getDOMNode()
     var displayHeight = node.offsetHeight
     var scrollHeight = node.scrollHeight
     var target = node.querySelector(this.props.target)
+    var canScroll = displayHeight < scrollHeight
 
     var newScrollTop = null
     if (forceTargetInView || this._targetInView) {
-      // If the target is onscreen, make sure it's within this.props.edgeSpace
-      // from the top or bottom.
+      var hasGrown = scrollHeight > this._lastScrollHeight
+      var fromBottom = scrollHeight - (node.scrollTop + displayHeight)
+      var canScrollBottom = canScroll && fromBottom <= this.props.edgeSpace
+
       var targetPos = node.scrollTop + displayHeight - target.offsetTop
-      if (this._targetInView && scrollHeight > this._lastScrollHeight) {
-        // If content has grown, allow target to get shifted up, but not down.
-        targetPos = Math.max(targetPos, this._anchorPos)
+      var clampedPos = clamp(this.props.edgeSpace, targetPos, displayHeight - this.props.edgeSpace + target.offsetHeight)
+
+      var movingTowardsEdge = Math.sign(targetPos - this._anchorPos) != Math.sign(clampedPos - targetPos)
+      var pastEdge = clampedPos != targetPos
+      var movingPastEdge = movingTowardsEdge && pastEdge
+      var jumping = Math.abs(targetPos - this._anchorPos) > 3 * target.offsetHeight
+
+      var shouldHoldPos = hasGrown || (movingPastEdge && !jumping)
+      var shouldScrollBottom = hasGrown && canScrollBottom
+
+      if (this._targetInView && shouldHoldPos && !shouldScrollBottom) {
+        targetPos = this._anchorPos
+      } else {
+        if (forceTargetInView && !this._targetInView || shouldScrollBottom || jumping) {
+          targetPos = clampedPos
+        }
       }
-      var clampedPos = clamp(this.props.edgeSpace, targetPos, displayHeight - this.props.edgeSpace)
-      newScrollTop = clampedPos - displayHeight + target.offsetTop
+      newScrollTop = targetPos - displayHeight + target.offsetTop
     } else if (this._anchor) {
       // Otherwise, try to keep the anchor element in the same place it was when
       // we last saw it via updateAnchorPos.
       newScrollTop = this._anchorPos - displayHeight + this._anchor.offsetTop
     }
 
-    if (newScrollTop != node.scrollTop && displayHeight != scrollHeight) {
+    if (newScrollTop != node.scrollTop && canScroll) {
       if (isWebkit) {
         // Note: mobile Webkit does this funny thing where getting/setting
         // scrollTop doesn't happen promptly during inertial scrolling. It turns
