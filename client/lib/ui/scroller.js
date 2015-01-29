@@ -52,6 +52,7 @@ module.exports = React.createClass({
     this.scroll()
     this.updateAnchorPos()
     this.checkScrollbar()
+    this._checkScroll()
   },
 
   updateAnchorPos: function() {
