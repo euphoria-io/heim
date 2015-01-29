@@ -138,7 +138,7 @@ module.exports = React.createClass({
     var target = node.querySelector(this.props.target)
     var canScroll = displayHeight < scrollHeight
 
-    var newScrollTop = null
+    var newScrollTop
     if (forceTargetInView || this._targetInView) {
       var hasGrown = scrollHeight > this._lastScrollHeight
       var fromBottom = scrollHeight - (node.scrollTop + displayHeight)
