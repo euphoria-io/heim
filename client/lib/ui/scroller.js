@@ -18,6 +18,7 @@ module.exports = React.createClass({
     this._finishScroll = _.debounce(this.finishScroll, 100)
     this._targetInView = false
     this._lastScrollHeight = 0
+    this._lastScrollTop = 0
     this._anchor = null
     this._anchorPos = null
     this._scrollQueued = false
@@ -67,11 +68,12 @@ module.exports = React.createClass({
     // Record the position of our point of reference. Either the target (if
     // it's in view), or the centermost child element.
     var node = this.refs.scroller.getDOMNode()
+    var displayTop = node.offsetTop
     var displayHeight = node.offsetHeight
 
     var target = node.querySelector(this.props.target)
-    var targetPos = node.scrollTop + displayHeight - target.offsetTop
-    this._targetInView = targetPos >= target.offsetHeight && targetPos < displayHeight
+    var targetPos = target.getBoundingClientRect().top
+    this._targetInView = targetPos >= displayTop + target.offsetHeight && targetPos < displayTop + displayHeight
 
     var anchor
     if (this._targetInView) {
@@ -84,8 +86,9 @@ module.exports = React.createClass({
         console.warn('scroller: unable to find anchor')  // jshint ignore:line
       }
       this._anchor = anchor
-      this._anchorPos = anchor && node.scrollTop + displayHeight - anchor.offsetTop
+      this._anchorPos = anchor && anchor.getBoundingClientRect().top
     }
+    this._lastScrollTop = node.scrollTop
     this._lastScrollHeight = node.scrollHeight
   },
 
@@ -133,19 +136,21 @@ module.exports = React.createClass({
     // anchor element.
     //
     var node = this.refs.scroller.getDOMNode()
+    var displayTop = node.offsetTop
     var displayHeight = node.offsetHeight
     var scrollHeight = node.scrollHeight
     var target = node.querySelector(this.props.target)
     var canScroll = displayHeight < scrollHeight
 
-    var newScrollTop
+    var posRef, oldPos
     if (forceTargetInView || this._targetInView) {
       var hasGrown = scrollHeight > this._lastScrollHeight
       var fromBottom = scrollHeight - (node.scrollTop + displayHeight)
       var canScrollBottom = canScroll && fromBottom <= this.props.edgeSpace
 
-      var targetPos = node.scrollTop + displayHeight - target.offsetTop
-      var clampedPos = clamp(this.props.edgeSpace, targetPos, displayHeight - this.props.edgeSpace + target.offsetHeight)
+      var targetBox = target.getBoundingClientRect()
+      var targetPos = targetBox.top
+      var clampedPos = clamp(displayTop + this.props.edgeSpace - targetBox.height, targetPos, displayTop + displayHeight - this.props.edgeSpace)
 
       var movingTowardsEdge = Math.sign(targetPos - this._anchorPos) != Math.sign(clampedPos - targetPos)
       var pastEdge = clampedPos != targetPos
@@ -155,31 +160,38 @@ module.exports = React.createClass({
       var shouldHoldPos = hasGrown || (movingPastEdge && !jumping)
       var shouldScrollBottom = hasGrown && canScrollBottom
 
+      posRef = target
       if (this._targetInView && shouldHoldPos && !shouldScrollBottom) {
-        targetPos = this._anchorPos
+        oldPos = this._anchorPos
       } else {
         if (forceTargetInView && !this._targetInView || shouldScrollBottom || jumping) {
-          targetPos = clampedPos
+          oldPos = clampedPos
         }
       }
-      newScrollTop = targetPos - displayHeight + target.offsetTop
     } else if (this._anchor) {
       // Otherwise, try to keep the anchor element in the same place it was when
       // we last saw it via updateAnchorPos.
-      newScrollTop = this._anchorPos - displayHeight + this._anchor.offsetTop
+      posRef = this._anchor
+      oldPos = this._anchorPos
     }
 
-    if (newScrollTop != node.scrollTop && canScroll) {
+    var delta = posRef.getBoundingClientRect().top - oldPos
+    var scrollDelta = node.scrollTop - this._lastScrollTop
+    if (delta && canScroll) {
       if (isWebkit) {
         // Note: mobile Webkit does this funny thing where getting/setting
         // scrollTop doesn't happen promptly during inertial scrolling. It turns
         // out that setting scrollTop inside a requestAnimationFrame callback
         // circumvents this issue.
         window.requestAnimationFrame(function() {
-          node.scrollTop = newScrollTop
-        })
+          // Time passes before the frame, so we need to update the deltas.
+          delta = posRef.getBoundingClientRect().top - oldPos
+          scrollDelta = node.scrollTop - this._lastScrollTop
+          node.scrollTop += delta + scrollDelta
+          this._lastScrollTop = node.scrollTop
+        }.bind(this))
       } else {
-        node.scrollTop = newScrollTop
+        node.scrollTop += delta + scrollDelta
       }
       this._scrollQueued = true
       this._finishScroll()
