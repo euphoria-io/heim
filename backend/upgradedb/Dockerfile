@@ -1,6 +1,7 @@
-FROM heim_backend
+FROM golang
 MAINTAINER Logan Hanks <logan.hanks@gmail.com>
 
-RUN go install heim/cmd/heim-upgradedb
+ENV GOPATH /go
 
-CMD /go/bin/heim-upgradedb -psql 'postgres://postgres:heimlich@psql/heim?sslmode=disable'
+ADD run.sh /
+CMD /run.sh

@@ -18,3 +18,5 @@ WORKDIR /srv/heim/client/src
 COPY . /srv/heim/client/src
 
 ENV PATH $PATH:../node_modules/.bin
+
+VOLUME /srv/heim/client/src/build

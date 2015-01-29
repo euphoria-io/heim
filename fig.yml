@@ -12,23 +12,22 @@ psqlclient:
   links:
     - psql
 
-# The upgradedb container runs the upgradedb command against the psql container.
-upgradedb:
-  build: backend/upgradedb
-  links:
-    - psql
-  volumes:
-    - backend:/go/src/heim/backend
-
 # The frontend container runs an ongoing gulp build.
 frontend:
   command: gulp build
   build: client
   volumes:
     - client:/srv/heim/client/src
-    - backend/static:/srv/heim/client/src/build
   environment:
     NODE_ENV: production
+
+# The upgradedb container runs the upgradedb command against the psql container.
+upgradedb:
+  build: backend/upgradedb
+  links:
+    - psql
+  volumes:
+    - .:/go/src/heim
 
 # The backend container runs the backend server against the psql container.
 backend:
@@ -36,7 +35,9 @@ backend:
   links:
     - psql
   volumes:
-    - backend:/go/src/heim/backend
+    - .:/go/src/heim
+  volumes_from:
+    - frontend
   ports:
     - "8080:80"
     - "2222:22"
