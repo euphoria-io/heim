@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"time"
 
-	"heim/backend/proto"
+	"heim/proto"
 )
 
 type Message struct {

@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"heim/backend"
-	"heim/backend/proto"
+	"heim/proto"
 
 	. "github.com/smartystreets/goconvey/convey"
 )

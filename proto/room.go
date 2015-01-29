@@ -3,7 +3,7 @@ package proto
 import (
 	"time"
 
-	"heim/backend/proto/security"
+	"heim/proto/security"
 
 	"golang.org/x/net/context"
 )

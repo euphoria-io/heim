@@ -3,7 +3,7 @@ package backend
 import (
 	"testing"
 
-	"heim/backend/proto"
+	"heim/proto"
 
 	"golang.org/x/net/context"
 

@@ -3,7 +3,7 @@ package backend
 import (
 	"sync"
 
-	"heim/backend/proto"
+	"heim/proto"
 )
 
 type TestBackend struct {

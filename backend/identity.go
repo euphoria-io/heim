@@ -1,7 +1,7 @@
 package backend
 
 import (
-	"heim/backend/proto"
+	"heim/proto"
 )
 
 type memIdentity struct {

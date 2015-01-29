@@ -4,7 +4,7 @@ import (
 	"sync"
 	"testing"
 
-	"heim/backend/proto"
+	"heim/proto"
 
 	"golang.org/x/net/context"
 

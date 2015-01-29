@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"heim/backend/proto"
+	"heim/proto"
 
 	"golang.org/x/net/context"
 )

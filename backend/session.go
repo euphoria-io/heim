@@ -7,7 +7,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"heim/backend/proto"
+	"heim/proto"
 
 	"github.com/gorilla/websocket"
 	"golang.org/x/net/context"

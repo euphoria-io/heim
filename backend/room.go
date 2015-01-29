@@ -5,8 +5,8 @@ import (
 	"sync"
 	"time"
 
-	"heim/backend/proto"
-	"heim/backend/proto/security"
+	"heim/proto"
+	"heim/proto/security"
 
 	"golang.org/x/net/context"
 )

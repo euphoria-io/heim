@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"heim/backend"
-	"heim/backend/proto"
+	"heim/proto"
 
 	"github.com/coopernurse/gorp"
 	"github.com/lib/pq"

@@ -3,7 +3,7 @@ package backend
 import (
 	"testing"
 
-	"heim/backend/proto"
+	"heim/proto"
 
 	. "github.com/smartystreets/goconvey/convey"
 )

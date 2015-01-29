@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"path"
 
-	"heim/backend/proto"
+	"heim/proto"
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
