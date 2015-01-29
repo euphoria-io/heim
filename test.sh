@@ -29,9 +29,9 @@ build_release() {
   cd ${SRCDIR}/heim/client
   gulp build
 
-  go get heim/backend/cmd/heimlich heim/backend/cmd/heim-backend
-  go install -ldflags "-X main.version ${DRONE_COMMIT}" heim/backend/cmd/heim-backend
-  go install heim/backend/cmd/heimlich
+  go get heim/cmd/heimlich heim/cmd/heim-backend
+  go install -ldflags "-X main.version ${DRONE_COMMIT}" heim/cmd/heim-backend
+  go install heim/cmd/heimlich
 
   mv ${SRCDIR}/heim/client/build /var/cache/drone/bin/static
   cd /var/cache/drone/bin

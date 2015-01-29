@@ -2,8 +2,8 @@ FROM golang
 MAINTAINER Logan Hanks <logan.hanks@gmail.com>
 
 ADD . /go/src/heim/backend
-RUN go get heim/backend/cmd/heim-backend
-RUN go install heim/backend/cmd/heim-backend
+RUN go get heim/cmd/heim-backend
+RUN go install heim/cmd/heim-backend
 
 # /go/src/hiem/backend/static should be provided as a volume
 # psql host should be provided as a linked container
