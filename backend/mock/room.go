@@ -1,10 +1,11 @@
-package backend
+package mock
 
 import (
 	"sort"
 	"sync"
 	"time"
 
+	"heim/backend"
 	"heim/proto"
 	"heim/proto/security"
 
@@ -142,7 +143,8 @@ func (r *memRoom) Listing(ctx context.Context) (proto.Listing, error) {
 
 func (r *memRoom) RenameUser(
 	ctx context.Context, session proto.Session, formerName string) (*proto.NickEvent, error) {
-	Logger(ctx).Printf("renaming %s from %s to %s\n", session.ID(), formerName, session.Identity().Name())
+	backend.Logger(ctx).Printf(
+		"renaming %s from %s to %s\n", session.ID(), formerName, session.Identity().Name())
 	payload := &proto.NickEvent{
 		ID:   session.Identity().ID(),
 		From: formerName,

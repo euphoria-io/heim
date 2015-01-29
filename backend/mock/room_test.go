@@ -1,9 +1,10 @@
-package backend
+package mock
 
 import (
 	"sync"
 	"testing"
 
+	"heim/backend"
 	"heim/proto"
 
 	"golang.org/x/net/context"
@@ -30,13 +31,7 @@ func (s *session) ID() string          { return s.id }
 func (s *session) Close()              {}
 func (s *session) SetName(name string) { s.name = name }
 
-func (s *session) Identity() proto.Identity {
-	id := newMemIdentity(s.id)
-	if s.name != "" {
-		id.name = s.name
-	}
-	return id
-}
+func (s *session) Identity() proto.Identity { return backend.NewIdentity(s.id, s.name) }
 
 func (s *session) Send(ctx context.Context, cmdType proto.PacketType, payload interface{}) error {
 	s.Lock()

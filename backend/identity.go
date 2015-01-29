@@ -4,6 +4,8 @@ import (
 	"heim/proto"
 )
 
+var DefaultName = "guest"
+
 type memIdentity struct {
 	id   string
 	name string
@@ -18,4 +20,11 @@ func (s *memIdentity) Name() string { return s.name }
 
 func (s *memIdentity) View() *proto.IdentityView {
 	return &proto.IdentityView{ID: s.id, Name: s.name}
+}
+
+func NewIdentity(id, name string) proto.Identity {
+	if name == "" {
+		name = DefaultName
+	}
+	return &memIdentity{id: id, name: name}
 }

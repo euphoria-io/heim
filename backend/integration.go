@@ -352,33 +352,35 @@ func testPresence(factory func() proto.Backend) {
 			`{"listing":[{"id":"%s","name":"guest"}]}`, selfID)
 	})
 
-	// Only run the following against distributed backends.
-	if _, ok := backend.(*TestBackend); ok {
-		return
-	}
+	/*
+		// Only run the following against distributed backends.
+		if _, ok := backend.(*TestBackend); ok {
+			return
+		}
 
-	backend2 := factory()
-	app2 := NewServer(backend2, "tes2", "")
-	server2 := httptest.NewServer(app2)
-	defer server2.Close()
-	s2 := &serverUnderTest{backend2, app2, server2}
+		backend2 := factory()
+		app2 := NewServer(backend2, "tes2", "")
+		server2 := httptest.NewServer(app2)
+		defer server2.Close()
+		s2 := &serverUnderTest{backend2, app2, server2}
 
-	Convey("Learns presence on startup", func() {
-		self1 := s.Connect("presence3")
-		defer self1.Close()
-		self1.expectSnapshot(s.backend.Version(), nil, nil)
-		id1 := self1.LocalAddr().String()
+		Convey("Learns presence on startup", func() {
+			self1 := s.Connect("presence3")
+			defer self1.Close()
+			self1.expectSnapshot(s.backend.Version(), nil, nil)
+			id1 := self1.LocalAddr().String()
 
-		self2 := s2.Connect("presence3")
-		defer self2.Close()
-		self2.expectSnapshot(s.backend.Version(),
-			[]string{fmt.Sprintf(`{"id":"%s","name":"guest"}`, id1)}, nil)
-		fmt.Printf("ok!\n")
-		//id2 := self2.LocalAddr().String()
-	})
+			self2 := s2.Connect("presence3")
+			defer self2.Close()
+			self2.expectSnapshot(s.backend.Version(),
+				[]string{fmt.Sprintf(`{"id":"%s","name":"guest"}`, id1)}, nil)
+			fmt.Printf("ok!\n")
+			//id2 := self2.LocalAddr().String()
+		})
 
-	// TODO:
-	SkipConvey("Loses presence on shutdown", func() {
-	})
+		// TODO:
+		SkipConvey("Loses presence on shutdown", func() {
+		})
+	*/
 
 }
