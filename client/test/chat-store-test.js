@@ -545,12 +545,12 @@ describe('chat store', function() {
         sinon.assert.notCalled(socket.send)
       })
 
-      it('should request 100 more logs before the earliest message', function() {
+      it('should request 50 more logs before the earliest message', function() {
         chat.store.socketEvent({status: 'receive', body: logReply})
         chat.store.loadMoreLogs()
         sinon.assert.calledWithExactly(socket.send, {
           type: 'log',
-          data: {n: 100, before: 'id1'},
+          data: {n: 50, before: 'id1'},
         })
       })
 

@@ -159,7 +159,7 @@ module.exports.store = Reflux.createStore({
 
     socket.send({
       type: 'log',
-      data: {n: 100, before: this.state.earliestLog},
+      data: {n: 50, before: this.state.earliestLog},
     })
   },
 

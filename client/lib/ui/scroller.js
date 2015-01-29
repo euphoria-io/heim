@@ -112,8 +112,7 @@ module.exports = React.createClass({
 
     var node = this.refs.scroller.getDOMNode()
 
-    var displayHeight = node.offsetHeight
-    if (this.props.onNearTop && node.scrollTop < displayHeight * 2) {
+    if (this.props.onNearTop && node.scrollTop < node.scrollHeight / 8) {
       this.props.onNearTop()
       this._waitingForUpdate = true
     }
