@@ -22,6 +22,7 @@ module.exports = React.createClass({
       this.saveEntryState()
     }
     node.focus()
+    actions.scrollToEntry()
   },
 
   setNick: function(ev) {
