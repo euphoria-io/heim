@@ -43,7 +43,7 @@ module.exports = React.createClass({
   },
 
   onClick: function(ev) {
-    if (window.getSelection().type == 'Range') {
+    if (!window.getSelection().isCollapsed) {
       return
     }
 

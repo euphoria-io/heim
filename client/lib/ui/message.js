@@ -15,7 +15,7 @@ var Message = module.exports = React.createClass({
   ],
 
   focusMessage: function() {
-    if (window.getSelection().type == 'Range') {
+    if (!window.getSelection().isCollapsed) {
       return
     }
 
