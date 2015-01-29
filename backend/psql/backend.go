@@ -21,11 +21,11 @@ import (
 )
 
 var schema = map[interface{}][]string{
-	Room{}:       []string{"Name"},
-	RoomKey{}:    []string{"Room", "Timestamp"},
-	Capability{}: []string{"ID"},
-	Message{}:    []string{"Room", "ID"},
-	Presence{}:   []string{"Room", "SessionID"},
+	Room{}: []string{"Name"},
+	//RoomKey{}:    []string{"Room", "Timestamp"},
+	//Capability{}: []string{"ID"},
+	Message{}: []string{"Room", "ID"},
+	//Presence{}:   []string{"Room", "SessionID"},
 }
 
 type AfterCreateTabler interface {
