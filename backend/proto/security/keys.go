@@ -1,6 +1,7 @@
 package security
 
 import (
+	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
 	"errors"
@@ -9,7 +10,10 @@ import (
 )
 
 var (
-	ErrInvalidKey = errors.New("invalid key")
+	ErrInvalidKey         = errors.New("invalid key")
+	ErrKeyMustBeDecrypted = errors.New("key must be decrypted")
+	ErrKeyMustBeEncrypted = errors.New("key must be encrypted")
+	ErrIVRequired         = errors.New("IV is required")
 )
 
 type KeyType byte
@@ -89,6 +93,16 @@ func (t KeyType) BlockCipher(key []byte) (cipher.Block, error) {
 	}
 }
 
+func (t KeyType) Pad(data []byte) []byte {
+	padding := t.BlockSize() - len(data)%t.BlockSize()
+	return append(data, bytes.Repeat([]byte{byte(padding)}, padding)...)
+}
+
+func (t KeyType) Unpad(data []byte) []byte {
+	unpadding := int(data[len(data)-1])
+	return data[:len(data)-unpadding]
+}
+
 type ManagedKey struct {
 	KeyType
 	IV         []byte
@@ -96,4 +110,58 @@ type ManagedKey struct {
 	Ciphertext []byte
 }
 
+func (k *ManagedKey) Clone() ManagedKey {
+	dup := func(v []byte) []byte {
+		w := make([]byte, len(v))
+		copy(w, v)
+		return w
+	}
+	return ManagedKey{
+		KeyType:    k.KeyType,
+		IV:         dup(k.IV),
+		Plaintext:  dup(k.Plaintext),
+		Ciphertext: dup(k.Ciphertext),
+	}
+}
+
 func (k *ManagedKey) Encrypted() bool { return k.Ciphertext != nil }
+
+func (k *ManagedKey) Encrypt(keyKey *ManagedKey) error {
+	if keyKey.Encrypted() || k.Encrypted() {
+		return ErrKeyMustBeDecrypted
+	}
+
+	if k.IV == nil {
+		return ErrIVRequired
+	}
+
+	if err := keyKey.BlockCrypt(k.IV, keyKey.Plaintext, k.Ciphertext, false); err != nil {
+		return err
+	}
+
+	k.Ciphertext = k.Plaintext
+	k.Plaintext = nil
+	return nil
+}
+
+func (k *ManagedKey) Decrypt(keyKey *ManagedKey) error {
+	if keyKey.Encrypted() {
+		return ErrKeyMustBeDecrypted
+	}
+
+	if !k.Encrypted() {
+		return ErrKeyMustBeEncrypted
+	}
+
+	if k.IV == nil {
+		return ErrIVRequired
+	}
+
+	if err := keyKey.BlockCrypt(k.IV, keyKey.Plaintext, k.Ciphertext, false); err != nil {
+		return err
+	}
+
+	k.Plaintext = k.Ciphertext
+	k.Ciphertext = nil
+	return nil
+}

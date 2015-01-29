@@ -116,14 +116,14 @@ func (rb *RoomBinding) RoomKey() proto.RoomKey { return rb }
 func (rb *RoomBinding) Timestamp() time.Time { return rb.key.Timestamp }
 func (rb *RoomBinding) Nonce() []byte        { return rb.key.Nonce }
 
-func (rb *RoomBinding) ManagedKey() *security.ManagedKey {
+func (rb *RoomBinding) ManagedKey() security.ManagedKey {
 	dup := func(v []byte) []byte {
 		w := make([]byte, len(v))
 		copy(w, v)
 		return w
 	}
 
-	return &security.ManagedKey{
+	return security.ManagedKey{
 		KeyType:    security.AES256,
 		IV:         dup(rb.key.IV),
 		Ciphertext: dup(rb.key.EncryptedKey),

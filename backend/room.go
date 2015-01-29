@@ -159,7 +159,7 @@ func (r *memRoom) GenerateMasterKey(ctx context.Context, kms security.KMS) (prot
 		return nil, err
 	}
 
-	mkey, err := kms.GenerateEncryptedKey(security.AES256)
+	mkey, err := kms.GenerateEncryptedKey(security.AES128)
 	if err != nil {
 		return nil, err
 	}
@@ -178,11 +178,6 @@ type roomKey struct {
 	key       security.ManagedKey
 }
 
-func (k *roomKey) Timestamp() time.Time { return k.timestamp }
-func (k *roomKey) Nonce() []byte        { return k.nonce }
-
-func (k *roomKey) ManagedKey() *security.ManagedKey {
-	mk := &security.ManagedKey{}
-	*mk = k.key
-	return mk
-}
+func (k *roomKey) Timestamp() time.Time            { return k.timestamp }
+func (k *roomKey) Nonce() []byte                   { return k.nonce }
+func (k *roomKey) ManagedKey() security.ManagedKey { return k.key.Clone() }

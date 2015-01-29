@@ -45,7 +45,7 @@ type Room interface {
 	// previous key.
 	GenerateMasterKey(ctx context.Context, kms security.KMS) (RoomKey, error)
 
-	// RoomKey returns the room's master key.
+	// RoomKey returns the room's current key.
 	RoomKey() RoomKey
 }
 
@@ -57,5 +57,5 @@ type RoomKey interface {
 	Nonce() []byte
 
 	// ManagedKey returns the current encrypted ManagedKey for the room.
-	ManagedKey() *security.ManagedKey
+	ManagedKey() security.ManagedKey
 }
