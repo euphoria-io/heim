@@ -215,8 +215,12 @@ func (s *memSession) handleCommand(cmd *proto.Packet) (interface{}, error) {
 		}
 		return &proto.LogReply{Log: msgs, Before: msg.Before}, nil
 	case *proto.NickCommand:
+		nick, err := proto.NormalizeNick(msg.Name)
+		if err != nil {
+			return nil, err
+		}
 		formerName := s.identity.Name()
-		s.identity.name = msg.Name
+		s.identity.name = nick
 		event, err := s.room.RenameUser(s.ctx, s, formerName)
 		if err != nil {
 			return nil, err

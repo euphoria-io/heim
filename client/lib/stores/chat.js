@@ -48,6 +48,9 @@ module.exports.store = Reflux.createStore({
       } else if (ev.body.type == 'who-reply') {
         this._handleWhoReply(ev.body.data)
       } else if (ev.body.type == 'nick-reply' || ev.body.type == 'nick-event') {
+        if (ev.body.type == 'nick-reply') {
+          this._handleNickReply(ev.body.data)
+        }
         this.state.who = this.state.who
           .mergeIn([ev.body.data.id], {
             id: ev.body.data.id,
@@ -103,6 +106,12 @@ module.exports.store = Reflux.createStore({
           return [user.id, Immutable.Map(user)]
         }, this)
     )
+  },
+
+  _handleNickReply: function(data) {
+    this.state.nick = data.to
+    this.state.nickText = data.to
+    storage.setRoom(this.state.roomName, 'nick', data.to)
   },
 
   storageChange: function(data) {

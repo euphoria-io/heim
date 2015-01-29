@@ -169,7 +169,7 @@ module.exports = React.createClass({
       <form className="entry">
         <div className="nick-box">
           <div className="auto-size-container">
-            <input className="nick" ref="nick" defaultValue={this.state.nick} onBlur={this.setNick} onChange={this.previewNick} />
+            <input className="nick" ref="nick" value={this.state.nickText} onBlur={this.setNick} onChange={this.previewNick} />
             <span className="nick">{this.state.nickText || this.state.nick}</span>
           </div>
         </div>

@@ -607,6 +607,14 @@ describe('chat store', function() {
   })
 
   describe('received nick changes', function() {
+    beforeEach(function() {
+      sinon.stub(storage, 'setRoom')
+    })
+
+    afterEach(function() {
+      storage.setRoom.restore()
+    })
+
     var nickReply = {
       'id': '1',
       'type': 'nick-reply',
@@ -626,6 +634,19 @@ describe('chat store', function() {
         'to': 'absence',
       }
     }
+
+    it('should update chat and room state', function(done) {
+      chat.store.state.roomName = 'ezzie'
+      chat.store.state.nick = ''
+      chat.store.state.nickText = ''
+      handleSocket({status: 'receive', body: nickReply}, function(state) {
+        assert.equal(state.nick, 'tester3')
+        assert.equal(state.nickText, 'tester3')
+        sinon.assert.calledOnce(storage.setRoom)
+        sinon.assert.calledWithExactly(storage.setRoom, 'ezzie', 'nick', 'tester3')
+        done()
+      })
+    })
 
     it('should update user list name', function(done) {
       handleSocket({status: 'receive', body: whoReply}, function() {
