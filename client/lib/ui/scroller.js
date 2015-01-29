@@ -21,6 +21,7 @@ module.exports = React.createClass({
     this._anchor = null
     this._anchorPos = null
     this._scrollQueued = false
+    this._waitingForUpdate = false
   },
 
   componentDidMount: function() {
@@ -53,6 +54,7 @@ module.exports = React.createClass({
     this.updateAnchorPos()
     this.checkScrollbar()
     this._checkScroll()
+    this._waitingForUpdate = false
   },
 
   updateAnchorPos: function() {
@@ -100,11 +102,16 @@ module.exports = React.createClass({
   },
 
   checkScroll: function() {
+    if (this._waitingForUpdate) {
+      return
+    }
+
     var node = this.refs.scroller.getDOMNode()
 
     var displayHeight = node.offsetHeight
     if (this.props.onNearTop && node.scrollTop < displayHeight * 2) {
       this.props.onNearTop()
+      this._waitingForUpdate = true
     }
   },
 
