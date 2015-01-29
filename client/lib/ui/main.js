@@ -39,7 +39,7 @@ module.exports = React.createClass({
   onMouseDown: function() {
     // FIXME: preventing/canceling a mousedown in React doesn't seem to stop
     // the subsequent click event, so we have to resort to this hack.
-    this._isFocusClick = Date.now() - this.state.focus.focusChangedAt < 50
+    this._isFocusClick = Date.now() - this.state.focus.focusChangedAt < 100
   },
 
   onClick: function(ev) {
