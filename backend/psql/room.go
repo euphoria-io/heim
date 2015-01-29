@@ -1,4 +1,4 @@
-package persist
+package psql
 
 import (
 	"database/sql"

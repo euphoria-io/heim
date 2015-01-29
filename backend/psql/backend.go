@@ -1,4 +1,4 @@
-package persist
+package psql
 
 import (
 	"database/sql"
@@ -45,7 +45,7 @@ type Backend struct {
 }
 
 func NewBackend(dsn, version string) (*Backend, error) {
-	log.Printf("persistence backend %s on %s", version, dsn)
+	log.Printf("psql backend %s on %s", version, dsn)
 
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {

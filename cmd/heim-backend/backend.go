@@ -7,15 +7,15 @@ import (
 	"os"
 
 	"heim/backend"
-	"heim/backend/persist"
+	"heim/backend/psql"
 	"heim/server"
 )
 
 var (
-	addr   = flag.String("http", ":8080", "")
-	id     = flag.String("id", "singleton", "")
-	psql   = flag.String("psql", "psql", "")
-	static = flag.String("static", "", "")
+	addr    = flag.String("http", ":8080", "")
+	id      = flag.String("id", "singleton", "")
+	psqlDSN = flag.String("psql", "psql", "")
+	static  = flag.String("static", "", "")
 
 	ctrlAddr     = flag.String("control", ":2222", "")
 	ctrlHostKey  = flag.String("control-hostkey", "", "")
@@ -27,7 +27,7 @@ var version string
 func main() {
 	flag.Parse()
 
-	b, err := persist.NewBackend(*psql, version)
+	b, err := psql.NewBackend(*psqlDSN, version)
 	if err != nil {
 		fmt.Printf("error: %s\n", err)
 		os.Exit(1)

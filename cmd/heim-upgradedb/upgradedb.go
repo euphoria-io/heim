@@ -5,15 +5,15 @@ import (
 	"fmt"
 	"os"
 
-	"heim/backend/persist"
+	"heim/backend/psql"
 )
 
-var psql = flag.String("psql", "psql", "")
+var psqlDSN = flag.String("psql", "psql", "")
 
 func main() {
 	flag.Parse()
 
-	b, err := persist.NewBackend(*psql, "upgradedb")
+	b, err := psql.NewBackend(*psqlDSN, "upgradedb")
 	if err != nil {
 		fmt.Printf("error: %s\n", err)
 		os.Exit(1)

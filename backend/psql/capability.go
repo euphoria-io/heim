@@ -1,4 +1,4 @@
-package persist
+package psql
 
 type Capability struct {
 	ID            string
