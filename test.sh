@@ -6,12 +6,12 @@ PATH=${PATH}:/var/cache/drone/bin
 SRCDIR=/var/cache/drone/src
 
 test_backend() {
-  ln -sf /var/cache/drone/src/github.com/euphoria-io/heim ${SRCDIR}/heim
-  go get -t heim/backend heim/backend/persist
-  go test -v heim/backend
-
   psql -c 'create database heimtest;' -U postgres -h $POSTGRES_PORT_5432_TCP_ADDR
-  go test -v heim/backend/persist --dsn "postgres://postgres@$POSTGRES_PORT_5432_TCP_ADDR/heimtest?sslmode=disable"
+  mv "$GOPATH"/src/github.com/euphoria-io/heim "$GOPATH"/src
+  ls -alRF /var/cache/drone/src/
+  go get heim/...
+  export DSN="postgres://postgres@$POSTGRES_PORT_5432_TCP_ADDR/heimtest?sslmode=disable"
+  go test -v heim/...
 }
 
 test_client() {

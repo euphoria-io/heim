@@ -2,6 +2,7 @@ package psql
 
 import (
 	"flag"
+	"os"
 	"testing"
 
 	"heim/backend"
@@ -13,8 +14,14 @@ import (
 var dsn = flag.String("dsn", "postgres://heimtest:heimtest@localhost/heimtest", "")
 
 func TestBackend(t *testing.T) {
+	// for running in CI container
+	dsn := *dsn
+	if env := os.Getenv("DSN"); env != "" {
+		dsn = env
+	}
+
 	Convey("Integration test suite", t, func() {
-		b, err := NewBackend(*dsn, "testver")
+		b, err := NewBackend(dsn, "testver")
 		if err != nil {
 			t.Fatal(err)
 		}
