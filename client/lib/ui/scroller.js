@@ -14,6 +14,7 @@ module.exports = React.createClass({
 
   componentWillMount: function() {
     window.addEventListener('resize', this.onResize)
+    this._onScroll = _.throttle(this.onScroll, 100)
     this._checkScroll = _.throttle(this.checkScroll, 150)
     this._finishScroll = _.debounce(this.finishScroll, 100)
     this._targetInView = false
@@ -204,7 +205,7 @@ module.exports = React.createClass({
 
   render: function() {
     return (
-      <div ref="scroller" onScroll={this.onScroll} className={this.props.className}>
+      <div ref="scroller" onScroll={this._onScroll} className={this.props.className}>
         {this.props.children}
       </div>
     )
