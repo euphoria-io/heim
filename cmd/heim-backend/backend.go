@@ -7,8 +7,8 @@ import (
 	"os"
 
 	"heim/backend"
-	"heim/backend/control"
 	"heim/backend/persist"
+	"heim/server"
 )
 
 var (
