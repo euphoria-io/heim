@@ -10,7 +10,7 @@ module.exports = React.createClass({
 
   mixins: [
     require('react-immutable-render-mixin'),
-    Reflux.connect(require('../stores/chat').store),
+    Reflux.connect(require('../stores/chat').store, 'chat'),
     Reflux.listenTo(actions.focusEntry, 'focus'),
     Reflux.listenTo(actions.keydownOnEntry, 'onKeyDown'),
   ],
@@ -101,10 +101,10 @@ module.exports = React.createClass({
   },
 
   chatSend: function(text) {
-    if (!this.state.connected) {
+    if (!this.state.chat.connected) {
       return
     }
-    actions.sendMessage(text, this.state.focusedMessage)
+    actions.sendMessage(text, this.state.chat.focusedMessage)
     actions.setEntryText('')
     this.refs.input.getDOMNode().value = ''
   },
@@ -161,7 +161,7 @@ module.exports = React.createClass({
   },
 
   componentDidMount: function() {
-    this.refs.input.getDOMNode().setSelectionRange(this.state.entrySelectionStart, this.state.entrySelectionEnd)
+    this.refs.input.getDOMNode().setSelectionRange(this.state.chat.entrySelectionStart, this.state.chat.entrySelectionEnd)
   },
 
   render: function() {
@@ -169,11 +169,11 @@ module.exports = React.createClass({
       <form className="entry">
         <div className="nick-box">
           <div className="auto-size-container">
-            <input className="nick" ref="nick" value={this.state.nickText} onBlur={this.setNick} onChange={this.previewNick} />
-            <span className="nick">{this.state.nickText || this.state.nick}</span>
+            <input className="nick" ref="nick" value={this.state.chat.nickText} onBlur={this.setNick} onChange={this.previewNick} />
+            <span className="nick">{this.state.nickText || this.state.chat.nick}</span>
           </div>
         </div>
-        <input key="msg" ref="input" type="text" autoFocus defaultValue={this.state.entryText} onChange={this.saveEntryState} onKeyDown={this.onKeyDown} onClick={this.saveEntryState} onFocus={actions.scrollToEntry} onKeyPress={actions.scrollToEntry} />
+        <input key="msg" ref="input" type="text" autoFocus defaultValue={this.state.chat.entryText} onChange={this.saveEntryState} onKeyDown={this.onKeyDown} onClick={this.saveEntryState} onFocus={actions.scrollToEntry} onKeyPress={actions.scrollToEntry} />
       </form>
     )
   },
