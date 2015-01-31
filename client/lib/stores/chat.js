@@ -19,6 +19,10 @@ module.exports.store = Reflux.createStore({
     this.state = {
       connected: null,
       nick: null,
+      confirmedNick: null,
+      nickInFlight: true,
+      nickRejected: false,
+      nickPacketID: -1,
       messages: new Tree('time'),
       earliestLog: null,
       nickHues: {},
@@ -49,15 +53,17 @@ module.exports.store = Reflux.createStore({
         this._handleWhoReply(ev.body.data)
       } else if (ev.body.type == 'nick-reply' || ev.body.type == 'nick-event') {
         if (ev.body.type == 'nick-reply') {
-          this._handleNickReply(ev.body.data)
+          this._handleNickReply(ev.body.id, ev.body.data)
         }
-        this.state.who = this.state.who
-          .mergeIn([ev.body.data.id], {
-            id: ev.body.data.id,
-            name: ev.body.data.to,
-            hue: this._getNickHue(ev.body.data.to),
-          })
-          .sortBy(function(user) { return user.get('name').toLowerCase() })
+        if (!ev.body.data.error) {
+          this.state.who = this.state.who
+            .mergeIn([ev.body.data.id], {
+              id: ev.body.data.id,
+              name: ev.body.data.to,
+              hue: this._getNickHue(ev.body.data.to),
+            })
+            .sortBy(function(user) { return user.get('name').toLowerCase() })
+        }
       } else if (ev.body.type == 'join-event') {
         ev.body.data.hue = this._getNickHue(ev.body.data.name)
         this.state.who = this.state.who
@@ -108,10 +114,21 @@ module.exports.store = Reflux.createStore({
     )
   },
 
-  _handleNickReply: function(data) {
-    this.state.nick = data.to
-    this.state.nickText = data.to
-    storage.setRoom(this.state.roomName, 'nick', data.to)
+  _handleNickReply: function(packetID, data) {
+    if (packetID != 'nick-'+String(this.state.nickPacketID)) {
+      // user has already requested a different nick, so ignore this reply
+      return
+    }
+    this.state.nickInFlight = false
+    if (data.error) {
+      this.state.nickRejected = true
+    } else {
+      this.state.nickRejected = false
+      this.state.nick = data.to
+      this.state.confirmedNick = data.to
+      storage.setRoom(this.state.roomName, 'nick', data.to)
+    }
+    this.trigger(this.state)
   },
 
   storageChange: function(data) {
@@ -145,14 +162,19 @@ module.exports.store = Reflux.createStore({
     if (nick == this.state.nick) {
       return
     }
-
     storage.setRoom(this.state.roomName, 'nick', nick)
     this._sendNick(nick)
   },
 
   _sendNick: function(nick) {
+    if (nick === '') {
+      this.state.confirmedNick = null
+    }
+    this.state.nickInFlight = true
+    this.state.nickPacketID++
     socket.send({
       type: 'nick',
+      id: 'nick-'+String(this.state.nickPacketID),
       data: {
         name: nick
       },

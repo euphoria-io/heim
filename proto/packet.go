@@ -36,7 +36,7 @@ var (
 )
 
 type ErrorReply struct {
-	Error string
+	Error string `json:"error"`
 }
 
 type SendCommand struct {

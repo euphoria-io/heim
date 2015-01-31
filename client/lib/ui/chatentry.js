@@ -3,14 +3,15 @@ var React = require('react/addons')
 var Reflux = require('reflux')
 
 var actions = require('../actions')
-
+var chat = require('../stores/chat')
 
 module.exports = React.createClass({
   displayName: 'ChatEntry',
 
   mixins: [
     require('react-immutable-render-mixin'),
-    Reflux.connect(require('../stores/chat').store, 'chat'),
+    Reflux.connect(chat.store, 'chat'),
+    Reflux.listenTo(chat.store, 'onNickReply'),
     Reflux.listenTo(actions.focusEntry, 'focus'),
     Reflux.listenTo(actions.keydownOnEntry, 'onKeyDown'),
   ],
@@ -28,6 +29,7 @@ module.exports = React.createClass({
   setNick: function(ev) {
     var input = this.refs.nick.getDOMNode()
     actions.setNick(input.value)
+    this.state.nickInFlight = true
     ev.preventDefault()
   },
 
@@ -160,6 +162,15 @@ module.exports = React.createClass({
     actions.setEntryText(input.value, input.selectionStart, input.selectionEnd)
   },
 
+  onNickReply: function(chatState) {
+    if (!chatState.nickInFlight && (this.state.nickInFlight || !this.state.nickText)) {
+      this.state.nickInFlight = false
+      if (!chatState.nickRejected) {
+        this.setState({nickText: chatState.confirmedNick})
+      }
+    }
+  },
+
   componentDidMount: function() {
     this.refs.input.getDOMNode().setSelectionRange(this.state.chat.entrySelectionStart, this.state.chat.entrySelectionEnd)
   },
@@ -169,7 +180,7 @@ module.exports = React.createClass({
       <form className="entry">
         <div className="nick-box">
           <div className="auto-size-container">
-            <input className="nick" ref="nick" value={this.state.chat.nickText} onBlur={this.setNick} onChange={this.previewNick} />
+            <input className="nick" ref="nick" value={this.state.nickText} onBlur={this.setNick} onChange={this.previewNick} />
             <span className="nick">{this.state.nickText || this.state.chat.nick}</span>
           </div>
         </div>
