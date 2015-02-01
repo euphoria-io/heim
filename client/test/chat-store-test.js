@@ -670,13 +670,14 @@ describe('chat store', function() {
       })
     })
 
-    it('should handle nick rejection', function(done) {
+    it('should reset nick of rejected', function(done) {
       chat.store.state.roomName = 'ezzie'
       chat.store.state.nickPacketID = 1
       chat.store.state.nickInFlight = true
+      chat.store.state.confirmedNick = 'previous'
       handleSocket({status: 'receive', body: rejectedNickReply}, function(state) {
-        assert.equal(state.nick, null)
-        assert.equal(state.confirmedNick, null)
+        assert.equal(state.nick, 'previous')
+        assert.equal(state.confirmedNick, 'previous')
         assert.equal(state.nickInFlight, false)
         sinon.assert.notCalled(storage.setRoom)
         done()

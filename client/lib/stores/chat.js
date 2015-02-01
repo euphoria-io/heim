@@ -121,6 +121,8 @@ module.exports.store = Reflux.createStore({
     }
     this.state.nickInFlight = false
     if (data.error) {
+      // server rejected, revert if possible
+      this.state.nick = this.state.confirmedNick
       this.state.nickRejected = true
     } else {
       this.state.nickRejected = false
