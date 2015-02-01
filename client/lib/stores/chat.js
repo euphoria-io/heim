@@ -128,8 +128,8 @@ module.exports.store = Reflux.createStore({
       this.state.nickRejected = false
       this.state.nick = data.to
       this.state.confirmedNick = data.to
-      storage.setRoom(this.state.roomName, 'nick', data.to)
     }
+    storage.setRoom(this.state.roomName, 'nick', this.state.nick)
     this.trigger(this.state)
   },
 
