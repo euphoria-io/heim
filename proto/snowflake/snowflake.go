@@ -1,4 +1,4 @@
-package proto
+package snowflake
 
 import (
 	"encoding/json"
@@ -18,7 +18,7 @@ var Clock = func() time.Time { return time.Now() }
 var Epoch = time.Date(2014, 12, 0, 0, 0, 0, 0, time.UTC)
 var DefaultSnowflaker Snowflaker
 
-var SnowflakeSeqCounter uint64
+var SeqCounter uint64
 
 const seqIDMask = (1 << gosnow.SequenceBits) - 1
 
@@ -33,7 +33,7 @@ func init() {
 
 type Snowflake uint64
 
-func NewSnowflake() (Snowflake, error) {
+func New() (Snowflake, error) {
 	snowflake, err := DefaultSnowflaker.Next()
 	if err != nil {
 		return Snowflake(0), err
@@ -41,10 +41,10 @@ func NewSnowflake() (Snowflake, error) {
 	return Snowflake(snowflake), nil
 }
 
-func NewSnowflakeFromTime(t time.Time) Snowflake {
+func NewFromTime(t time.Time) Snowflake {
 	timestampMillis := (t.UnixNano() - Epoch.UnixNano()) / int64(time.Millisecond)
 	workerID := gosnow.DefaultWorkId()
-	seqID := atomic.AddUint64(&SnowflakeSeqCounter, 1)
+	seqID := atomic.AddUint64(&SeqCounter, 1)
 
 	return Snowflake(
 		(uint64(timestampMillis) << (gosnow.WorkerIdBits + gosnow.SequenceBits)) |
@@ -52,7 +52,7 @@ func NewSnowflakeFromTime(t time.Time) Snowflake {
 			(seqID & seqIDMask))
 }
 
-func NewSnowflakeFromString(s string) (Snowflake, error) {
+func NewFromString(s string) (Snowflake, error) {
 	snowflake, err := strconv.ParseUint(s, 36, 64)
 	if err != nil {
 		return Snowflake(0), err

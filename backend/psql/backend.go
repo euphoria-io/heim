@@ -14,6 +14,7 @@ import (
 
 	"heim/backend"
 	"heim/proto"
+	"heim/proto/snowflake"
 
 	"github.com/coopernurse/gorp"
 	"github.com/lib/pq"
@@ -302,7 +303,7 @@ func (b *Backend) listing(ctx context.Context, room *Room) (proto.Listing, error
 	return result, nil
 }
 
-func (b *Backend) latest(ctx context.Context, room *Room, n int, before proto.Snowflake) (
+func (b *Backend) latest(ctx context.Context, room *Room, n int, before snowflake.Snowflake) (
 	[]proto.Message, error) {
 
 	if n <= 0 {

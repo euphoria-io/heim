@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	"heim/proto"
+	"heim/proto/snowflake"
 
 	"golang.org/x/net/context"
 )
@@ -22,7 +23,7 @@ func (log *memLog) post(msg *proto.Message) {
 	log.msgs = append(log.msgs, msg)
 }
 
-func (log *memLog) Latest(ctx context.Context, n int, before proto.Snowflake) (
+func (log *memLog) Latest(ctx context.Context, n int, before snowflake.Snowflake) (
 	[]proto.Message, error) {
 
 	log.Lock()

@@ -8,6 +8,7 @@ import (
 	"heim/backend"
 	"heim/proto"
 	"heim/proto/security"
+	"heim/proto/snowflake"
 
 	"golang.org/x/net/context"
 )
@@ -34,7 +35,7 @@ func newMemRoom(name, version string) *memRoom {
 
 func (r *memRoom) Version() string { return r.version }
 
-func (r *memRoom) Latest(ctx context.Context, n int, before proto.Snowflake) (
+func (r *memRoom) Latest(ctx context.Context, n int, before snowflake.Snowflake) (
 	[]proto.Message, error) {
 
 	return r.log.Latest(ctx, n, before)
@@ -91,7 +92,7 @@ func (r *memRoom) Send(ctx context.Context, session proto.Session, message proto
 	defer r.Unlock()
 
 	// TODO: verify parent
-	msgID, err := proto.NewSnowflake()
+	msgID, err := snowflake.New()
 	if err != nil {
 		return proto.Message{}, err
 	}

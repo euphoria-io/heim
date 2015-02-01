@@ -1,4 +1,5 @@
-package mock
+// Test from external package to avoid import cycles.
+package security_test
 
 import (
 	"encoding/base64"
@@ -7,8 +8,10 @@ import (
 	"testing"
 	"time"
 
+	"heim/backend/mock"
 	"heim/proto"
 	"heim/proto/security"
+	"heim/proto/snowflake"
 
 	"golang.org/x/net/context"
 
@@ -20,24 +23,27 @@ func TestGrants(t *testing.T) {
 		kms := security.LocalKMS()
 		kms.SetMasterKey(make([]byte, security.AES256.KeySize()))
 		ctx := context.Background()
-		room := newMemRoom("test", "testver")
-		roomKey, err := room.GenerateMasterKey(ctx, kms)
+		backend := &mock.TestBackend{}
+		room, err := backend.GetRoom("test")
 		So(err, ShouldBeNil)
+		roomMasterKey, err := room.GenerateMasterKey(ctx, kms)
+		So(err, ShouldBeNil)
+		roomKey := roomMasterKey.ManagedKey()
+		roomNonce := roomMasterKey.Nonce()
 
 		// Sign in as alice and send an encrypted message with aliceSendTime
 		// as the nonce.
 		aliceSendTime := time.Now()
-		nonce := []byte(proto.NewSnowflakeFromTime(aliceSendTime).String())
+		msgNonce := []byte(snowflake.NewFromTime(aliceSendTime).String())
 
 		aliceKey := &security.ManagedKey{
 			KeyType:   security.AES256,
 			Plaintext: make([]byte, security.AES256.KeySize()),
 		}
-		grant, err := GrantCapabilityOnRoom(ctx, kms, roomKey, aliceKey)
+		grant, err := security.GrantCapabilityOnSubject(ctx, kms, roomNonce, &roomKey, aliceKey)
 		So(err, ShouldBeNil)
-		capability := security.Capability(grant)
 
-		alice := newSession("Alice")
+		alice := mock.TestSession("Alice")
 		So(room.Join(ctx, alice), ShouldBeNil)
 
 		msg := proto.Message{
@@ -46,9 +52,9 @@ func TestGrants(t *testing.T) {
 			Content:  "hello",
 		}
 
-		iv, err := base64.URLEncoding.DecodeString(capability.ID())
+		iv, err := base64.URLEncoding.DecodeString(grant.ID())
 		So(err, ShouldBeNil)
-		payload := capability.EncryptedPayload()
+		payload := grant.EncryptedPayload()
 		So(aliceKey.BlockCrypt(iv, aliceKey.Plaintext, payload, false), ShouldBeNil)
 		key := &security.ManagedKey{
 			KeyType: security.AES128,
@@ -56,7 +62,7 @@ func TestGrants(t *testing.T) {
 		So(json.Unmarshal(aliceKey.Unpad(payload), &key.Plaintext), ShouldBeNil)
 
 		digest, ciphertext, err := security.EncryptGCM(
-			key, nonce, []byte(msg.Content), []byte("Alice"))
+			key, msgNonce, []byte(msg.Content), []byte("Alice"))
 		So(err, ShouldBeNil)
 
 		digestStr := base64.URLEncoding.EncodeToString(digest)
@@ -71,20 +77,19 @@ func TestGrants(t *testing.T) {
 			Plaintext: make([]byte, security.AES256.KeySize()),
 		}
 		//bobKey.Plaintext[0] = 1
-		grant, err = GrantCapabilityOnRoom(ctx, kms, roomKey, bobKey)
+		grant, err = security.GrantCapabilityOnSubject(ctx, kms, roomNonce, &roomKey, bobKey)
 		So(err, ShouldBeNil)
-		capability = security.Capability(grant)
 
-		iv, err = base64.URLEncoding.DecodeString(capability.ID())
+		iv, err = base64.URLEncoding.DecodeString(grant.ID())
 		So(err, ShouldBeNil)
-		payload = capability.EncryptedPayload()
+		payload = grant.EncryptedPayload()
 		So(bobKey.BlockCrypt(iv, bobKey.Plaintext, payload, false), ShouldBeNil)
 		key = &security.ManagedKey{
 			KeyType: security.AES128,
 		}
 		So(json.Unmarshal(bobKey.Unpad(payload), &key.Plaintext), ShouldBeNil)
 
-		bob := newSession("Bob")
+		bob := mock.TestSession("Bob")
 		So(room.Join(ctx, bob), ShouldBeNil)
 		log, err := room.Latest(ctx, 1, 0)
 		So(err, ShouldBeNil)
@@ -98,7 +103,7 @@ func TestGrants(t *testing.T) {
 		ciphertext, err = base64.URLEncoding.DecodeString(parts[1])
 		So(err, ShouldBeNil)
 
-		plaintext, err := security.DecryptGCM(key, nonce, digest, ciphertext, []byte("Alice"))
+		plaintext, err := security.DecryptGCM(key, msgNonce, digest, ciphertext, []byte("Alice"))
 		So(err, ShouldBeNil)
 		So(string(plaintext), ShouldEqual, "hello")
 	})

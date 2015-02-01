@@ -8,6 +8,7 @@ import (
 	"heim/backend"
 	"heim/proto"
 	"heim/proto/security"
+	"heim/proto/snowflake"
 
 	"golang.org/x/net/context"
 )
@@ -46,7 +47,7 @@ type RoomBinding struct {
 	key *RoomKey
 }
 
-func (rb *RoomBinding) Latest(ctx context.Context, n int, before proto.Snowflake) (
+func (rb *RoomBinding) Latest(ctx context.Context, n int, before snowflake.Snowflake) (
 	[]proto.Message, error) {
 
 	return rb.Backend.latest(ctx, rb.Room, n, before)

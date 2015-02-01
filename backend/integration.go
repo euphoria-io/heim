@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"heim/proto"
+	"heim/proto/snowflake"
 
 	"github.com/gorilla/websocket"
 
@@ -18,36 +19,36 @@ import (
 
 // TODO: move time mocking to snowflake_test?
 type testClock struct {
-	secs                     int64
-	savedClock               func() time.Time
-	savedSnowflaker          proto.Snowflaker
-	savedEpoch               time.Time
-	savedSnowflakeSeqCounter uint64
+	secs            int64
+	savedClock      func() time.Time
+	savedSnowflaker snowflake.Snowflaker
+	savedEpoch      time.Time
+	savedSeqCounter uint64
 }
 
 func NewTestClock() io.Closer {
 	tc := &testClock{
-		savedClock:               proto.Clock,
-		savedSnowflaker:          proto.DefaultSnowflaker,
-		savedEpoch:               proto.Epoch,
-		savedSnowflakeSeqCounter: proto.SnowflakeSeqCounter,
+		savedClock:      snowflake.Clock,
+		savedSnowflaker: snowflake.DefaultSnowflaker,
+		savedEpoch:      snowflake.Epoch,
+		savedSeqCounter: snowflake.SeqCounter,
 	}
-	proto.Clock = tc.clock
-	proto.DefaultSnowflaker = tc
-	proto.Epoch = time.Unix(0, 0)
+	snowflake.Clock = tc.clock
+	snowflake.DefaultSnowflaker = tc
+	snowflake.Epoch = time.Unix(0, 0)
 	return tc
 }
 
 func (tc *testClock) Close() error {
-	proto.Clock = tc.savedClock
-	proto.DefaultSnowflaker = tc.savedSnowflaker
-	proto.Epoch = tc.savedEpoch
-	proto.SnowflakeSeqCounter = tc.savedSnowflakeSeqCounter
+	snowflake.Clock = tc.savedClock
+	snowflake.DefaultSnowflaker = tc.savedSnowflaker
+	snowflake.Epoch = tc.savedEpoch
+	snowflake.SeqCounter = tc.savedSeqCounter
 	return nil
 }
 
 func (tc *testClock) Next() (uint64, error) {
-	sf := proto.NewSnowflakeFromTime(tc.clock())
+	sf := snowflake.NewFromTime(tc.clock())
 	return uint64(sf), nil
 }
 
@@ -137,11 +138,11 @@ func (tc *testConn) Close() {
 		websocket.FormatCloseMessage(websocket.CloseNormalClosure, "normal closure"))
 }
 
-func snowflakes(n int) []proto.Snowflake {
+func snowflakes(n int) []snowflake.Snowflake {
 	fc := NewTestClock()
 	defer fc.Close()
 
-	snowflakes := make([]proto.Snowflake, n)
+	snowflakes := make([]snowflake.Snowflake, n)
 	for i := range snowflakes {
 		var err error
 		snowflakes[i], err = proto.NewSnowflake()

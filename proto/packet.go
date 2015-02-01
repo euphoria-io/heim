@@ -3,6 +3,8 @@ package proto
 import (
 	"encoding/json"
 	"fmt"
+
+	"heim/proto/snowflake"
 )
 
 type PacketType string
@@ -40,8 +42,8 @@ type ErrorReply struct {
 }
 
 type SendCommand struct {
-	Content string    `json:"content"`
-	Parent  Snowflake `json:"parent"`
+	Content string              `json:"content"`
+	Parent  snowflake.Snowflake `json:"parent"`
 }
 
 type SendEvent Message
@@ -50,13 +52,13 @@ type SendReply SendEvent
 type PresenceEvent IdentityView
 
 type LogCommand struct {
-	N      int       `json:"n"`
-	Before Snowflake `json:"before"`
+	N      int                 `json:"n"`
+	Before snowflake.Snowflake `json:"before"`
 }
 
 type LogReply struct {
-	Log    []Message `json:"log"`
-	Before Snowflake `json:"before"`
+	Log    []Message           `json:"log"`
+	Before snowflake.Snowflake `json:"before"`
 }
 
 type LogEvent LogReply

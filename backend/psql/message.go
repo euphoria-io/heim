@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"heim/proto"
+	"heim/proto/snowflake"
 )
 
 type Message struct {
@@ -23,10 +24,10 @@ func (Message) AfterCreateTable(db *sql.DB) error {
 }
 
 func NewMessage(
-	room *Room, idView *proto.IdentityView, parent proto.Snowflake, content string) (
+	room *Room, idView *proto.IdentityView, parent snowflake.Snowflake, content string) (
 	*Message, error) {
 
-	id, err := proto.NewSnowflake()
+	id, err := snowflake.New()
 	if err != nil {
 		return nil, err
 	}
