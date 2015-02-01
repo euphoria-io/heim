@@ -25,11 +25,11 @@ frontend:
 
 # The upgradedb container runs the upgradedb command against the psql container.
 upgradedb:
-  build: backend/upgradedb
+  build: upgradedb
   links:
     - psql
   volumes:
-    - .:/go/src/heim
+    - upgradedb:/migrations
 
 # The backend container runs the backend server against the psql container.
 backend:

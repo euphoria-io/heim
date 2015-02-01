@@ -1,0 +1,4 @@
+development:
+  dialect: postgres
+  datasource: dbname=heim host=psql user=postgres password=heimlich sslmode=disable
+  dir: .
