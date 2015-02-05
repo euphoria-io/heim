@@ -11,7 +11,7 @@ module.exports = React.createClass({
   mixins: [
     require('react-immutable-render-mixin'),
     Reflux.connect(chat.store, 'chat'),
-    Reflux.listenTo(chat.store, 'onNickReply'),
+    Reflux.listenTo(chat.store, 'onNickReply', 'onNickReply'),
     Reflux.listenTo(actions.focusEntry, 'focus'),
     Reflux.listenTo(actions.keydownOnEntry, 'onKeyDown'),
   ],
