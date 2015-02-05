@@ -16,6 +16,11 @@ module.exports = React.createClass({
     Reflux.listenTo(actions.keydownOnEntry, 'onKeyDown'),
   ],
 
+  componentDidMount: function() {
+    this.refs.input.getDOMNode().setSelectionRange(this.state.chat.entrySelectionStart, this.state.chat.entrySelectionEnd)
+    this._nickInFlight = false
+  },
+
   focus: function(withChar) {
     var node = this.refs.input.getDOMNode()
     if (withChar) {
@@ -29,7 +34,7 @@ module.exports = React.createClass({
   setNick: function(ev) {
     var input = this.refs.nick.getDOMNode()
     actions.setNick(input.value)
-    this.state.nickInFlight = true
+    this._nickInFlight = true
     ev.preventDefault()
   },
 
@@ -163,16 +168,12 @@ module.exports = React.createClass({
   },
 
   onNickReply: function(chatState) {
-    if (!chatState.nickInFlight && (this.state.nickInFlight || !this.state.nickText)) {
-      this.state.nickInFlight = false
+    if (!chatState.nickInFlight && (this._nickInFlight || !this.state.nickText)) {
+      this._nickInFlight = false
       if (!chatState.nickRejected) {
         this.setState({nickText: chatState.confirmedNick})
       }
     }
-  },
-
-  componentDidMount: function() {
-    this.refs.input.getDOMNode().setSelectionRange(this.state.chat.entrySelectionStart, this.state.chat.entrySelectionEnd)
   },
 
   render: function() {
