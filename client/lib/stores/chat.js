@@ -26,7 +26,7 @@ module.exports.store = Reflux.createStore({
       messages: new Tree('time'),
       earliestLog: null,
       nickHues: {},
-      who: Immutable.OrderedMap(),
+      who: Immutable.Map(),
       focusedMessage: null,
       entryText: '',
       entrySelectionStart: null,
@@ -42,7 +42,7 @@ module.exports.store = Reflux.createStore({
     if (ev.status == 'receive') {
       if (ev.body.type == 'send-event' || ev.body.type == 'send-reply') {
         var message = ev.body.data
-        message.sender.hue = this._getNickHue(message.sender.name)
+        this._handleMessagesData([message])
         this.state.messages.add(message)
       } else if (ev.body.type == 'snapshot-event') {
         this._handleWhoReply(ev.body.data)
@@ -62,13 +62,11 @@ module.exports.store = Reflux.createStore({
               name: ev.body.data.to,
               hue: this._getNickHue(ev.body.data.to),
             })
-            .sortBy(function(user) { return user.get('name').toLowerCase() })
         }
       } else if (ev.body.type == 'join-event') {
         ev.body.data.hue = this._getNickHue(ev.body.data.name)
         this.state.who = this.state.who
           .set(ev.body.data.id, Immutable.fromJS(ev.body.data))
-          .sortBy(function(user) { return user.get('name').toLowerCase() })
       } else if (ev.body.type == 'part-event') {
         this.state.who = this.state.who.delete(ev.body.data.id)
       }
@@ -83,15 +81,24 @@ module.exports.store = Reflux.createStore({
     this.trigger(this.state)
   },
 
+  _handleMessagesData: function(messages) {
+    this.state.who = this.state.who.withMutations(who => {
+      _.each(messages, message => {
+        message.sender.hue = this._getNickHue(message.sender.name)
+        who.mergeIn([message.sender.id], {
+          lastSent: message.time
+        })
+      })
+    })
+  },
+
   _handleLogReply: function(data) {
     if (!data.log.length) {
       return
     }
     this._loadingLogs = false
     this.state.earliestLog = data.log[0].id
-    _.each(data.log, function(message) {
-      message.sender.hue = this._getNickHue(message.sender.name)
-    }, this)
+    this._handleMessagesData(data.log)
     if (data.before) {
       this.state.messages.addAll(data.log)
     } else {
@@ -104,9 +111,9 @@ module.exports.store = Reflux.createStore({
   },
 
   _handleWhoReply: function(data) {
+    // TODO: merge instead of reset so we don't lose lastSent
     this.state.who = Immutable.OrderedMap(
       Immutable.Seq(data.listing)
-        .sortBy(function(user) { return user.name.toLowerCase() })
         .map(function(user) {
           user.hue = this._getNickHue(user.name)
           return [user.id, Immutable.Map(user)]

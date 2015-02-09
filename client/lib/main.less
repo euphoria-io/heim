@@ -120,14 +120,22 @@ html, body, #container, .chat {
     }
 
     .user-list {
-      .line {
-        margin: 2px 0;
-        text-align: right;
-      }
+      text-align: right;
+      overflow-y: auto;
+      max-height: 80vh;
+      // ensure that the user list is wider than the disappearing [+N more]
+      // line so we don't shrink when expanded.
+      min-width: 6em;
 
       .nick {
-        display: inline-block;
+        display: block;
+        float: right;
+        clear: both;
+        margin: 2px 0;
         box-shadow: 0 0 5px white;
+        white-space: nowrap;
+        max-width: 30vw;
+        overflow: hidden;
       }
     }
 

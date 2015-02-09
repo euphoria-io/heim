@@ -24,11 +24,6 @@ describe('chat store', function() {
     chat.store.socketEvent(ev)
   }
 
-  function checkWhoSorted(who) {
-    var sorted = who.sortBy(function(user) { return user.get('name').toLowerCase() })
-    assert(who.equals(sorted))
-  }
-
   var message1 = {
     'id': 'id1',
     'time': 123456,
@@ -74,7 +69,7 @@ describe('chat store', function() {
 
   var message0 = {
     'id': 'id0',
-    'time': 123456,
+    'time': 123460,
     'sender': {
       'id': '32.64.96.128:12345',
       'name': 'tester',
@@ -364,6 +359,13 @@ describe('chat store', function() {
       })
     })
 
+    it('should update sender lastSent', function(done) {
+      handleSocket({status: 'receive', body: sendEvent}, function(state) {
+        assert.equal(state.who.get(sendEvent.data.sender.id).get('lastSent'), sendEvent.data.time)
+        done()
+      })
+    })
+
     it('should be stored as children of parent', function(done) {
       handleSocket({status: 'receive', body: sendEvent}, function() {
         handleSocket({status: 'receive', body: sendReplyEvent}, function(state) {
@@ -396,6 +398,14 @@ describe('chat store', function() {
     it('messages should all be assigned hues', function(done) {
       handleSocket({status: 'receive', body: msgBody}, function(state) {
         assertMessagesHaveHues(state.messages)
+        done()
+      })
+    })
+
+    it('messages should update sender lastSent', function(done) {
+      handleSocket({status: 'receive', body: msgBody}, function(state) {
+        assert.equal(state.who.get(message2.sender.id).get('lastSent'), message2.time)
+        assert.equal(state.who.get(message3.sender.id).get('lastSent'), message3.time)
         done()
       })
     })
@@ -441,6 +451,15 @@ describe('chat store', function() {
         handleSocket({status: 'receive', body: logReply}, function() {
           handleSocket({status: 'receive', body: moreLogReply}, function(state) {
             assertMessagesHaveHues(state.messages)
+            done()
+          })
+        })
+      })
+
+      it('messages should update sender lastSent', function(done) {
+        handleSocket({status: 'receive', body: logReply}, function() {
+          handleSocket({status: 'receive', body: moreLogReply}, function(state) {
+            assert.equal(state.who.get(message0.sender.id).get('lastSent'), message0.time)
             done()
           })
         })
@@ -590,13 +609,6 @@ describe('chat store', function() {
         done()
       })
     })
-
-    it('users should be sorted by name', function(done) {
-      handleSocket({status: 'receive', body: msgBody}, function(state) {
-        checkWhoSorted(state.who)
-        done()
-      })
-    })
   }
 
   describe('received users', function() {
@@ -703,15 +715,6 @@ describe('chat store', function() {
       })
     })
 
-    it('should keep the list sorted', function(done) {
-      handleSocket({status: 'receive', body: whoReply}, function() {
-        handleSocket({status: 'receive', body: nickReply}, function(state) {
-          checkWhoSorted(state.who)
-          done()
-        })
-      })
-    })
-
     it('should add nonexistent users', function(done) {
       handleSocket({status: 'receive', body: whoReply}, function() {
         handleSocket({status: 'receive', body: nonexistentNickEvent}, function(state) {
@@ -743,15 +746,6 @@ describe('chat store', function() {
       handleSocket({status: 'receive', body: joinEvent}, function(state) {
         assert.equal(state.who.getIn([joinEvent.data.id, 'hue']), 161)
         done()
-      })
-    })
-
-    it('should keep the list sorted', function(done) {
-      handleSocket({status: 'receive', body: whoReply}, function() {
-        handleSocket({status: 'receive', body: joinEvent}, function(state) {
-          checkWhoSorted(state.who)
-          done()
-        })
       })
     })
   })
