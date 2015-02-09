@@ -37,11 +37,11 @@
   },
   "scripts": {
     "test": "gulp lint && mochify",
-    "cover": "find ./test/ -maxdepth 1 -name '*.js' -not -name '*ui*' | xargs mochify --cover -R spec"
+    "cover": "find ./test/ -maxdepth 1 -name '*.js' -not -name '*ui*' | xargs mochify --cover -R spec --transform [ reactify --es6 ]"
   },
   "browserify": {
     "transform": [
-      "reactify"
+      ["reactify", {"es6": true}]
     ]
   }
 }

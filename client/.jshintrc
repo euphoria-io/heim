@@ -9,6 +9,7 @@
   "browserify": true,
   "mocha": true,
   "undef": true,
+  "esnext": true,
   "globals": {
     "ReactPerf": true,
     "Notification": false,
