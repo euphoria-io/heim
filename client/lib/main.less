@@ -38,6 +38,12 @@ html, body, #container, .chat {
     padding-left: @time-margin;
     height: 100%;
 
+    &.focus-highlighting {
+      .messages .line {
+        opacity: .5;
+      }
+    }
+
     .messages-content {
       display: flex;
       flex-direction: column-reverse;
@@ -71,6 +77,10 @@ html, body, #container, .chat {
         align-items: flex-start;
         margin: 2px 0;
         word-wrap: break-word;
+
+        &.focus-highlight {
+          opacity: 1;
+        }
 
         &.status {
           border: 1px solid #ddd;

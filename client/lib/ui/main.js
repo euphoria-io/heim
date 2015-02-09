@@ -66,7 +66,8 @@ module.exports = React.createClass({
           edgeSpace={156}
           className={cx({
             'messages-container': true,
-            'form-focus': this.state.focus.windowFocused && this.state.chat.connected
+            'focus-highlighting': !!this.state.chat.focusedMessage,
+            'form-focus': this.state.focus.windowFocused && this.state.chat.connected,
           })}
           onScrollbarSize={this.onScrollbarSize}
           onNearTop={actions.loadMoreLogs}

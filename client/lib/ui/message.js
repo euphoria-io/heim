@@ -1,4 +1,5 @@
 var React = require('react')
+var cx = React.addons.classSet
 var moment = require('moment')
 
 var actions = require('../actions')
@@ -47,7 +48,7 @@ var Message = module.exports = React.createClass({
 
     return (
       <div data-message-id={message.get('id')} className="message-node">
-        <div className="line" onClick={this.focusMessage}>
+        <div className={cx({'line': true, 'focus-highlight': entry || this.props.displayFocusHighlight})} onClick={this.focusMessage}>
           <time dateTime={time.toISOString()} title={time.format('MMMM Do YYYY, h:mm:ss a')} style={timeStyle}>
             {time.format('h:mma')}
           </time>
@@ -57,7 +58,7 @@ var Message = module.exports = React.createClass({
         {(children.size > 0 || entry) &&
           <div className="replies">
             {children.toSeq().map(function(nodeId) {
-              return <Message key={nodeId} tree={this.props.tree} nodeId={nodeId} depth={this.props.depth + 1} />
+              return <Message key={nodeId} tree={this.props.tree} nodeId={nodeId} depth={this.props.depth + 1} displayFocusHighlight={!!entry} />
             }, this).toArray()}
             {entry && <ChatEntry />}
           </div>
