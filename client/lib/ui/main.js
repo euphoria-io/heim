@@ -60,7 +60,17 @@ module.exports = React.createClass({
   render: function() {
     return (
       <div className="chat">
-        <Scroller ref="scroller" target=".entry" edgeSpace={156} className={cx({'messages-container': true, 'form-focus': this.state.focus.windowFocused && this.state.chat.connected})} onScrollbarSize={this.onScrollbarSize} onNearTop={actions.loadMoreLogs}>
+        <Scroller
+          ref="scroller"
+          target=".entry"
+          edgeSpace={156}
+          className={cx({
+            'messages-container': true,
+            'form-focus': this.state.focus.windowFocused && this.state.chat.connected
+          })}
+          onScrollbarSize={this.onScrollbarSize}
+          onNearTop={actions.loadMoreLogs}
+        >
           <div className="messages-content" onMouseDownCapture={this.onMouseDown} onClickCapture={this.onClick}>
             <div className="top-right" style={{marginRight: this.state.scrollbarWidth}}>
               <div className="settings-pane">
