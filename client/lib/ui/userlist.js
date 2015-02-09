@@ -36,7 +36,7 @@ module.exports = React.createClass({
       list = latest.take(4)
     }
 
-    list = list.sortBy(user => user.get('name'))
+    list = list.sortBy(user => user.get('name').toLowerCase())
 
     return (
       <div className={cx({'user-list': true, 'obscured': this.props.obscured && !this.state.expanded})} onMouseEnter={this.onMouseEnter} onMouseLeave={this.onMouseLeave}>
