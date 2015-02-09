@@ -24,6 +24,10 @@ module.exports = React.createClass({
     this.setState({scrollbarWidth: width})
   },
 
+  onResize: function(width, height) {
+    this.setState({tiny: height < 300})
+  },
+
   toggleSettings: function() {
     this.setState({settingsOpen: !this.state.settingsOpen})
   },
@@ -70,6 +74,7 @@ module.exports = React.createClass({
             'form-focus': this.state.focus.windowFocused && this.state.chat.connected,
           })}
           onScrollbarSize={this.onScrollbarSize}
+          onResize={this.onResize}
           onNearTop={actions.loadMoreLogs}
         >
           <div className="messages-content" onMouseDownCapture={this.onMouseDown} onClickCapture={this.onClick}>
@@ -84,7 +89,7 @@ module.exports = React.createClass({
                 </ReactCSSTransitionGroup>
                 <button type="button" className="settings" onClick={this.toggleSettings} tabIndex="-1" />
               </div>
-              <UserList users={this.state.chat.who} />
+              <UserList users={this.state.chat.who} obscured={this.state.tiny} />
             </div>
             <Messages ref="messages" />
           </div>

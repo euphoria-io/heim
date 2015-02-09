@@ -28,6 +28,7 @@ module.exports = React.createClass({
 
   componentDidMount: function() {
     this.updateAnchorPos()
+    this.onResize()
   },
 
   componentWillUnmount: function() {
@@ -39,6 +40,10 @@ module.exports = React.createClass({
     // position, if possible. This is accomplished by scrolling relative to the
     // previous display height factored into the pos recorded by updateAnchorPos.
     this.scroll()
+    if (this.props.onResize) {
+      var node = this.refs.scroller.getDOMNode()
+      this.props.onResize(node.offsetWidth, node.offsetHeight)
+    }
   },
 
   finishScroll: function() {

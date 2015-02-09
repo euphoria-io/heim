@@ -1,4 +1,5 @@
 var React = require('react')
+var cx = React.addons.classSet
 
 
 module.exports = React.createClass({
@@ -38,7 +39,7 @@ module.exports = React.createClass({
     list = list.sortBy(user => user.get('name'))
 
     return (
-      <div className="user-list" onMouseEnter={this.onMouseEnter} onMouseLeave={this.onMouseLeave}>
+      <div className={cx({'user-list': true, 'obscured': this.props.obscured && !this.state.expanded})} onMouseEnter={this.onMouseEnter} onMouseLeave={this.onMouseLeave}>
         {list.map(function(user) {
           return <div key={user.get('id')} className="nick" style={{background: 'hsl(' + user.get('hue') + ', 65%, 85%)'}}>{user.get('name')}</div>
         }, this).toArray()}
