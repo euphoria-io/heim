@@ -19,8 +19,6 @@ test_client() {
   cd ${SRCDIR}/heim/client
   npm install
   PATH=${PATH}:${SRCDIR}/heim/client/node_modules/.bin
-  ln -s ${SRCDIR}/heim/client src
-  cd src
   npm test
 }
 
