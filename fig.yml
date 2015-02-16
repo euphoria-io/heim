@@ -20,7 +20,7 @@ frontend:
     - client:/srv/heim/client/src
     - client/build:/srv/heim/client/src/build
   environment:
-    NODE_ENV: production
+    NODE_ENV: development
 
 # The upgradedb container runs the upgradedb command against the psql container.
 upgradedb:
