@@ -47,7 +47,7 @@ func TestGrants(t *testing.T) {
 		So(room.Join(ctx, alice), ShouldBeNil)
 
 		msg := proto.Message{
-			ID:       proto.NewSnowflakeFromTime(aliceSendTime),
+			ID:       snowflake.NewFromTime(aliceSendTime),
 			UnixTime: aliceSendTime.Unix(),
 			Content:  "hello",
 		}

@@ -145,7 +145,7 @@ func snowflakes(n int) []snowflake.Snowflake {
 	snowflakes := make([]snowflake.Snowflake, n)
 	for i := range snowflakes {
 		var err error
-		snowflakes[i], err = proto.NewSnowflake()
+		snowflakes[i], err = snowflake.New()
 		So(err, ShouldBeNil)
 	}
 	return snowflakes
