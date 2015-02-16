@@ -285,6 +285,11 @@ describe('notification store', function() {
         sinon.assert.calledOnce(actions.focusMessage)
         sinon.assert.calledWithExactly(actions.focusMessage, 'id1')
       })
+
+      it('should close after 3 seconds', function() {
+        support.clock.tick(3000)
+        sinon.assert.calledOnce(fakeNotification.close)
+      })
     })
   })
 })

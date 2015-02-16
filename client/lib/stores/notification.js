@@ -21,6 +21,8 @@ module.exports.store = Reflux.createStore({
     {focusChange: require('./focus').store},
   ],
 
+  timeout: 3 * 1000,
+
   init: function() {
     this.state = {
       enabled: null,
@@ -93,12 +95,16 @@ module.exports.store = Reflux.createStore({
   closeNotification: function() {
     if (this.notification) {
       this.notification.close()
-      this.onNotificationClose()
+      this.resetNotification()
     }
   },
 
-  onNotificationClose: function() {
+  resetNotification: function() {
     this.notification = null
+    if (this._closeTimeout) {
+      clearTimeout(this._closeTimeout)
+    }
+    this._closeTimeout = null
   },
 
   notify: function(message, messageId, options) {
@@ -112,12 +118,16 @@ module.exports.store = Reflux.createStore({
       return
     }
 
+    this.resetNotification()
+
     this.notification = new Notification(message, options)
     this.notification.onclick = function() {
       window.focus()
       actions.focusMessage(messageId)
     }
-    this.notification.onclose = this.onNotificationClose
+    this.notification.onclose = this.resetNotification
+
+    this._closeTimeout = setTimeout(this.closeNotification, this.timeout)
   },
 
   setFavicon: require('favicon-setter'),
