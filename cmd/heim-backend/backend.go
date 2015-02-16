@@ -7,8 +7,8 @@ import (
 	"os"
 
 	"heim/backend"
+	"heim/backend/console"
 	"heim/backend/psql"
-	"heim/server"
 )
 
 var (
@@ -45,7 +45,7 @@ func main() {
 
 func controller(server *backend.Server) error {
 	if *ctrlAddr != "" {
-		ctrl, err := control.NewController(*ctrlAddr, server)
+		ctrl, err := console.NewController(*ctrlAddr, server)
 		if err != nil {
 			return err
 		}
