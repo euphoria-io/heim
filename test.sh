@@ -8,7 +8,6 @@ SRCDIR=/var/cache/drone/src
 test_backend() {
   psql -c 'create database heimtest;' -U postgres -h $POSTGRES_PORT_5432_TCP_ADDR
   mv "$GOPATH"/src/github.com/euphoria-io/heim "$GOPATH"/src
-  ls -alRF /var/cache/drone/src/
   go get heim/...
   export DSN="postgres://postgres@$POSTGRES_PORT_5432_TCP_ADDR/heimtest?sslmode=disable"
   go test -v heim/...
