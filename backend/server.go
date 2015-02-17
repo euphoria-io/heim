@@ -6,8 +6,10 @@ import (
 
 	"heim/proto"
 
+	gorillactx "github.com/gorilla/context"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
+	"github.com/prometheus/client_golang/prometheus"
 
 	"golang.org/x/net/context"
 )
@@ -39,9 +41,14 @@ func (s *Server) route() {
 	s.r = mux.NewRouter().StrictSlash(true)
 	s.r.Path("/").Methods("OPTIONS").HandlerFunc(s.handleProbe)
 	s.r.Path("/robots.txt").HandlerFunc(s.handleRobotsTxt)
-	s.r.PathPrefix("/static/").HandlerFunc(s.handleStatic)
-	s.r.HandleFunc("/room/{room:[a-z0-9]+}/ws", s.handleRoom)
-	s.r.HandleFunc("/room/{room:[a-z0-9]+}/", s.handleRoomStatic)
+	s.r.Path("/metrics").Handler(
+		prometheus.InstrumentHandler("metrics", prometheus.UninstrumentedHandler()))
+
+	s.r.PathPrefix("/static/").Handler(prometheus.InstrumentHandlerFunc("static", s.handleStatic))
+
+	s.r.HandleFunc("/room/{room:[a-z0-9]+}/ws", instrumentSocketHandlerFunc("ws", s.handleRoom))
+	s.r.Handle(
+		"/room/{room:[a-z0-9]+}/", prometheus.InstrumentHandlerFunc("room_static", s.handleRoomStatic))
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -116,4 +123,32 @@ func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
 		// TODO: error handling
 		return
 	}
+}
+
+type hijackResponseWriter struct {
+	http.ResponseWriter
+	http.Hijacker
+}
+
+func instrumentSocketHandlerFunc(name string, handler http.HandlerFunc) http.HandlerFunc {
+	type hijackerKey int
+	var k hijackerKey
+
+	loadHijacker := func(w http.ResponseWriter, r *http.Request) {
+		if hj, ok := gorillactx.GetOk(r, k); ok {
+			w = &hijackResponseWriter{ResponseWriter: w, Hijacker: hj.(http.Hijacker)}
+		}
+		handler(w, r)
+	}
+
+	promHandler := prometheus.InstrumentHandlerFunc(name, loadHijacker)
+
+	saveHijacker := func(w http.ResponseWriter, r *http.Request) {
+		if hj, ok := w.(http.Hijacker); ok {
+			gorillactx.Set(r, k, hj)
+		}
+		promHandler(w, r)
+	}
+
+	return saveHijacker
 }
