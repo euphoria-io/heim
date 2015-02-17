@@ -1,5 +1,4 @@
 FROM ubuntu:14.04
-
 MAINTAINER Max Goodman <c@chromakode.com>
 
 RUN apt-get update && apt-get dist-upgrade -y
