@@ -2,7 +2,6 @@
 
 set -ex
 
-go get heim/cmd/heim-backend
 go install heim/cmd/heim-backend
 
 # /go/src/heim/backend/static should be provided as a volume

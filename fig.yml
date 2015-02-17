@@ -18,6 +18,7 @@ frontend:
   build: client
   volumes:
     - client:/srv/heim/client/src
+    - deps/node_modules:/srv/heim/client/src/node_modules
     - client/build:/srv/heim/client/src/build
   environment:
     NODE_ENV: development
@@ -37,6 +38,7 @@ backend:
     - psql
   volumes:
     - .:/go/src/heim
+    - deps/godeps:/godeps
     - client/build:/srv/heim/client/src/build
   ports:
     - "8080:80"

@@ -1,7 +1,7 @@
 FROM golang
 MAINTAINER Logan Hanks <logan.hanks@gmail.com>
 
-ENV GOPATH /go
+ENV GOPATH /godeps:/go
 
 ADD run.sh /
 CMD /run.sh

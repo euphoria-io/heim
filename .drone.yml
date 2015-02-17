@@ -1,8 +1,8 @@
-image: loganhanks/euphoria
+image: eu.phoria/drone-runner:2
 env:
   - GOPATH=/var/cache/drone
 script:
-  - /var/cache/drone/src/github.com/euphoria-io/heim/test.sh
+  - /var/cache/drone/src/github.com/euphoria-io/heim/ci/build.sh
 services:
   - postgres
 notify:

@@ -4,11 +4,18 @@ set -ex
 
 PATH=${PATH}:/var/cache/drone/bin
 SRCDIR=/var/cache/drone/src
+DEPSDIR=/var/cache/heim-deps
+
+setup_deps() {
+  ${DEPSDIR}/deps.sh link ${SRCDIR}/heim
+  ln -s ${DEPSDIR}/node_modules ${SRCDIR}/heim/node_modules
+  PATH=${PATH}:${SRCDIR}/heim/node_modules/.bin
+  GOPATH=${SRCDIR}/heim/deps/godeps:${GOPATH}
+}
 
 test_backend() {
+  cd ${SRCDIR}
   psql -c 'create database heimtest;' -U postgres -h $POSTGRES_PORT_5432_TCP_ADDR
-  mv "$GOPATH"/src/github.com/euphoria-io/heim "$GOPATH"/src
-  go get heim/...
   export DSN="postgres://postgres@$POSTGRES_PORT_5432_TCP_ADDR/heimtest?sslmode=disable"
   go test -v heim/...
 }
@@ -16,9 +23,7 @@ test_backend() {
 test_client() {
   export NODE_ENV=development
   cd ${SRCDIR}/heim/client
-  npm install
-  PATH=${PATH}:${SRCDIR}/heim/client/node_modules/.bin
-  npm test
+  gulp lint && mochify
 }
 
 build_release() {
@@ -26,7 +31,6 @@ build_release() {
   cd ${SRCDIR}/heim/client
   gulp build
 
-  go get heim/cmd/heimlich heim/cmd/heim-backend
   go install -ldflags "-X main.version ${DRONE_COMMIT}" heim/cmd/heim-backend
   go install heim/cmd/heimlich
 
@@ -34,12 +38,6 @@ build_release() {
   cd /var/cache/drone/bin
   find static -type f | xargs heimlich heim-backend
 
-  DEBIAN_FRONTEND=noninteractive apt-get install -y s3cmd
-  cat > /root/.s3cfg << EOF
-[default]
-access_key = [redacted ;)]
-secret_key = [redacted :O]
-EOF
   s3cmd put heim-backend.hzp s3://heim-release/${DRONE_COMMIT}
   if [ ${DRONE_BRANCH} == master ]; then
     s3cmd cp s3://heim-release/${DRONE_COMMIT} s3://heim-release/latest
@@ -53,6 +51,10 @@ EOF
     s3cmd cp s3://heim-release/${DRONE_COMMIT} s3://heim-release/${DRONE_BRANCH}
   fi
 }
+
+mv ${SRCDIR}/github.com/euphoria-io/heim ${SRCDIR}
+
+setup_deps
 
 test_backend
 test_client
