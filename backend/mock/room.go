@@ -154,7 +154,12 @@ func (r *memRoom) RenameUser(
 	return payload, r.broadcast(ctx, proto.NickType, payload, session)
 }
 
-func (r *memRoom) RoomKey() proto.RoomKey { return r.key }
+func (r *memRoom) MasterKey(ctx context.Context) (proto.RoomKey, error) {
+	if r.key == nil {
+		return nil, nil
+	}
+	return r.key, nil
+}
 
 func (r *memRoom) GenerateMasterKey(ctx context.Context, kms security.KMS) (proto.RoomKey, error) {
 	nonce, err := kms.GenerateNonce(security.AES128.KeySize())

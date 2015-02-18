@@ -33,18 +33,9 @@ func (r *Room) Bind(b *Backend) *RoomBinding {
 	}
 }
 
-type RoomKey struct {
-	Room         string
-	Timestamp    time.Time
-	Nonce        []byte
-	IV           []byte
-	EncryptedKey []byte `db:"encrypted_key"`
-}
-
 type RoomBinding struct {
 	*Backend
 	*Room
-	key *RoomKey
 }
 
 func (rb *RoomBinding) Latest(ctx context.Context, n int, before snowflake.Snowflake) (
@@ -86,6 +77,13 @@ func (rb *RoomBinding) RenameUser(ctx context.Context, session proto.Session, fo
 func (rb *RoomBinding) GenerateMasterKey(
 	ctx context.Context, kms security.KMS) (proto.RoomKey, error) {
 
+	// Generate unique ID for storing new key in DB.
+	keyID, err := snowflake.New()
+	if err != nil {
+		return nil, err
+	}
+
+	// Use KMS to generate nonce and key.
 	nonce, err := kms.GenerateNonce(security.AES128.KeySize())
 	if err != nil {
 		return nil, err
@@ -96,37 +94,59 @@ func (rb *RoomBinding) GenerateMasterKey(
 		return nil, err
 	}
 
-	roomKey := &RoomKey{
-		Room:         rb.Name,
-		Timestamp:    time.Now(),
-		Nonce:        nonce,
-		IV:           mkey.IV,
-		EncryptedKey: mkey.Ciphertext,
-	}
-
-	if err := rb.DbMap.Insert(roomKey); err != nil {
+	// Insert key and room association into the DB.
+	transaction, err := rb.DbMap.Begin()
+	if err != nil {
 		return nil, err
 	}
 
-	rb.key = roomKey
-	return rb, nil
+	rmkb := &RoomMasterKeyBinding{
+		MasterKey: MasterKey{
+			ID:           keyID.String(),
+			EncryptedKey: mkey.Ciphertext,
+			IV:           mkey.IV,
+			Nonce:        nonce,
+		},
+		RoomMasterKey: RoomMasterKey{
+			Room:      rb.Name,
+			KeyID:     keyID.String(),
+			Activated: time.Now(),
+		},
+	}
+	if err := transaction.Insert(&rmkb.MasterKey); err != nil {
+		if rerr := transaction.Rollback(); rerr != nil {
+			backend.Logger(ctx).Printf("rollback error: %s", rerr)
+		}
+		return nil, err
+	}
+
+	if err := transaction.Insert(&rmkb.RoomMasterKey); err != nil {
+		if rerr := transaction.Rollback(); rerr != nil {
+			backend.Logger(ctx).Printf("rollback error: %s", rerr)
+		}
+		return nil, err
+	}
+
+	if err := transaction.Commit(); err != nil {
+		return nil, err
+	}
+
+	return rmkb, nil
 }
 
-func (rb *RoomBinding) RoomKey() proto.RoomKey { return rb }
-
-func (rb *RoomBinding) Timestamp() time.Time { return rb.key.Timestamp }
-func (rb *RoomBinding) Nonce() []byte        { return rb.key.Nonce }
-
-func (rb *RoomBinding) ManagedKey() security.ManagedKey {
-	dup := func(v []byte) []byte {
-		w := make([]byte, len(v))
-		copy(w, v)
-		return w
+func (rb *RoomBinding) MasterKey(ctx context.Context) (proto.RoomKey, error) {
+	rmkb := &RoomMasterKeyBinding{}
+	err := rb.DbMap.SelectOne(
+		rmkb,
+		"SELECT * FROM master_key mk, room_master_key r"+
+			" WHERE r.room = $1 AND mk.id = r.key_id AND r.expired < r.activated"+
+			" ORDER BY r.activated DESC LIMIT 1",
+		rb.Name)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
 	}
-
-	return security.ManagedKey{
-		KeyType:    security.AES256,
-		IV:         dup(rb.key.IV),
-		Ciphertext: dup(rb.key.EncryptedKey),
-	}
+	return rmkb, nil
 }

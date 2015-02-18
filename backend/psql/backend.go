@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"reflect"
 	"sort"
 	"strings"
 	"sync"
@@ -21,12 +20,19 @@ import (
 	"golang.org/x/net/context"
 )
 
-var schema = map[interface{}][]string{
-	Room{}: []string{"Name"},
-	//RoomKey{}:    []string{"Room", "Timestamp"},
-	//Capability{}: []string{"ID"},
-	Message{}: []string{"Room", "ID"},
-	//Presence{}:   []string{"Room", "SessionID"},
+var schema = map[string]struct {
+	Table      interface{}
+	PrimaryKey []string
+}{
+	// Keys and capabilities.
+	"master_key": {MasterKey{}, []string{"ID"}},
+	"capability": {Capability{}, []string{"ID"}},
+
+	// Rooms.
+	"room":            {Room{}, []string{"Name"}},
+	"message":         {Message{}, []string{"Room", "ID"}},
+	"room_master_key": {RoomMasterKey{}, []string{"Room", "KeyID"}},
+	"room_capability": {RoomCapability{}, []string{"Room", "CapabilityID"}},
 }
 
 type AfterCreateTabler interface {
@@ -63,8 +69,8 @@ func (b *Backend) start() {
 	// TODO: make debug configurable
 	b.DbMap.TraceOn("[gorp]", log.New(os.Stdout, "", log.LstdFlags))
 
-	for t, keys := range schema {
-		b.DbMap.AddTable(t).SetKeys(false, keys...)
+	for name, item := range schema {
+		b.DbMap.AddTableWithName(item.Table, name).SetKeys(false, item.PrimaryKey...)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -82,14 +88,10 @@ func (b *Backend) createSchema() error {
 		return err
 	}
 
-	for t, _ := range schema {
-		if after, ok := t.(AfterCreateTabler); ok {
+	for name, item := range schema {
+		if after, ok := item.Table.(AfterCreateTabler); ok {
 			if err := after.AfterCreateTable(b.DB); err != nil {
-				tableName := "???"
-				if table, err := b.DbMap.TableFor(reflect.TypeOf(t), false); err == nil {
-					tableName = table.TableName
-				}
-				return fmt.Errorf("%s post-creation: %s", tableName, err)
+				return fmt.Errorf("%s post-creation: %s", name, err)
 			}
 		}
 	}

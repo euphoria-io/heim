@@ -40,6 +40,7 @@ backend:
     - .:/go/src/heim
     - deps/godeps:/godeps
     - client/build:/srv/heim/client/src/build
+    - backend/console/keys:/keys
   ports:
     - "8080:80"
-    - "2222:22"
+    - "2222:2222"

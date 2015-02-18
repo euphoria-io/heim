@@ -10,7 +10,8 @@ import (
 	"os"
 	"strings"
 
-	"heim/backend"
+	"heim/proto"
+	"heim/proto/security"
 
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/terminal"
@@ -19,13 +20,14 @@ import (
 type Controller struct {
 	listener net.Listener
 	config   *ssh.ServerConfig
-	server   *backend.Server
+	backend  proto.Backend
+	kms      security.KMS
 
 	// TODO: key ssh.PublicKey
 	authorizedKeys []ssh.PublicKey
 }
 
-func NewController(addr string, server *backend.Server) (*Controller, error) {
+func NewController(addr string, backend proto.Backend, kms security.KMS) (*Controller, error) {
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
 		return nil, fmt.Errorf("listen %s: %s", addr, err)
@@ -33,7 +35,8 @@ func NewController(addr string, server *backend.Server) (*Controller, error) {
 
 	ctrl := &Controller{
 		listener: listener,
-		server:   server,
+		backend:  backend,
+		kms:      kms,
 	}
 
 	ctrl.config = &ssh.ServerConfig{
@@ -117,7 +120,9 @@ func (ctrl *Controller) AddAuthorizedKeys(path string) error {
 }
 
 func (ctrl *Controller) Serve() {
+	fmt.Printf("ssh controller serving\n")
 	for {
+		fmt.Printf("ssh controller accepting\n")
 		conn, err := ctrl.listener.Accept()
 		if err != nil {
 			panic(fmt.Sprintf("controller accept: %s", err))
@@ -128,6 +133,7 @@ func (ctrl *Controller) Serve() {
 }
 
 func (ctrl *Controller) interact(conn net.Conn) {
+	fmt.Printf("ssh interaction starting\n")
 	_, nchs, reqs, err := ssh.NewServerConn(conn, ctrl.config)
 	if err != nil {
 		fmt.Printf("ssh.NewServerConn: %s\n", err)
@@ -136,7 +142,9 @@ func (ctrl *Controller) interact(conn net.Conn) {
 
 	go ssh.DiscardRequests(reqs)
 
+	fmt.Printf("iterating over nchs\n")
 	for nch := range nchs {
+		fmt.Printf("nch.ChannelType() = %s\n", nch.ChannelType())
 		if nch.ChannelType() != "session" {
 			nch.Reject(ssh.UnknownChannelType, "unknown channel type")
 			continue
@@ -186,7 +194,7 @@ func (ctrl *Controller) terminal(ch ssh.Channel) {
 			// TODO: graceful shutdown
 			os.Exit(0)
 		default:
-			fmt.Fprintf(term, "invalid command: %s\r\n", cmd[0])
+			runCommand(ctrl, cmd[0], term, cmd[1:])
 		}
 	}
 }

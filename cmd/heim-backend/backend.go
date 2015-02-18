@@ -9,6 +9,8 @@ import (
 	"heim/backend"
 	"heim/backend/console"
 	"heim/backend/psql"
+	"heim/proto"
+	"heim/proto/security"
 )
 
 var (
@@ -34,7 +36,11 @@ func main() {
 	}
 
 	server := backend.NewServer(b, *id, *static)
-	if err := controller(server); err != nil {
+	kms := security.LocalKMS()
+	// TODO: get key from somewhere
+	kms.SetMasterKey(make([]byte, security.AES256.KeySize()))
+
+	if err := controller(b, kms); err != nil {
 		fmt.Printf("error: %s\n", err)
 		os.Exit(1)
 	}
@@ -43,9 +49,9 @@ func main() {
 	http.ListenAndServe(*addr, newVersioningHandler(server))
 }
 
-func controller(server *backend.Server) error {
+func controller(b proto.Backend, kms security.KMS) error {
 	if *ctrlAddr != "" {
-		ctrl, err := console.NewController(*ctrlAddr, server)
+		ctrl, err := console.NewController(*ctrlAddr, b, kms)
 		if err != nil {
 			return err
 		}

@@ -45,8 +45,8 @@ type Room interface {
 	// previous key.
 	GenerateMasterKey(ctx context.Context, kms security.KMS) (RoomKey, error)
 
-	// RoomKey returns the room's current key.
-	RoomKey() RoomKey
+	// MasterKey returns the room's current key, or nil if the room is unlocked.
+	MasterKey(ctx context.Context) (RoomKey, error)
 }
 
 type RoomKey interface {
