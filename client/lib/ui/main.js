@@ -63,7 +63,7 @@ module.exports = React.createClass({
 
   render: function() {
     return (
-      <div className="chat">
+      <div className="chat" onMouseDownCapture={this.onMouseDown} onClickCapture={this.onClick}>
         <Scroller
           ref="scroller"
           target=".entry"
@@ -77,7 +77,7 @@ module.exports = React.createClass({
           onResize={this.onResize}
           onNearTop={actions.loadMoreLogs}
         >
-          <div className="messages-content" onMouseDownCapture={this.onMouseDown} onClickCapture={this.onClick}>
+          <div className="messages-content">
             <div className="top-right" style={{marginRight: this.state.scrollbarWidth}}>
               <div className="settings-pane">
                 <ReactCSSTransitionGroup transitionName="settings">
