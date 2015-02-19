@@ -194,10 +194,8 @@ func IntegrationTest(factory func() proto.Backend) {
 	runTestWithFactory(testPresence)
 }
 
-var skipConvey = SkipConvey
-
 func testLurker(s *serverUnderTest) {
-	skipConvey("Lurker", func() {
+	Convey("Lurker", func() {
 		conn1 := s.Connect("lurker")
 		defer conn1.Close()
 		id1 := conn1.LocalAddr().String()
@@ -221,7 +219,7 @@ func testLurker(s *serverUnderTest) {
 }
 
 func testBroadcast(s *serverUnderTest) {
-	skipConvey("Broadcast", func() {
+	Convey("Broadcast", func() {
 		tc := NewTestClock()
 		defer tc.Close()
 
@@ -291,7 +289,7 @@ func testBroadcast(s *serverUnderTest) {
 }
 
 func testThreading(s *serverUnderTest) {
-	skipConvey("Send with parent", func() {
+	Convey("Send with parent", func() {
 		tc := NewTestClock()
 		defer tc.Close()
 
@@ -334,7 +332,7 @@ func testPresence(factory func() proto.Backend) {
 	defer server.Close()
 	s := &serverUnderTest{backend, app, server}
 
-	skipConvey("Other party joins then parts", func() {
+	Convey("Other party joins then parts", func() {
 		self := s.Connect("presence")
 		defer self.Close()
 		self.expectSnapshot(s.backend.Version(), nil, nil)
@@ -357,7 +355,7 @@ func testPresence(factory func() proto.Backend) {
 		self.expect("2", "who-reply", `{"listing":[{"id":"%s","name":"guest"}]}`, selfID)
 	})
 
-	skipConvey("Join after other party, other party parts", func() {
+	Convey("Join after other party, other party parts", func() {
 		other := s.Connect("presence2")
 		otherID := other.LocalAddr().String()
 		other.expectSnapshot(s.backend.Version(), nil, nil)
