@@ -142,7 +142,9 @@ module.exports.store = Reflux.createStore({
 
   storageChange: function(data) {
     var roomStorage = data.room[this.state.roomName] || {}
-    this.state.nick = roomStorage.nick
+    if (!this.state.nick) {
+      this.state.nick = roomStorage.nick
+    }
     this.trigger(this.state)
   },
 
