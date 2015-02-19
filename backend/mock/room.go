@@ -16,11 +16,12 @@ import (
 type memRoom struct {
 	sync.Mutex
 
-	name       string
-	version    string
-	log        *memLog
-	identities map[string]proto.Identity
-	live       map[string][]proto.Session
+	name         string
+	version      string
+	log          *memLog
+	identities   map[string]proto.Identity
+	live         map[string][]proto.Session
+	capabilities map[string]security.Capability
 
 	key *roomKey
 }
@@ -178,6 +179,13 @@ func (r *memRoom) GenerateMasterKey(ctx context.Context, kms security.KMS) (prot
 		key:       *mkey,
 	}
 	return r.key, nil
+}
+
+func (r *memRoom) SaveCapability(ctx context.Context, capability security.Capability) error {
+	r.Lock()
+	r.capabilities[capability.CapabilityID()] = capability
+	r.Unlock()
+	return nil
 }
 
 type roomKey struct {

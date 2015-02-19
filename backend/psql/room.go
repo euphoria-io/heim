@@ -150,3 +150,36 @@ func (rb *RoomBinding) MasterKey(ctx context.Context) (proto.RoomKey, error) {
 	}
 	return rmkb, nil
 }
+
+func (rb *RoomBinding) SaveCapability(ctx context.Context, capability security.Capability) error {
+	transaction, err := rb.DbMap.Begin()
+	if err != nil {
+		return err
+	}
+
+	rmc := &RoomCapabilityBinding{
+		Capability: Capability{
+			ID:                   capability.CapabilityID(),
+			EncryptedPrivateData: capability.EncryptedPayload(),
+			PublicData:           capability.PublicPayload(),
+		},
+		RoomCapability: RoomCapability{
+			Room:         rb.Name,
+			CapabilityID: capability.CapabilityID(),
+			Granted:      time.Now(),
+		},
+	}
+
+	if err := transaction.Insert(&rmc.Capability, &rmc.RoomCapability); err != nil {
+		if rerr := transaction.Rollback(); rerr != nil {
+			backend.Logger(ctx).Printf("rollback error: %s", rerr)
+		}
+		return err
+	}
+
+	if err := transaction.Commit(); err != nil {
+		return err
+	}
+
+	return nil
+}

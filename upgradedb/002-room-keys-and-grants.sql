@@ -11,12 +11,9 @@ CREATE TABLE master_key (
 
 CREATE TABLE capability (
     id text NOT NULL,
-    kind text NOT NULL, -- passcode, public_key, symmetric_key, etc.
-    nonce bytea,
     encrypted_private_data bytea,
     public_data bytea,
-    PRIMARY KEY (id),
-    UNIQUE (nonce)
+    PRIMARY KEY (id)
 );
 
 CREATE TABLE room_master_key (

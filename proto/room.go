@@ -47,6 +47,9 @@ type Room interface {
 
 	// MasterKey returns the room's current key, or nil if the room is unlocked.
 	MasterKey(ctx context.Context) (RoomKey, error)
+
+	// SaveCapability saves the given capability.
+	SaveCapability(ctx context.Context, capability security.Capability) error
 }
 
 type RoomKey interface {

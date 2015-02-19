@@ -9,8 +9,10 @@ type MasterKey struct {
 
 type Capability struct {
 	ID                   string
-	Kind                 string
-	Nonce                []byte
 	EncryptedPrivateData []byte `db:"encrypted_private_data"`
 	PublicData           []byte `db:"public_data"`
 }
+
+func (c *Capability) CapabilityID() string     { return c.ID }
+func (c *Capability) PublicPayload() []byte    { return c.PublicData }
+func (c *Capability) EncryptedPayload() []byte { return c.EncryptedPrivateData }

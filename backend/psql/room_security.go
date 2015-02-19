@@ -42,3 +42,8 @@ func (rmkb *RoomMasterKeyBinding) ManagedKey() security.ManagedKey {
 		Ciphertext: dup(rmkb.MasterKey.EncryptedKey),
 	}
 }
+
+type RoomCapabilityBinding struct {
+	Capability
+	RoomCapability
+}

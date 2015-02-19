@@ -52,7 +52,7 @@ func TestGrants(t *testing.T) {
 			Content:  "hello",
 		}
 
-		iv, err := base64.URLEncoding.DecodeString(grant.ID())
+		iv, err := base64.URLEncoding.DecodeString(grant.CapabilityID())
 		So(err, ShouldBeNil)
 		payload := grant.EncryptedPayload()
 		So(aliceKey.BlockCrypt(iv, aliceKey.Plaintext, payload, false), ShouldBeNil)
@@ -80,7 +80,7 @@ func TestGrants(t *testing.T) {
 		grant, err = security.GrantCapabilityOnSubject(ctx, kms, roomNonce, &roomKey, bobKey)
 		So(err, ShouldBeNil)
 
-		iv, err = base64.URLEncoding.DecodeString(grant.ID())
+		iv, err = base64.URLEncoding.DecodeString(grant.CapabilityID())
 		So(err, ShouldBeNil)
 		payload = grant.EncryptedPayload()
 		So(bobKey.BlockCrypt(iv, bobKey.Plaintext, payload, false), ShouldBeNil)

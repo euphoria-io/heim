@@ -1,19 +1,23 @@
 package security
 
 import (
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 
+	"golang.org/x/crypto/pbkdf2"
 	"golang.org/x/net/context"
 )
 
+const keyDerivationIterations = 4096
+
 // Capability is a generic handle on a cryptographic grant of access.
 type Capability interface {
-	// ID() returns the globally unique identifier of the capability.
-	// It should be a string derived from a secret shared with the
-	// recipient.
-	ID() string
+	// CapabilityID() returns the globally unique identifier of the
+	// capability. It should be a string derived from a secret shared
+	// with the recipient.
+	CapabilityID() string
 
 	// PublicPayload returns the publicly exposed data associated
 	// with the capability.
@@ -84,7 +88,7 @@ type capability struct {
 	EncryptedPrivate []byte
 }
 
-func (c *capability) ID() string            { return c.IDString }
+func (c *capability) CapabilityID() string  { return c.IDString }
 func (c *capability) PublicPayload() []byte { return c.Public }
 
 func (c *capability) EncryptedPayload() []byte {
@@ -105,4 +109,15 @@ func GrantCapabilityOnSubject(
 
 	// TODO: make private data a struct
 	return NewCapability(kms, clientKey, nonce, nil, subjectKey.Plaintext)
+}
+
+func GrantCapabilityOnSubjectWithPasscode(
+	ctx context.Context, kms KMS, nonce []byte, encryptedSubjectKey *ManagedKey, passcode []byte) (
+	Capability, error) {
+
+	// Use nonce as salt.
+	clientKey := &ManagedKey{
+		Plaintext: pbkdf2.Key(passcode, nonce, keyDerivationIterations, AES256.KeySize(), sha256.New),
+	}
+	return GrantCapabilityOnSubject(ctx, kms, nonce, encryptedSubjectKey, clientKey)
 }
