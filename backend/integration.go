@@ -441,6 +441,9 @@ func testAuthentication(s *serverUnderTest) {
 
 		conn.send("1", "auth", `{"type":"passcode","passcode":"dunno"}`)
 		conn.expect("1", "auth-reply", `{"success":false,"reason":"passcode incorrect"}`)
+
+		conn.send("1", "who", "")
+		conn.expectError("1", "who-reply", "access denied, please authenticate")
 	})
 
 	Convey("Access granted", func() {

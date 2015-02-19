@@ -163,8 +163,6 @@ func (s *session) serve() error {
 				return err
 			}
 
-			fmt.Printf("response is: %#v\n", resp)
-
 			data, err := resp.Encode()
 			if err != nil {
 				logger.Printf("error: Response encode: %s", err)
@@ -239,9 +237,9 @@ func (s *session) handleAuth(cmd *proto.Packet) (interface{}, error) {
 		if reply.Success {
 			s.capability = capability
 			s.state = s.handleCommand
-		}
-		if err := s.join(); err != nil {
-			return nil, err
+			if err := s.join(); err != nil {
+				return nil, err
+			}
 		}
 		return reply, nil
 	default:
