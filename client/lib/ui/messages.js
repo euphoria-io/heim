@@ -20,9 +20,7 @@ module.exports = React.createClass({
     var disconnected = this.state.connected === false
 
     var entry
-    if (!disconnected &&
-        (!this.state.nickInFlight || !this.state.nick || this.state.nick === '') &&
-        (!this.state.confirmedNick || this.state.confirmedNick === '')) {
+    if (!disconnected && !this.state.nick && !this.state.tentativeNick) {
       entry = <NickEntry />
     } else if (!this.state.focusedMessage) {
       entry = <ChatEntry />

@@ -10,14 +10,19 @@ module.exports = React.createClass({
 
   mixins: [
     Reflux.connect(chat.store, 'chat'),
-    Reflux.listenTo(chat.store, 'onNickReply', 'onNickReply'),
     Reflux.listenTo(actions.focusEntry, 'focus'),
     Reflux.listenTo(actions.keydownOnEntry, 'onKeyDown'),
   ],
 
   componentDidMount: function() {
     this.refs.input.getDOMNode().setSelectionRange(this.state.chat.entrySelectionStart, this.state.chat.entrySelectionEnd)
-    this._nickInFlight = false
+  },
+
+  getInitialState: function() {
+    return {
+      nickText: null,
+      nickFocused: false,
+    }
   },
 
   focus: function(withChar) {
@@ -28,13 +33,6 @@ module.exports = React.createClass({
     }
     node.focus()
     actions.scrollToEntry()
-  },
-
-  setNick: function(ev) {
-    var input = this.refs.nick.getDOMNode()
-    actions.setNick(input.value)
-    this._nickInFlight = true
-    ev.preventDefault()
   },
 
   chatMove: function(dir) {
@@ -156,9 +154,17 @@ module.exports = React.createClass({
     }
   },
 
-  previewNick: function() {
-    var input = this.refs.nick.getDOMNode()
-    this.setState({nickText: input.value})
+  onNickChange: function(ev) {
+    this.setState({nickText: ev.target.value})
+  },
+
+  onNickFocus: function(ev) {
+    this.setState({nickText: ev.target.value, nickFocused: true})
+  },
+
+  onNickBlur: function(ev) {
+    actions.setNick(ev.target.value)
+    this.setState({nickText: null, nickFocused: false})
   },
 
   saveEntryState: function() {
@@ -166,22 +172,20 @@ module.exports = React.createClass({
     actions.setEntryText(input.value, input.selectionStart, input.selectionEnd)
   },
 
-  onNickReply: function(chatState) {
-    if (!chatState.nickInFlight && (this._nickInFlight || !this.state.nickText)) {
-      this._nickInFlight = false
-      if (!chatState.nickRejected) {
-        this.setState({nickText: chatState.confirmedNick})
-      }
-    }
-  },
-
   render: function() {
+    var nick
+    if (this.state.nickFocused) {
+      nick = this.state.nickText
+    } else {
+      nick = this.state.chat.tentativeNick || this.state.chat.nick
+    }
+
     return (
       <form className="entry">
         <div className="nick-box">
           <div className="auto-size-container">
-            <input className="nick" ref="nick" value={this.state.nickText || this.state.chat.nick} onBlur={this.setNick} onChange={this.previewNick} />
-            <span className="nick">{this.state.nickText || this.state.chat.nick}</span>
+            <input className="nick" ref="nick" value={nick} onFocus={this.onNickFocus} onBlur={this.onNickBlur} onChange={this.onNickChange} />
+            <span className="nick">{nick}</span>
           </div>
         </div>
         <input key="msg" ref="input" type="text" autoFocus defaultValue={this.state.chat.entryText} onChange={this.saveEntryState} onKeyDown={this.onKeyDown} onClick={this.saveEntryState} onFocus={actions.scrollToEntry} onKeyPress={actions.scrollToEntry} />

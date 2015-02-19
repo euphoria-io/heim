@@ -174,15 +174,11 @@ describe('chat store', function() {
       })
 
       it('should send a nick change', function() {
+        assert.equal(chat.store.state.tentativeNick, testNick)
         sinon.assert.calledWithExactly(socket.send, {
           type: 'nick',
-          id: 'nick-0',
           data: {name: testNick},
         })
-      })
-
-      it('should update stored nick', function() {
-        sinon.assert.calledWithExactly(storage.setRoom, 'ezzie', 'nick', testNick)
       })
 
       it('should avoid re-sending same nick', function() {
@@ -287,7 +283,6 @@ describe('chat store', function() {
       handleSocket({status: 'open'}, function() {
         sinon.assert.calledWithExactly(socket.send, {
           type: 'nick',
-          id: 'nick-0',
           data: {name: mockStorage.room.ezzie.nick},
         })
         done()
@@ -630,7 +625,7 @@ describe('chat store', function() {
     })
 
     var nickReply = {
-      'id': 'nick-1',
+      'id': '1',
       'type': 'nick-reply',
       'data': {
         'id': '32.64.96.128:12345',
@@ -640,7 +635,7 @@ describe('chat store', function() {
     }
 
     var rejectedNickReply = {
-      'id': 'nick-1',
+      'id': '1',
       'type': 'nick-reply',
       'data': {'error': 'error'}
     }
@@ -657,42 +652,10 @@ describe('chat store', function() {
 
     it('should update chat and room state', function(done) {
       chat.store.state.roomName = 'ezzie'
-      chat.store.state.nickPacketID = 1
-      chat.store.state.nickInFlight = true
       handleSocket({status: 'receive', body: nickReply}, function(state) {
         assert.equal(state.nick, 'tester3')
-        assert.equal(state.confirmedNick, 'tester3')
-        assert.equal(state.nickInFlight, false)
         sinon.assert.calledOnce(storage.setRoom)
         sinon.assert.calledWithExactly(storage.setRoom, 'ezzie', 'nick', 'tester3')
-        done()
-      })
-    })
-
-    it('should ignore outdated nick replies', function(done) {
-      chat.store.state.roomName = 'ezzie'
-      chat.store.state.nickPacketID = 2
-      chat.store.state.nickInFlight = true
-      handleSocket({status: 'receive', body: nickReply}, function(state) {
-        assert.equal(state.nick, null)
-        assert.equal(state.confirmedNick, null)
-        assert.equal(state.nickInFlight, true)
-        sinon.assert.notCalled(storage.setRoom)
-        done()
-      })
-    })
-
-    it('should reset nick of rejected', function(done) {
-      chat.store.state.roomName = 'ezzie'
-      chat.store.state.nickPacketID = 1
-      chat.store.state.nickInFlight = true
-      chat.store.state.confirmedNick = 'previous'
-      handleSocket({status: 'receive', body: rejectedNickReply}, function(state) {
-        assert.equal(state.nick, 'previous')
-        assert.equal(state.confirmedNick, 'previous')
-        assert.equal(state.nickInFlight, false)
-        sinon.assert.calledOnce(storage.setRoom)
-        sinon.assert.calledWithExactly(storage.setRoom, 'ezzie', 'nick', 'previous')
         done()
       })
     })
@@ -719,6 +682,27 @@ describe('chat store', function() {
       handleSocket({status: 'receive', body: whoReply}, function() {
         handleSocket({status: 'receive', body: nonexistentNickEvent}, function(state) {
           assert(state.who.has(nonexistentNickEvent.data.id))
+          done()
+        })
+      })
+    })
+
+    describe('in response to nick set', function() {
+      it('should not update nick if rejected', function(done) {
+        chat.store.state.nick = 'previous'
+        chat.store.state.roomName = 'ezzie'
+        handleSocket({status: 'receive', body: rejectedNickReply}, function(state) {
+          assert.equal(state.nick, 'previous')
+          done()
+        })
+      })
+
+      it('should update stored nick', function(done) {
+        chat.store.state.roomName = 'ezzie'
+        handleSocket({status: 'receive', body: nickReply}, function(state) {
+          assert.equal(state.nick, 'tester3')
+          sinon.assert.calledOnce(storage.setRoom)
+          sinon.assert.calledWithExactly(storage.setRoom, 'ezzie', 'nick', 'tester3')
           done()
         })
       })
@@ -767,17 +751,6 @@ describe('chat store', function() {
           done()
         })
       })
-    })
-  })
-
-  describe('sent nicks', function() {
-    it('should clear confirmedNick if empty', function(done) {
-      chat.store.state.confirmedNick = 'test'
-      chat.store.state.nickInFlight = false
-      chat.store._sendNick('')
-      assert.equal(chat.store.state.confirmedNick, null)
-      assert.equal(chat.store.state.nickInFlight, true)
-      done()
     })
   })
 })
