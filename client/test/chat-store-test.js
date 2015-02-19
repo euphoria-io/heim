@@ -118,8 +118,9 @@ describe('chat store', function() {
     }
   }
 
-  it('should initialize with null connected state', function() {
+  it('should initialize with null connected and false joined state', function() {
     assert.equal(chat.store.getInitialState().connected, null)
+    assert.equal(chat.store.getInitialState().joined, false)
   })
 
   it('should initialize with empty collections', function() {
@@ -264,37 +265,6 @@ describe('chat store', function() {
         assert.equal(state.connected, true)
       })
     })
-
-    it('should send stored nick upon connecting', function(done) {
-      var mockStorage = {
-        room: {
-          ezzie: {
-            nick: 'test-nick',
-          }
-        }
-      }
-      chat.store.state.roomName = 'ezzie'
-      chat.store.storageChange(mockStorage)
-      handleSocket({status: 'open'}, function() {
-        sinon.assert.calledWithExactly(socket.send, {
-          type: 'nick',
-          data: {name: mockStorage.room.ezzie.nick},
-        })
-        done()
-      })
-    })
-
-    it('should not send stored nick if unset', function(done) {
-      var mockStorage = {
-        room: {}
-      }
-      chat.store.state.roomName = 'ezzie'
-      chat.store.storageChange(mockStorage)
-      handleSocket({status: 'open'}, function() {
-        sinon.assert.notCalled(socket.send)
-        done()
-      })
-    })
   })
 
   describe('when disconnected', function() {
@@ -338,7 +308,8 @@ describe('chat store', function() {
     })
 
     it('should send stored nick', function(done) {
-      handleSocket({status: 'open'}, function() {
+      chat.store.socketEvent({status: 'open'})
+      handleSocket({status: 'receive', body: snapshotReply}, function() {
         sinon.assert.calledWithExactly(socket.send, {
           type: 'nick',
           data: {name: mockStorage.room.ezzie.nick},
@@ -651,6 +622,32 @@ describe('chat store', function() {
   describe('received snapshots', function() {
     checkLogs(snapshotReply)
     checkUsers(snapshotReply)
+
+    it('should set joined state to true', function(done) {
+      handleSocket({status: 'receive', body: snapshotReply}, function(state) {
+        assert.equal(state.joined, true)
+        done()
+      })
+    })
+
+    it('should trigger sending stored nick', function(done) {
+      var mockStorage = {
+        room: {
+          ezzie: {
+            nick: 'test-nick',
+          }
+        }
+      }
+      chat.store.state.roomName = 'ezzie'
+      chat.store.storageChange(mockStorage)
+      handleSocket({status: 'receive', body: snapshotReply}, function() {
+        sinon.assert.calledWithExactly(socket.send, {
+          type: 'nick',
+          data: {name: mockStorage.room.ezzie.nick},
+        })
+        done()
+      })
+    })
   })
 
   describe('received nick changes', function() {

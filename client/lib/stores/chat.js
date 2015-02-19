@@ -18,9 +18,12 @@ module.exports.store = Reflux.createStore({
   init: function() {
     this.state = {
       connected: null,
+      joined: false,
       roomName: null,
       tentativeNick: null,
       nick: null,
+      authType: null,
+      authState: 'ok',
       messages: new Tree('time'),
       earliestLog: null,
       nickHues: {},
@@ -45,6 +48,16 @@ module.exports.store = Reflux.createStore({
       } else if (ev.body.type == 'snapshot-event') {
         this._handleWhoReply(ev.body.data)
         this._handleLogReply(ev.body.data)
+        this._joinRoom()
+      } else if (ev.body.type == 'bounce-event') {
+        this.state.authType = 'passcode'
+        this.state.authState = null
+      } else if (ev.body.type == 'auth-reply') {
+        if (ev.body.data.success) {
+          this.state.authState = 'ok'
+        } else {
+          this.state.authState = 'failed'
+        }
       } else if (ev.body.type == 'log-reply' && ev.body.data) {
         this._handleLogReply(ev.body.data)
       } else if (ev.body.type == 'who-reply') {
@@ -70,11 +83,9 @@ module.exports.store = Reflux.createStore({
       }
     } else if (ev.status == 'open') {
       this.state.connected = true
-      if (this.state.tentativeNick || this.state.nick) {
-        this._sendNick(this.state.tentativeNick || this.state.nick)
-      }
     } else if (ev.status == 'close') {
       this.state.connected = false
+      this.state.joined = false
     }
     this.trigger(this.state)
   },
@@ -127,6 +138,16 @@ module.exports.store = Reflux.createStore({
     storage.setRoom(this.state.roomName, 'nick', this.state.nick)
   },
 
+  _joinRoom: function() {
+    if (!this.state.joined) {
+      if (this.state.tentativeNick || this.state.nick) {
+        this._sendNick(this.state.tentativeNick || this.state.nick)
+      }
+
+      this.state.joined = true
+    }
+  },
+
   storageChange: function(data) {
     var roomStorage = data.room[this.state.roomName] || {}
     if (!this.state.nick) {
@@ -170,6 +191,16 @@ module.exports.store = Reflux.createStore({
       type: 'nick',
       data: {
         name: nick
+      },
+    })
+  },
+
+  tryRoomPasscode: function(passcode) {
+    socket.send({
+      type: 'auth',
+      data: {
+        type: 'passcode',
+        passcode: passcode,
       },
     })
   },

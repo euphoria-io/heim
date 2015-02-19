@@ -5,6 +5,7 @@ var moment = require('moment')
 var MessageList = require('./messagelist')
 var ChatEntry = require('./chatentry')
 var NickEntry = require('./nickentry')
+var PasscodeEntry = require('./passcodeentry')
 
 
 module.exports = React.createClass({
@@ -20,7 +21,9 @@ module.exports = React.createClass({
     var disconnected = this.state.connected === false
 
     var entry
-    if (!disconnected && !this.state.nick && !this.state.tentativeNick) {
+    if (this.state.authType == 'passcode' && this.state.authState != 'ok') {
+      entry = <PasscodeEntry />
+    } else if (this.state.joined && !this.state.nick && !this.state.tentativeNick) {
       entry = <NickEntry />
     } else if (!this.state.focusedMessage) {
       entry = <ChatEntry />

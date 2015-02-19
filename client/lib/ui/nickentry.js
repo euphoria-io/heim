@@ -39,7 +39,7 @@ module.exports = React.createClass({
     var isTouchDevice = 'ontouchstart' in window
 
     return (
-      <div className="welcome">
+      <div className="entry-box welcome">
         <div className="message">
           <h1><strong>Hello{this.state.nickText ? ' ' + this.state.nickText : ''}!</strong> <span className="no-break">Welcome to our discussion.</span></h1>
           <p>To reply to a message directly, {isTouchDevice ? 'tap' : 'use the arrow keys or click on'} it.</p>

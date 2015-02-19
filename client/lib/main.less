@@ -23,6 +23,22 @@ html, body, #container, .chat {
   height: 100%;
 }
 
+@passcode-color: #eedba0;
+
+.hatch-shade {
+  background: fade(black, 50%) data-uri('../res/hatching.svg') repeat;
+  opacity: .1;
+  z-index: 1;
+
+  &.fill {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+  }
+}
+
 .chat {
   @time-margin: 70px;
   @messages-padding: 10px;
@@ -335,11 +351,17 @@ html, body, #container, .chat {
       }
     }
 
-    .welcome {
+    .entry-box {
+      position: relative;
       margin: -10px;
       margin-top: 10px;
       padding: 10px;
-      background: fade(green, 10%);
+      z-index: 10;
+
+      .message {
+        margin: -10px;
+        padding: 10px;
+      }
 
       h1 {
         font-size: 1.5em;
@@ -370,6 +392,44 @@ html, body, #container, .chat {
         input {
           margin-right: .35em;
           vertical-align: middle;
+        }
+      }
+    }
+
+    .entry-box.welcome {
+      @color: #e5f2e5;
+      background: @color;
+
+      .message {
+        border-top: 1px solid darken(@color, 30%);
+        border-bottom: 1px solid darken(@color, 30%);
+      }
+    }
+
+    .entry-box.passcode {
+      background: @passcode-color;
+
+      .message {
+        border-top: 1px solid darken(@passcode-color, 30%);
+        border-bottom: 1px solid darken(@passcode-color, 30%);
+
+        &:before {
+          content: '';
+          display: inline-block;
+          width: 18px;
+          height: 18px;
+          margin-right: 10px;
+          background: data-uri('../res/lock.svg') no-repeat center center;
+          background-size: contain;
+          vertical-align: top;
+        }
+      }
+
+      .entry {
+        border-color: darken(@passcode-color, 30%);
+
+        label {
+          color: darken(desaturate(@passcode-color, 25%), 50%);
         }
       }
     }
