@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"heim/proto"
+	"heim/proto/security"
 
 	"github.com/gorilla/websocket"
 	"golang.org/x/net/context"
@@ -20,7 +21,9 @@ var (
 	ErrUnresponsive = fmt.Errorf("connection unresponsive")
 )
 
-type memSession struct {
+type cmdState func(*proto.Packet) (interface{}, error)
+
+type session struct {
 	ctx      context.Context
 	cancel   context.CancelFunc
 	conn     *websocket.Conn
@@ -28,20 +31,22 @@ type memSession struct {
 	serverID string
 	room     proto.Room
 
+	state      cmdState
+	capability security.Capability
+	onClose    func()
+
 	incoming chan *proto.Packet
 	outgoing chan *proto.Packet
 
 	outstandingPings uint32
 }
 
-func newMemSession(
-	ctx context.Context, conn *websocket.Conn, serverID string, room proto.Room) *memSession {
-
+func newSession(ctx context.Context, conn *websocket.Conn, serverID string, room proto.Room) *session {
 	id := conn.RemoteAddr().String()
 	loggingCtx := LoggingContext(ctx, fmt.Sprintf("[%s] ", id))
 	cancellableCtx, cancel := context.WithCancel(loggingCtx)
 
-	session := &memSession{
+	session := &session{
 		ctx:      cancellableCtx,
 		cancel:   cancel,
 		conn:     conn,
@@ -58,18 +63,18 @@ func newMemSession(
 	return session
 }
 
-func (s *memSession) Close() {
+func (s *session) Close() {
 	logger := Logger(s.ctx)
 	logger.Printf("closing session")
 	s.cancel()
 }
 
-func (s *memSession) ID() string               { return s.conn.RemoteAddr().String() }
-func (s *memSession) ServerID() string         { return s.serverID }
-func (s *memSession) Identity() proto.Identity { return s.identity }
-func (s *memSession) SetName(name string)      { s.identity.name = name }
+func (s *session) ID() string               { return s.conn.RemoteAddr().String() }
+func (s *session) ServerID() string         { return s.serverID }
+func (s *session) Identity() proto.Identity { return s.identity }
+func (s *session) SetName(name string)      { s.identity.name = name }
 
-func (s *memSession) Send(
+func (s *session) Send(
 	ctx context.Context, cmdType proto.PacketType, payload interface{}) error {
 
 	encoded, err := json.Marshal(payload)
@@ -89,23 +94,45 @@ func (s *memSession) Send(
 	return nil
 }
 
-func (s *memSession) handlePong(string) error {
+func (s *session) handlePong(string) error {
 	atomic.StoreUint32(&s.outstandingPings, 0)
 	return nil
 }
 
-func (s *memSession) serve() error {
-	go s.readMessages()
+func (s *session) serve() error {
+	defer func() {
+		if s.onClose != nil {
+			s.onClose()
+		}
+	}()
 
 	logger := Logger(s.ctx)
 	logger.Printf("client connected")
+
+	// TODO: check room auth
+	key, err := s.room.MasterKey(s.ctx)
+	if err != nil {
+		return err
+	}
+	switch key {
+	case nil:
+		if err := s.join(); err != nil {
+			// TODO: send an error packet
+			return err
+		}
+		s.state = s.handleCommand
+	default:
+		s.sendBounce()
+		s.state = s.handleAuth
+	}
+
+	go s.readMessages()
 
 	keepalive := time.NewTimer(KeepAlive)
 	defer keepalive.Stop()
 
 	for {
 		select {
-
 		case <-s.ctx.Done():
 			// connection forced to close
 			return s.ctx.Err()
@@ -124,10 +151,10 @@ func (s *memSession) serve() error {
 		case cmd := <-s.incoming:
 			keepalive.Stop()
 
-			reply, err := s.handleCommand(cmd)
+			reply, err := s.state(cmd)
 			if err != nil {
-				logger.Printf("error: handleCommand: %s", err)
-				reply = proto.ErrorReply{Error: err.Error()}
+				logger.Printf("error: %v: %s", s.state, err)
+				reply = err
 			}
 
 			resp, err := proto.MakeResponse(cmd.ID, cmd.Type, reply)
@@ -135,6 +162,8 @@ func (s *memSession) serve() error {
 				logger.Printf("error: Response: %s", err)
 				return err
 			}
+
+			fmt.Printf("response is: %#v\n", resp)
 
 			data, err := resp.Encode()
 			if err != nil {
@@ -165,7 +194,7 @@ func (s *memSession) serve() error {
 	return nil
 }
 
-func (s *memSession) readMessages() {
+func (s *session) readMessages() {
 	logger := Logger(s.ctx)
 	defer s.Close()
 
@@ -195,7 +224,32 @@ func (s *memSession) readMessages() {
 	}
 }
 
-func (s *memSession) handleCommand(cmd *proto.Packet) (interface{}, error) {
+func (s *session) handleAuth(cmd *proto.Packet) (interface{}, error) {
+	payload, err := cmd.Payload()
+	if err != nil {
+		return nil, fmt.Errorf("payload: %s", err)
+	}
+
+	switch msg := payload.(type) {
+	case *proto.AuthCommand:
+		reply, capability, err := Authenticate(s.ctx, s.room, msg)
+		if err != nil {
+			return nil, err
+		}
+		if reply.Success {
+			s.capability = capability
+			s.state = s.handleCommand
+		}
+		if err := s.join(); err != nil {
+			return nil, err
+		}
+		return reply, nil
+	default:
+		return nil, fmt.Errorf("access denied, please authenticate")
+	}
+}
+
+func (s *session) handleCommand(cmd *proto.Packet) (interface{}, error) {
 	payload, err := cmd.Payload()
 	if err != nil {
 		return nil, fmt.Errorf("payload: %s", err)
@@ -237,7 +291,7 @@ func (s *memSession) handleCommand(cmd *proto.Packet) (interface{}, error) {
 	}
 }
 
-func (s *memSession) sendSnapshot() error {
+func (s *session) sendSnapshot() error {
 	msgs, err := s.room.Latest(s.ctx, 100, 0)
 	if err != nil {
 		return err
@@ -258,5 +312,36 @@ func (s *memSession) sendSnapshot() error {
 		return err
 	}
 	s.outgoing <- event
+	return nil
+}
+
+func (s *session) sendBounce() error {
+	bounce := &proto.BounceEvent{
+		Reason: "authentication required",
+		// TODO: fill in AuthOptions
+	}
+	event, err := proto.MakeEvent(bounce)
+	if err != nil {
+		return err
+	}
+	s.outgoing <- event
+	return nil
+}
+
+func (s *session) join() error {
+	if err := s.sendSnapshot(); err != nil {
+		Logger(s.ctx).Printf("snapshot failed: %s", err)
+		return err
+	}
+	if err := s.room.Join(s.ctx, s); err != nil {
+		Logger(s.ctx).Printf("join failed: %s", err)
+		return err
+	}
+	s.onClose = func() {
+		if err := s.room.Part(s.ctx, s); err != nil {
+			// TODO: error handling
+			return
+		}
+	}
 	return nil
 }

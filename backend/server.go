@@ -5,6 +5,7 @@ import (
 	"path"
 
 	"heim/proto"
+	"heim/proto/security"
 
 	gorillactx "github.com/gorilla/context"
 	"github.com/gorilla/mux"
@@ -24,13 +25,15 @@ type Server struct {
 	ID         string
 	r          *mux.Router
 	b          proto.Backend
+	kms        security.KMS
 	staticPath string
 }
 
-func NewServer(backend proto.Backend, id, staticPath string) *Server {
+func NewServer(backend proto.Backend, kms security.KMS, id, staticPath string) *Server {
 	s := &Server{
 		ID:         id,
 		b:          backend,
+		kms:        kms,
 		staticPath: staticPath,
 	}
 	s.route()
@@ -97,27 +100,7 @@ func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
 	}
 	defer conn.Close()
 
-	session := newMemSession(ctx, conn, s.ID, room)
-
-	if err := session.sendSnapshot(); err != nil {
-		logger.Printf("snapshot failed: %s", err)
-		// TODO: send an error packet
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	err = room.Join(ctx, session)
-	if err != nil {
-		// TODO: error handling
-		return
-	}
-
-	defer func() {
-		if err := room.Part(ctx, session); err != nil {
-			// TODO: error handling
-			return
-		}
-	}()
+	session := newSession(ctx, conn, s.ID, room)
 
 	if err = session.serve(); err != nil {
 		// TODO: error handling

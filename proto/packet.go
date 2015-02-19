@@ -13,6 +13,12 @@ func (c PacketType) Event() PacketType { return c + "-event" }
 func (c PacketType) Reply() PacketType { return c + "-reply" }
 
 var (
+	AuthType      = PacketType("auth")
+	AuthEventType = AuthType.Event()
+	AuthReplyType = AuthType.Reply()
+
+	BounceEventType = PacketType("bounce").Event()
+
 	SendType      = PacketType("send")
 	SendEventType = SendType.Event()
 	SendReplyType = SendType.Reply()
@@ -35,6 +41,8 @@ var (
 	WhoReplyType = WhoType.Reply()
 
 	SnapshotEventType = PacketType("snapshot").Event()
+
+	ErrorReplyType = PacketType("error").Reply()
 )
 
 type ErrorReply struct {
@@ -75,6 +83,23 @@ type NickReply struct {
 
 type NickEvent NickReply
 
+type AuthCommand struct {
+	Type     AuthOption `json:"type"`
+	Passcode string     `json:"passcode,omitempty"`
+}
+
+type AuthReply struct {
+	Success bool   `json:"success"`
+	Reason  string `json:"reason"`
+}
+
+type AuthEvent AuthReply
+
+type BounceEvent struct {
+	Reason      string       `json:"reason"`
+	AuthOptions []AuthOption `json:"auth_options"`
+}
+
 type SnapshotEvent struct {
 	Version string    `json:"version"`
 	Listing Listing   `json:"listing"`
@@ -90,12 +115,17 @@ type WhoReply struct {
 type WhoEvent WhoReply
 
 type Packet struct {
-	ID   string          `json:"id"`
-	Type PacketType      `json:"type"`
-	Data json.RawMessage `json:"data"`
+	ID    string          `json:"id"`
+	Type  PacketType      `json:"type"`
+	Data  json.RawMessage `json:"data"`
+	Error string          `json:"error,omitempty"`
 }
 
 func (cmd *Packet) Payload() (interface{}, error) {
+	if cmd.Error != "" {
+		return &ErrorReply{Error: cmd.Error}, nil
+	}
+
 	var payload interface{}
 
 	// TODO: use reflect + a map
@@ -120,6 +150,14 @@ func (cmd *Packet) Payload() (interface{}, error) {
 		payload = &NickReply{}
 	case NickEventType:
 		payload = &NickEvent{}
+	case AuthType:
+		payload = &AuthCommand{}
+	case AuthEventType:
+		payload = &AuthEvent{}
+	case AuthReplyType:
+		payload = &AuthReply{}
+	case BounceEventType:
+		payload = &BounceEvent{}
 	case SnapshotEventType:
 		payload = &SnapshotEvent{}
 	case WhoType:
@@ -149,11 +187,16 @@ func MakeResponse(refID string, msgType PacketType, payload interface{}) (*Packe
 		Type: msgType.Reply(),
 	}
 
+	if err, ok := payload.(error); ok {
+		msgType = ErrorReplyType
+		packet.Error = err.Error()
+		payload = nil
+	}
+
 	data, err := json.Marshal(payload)
 	if err != nil {
 		return nil, err
 	}
-
 	if err := packet.Data.UnmarshalJSON(data); err != nil {
 		return nil, err
 	}
@@ -164,6 +207,8 @@ func MakeResponse(refID string, msgType PacketType, payload interface{}) (*Packe
 func MakeEvent(payload interface{}) (*Packet, error) {
 	packet := &Packet{}
 	switch payload.(type) {
+	case *BounceEvent:
+		packet.Type = BounceEventType
 	case *SnapshotEvent:
 		packet.Type = SnapshotEventType
 	default:

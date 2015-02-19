@@ -16,4 +16,5 @@ fi
     -static /srv/heim/client/src/build \
     -http :80 \
     -psql 'postgres://postgres:heimlich@psql/heim?sslmode=disable' \
+    -kms-local-key-file /keys/masterkey \
     $control_flags

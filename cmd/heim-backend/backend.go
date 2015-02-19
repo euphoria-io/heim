@@ -3,9 +3,11 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
 
+	"heim/aws/kms"
 	"heim/backend"
 	"heim/backend/console"
 	"heim/backend/psql"
@@ -22,6 +24,10 @@ var (
 	ctrlAddr     = flag.String("control", ":2222", "")
 	ctrlHostKey  = flag.String("control-hostkey", "", "")
 	ctrlAuthKeys = flag.String("control-authkeys", "", "")
+
+	kmsAWSRegion    = flag.String("kms-aws-region", "us-west-2", "")
+	kmsAWSKeyID     = flag.String("kms-aws-key-id", "", "")
+	kmsLocalKeyFile = flag.String("kms-local-key-file", "", "")
 )
 
 var version string
@@ -35,15 +41,18 @@ func main() {
 		os.Exit(1)
 	}
 
-	server := backend.NewServer(b, *id, *static)
-	kms := security.LocalKMS()
-	// TODO: get key from somewhere
-	kms.SetMasterKey(make([]byte, security.AES256.KeySize()))
+	kms, err := getKMS()
+	if err != nil {
+		fmt.Printf("error: %s\n", err)
+		os.Exit(1)
+	}
 
 	if err := controller(b, kms); err != nil {
 		fmt.Printf("error: %s\n", err)
 		os.Exit(1)
 	}
+
+	server := backend.NewServer(b, kms, *id, *static)
 
 	fmt.Printf("serving on %s\n", *addr)
 	http.ListenAndServe(*addr, newVersioningHandler(server))
@@ -90,4 +99,52 @@ func (vh *versioningHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Heim-Version", vh.version)
 	}
 	vh.handler.ServeHTTP(w, r)
+}
+
+func getKMS() (security.KMS, error) {
+	switch {
+	case *kmsLocalKeyFile != "":
+		kms, err := localKMS(*kmsLocalKeyFile)
+		if err != nil {
+			return nil, fmt.Errorf("kms-local-key-file: %s", err)
+		}
+		return kms, nil
+	case *kmsAWSKeyID != "":
+		if *kmsAWSRegion == "" {
+			return nil, fmt.Errorf("--kms-aws-region required if --kms-aws-key-id is specified")
+		}
+		kms, err := kms.New(*kmsAWSRegion, *kmsAWSKeyID)
+		if err != nil {
+			return nil, fmt.Errorf("kms-aws: %s", err)
+		}
+		return kms, nil
+	default:
+		return nil, fmt.Errorf("--kms-aws-key-id or --kms-local-key-file required")
+	}
+}
+
+func localKMS(keyPath string) (security.KMS, error) {
+	f, err := os.Open(keyPath)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	keySize := security.AES256.KeySize()
+	fi, err := f.Stat()
+	if err != nil {
+		return nil, err
+	}
+	if fi.Size() != int64(keySize) {
+		return nil, fmt.Errorf("key must be exactly %d bytes in size", keySize)
+	}
+
+	masterKey, err := ioutil.ReadAll(f)
+	if err != nil {
+		return nil, err
+	}
+
+	kms := security.LocalKMS()
+	kms.SetMasterKey(masterKey)
+	return kms, nil
 }

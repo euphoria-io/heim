@@ -181,12 +181,14 @@ func (rb *RoomBinding) SaveCapability(ctx context.Context, capability security.C
 		return err
 	}
 
+	backend.Logger(ctx).Printf("added capability %s to room %s", capability.CapabilityID(), rb.Name)
 	return nil
 }
 
 func (rb *RoomBinding) GetCapability(ctx context.Context, id string) (security.Capability, error) {
 	rcb := &RoomCapabilityBinding{}
 
+	backend.Logger(ctx).Printf("looking up capability %s in room %s", id, rb.Name)
 	err := rb.DbMap.SelectOne(
 		rcb,
 		"SELECT * FROM capability c, room_capability r"+
@@ -194,6 +196,9 @@ func (rb *RoomBinding) GetCapability(ctx context.Context, id string) (security.C
 		rb.Name, id)
 
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
 		return nil, err
 	}
 
