@@ -28,9 +28,10 @@ type memRoom struct {
 
 func newMemRoom(name, version string) *memRoom {
 	return &memRoom{
-		name:    name,
-		version: version,
-		log:     newMemLog(),
+		name:         name,
+		version:      version,
+		log:          newMemLog(),
+		capabilities: map[string]security.Capability{},
 	}
 }
 
@@ -186,6 +187,10 @@ func (r *memRoom) SaveCapability(ctx context.Context, capability security.Capabi
 	r.capabilities[capability.CapabilityID()] = capability
 	r.Unlock()
 	return nil
+}
+
+func (r *memRoom) GetCapability(ctx context.Context, id string) (security.Capability, error) {
+	return r.capabilities[id], nil
 }
 
 type roomKey struct {

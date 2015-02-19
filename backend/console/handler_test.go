@@ -8,6 +8,13 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
+type testTerm struct {
+	bytes.Buffer
+	password string
+}
+
+func (t *testTerm) ReadPassword(password string) (string, error) { return t.password, nil }
+
 type testHandler struct{}
 
 func (testHandler) run(c *console, args []string) error {
@@ -28,21 +35,21 @@ func TestRunHandler(t *testing.T) {
 	ctrl := &Controller{}
 
 	Convey("Successfully runs", t, func() {
-		term := &bytes.Buffer{}
+		term := &testTerm{}
 		runHandler(testHandler{}, cmdConsole(ctrl, "test", term), []string{"test"})
 		So(term.String(), ShouldEqual, "ok\r\n")
 	})
 
 	Convey("Usage error", t, func() {
 		Convey("Handler serves usage", func() {
-			term := &bytes.Buffer{}
+			term := &testTerm{}
 			runHandler(testHandlerWithUsage{}, cmdConsole(ctrl, "test", term), nil)
 			So(term.String(), ShouldEqual,
 				"error: invalid number of arguments: 0\r\nusage\r\n\r\nOPTIONS:\r\n")
 		})
 
 		Convey("Handler doesn't serve usage", func() {
-			term := &bytes.Buffer{}
+			term := &testTerm{}
 			runHandler(testHandler{}, cmdConsole(ctrl, "test", term), nil)
 			So(term.String(), ShouldEqual, "error: invalid number of arguments: 0\r\n")
 		})
@@ -51,7 +58,7 @@ func TestRunHandler(t *testing.T) {
 
 func TestRunCommand(t *testing.T) {
 	Convey("Unregistered command prints error", t, func() {
-		term := &bytes.Buffer{}
+		term := &testTerm{}
 		runCommand(nil, "asdf", term, nil)
 		So(term.String(), ShouldEqual, "invalid command: asdf\r\n")
 	})
@@ -61,7 +68,7 @@ func TestRunCommand(t *testing.T) {
 		defer func() { handlers = save }()
 		handlers = map[string]handler{}
 		register("test", testHandler{})
-		term := &bytes.Buffer{}
+		term := &testTerm{}
 		runCommand(&Controller{}, "test", term, []string{"arg"})
 		So(term.String(), ShouldEqual, "ok\r\n")
 	})

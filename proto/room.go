@@ -50,6 +50,10 @@ type Room interface {
 
 	// SaveCapability saves the given capability.
 	SaveCapability(ctx context.Context, capability security.Capability) error
+
+	// GetCapability retrieves the capability under the given ID, or
+	// returns nil if it doesn't exist.
+	GetCapability(ctx context.Context, id string) (security.Capability, error)
 }
 
 type RoomKey interface {

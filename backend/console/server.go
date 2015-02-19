@@ -120,9 +120,7 @@ func (ctrl *Controller) AddAuthorizedKeys(path string) error {
 }
 
 func (ctrl *Controller) Serve() {
-	fmt.Printf("ssh controller serving\n")
 	for {
-		fmt.Printf("ssh controller accepting\n")
 		conn, err := ctrl.listener.Accept()
 		if err != nil {
 			panic(fmt.Sprintf("controller accept: %s", err))
@@ -133,25 +131,20 @@ func (ctrl *Controller) Serve() {
 }
 
 func (ctrl *Controller) interact(conn net.Conn) {
-	fmt.Printf("ssh interaction starting\n")
 	_, nchs, reqs, err := ssh.NewServerConn(conn, ctrl.config)
 	if err != nil {
-		fmt.Printf("ssh.NewServerConn: %s\n", err)
 		return
 	}
 
 	go ssh.DiscardRequests(reqs)
 
-	fmt.Printf("iterating over nchs\n")
 	for nch := range nchs {
-		fmt.Printf("nch.ChannelType() = %s\n", nch.ChannelType())
 		if nch.ChannelType() != "session" {
 			nch.Reject(ssh.UnknownChannelType, "unknown channel type")
 			continue
 		}
 		ch, reqs, err := nch.Accept()
 		if err != nil {
-			fmt.Printf("ssh accept: %s\n", err)
 			return
 		}
 		go ctrl.filterClientRequests(reqs)

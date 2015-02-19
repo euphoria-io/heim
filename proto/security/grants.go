@@ -1,12 +1,10 @@
 package security
 
 import (
-	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 
-	"golang.org/x/crypto/pbkdf2"
 	"golang.org/x/net/context"
 )
 
@@ -40,12 +38,9 @@ type Capability interface {
 func NewCapability(kms KMS, clientKey *ManagedKey, nonce []byte, public, private interface{}) (
 	Capability, error) {
 
-	if len(nonce) != clientKey.BlockSize() {
-		return nil, fmt.Errorf("nonce must be %d bytes", clientKey.BlockSize())
-	}
-
-	if clientKey.Encrypted() {
-		return nil, fmt.Errorf("client key must be decrypted")
+	id, err := generateCapabilityID(clientKey, nonce)
+	if err != nil {
+		return nil, err
 	}
 
 	publicData, err := json.Marshal(public)
@@ -58,14 +53,6 @@ func NewCapability(kms KMS, clientKey *ManagedKey, nonce []byte, public, private
 		return nil, err
 	}
 
-	// Generate capability ID by encrypting nonce with client key. We use
-	// the nonce itself as the IV.
-	id := make([]byte, len(nonce))
-	copy(id, nonce)
-	if err := clientKey.KeyType.BlockCrypt(nonce, clientKey.Plaintext, id, true); err != nil {
-		return nil, err
-	}
-
 	// Use the ID as the IV for encrypting the private payload.
 	privateData = clientKey.KeyType.Pad(privateData)
 	if err := clientKey.KeyType.BlockCrypt(id, clientKey.Plaintext, privateData, true); err != nil {
@@ -74,7 +61,6 @@ func NewCapability(kms KMS, clientKey *ManagedKey, nonce []byte, public, private
 
 	grant := &capability{
 		IDString:         base64.URLEncoding.EncodeToString(id),
-		Nonce:            nonce,
 		Public:           publicData,
 		EncryptedPrivate: privateData,
 	}
@@ -83,7 +69,6 @@ func NewCapability(kms KMS, clientKey *ManagedKey, nonce []byte, public, private
 
 type capability struct {
 	IDString         string
-	Nonce            []byte
 	Public           []byte
 	EncryptedPrivate []byte
 }
@@ -115,9 +100,39 @@ func GrantCapabilityOnSubjectWithPasscode(
 	ctx context.Context, kms KMS, nonce []byte, encryptedSubjectKey *ManagedKey, passcode []byte) (
 	Capability, error) {
 
-	// Use nonce as salt.
-	clientKey := &ManagedKey{
-		Plaintext: pbkdf2.Key(passcode, nonce, keyDerivationIterations, AES256.KeySize(), sha256.New),
-	}
+	clientKey := KeyFromPasscode(passcode, nonce, keyDerivationIterations, AES128.KeySize())
 	return GrantCapabilityOnSubject(ctx, kms, nonce, encryptedSubjectKey, clientKey)
+}
+
+func GetCapabilityID(nonce []byte, clientKey *ManagedKey) (string, error) {
+	id, err := generateCapabilityID(clientKey, nonce)
+	if err != nil {
+		return "", err
+	}
+	return base64.URLEncoding.EncodeToString(id), nil
+}
+
+func GetCapabilityIDForPasscode(nonce, passcode []byte) (string, error) {
+	clientKey := KeyFromPasscode(passcode, nonce, keyDerivationIterations, AES128.KeySize())
+	return GetCapabilityID(nonce, clientKey)
+}
+
+func generateCapabilityID(clientKey *ManagedKey, nonce []byte) ([]byte, error) {
+	if len(nonce) != clientKey.BlockSize() {
+		return nil, fmt.Errorf("nonce must be %d bytes", clientKey.BlockSize())
+	}
+
+	if clientKey.Encrypted() {
+		return nil, fmt.Errorf("client key must be decrypted")
+	}
+
+	// Generate capability ID by encrypting nonce with client key. We use
+	// the nonce itself as the IV.
+	id := make([]byte, len(nonce))
+	copy(id, nonce)
+	if err := clientKey.KeyType.BlockCrypt(nonce, clientKey.Plaintext, id, true); err != nil {
+		return nil, err
+	}
+
+	return id, nil
 }

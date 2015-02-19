@@ -4,9 +4,12 @@ import (
 	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"strconv"
+
+	"golang.org/x/crypto/pbkdf2"
 )
 
 var (
@@ -164,4 +167,10 @@ func (k *ManagedKey) Decrypt(keyKey *ManagedKey) error {
 	k.Plaintext = k.Ciphertext
 	k.Ciphertext = nil
 	return nil
+}
+
+func KeyFromPasscode(passcode, salt []byte, iterations, keySize int) *ManagedKey {
+	return &ManagedKey{
+		Plaintext: pbkdf2.Key(passcode, salt, iterations, keySize, sha256.New),
+	}
 }

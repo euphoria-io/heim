@@ -14,6 +14,8 @@ import (
 
 type ioterm interface {
 	io.Writer
+
+	ReadPassword(prompt string) (string, error)
 }
 
 func cmdConsole(ctrl *Controller, cmd string, term ioterm) *console {

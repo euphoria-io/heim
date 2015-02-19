@@ -47,3 +47,5 @@ type RoomCapabilityBinding struct {
 	Capability
 	RoomCapability
 }
+
+func (rcb *RoomCapabilityBinding) CapabilityID() string { return rcb.Capability.CapabilityID() }

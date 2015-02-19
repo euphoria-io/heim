@@ -157,7 +157,7 @@ func (rb *RoomBinding) SaveCapability(ctx context.Context, capability security.C
 		return err
 	}
 
-	rmc := &RoomCapabilityBinding{
+	rcb := &RoomCapabilityBinding{
 		Capability: Capability{
 			ID:                   capability.CapabilityID(),
 			EncryptedPrivateData: capability.EncryptedPayload(),
@@ -170,7 +170,7 @@ func (rb *RoomBinding) SaveCapability(ctx context.Context, capability security.C
 		},
 	}
 
-	if err := transaction.Insert(&rmc.Capability, &rmc.RoomCapability); err != nil {
+	if err := transaction.Insert(&rcb.Capability, &rcb.RoomCapability); err != nil {
 		if rerr := transaction.Rollback(); rerr != nil {
 			backend.Logger(ctx).Printf("rollback error: %s", rerr)
 		}
@@ -182,4 +182,20 @@ func (rb *RoomBinding) SaveCapability(ctx context.Context, capability security.C
 	}
 
 	return nil
+}
+
+func (rb *RoomBinding) GetCapability(ctx context.Context, id string) (security.Capability, error) {
+	rcb := &RoomCapabilityBinding{}
+
+	err := rb.DbMap.SelectOne(
+		rcb,
+		"SELECT * FROM capability c, room_capability r"+
+			" WHERE r.room = $1 AND c.id = $2 AND r.revoked < r.granted",
+		rb.Name, id)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return rcb, nil
 }
