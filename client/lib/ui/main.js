@@ -47,7 +47,7 @@ module.exports = React.createClass({
   },
 
   onClick: function(ev) {
-    if (!window.getSelection().isCollapsed) {
+    if (!window.getSelection().isCollapsed || ev.target.nodeName == 'BUTTON') {
       return
     }
 
