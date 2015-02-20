@@ -8,8 +8,7 @@ DEPSDIR=/var/cache/heim-deps
 
 setup_deps() {
   ${DEPSDIR}/deps.sh link ${SRCDIR}/heim
-  ln -s ${DEPSDIR}/node_modules ${SRCDIR}/heim/node_modules
-  PATH=${PATH}:${SRCDIR}/heim/node_modules/.bin
+  PATH=${PATH}:${SRCDIR}/heim/deps/node_modules/.bin
   GOPATH=${SRCDIR}/heim/deps/godeps:${GOPATH}
 }
 
