@@ -12,6 +12,8 @@ import (
 	"golang.org/x/crypto/pbkdf2"
 )
 
+const keyDerivationIterations = 4096
+
 var (
 	ErrInvalidKey         = errors.New("invalid key")
 	ErrKeyMustBeDecrypted = errors.New("key must be decrypted")
@@ -169,8 +171,8 @@ func (k *ManagedKey) Decrypt(keyKey *ManagedKey) error {
 	return nil
 }
 
-func KeyFromPasscode(passcode, salt []byte, iterations, keySize int) *ManagedKey {
+func KeyFromPasscode(passcode, salt []byte, keySize int) *ManagedKey {
 	return &ManagedKey{
-		Plaintext: pbkdf2.Key(passcode, salt, iterations, keySize, sha256.New),
+		Plaintext: pbkdf2.Key(passcode, salt, keyDerivationIterations, keySize, sha256.New),
 	}
 }

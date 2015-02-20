@@ -8,8 +8,6 @@ import (
 	"golang.org/x/net/context"
 )
 
-const keyDerivationIterations = 4096
-
 // Capability is a generic handle on a cryptographic grant of access.
 type Capability interface {
 	// CapabilityID() returns the globally unique identifier of the
@@ -100,7 +98,7 @@ func GrantCapabilityOnSubjectWithPasscode(
 	ctx context.Context, kms KMS, nonce []byte, encryptedSubjectKey *ManagedKey, passcode []byte) (
 	Capability, error) {
 
-	clientKey := KeyFromPasscode(passcode, nonce, keyDerivationIterations, AES128.KeySize())
+	clientKey := KeyFromPasscode(passcode, nonce, AES128.KeySize())
 	return GrantCapabilityOnSubject(ctx, kms, nonce, encryptedSubjectKey, clientKey)
 }
 
@@ -113,7 +111,7 @@ func GetCapabilityID(nonce []byte, clientKey *ManagedKey) (string, error) {
 }
 
 func GetCapabilityIDForPasscode(nonce, passcode []byte) (string, error) {
-	clientKey := KeyFromPasscode(passcode, nonce, keyDerivationIterations, AES128.KeySize())
+	clientKey := KeyFromPasscode(passcode, nonce, AES128.KeySize())
 	return GetCapabilityID(nonce, clientKey)
 }
 

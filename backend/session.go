@@ -9,6 +9,7 @@ import (
 
 	"heim/proto"
 	"heim/proto/security"
+	"heim/proto/snowflake"
 
 	"github.com/gorilla/websocket"
 	"golang.org/x/net/context"
@@ -32,6 +33,7 @@ type session struct {
 	room     proto.Room
 
 	state      cmdState
+	roomKey    *security.ManagedKey
 	capability security.Capability
 	onClose    func()
 
@@ -76,6 +78,14 @@ func (s *session) SetName(name string)      { s.identity.name = name }
 
 func (s *session) Send(
 	ctx context.Context, cmdType proto.PacketType, payload interface{}) error {
+
+	if s.capability != nil {
+		var err error
+		payload, err = decryptPayload(payload, s.roomKey, s.capability)
+		if err != nil {
+			return err
+		}
+	}
 
 	encoded, err := json.Marshal(payload)
 	if err != nil {
@@ -230,11 +240,12 @@ func (s *session) handleAuth(cmd *proto.Packet) (interface{}, error) {
 
 	switch msg := payload.(type) {
 	case *proto.AuthCommand:
-		reply, capability, err := Authenticate(s.ctx, s.room, msg)
+		reply, roomKey, capability, err := Authenticate(s.ctx, s.room, msg)
 		if err != nil {
 			return nil, err
 		}
 		if reply.Success {
+			s.roomKey = roomKey
 			s.capability = capability
 			s.state = s.handleCommand
 			if err := s.join(); err != nil {
@@ -255,11 +266,7 @@ func (s *session) handleCommand(cmd *proto.Packet) (interface{}, error) {
 
 	switch msg := payload.(type) {
 	case *proto.SendCommand:
-		sent, err := s.room.Send(s.ctx, s, proto.Message{Content: msg.Content, Parent: msg.Parent})
-		if err != nil {
-			return nil, err
-		}
-		return proto.SendReply(sent), nil
+		return s.handleSendCommand(msg)
 	case *proto.LogCommand:
 		msgs, err := s.room.Latest(s.ctx, msg.N, msg.Before)
 		if err != nil {
@@ -294,6 +301,15 @@ func (s *session) sendSnapshot() error {
 	if err != nil {
 		return err
 	}
+
+	for i := range msgs {
+		if s.capability != nil {
+			if err := decryptMessage(&msgs[i], s.roomKey, s.capability); err != nil {
+				return err
+			}
+		}
+	}
+
 	listing, err := s.room.Listing(s.ctx)
 	if err != nil {
 		return err
@@ -342,4 +358,31 @@ func (s *session) join() error {
 		}
 	}
 	return nil
+}
+
+func (s *session) handleSendCommand(cmd *proto.SendCommand) (interface{}, error) {
+	msgID, err := snowflake.New()
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: verify parent
+	msg := proto.Message{
+		ID:      msgID,
+		Content: cmd.Content,
+		Parent:  cmd.Parent,
+		Sender:  s.identity.View(),
+	}
+
+	if s.capability != nil {
+		if err := encryptMessage(&msg, s.roomKey, s.capability); err != nil {
+			return nil, err
+		}
+	}
+
+	sent, err := s.room.Send(s.ctx, s, msg)
+	if err != nil {
+		return nil, err
+	}
+	return proto.SendReply(sent), nil
 }

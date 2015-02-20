@@ -93,17 +93,11 @@ func (r *memRoom) Send(ctx context.Context, session proto.Session, message proto
 	r.Lock()
 	defer r.Unlock()
 
-	// TODO: verify parent
-	msgID, err := snowflake.New()
-	if err != nil {
-		return proto.Message{}, err
-	}
-
 	msg := proto.Message{
-		ID:       msgID,
-		UnixTime: msgID.Time().Unix(),
+		ID:       message.ID,
+		UnixTime: message.ID.Time().Unix(),
 		Parent:   message.Parent,
-		Sender:   session.Identity().View(),
+		Sender:   message.Sender,
 		Content:  message.Content,
 	}
 	r.log.post(&msg)

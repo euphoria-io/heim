@@ -89,7 +89,7 @@ func (rb *RoomBinding) GenerateMasterKey(
 		return nil, err
 	}
 
-	mkey, err := kms.GenerateEncryptedKey(security.AES256)
+	mkey, err := kms.GenerateEncryptedKey(security.AES128)
 	if err != nil {
 		return nil, err
 	}

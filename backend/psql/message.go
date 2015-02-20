@@ -24,13 +24,8 @@ func (Message) AfterCreateTable(db *sql.DB) error {
 }
 
 func NewMessage(
-	room *Room, idView *proto.IdentityView, parent snowflake.Snowflake, content string) (
+	room *Room, idView *proto.IdentityView, id, parent snowflake.Snowflake, content string) (
 	*Message, error) {
-
-	id, err := snowflake.New()
-	if err != nil {
-		return nil, err
-	}
 
 	return &Message{
 		Room:       room.Name,
