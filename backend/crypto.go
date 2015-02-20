@@ -10,7 +10,6 @@ import (
 )
 
 func decryptPayload(payload interface{}, auth map[string]*Authentication) (interface{}, error) {
-	fmt.Printf("maybe decrypt %#v\n", payload)
 	switch msg := payload.(type) {
 	case proto.Message:
 		return decryptMessage(&msg, auth)
@@ -20,12 +19,12 @@ func decryptPayload(payload interface{}, auth map[string]*Authentication) (inter
 			return nil, err
 		}
 		return *(*proto.SendReply)(dm), nil
-	case proto.SendEvent:
-		dm, err := decryptMessage((*proto.Message)(&msg), auth)
+	case *proto.SendEvent:
+		dm, err := decryptMessage((*proto.Message)(msg), auth)
 		if err != nil {
 			return nil, err
 		}
-		return *(*proto.SendEvent)(dm), nil
+		return (*proto.SendEvent)(dm), nil
 	default:
 		return msg, nil
 	}
