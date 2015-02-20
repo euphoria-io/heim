@@ -90,7 +90,7 @@ type AuthCommand struct {
 
 type AuthReply struct {
 	Success bool   `json:"success"`
-	Reason  string `json:"reason"`
+	Reason  string `json:"reason,omitempty"`
 }
 
 type AuthEvent AuthReply
@@ -117,7 +117,7 @@ type WhoEvent WhoReply
 type Packet struct {
 	ID    string          `json:"id"`
 	Type  PacketType      `json:"type"`
-	Data  json.RawMessage `json:"data"`
+	Data  json.RawMessage `json:"data,omitempty"`
 	Error string          `json:"error,omitempty"`
 }
 
