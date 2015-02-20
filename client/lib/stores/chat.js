@@ -70,8 +70,8 @@ module.exports.store = Reflux.createStore({
       }
     } else if (ev.status == 'open') {
       this.state.connected = true
-      if (this.state.tentativeNick) {
-        this._sendNick(this.state.tentativeNick)
+      if (this.state.tentativeNick || this.state.nick) {
+        this._sendNick(this.state.tentativeNick || this.state.nick)
       }
     } else if (ev.status == 'close') {
       this.state.connected = false

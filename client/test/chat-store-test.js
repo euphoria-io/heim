@@ -164,13 +164,8 @@ describe('chat store', function() {
       var testNick = 'test-nick'
 
       beforeEach(function() {
-        sinon.stub(storage, 'setRoom')
         chat.store.connect('ezzie')
         chat.store.setNick(testNick)
-      })
-
-      afterEach(function() {
-        storage.setRoom.restore()
       })
 
       it('should send a nick change', function() {
@@ -306,6 +301,49 @@ describe('chat store', function() {
     it('should have connected state: false', function() {
       handleSocket({status: 'close'}, function(state) {
         assert.equal(state.connected, false)
+      })
+    })
+  })
+
+  describe('when reconnecting', function() {
+    var mockStorage = {
+      room: {
+        ezzie: {
+          nick: 'tester',
+        }
+      }
+    }
+
+    beforeEach(function() {
+      sinon.stub(storage, 'setRoom')
+      chat.store.state.roomName = 'ezzie'
+      chat.store.storageChange(mockStorage)
+      chat.store.socketEvent({status: 'open'})
+      chat.store.socketEvent({status: 'receive', body: snapshotReply})
+      chat.store.socketEvent({status: 'receive', body: {
+        'id': '1',
+        'type': 'nick-reply',
+        'data': {
+          'id': '32.64.96.128:12345',
+          'from': 'guest',
+          'to': 'tester',
+        }
+      }})
+      chat.store.socketEvent({status: 'close'})
+      socket.send.reset()
+    })
+
+    afterEach(function() {
+      storage.setRoom.restore()
+    })
+
+    it('should send stored nick', function(done) {
+      handleSocket({status: 'open'}, function() {
+        sinon.assert.calledWithExactly(socket.send, {
+          type: 'nick',
+          data: {name: mockStorage.room.ezzie.nick},
+        })
+        done()
       })
     })
   })
