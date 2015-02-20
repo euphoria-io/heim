@@ -18,6 +18,7 @@ module.exports.store = Reflux.createStore({
   init: function() {
     this.state = {
       connected: null,
+      roomName: null,
       tentativeNick: null,
       nick: null,
       messages: new Tree('time'),
