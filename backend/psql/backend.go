@@ -188,7 +188,7 @@ func (b *Backend) sendMessageToRoom(
 	ctx context.Context, room *Room, session proto.Session, msg proto.Message,
 	exclude ...proto.Session) (proto.Message, error) {
 
-	stored, err := NewMessage(room, msg.Sender, msg.ID, msg.Parent, msg.Content)
+	stored, err := NewMessage(room, msg.Sender, msg.ID, msg.Parent, msg.EncryptionKeyID, msg.Content)
 	if err != nil {
 		return proto.Message{}, err
 	}

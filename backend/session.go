@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"heim/proto"
-	"heim/proto/security"
 	"heim/proto/snowflake"
 
 	"github.com/gorilla/websocket"
@@ -32,10 +31,10 @@ type session struct {
 	serverID string
 	room     proto.Room
 
-	state      cmdState
-	roomKey    *security.ManagedKey
-	capability security.Capability
-	onClose    func()
+	state   cmdState
+	auth    map[string]*Authentication
+	keyID   string
+	onClose func()
 
 	incoming chan *proto.Packet
 	outgoing chan *proto.Packet
@@ -79,12 +78,10 @@ func (s *session) SetName(name string)      { s.identity.name = name }
 func (s *session) Send(
 	ctx context.Context, cmdType proto.PacketType, payload interface{}) error {
 
-	if s.capability != nil {
-		var err error
-		payload, err = decryptPayload(payload, s.roomKey, s.capability)
-		if err != nil {
-			return err
-		}
+	var err error
+	payload, err = decryptPayload(payload, s.auth)
+	if err != nil {
+		return err
 	}
 
 	encoded, err := json.Marshal(payload)
@@ -240,19 +237,21 @@ func (s *session) handleAuth(cmd *proto.Packet) (interface{}, error) {
 
 	switch msg := payload.(type) {
 	case *proto.AuthCommand:
-		reply, roomKey, capability, err := Authenticate(s.ctx, s.room, msg)
+		auth, err := Authenticate(s.ctx, s.room, msg)
 		if err != nil {
 			return nil, err
 		}
-		if reply.Success {
-			s.roomKey = roomKey
-			s.capability = capability
-			s.state = s.handleCommand
-			if err := s.join(); err != nil {
-				return nil, err
-			}
+		if auth.FailureReason != "" {
+			return &proto.AuthReply{Reason: auth.FailureReason}, nil
 		}
-		return reply, nil
+		// TODO: support holding multiple keys
+		s.auth = map[string]*Authentication{auth.KeyID: auth}
+		s.keyID = auth.KeyID
+		s.state = s.handleCommand
+		if err := s.join(); err != nil {
+			return nil, err
+		}
+		return &proto.AuthReply{Success: true}, nil
 	default:
 		return nil, fmt.Errorf("access denied, please authenticate")
 	}
@@ -302,11 +301,12 @@ func (s *session) sendSnapshot() error {
 		return err
 	}
 
-	for i := range msgs {
-		if s.capability != nil {
-			if err := decryptMessage(&msgs[i], s.roomKey, s.capability); err != nil {
-				return err
+	for i, msg := range msgs {
+		if msg.EncryptionKeyID != "" {
+			if _, err := decryptMessage(&msg, s.auth); err != nil {
+				continue
 			}
+			msgs[i] = msg
 		}
 	}
 
@@ -374,8 +374,8 @@ func (s *session) handleSendCommand(cmd *proto.SendCommand) (interface{}, error)
 		Sender:  s.identity.View(),
 	}
 
-	if s.capability != nil {
-		if err := encryptMessage(&msg, s.roomKey, s.capability); err != nil {
+	if s.keyID != "" {
+		if err := encryptMessage(&msg, s.keyID, s.auth[s.keyID].Key); err != nil {
 			return nil, err
 		}
 	}
@@ -384,5 +384,6 @@ func (s *session) handleSendCommand(cmd *proto.SendCommand) (interface{}, error)
 	if err != nil {
 		return nil, err
 	}
-	return proto.SendReply(sent), nil
+
+	return decryptPayload(proto.SendReply(sent), s.auth)
 }

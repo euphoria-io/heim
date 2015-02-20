@@ -26,6 +26,7 @@ type RoomMasterKeyBinding struct {
 	RoomMasterKey
 }
 
+func (rmkb *RoomMasterKeyBinding) KeyID() string        { return rmkb.RoomMasterKey.KeyID }
 func (rmkb *RoomMasterKeyBinding) Timestamp() time.Time { return rmkb.RoomMasterKey.Activated }
 func (rmkb *RoomMasterKeyBinding) Nonce() []byte        { return rmkb.MasterKey.Nonce }
 

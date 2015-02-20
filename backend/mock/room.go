@@ -1,6 +1,7 @@
 package mock
 
 import (
+	"fmt"
 	"sort"
 	"sync"
 	"time"
@@ -173,6 +174,7 @@ func (r *memRoom) GenerateMasterKey(ctx context.Context, kms security.KMS) (prot
 		nonce:     nonce,
 		key:       *mkey,
 	}
+	r.key.id = fmt.Sprintf("%s", r.key.timestamp)
 	return r.key, nil
 }
 
@@ -188,11 +190,13 @@ func (r *memRoom) GetCapability(ctx context.Context, id string) (security.Capabi
 }
 
 type roomKey struct {
+	id        string
 	timestamp time.Time
 	nonce     []byte
 	key       security.ManagedKey
 }
 
+func (k *roomKey) KeyID() string                   { return k.id }
 func (k *roomKey) Timestamp() time.Time            { return k.timestamp }
 func (k *roomKey) Nonce() []byte                   { return k.nonce }
 func (k *roomKey) ManagedKey() security.ManagedKey { return k.key.Clone() }

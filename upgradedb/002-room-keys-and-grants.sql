@@ -39,10 +39,14 @@ CREATE TABLE room_capability (
 -- get capabilities by room ordered by granted, revoked
 CREATE INDEX room_capability_room_granted_revoked ON room_capability(room, granted, revoked);
 
--- +migrate Down
--- just drop the tables
+-- designate encryption key and status in message table
+ALTER TABLE message ADD encryption_key_id text;
 
-DROP TABLE master_key;
-DROP TABLE capability;
-DROP TABLE room_master_key;
-DROP TABLE room_capability;
+-- +migrate Down
+-- drop the new tables, drop the message column
+
+DROP TABLE IF EXISTS master_key;
+DROP TABLE IF EXISTS capability;
+DROP TABLE IF EXISTS room_master_key;
+DROP TABLE IF EXISTS room_capability;
+ALTER TABLE message DROP IF EXISTS encryption_key_id;

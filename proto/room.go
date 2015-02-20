@@ -57,6 +57,9 @@ type Room interface {
 }
 
 type RoomKey interface {
+	// ID returns a unique identifier for the key.
+	KeyID() string
+
 	// Timestamp returns when the key was generated.
 	Timestamp() time.Time
 
