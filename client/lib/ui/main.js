@@ -90,7 +90,7 @@ module.exports = React.createClass({
                 <button type="button" className="settings" onClick={this.toggleSettings} tabIndex="-1" />
               </div>
               <UserList users={this.state.chat.who} obscured={this.state.tiny} />
-              {this.state.chat.roomName == 'space' && <div className="norman"><p>norman</p><img src="http://i.imgur.com/wAz2oho.jpg" /></div>}
+              {this.state.chat.roomName == 'space' && <div className="norman"><p>norman</p><img src="//i.imgur.com/wAz2oho.jpg" /></div>}
             </div>
             <Messages ref="messages" />
           </div>
