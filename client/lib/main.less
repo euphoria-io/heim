@@ -379,6 +379,20 @@ html, body, #container, .chat {
 .norman {
   margin-top: 15px;
   text-align: right;
+  opacity: .5;
+
+  &, img {
+    transition: all .15s ease;
+  }
+
+  &:hover {
+    opacity: 1;
+
+    img {
+      width: 22vw;
+      max-width: 250px;
+    }
+  }
 
   p {
     margin: 0;
@@ -388,6 +402,7 @@ html, body, #container, .chat {
   img {
     width: 15vw;
     min-width: 50px;
+    max-width: 100px;
   }
 }
 
