@@ -675,7 +675,7 @@ describe('chat store', function() {
     var rejectedNickReply = {
       'id': '1',
       'type': 'nick-reply',
-      'data': {'error': 'error'}
+      'error': 'error',
     }
 
     var nonexistentNickEvent = {

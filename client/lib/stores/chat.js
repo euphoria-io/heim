@@ -51,9 +51,9 @@ module.exports.store = Reflux.createStore({
         this._handleWhoReply(ev.body.data)
       } else if (ev.body.type == 'nick-reply' || ev.body.type == 'nick-event') {
         if (ev.body.type == 'nick-reply') {
-          this._handleNickReply(ev.body.data)
+          this._handleNickReply(ev.body.error, ev.body.data)
         }
-        if (!ev.body.data.error) {
+        if (!ev.body.error) {
           this.state.who = this.state.who
             .mergeIn([ev.body.data.id], {
               id: ev.body.data.id,
@@ -119,8 +119,8 @@ module.exports.store = Reflux.createStore({
     )
   },
 
-  _handleNickReply: function(data) {
-    if (!data.error) {
+  _handleNickReply: function(error, data) {
+    if (!error) {
       this.state.nick = data.to
     }
     delete this.state.tentativeNick
