@@ -288,6 +288,22 @@ describe('chat store', function() {
         assert.equal(state.connected, true)
       })
     })
+
+    it('should send stored passcode authenticaton', function(done) {
+      chat.store.state.roomName = 'ezzie'
+      chat.store.storageChange(mockStorage)
+      handleSocket({status: 'open'}, function() {
+        sinon.assert.calledOnce(socket.send)
+        sinon.assert.calledWithExactly(socket.send, {
+          type: 'auth',
+          data: {
+            type: 'passcode',
+            passcode: 'hunter2',
+          },
+        })
+        done()
+      })
+    })
   })
 
   describe('when disconnected', function() {
@@ -848,6 +864,15 @@ describe('chat store', function() {
         done()
       })
     })
+
+    it('should be ignored if authentication stored', function(done) {
+      chat.store.state.roomName = 'ezzie'
+      chat.store.storageChange(mockStorage)
+      handleSocket({status: 'receive', body: bounceEvent}, function(state) {
+        assert.equal(state.authState, 'stored')
+        done()
+      })
+    })
   })
 
   describe('received auth reply events', function() {
@@ -911,35 +936,6 @@ describe('chat store', function() {
           assert.equal(state.authState, 'failed')
           assert.equal(state.authData, null)
         })
-      })
-    })
-  })
-
-  describe('stored passcode authentication', function() {
-    beforeEach(function() {
-      chat.store.state.roomName = 'ezzie'
-    })
-
-    it('should be sent on connect', function(done) {
-      chat.store.storageChange(mockStorage)
-      handleSocket({status: 'open'}, function() {
-        sinon.assert.calledOnce(socket.send)
-        sinon.assert.calledWithExactly(socket.send, {
-          type: 'auth',
-          data: {
-            type: 'passcode',
-            passcode: 'hunter2',
-          },
-        })
-        done()
-      })
-    })
-
-    it('should ignore bounce events', function(done) {
-      chat.store.storageChange(mockStorage)
-      handleSocket({status: 'receive', body: bounceEvent}, function(state) {
-        assert.equal(state.authState, 'stored')
-        done()
       })
     })
   })
