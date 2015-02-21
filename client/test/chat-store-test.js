@@ -101,13 +101,23 @@ describe('chat store', function() {
         },
         {
           'id': '32.64.96.128:12345',
-          'name': 'Ztester',
+          'name': 'guest',
         },
         {
           'id': '32.64.96.128:12346',
           'name': 'tester2',
         },
       ]
+    }
+  }
+
+  var nickReply = {
+    'id': '1',
+    'type': 'nick-reply',
+    'data': {
+      'id': '32.64.96.128:12345',
+      'from': 'guest',
+      'to': 'tester',
     }
   }
 
@@ -320,15 +330,7 @@ describe('chat store', function() {
       chat.store.storageChange(mockStorage)
       chat.store.socketEvent({status: 'open'})
       chat.store.socketEvent({status: 'receive', body: snapshotReply})
-      chat.store.socketEvent({status: 'receive', body: {
-        'id': '1',
-        'type': 'nick-reply',
-        'data': {
-          'id': '32.64.96.128:12345',
-          'from': 'guest',
-          'to': 'tester',
-        }
-      }})
+      chat.store.socketEvent({status: 'receive', body: nickReply})
       chat.store.socketEvent({status: 'close'})
       socket.send.reset()
     })
@@ -704,16 +706,6 @@ describe('chat store', function() {
   })
 
   describe('received nick changes', function() {
-    var nickReply = {
-      'id': '1',
-      'type': 'nick-reply',
-      'data': {
-        'id': '32.64.96.128:12345',
-        'from': 'tester',
-        'to': 'tester3',
-      }
-    }
-
     var rejectedNickReply = {
       'id': '1',
       'type': 'nick-reply',
@@ -733,9 +725,9 @@ describe('chat store', function() {
     it('should update chat and room state', function(done) {
       chat.store.state.roomName = 'ezzie'
       handleSocket({status: 'receive', body: nickReply}, function(state) {
-        assert.equal(state.nick, 'tester3')
+        assert.equal(state.nick, 'tester')
         sinon.assert.calledOnce(storage.setRoom)
-        sinon.assert.calledWithExactly(storage.setRoom, 'ezzie', 'nick', 'tester3')
+        sinon.assert.calledWithExactly(storage.setRoom, 'ezzie', 'nick', 'tester')
         done()
       })
     })
@@ -752,7 +744,7 @@ describe('chat store', function() {
     it('should update hue', function(done) {
       handleSocket({status: 'receive', body: whoReply}, function() {
         handleSocket({status: 'receive', body: nickReply}, function(state) {
-          assert.equal(state.who.getIn([nickReply.data.id, 'hue']), 204)
+          assert.equal(state.who.getIn([nickReply.data.id, 'hue']), 153)
           done()
         })
       })
@@ -780,9 +772,9 @@ describe('chat store', function() {
       it('should update stored nick', function(done) {
         chat.store.state.roomName = 'ezzie'
         handleSocket({status: 'receive', body: nickReply}, function(state) {
-          assert.equal(state.nick, 'tester3')
+          assert.equal(state.nick, 'tester')
           sinon.assert.calledOnce(storage.setRoom)
-          sinon.assert.calledWithExactly(storage.setRoom, 'ezzie', 'nick', 'tester3')
+          sinon.assert.calledWithExactly(storage.setRoom, 'ezzie', 'nick', 'tester')
           done()
         })
       })
