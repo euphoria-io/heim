@@ -64,7 +64,7 @@ module.exports = React.createClass({
   render: function() {
     return (
       <div className="chat" onMouseDownCapture={this.onMouseDown} onClickCapture={this.onClick}>
-        {this.state.chat.authState != 'ok' && this.state.chat.authState != 'stored' && <div className="hatch-shade fill" />}
+        {this.state.chat.authState && this.state.chat.authState != 'trying-stored' && <div className="hatch-shade fill" />}
         <Scroller
           ref="scroller"
           target=".entry"

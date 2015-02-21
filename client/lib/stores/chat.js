@@ -23,7 +23,7 @@ module.exports.store = Reflux.createStore({
       tentativeNick: null,
       nick: null,
       authType: null,
-      authState: 'ok',
+      authState: null,
       authData: null,
       messages: new Tree('time'),
       earliestLog: null,
@@ -52,8 +52,8 @@ module.exports.store = Reflux.createStore({
         this._joinRoom()
       } else if (ev.body.type == 'bounce-event') {
         this.state.authType = 'passcode'
-        if (this.state.authState != 'stored') {
-          this.state.authState = null
+        if (this.state.authState != 'trying-stored') {
+          this.state.authState = 'needs-passcode'
         }
       } else if (ev.body.type == 'auth-reply') {
         this._handleAuthReply(ev.body.data)
@@ -82,8 +82,9 @@ module.exports.store = Reflux.createStore({
       }
     } else if (ev.status == 'open') {
       this.state.connected = true
-      if (this.state.authType == 'passcode' && this.state.authState == 'stored') {
+      if (this.state.authType == 'passcode' && this.state.authData) {
         this._sendPasscode(this.state.authData)
+        this.state.authState = 'trying-stored'
       }
     } else if (ev.status == 'close') {
       this.state.connected = false
@@ -142,20 +143,19 @@ module.exports.store = Reflux.createStore({
 
   _handleAuthReply: function(data) {
     if (data.success) {
-      this.state.authState = 'ok'
+      this.state.authState = null
       storage.setRoom(this.state.roomName, 'auth', {
         type: this.state.authType,
         data: this.state.authData,
       })
       this._joinRoom()
     } else {
-      if (this.state.authState == 'stored') {
-        storage.setRoom(this.state.roomName, 'auth', null)
-        this.state.authState = null
+      if (this.state.authState == 'trying-stored') {
+        this.state.authState = 'needs-passcode'
       } else {
         this.state.authState = 'failed'
       }
-      this.state.authData = null
+      storage.setRoom(this.state.roomName, 'auth', null)
     }
   },
 
@@ -177,9 +177,6 @@ module.exports.store = Reflux.createStore({
     if (roomStorage.auth) {
       this.state.authType = roomStorage.auth.type
       this.state.authData = roomStorage.auth.data
-      if (!this.state.connected) {
-        this.state.authState = 'stored'
-      }
     }
     this.trigger(this.state)
   },
@@ -235,6 +232,7 @@ module.exports.store = Reflux.createStore({
 
   tryRoomPasscode: function(passcode) {
     this.state.authData = passcode
+    this.state.authState = 'trying'
     this._sendPasscode(passcode)
     this.trigger(this.state)
   },

@@ -21,7 +21,7 @@ module.exports = React.createClass({
     var disconnected = this.state.connected === false
 
     var entry
-    if (this.state.authType == 'passcode' && this.state.authState != 'ok' && this.state.authState != 'stored') {
+    if (this.state.authType == 'passcode' && this.state.authState && this.state.authState != 'trying-stored') {
       entry = <PasscodeEntry />
     } else if (this.state.joined && !this.state.nick && !this.state.tentativeNick) {
       entry = <NickEntry />

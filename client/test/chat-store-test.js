@@ -139,6 +139,14 @@ describe('chat store', function() {
     },
   }
 
+  var successfulAuthReplyEvent = {
+    'id': '1',
+    'type': 'auth-reply',
+    'data': {
+      'success': true,
+    },
+  }
+
   var mockStorage = {
     room: {
       ezzie: {
@@ -303,6 +311,7 @@ describe('chat store', function() {
       chat.store.state.roomName = 'ezzie'
       chat.store.storageChange(mockStorage)
       handleSocket({status: 'open'}, function() {
+        assert.equal(chat.store.state.authState, 'trying-stored')
         sinon.assert.calledOnce(socket.send)
         sinon.assert.calledWithExactly(socket.send, {
           type: 'auth',
@@ -329,6 +338,7 @@ describe('chat store', function() {
       chat.store.state.roomName = 'ezzie'
       chat.store.storageChange(mockStorage)
       chat.store.socketEvent({status: 'open'})
+      chat.store.socketEvent({status: 'receive', body: successfulAuthReplyEvent})
       chat.store.socketEvent({status: 'receive', body: snapshotReply})
       chat.store.socketEvent({status: 'receive', body: nickReply})
       chat.store.socketEvent({status: 'close'})
@@ -345,6 +355,20 @@ describe('chat store', function() {
         done()
       })
     })
+
+    it('should send stored passcode authentication', function(done) {
+      handleSocket({status: 'open'}, function() {
+        sinon.assert.calledOnce(socket.send)
+        sinon.assert.calledWithExactly(socket.send, {
+          type: 'auth',
+          data: {
+            type: 'passcode',
+            passcode: 'hunter2',
+          },
+        })
+        done()
+      })
+    })
   })
 
   describe('on storage change', function() {
@@ -357,12 +381,6 @@ describe('chat store', function() {
       chat.store.storageChange(mockStorage)
       assert.equal(chat.store.state.authType, 'passcode')
       assert.equal(chat.store.state.authData, 'hunter2')
-    })
-
-    it('should set "stored" auth state if received while disconnected', function() {
-      assert.equal(chat.store.state.connected, null)
-      chat.store.storageChange(mockStorage)
-      assert.equal(chat.store.state.authState, 'stored')
     })
 
     it('should set tentative nick if no current nick', function() {
@@ -831,6 +849,7 @@ describe('chat store', function() {
       var testPassword = 'hunter2'
       chat.store.tryRoomPasscode(testPassword)
       assert.equal(chat.store.state.authData, testPassword)
+      assert.equal(chat.store.state.authState, 'trying')
       sinon.assert.calledOnce(socket.send)
       sinon.assert.calledWithExactly(socket.send, {
         type: 'auth',
@@ -850,32 +869,27 @@ describe('chat store', function() {
       })
     })
 
-    it('should reset auth state if not stored', function(done) {
-      handleSocket({status: 'receive', body: bounceEvent}, function(state) {
-        assert.equal(state.authState, null)
-        done()
+    describe('if not trying a stored passcode', function() {
+      it('should set auth state to "needs-passcode"', function(done) {
+        handleSocket({status: 'receive', body: bounceEvent}, function(state) {
+          assert.equal(state.authState, 'needs-passcode')
+          done()
+        })
       })
     })
 
-    it('should be ignored if authentication stored', function(done) {
-      chat.store.state.roomName = 'ezzie'
-      chat.store.storageChange(mockStorage)
-      handleSocket({status: 'receive', body: bounceEvent}, function(state) {
-        assert.equal(state.authState, 'stored')
-        done()
+    describe('if trying a stored passcode', function() {
+      it('should be ignored', function(done) {
+        chat.store.state.authState = 'trying-stored'
+        handleSocket({status: 'receive', body: bounceEvent}, function(state) {
+          assert.equal(state.authState, 'trying-stored')
+          done()
+        })
       })
     })
   })
 
   describe('received auth reply events', function() {
-    var successfulAuthReplyEvent = {
-      'id': '1',
-      'type': 'auth-reply',
-      'data': {
-        'success': true,
-      },
-    }
-
     var incorrectAuthReplyEvent = {
       'id': '1',
       'type': 'auth-reply',
@@ -898,7 +912,7 @@ describe('chat store', function() {
         handleSocket({status: 'receive', body: successfulAuthReplyEvent}, function(state) {
           sinon.assert.calledOnce(storage.setRoom)
           sinon.assert.calledWithExactly(storage.setRoom, 'ezzie', 'auth', {type: 'passcode', data: 'hunter2'})
-          assert.equal(state.authState, 'ok')
+          assert.equal(state.authState, null)
           sinon.assert.calledWithExactly(socket.send, {
             type: 'nick',
             data: {name: 'tester'},
@@ -910,23 +924,23 @@ describe('chat store', function() {
     })
 
     describe('if stored auth unsuccessful', function() {
-      it('should clear stored auth data and reset auth state', function() {
-        chat.store.state.authState = 'stored'
+      it('should clear stored auth data and set auth state to "needs-passcode"', function() {
+        chat.store.state.authState = 'trying-stored'
         handleSocket({status: 'receive', body: incorrectAuthReplyEvent}, function(state) {
           sinon.assert.calledOnce(storage.setRoom)
           sinon.assert.calledWithExactly(storage.setRoom, 'ezzie', 'auth', null)
-          assert.equal(state.authState, null)
-          assert.equal(state.authData, null)
+          assert.equal(state.authState, 'needs-passcode')
         })
       })
     })
 
     describe('if auth unsuccessful', function() {
-      it('should set auth state to failed', function() {
+      it('should clear stored auth data and set auth state to "failed"', function() {
         chat.store.state.authState = null
         handleSocket({status: 'receive', body: incorrectAuthReplyEvent}, function(state) {
+          sinon.assert.calledOnce(storage.setRoom)
+          sinon.assert.calledWithExactly(storage.setRoom, 'ezzie', 'auth', null)
           assert.equal(state.authState, 'failed')
-          assert.equal(state.authData, null)
         })
       })
     })
