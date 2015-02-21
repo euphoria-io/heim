@@ -24,6 +24,7 @@ module.exports.store = Reflux.createStore({
       nick: null,
       authType: null,
       authState: 'ok',
+      authData: null,
       messages: new Tree('time'),
       earliestLog: null,
       nickHues: {},
@@ -51,13 +52,11 @@ module.exports.store = Reflux.createStore({
         this._joinRoom()
       } else if (ev.body.type == 'bounce-event') {
         this.state.authType = 'passcode'
-        this.state.authState = null
-      } else if (ev.body.type == 'auth-reply') {
-        if (ev.body.data.success) {
-          this.state.authState = 'ok'
-        } else {
-          this.state.authState = 'failed'
+        if (this.state.authState != 'stored') {
+          this.state.authState = null
         }
+      } else if (ev.body.type == 'auth-reply') {
+        this._handleAuthReply(ev.body.data)
       } else if (ev.body.type == 'log-reply' && ev.body.data) {
         this._handleLogReply(ev.body.data)
       } else if (ev.body.type == 'who-reply') {
@@ -83,6 +82,9 @@ module.exports.store = Reflux.createStore({
       }
     } else if (ev.status == 'open') {
       this.state.connected = true
+      if (this.state.authType == 'passcode' && this.state.authState == 'stored') {
+        this._sendPasscode(this.state.authData)
+      }
     } else if (ev.status == 'close') {
       this.state.connected = false
       this.state.joined = false
@@ -138,6 +140,25 @@ module.exports.store = Reflux.createStore({
     storage.setRoom(this.state.roomName, 'nick', this.state.nick)
   },
 
+  _handleAuthReply: function(data) {
+    if (data.success) {
+      this.state.authState = 'ok'
+      storage.setRoom(this.state.roomName, 'auth', {
+        type: this.state.authType,
+        data: this.state.authData,
+      })
+      this._joinRoom()
+    } else {
+      if (this.state.authState == 'stored') {
+        storage.setRoom(this.state.roomName, 'auth', null)
+        this.state.authState = null
+      } else {
+        this.state.authState = 'failed'
+      }
+      this.state.authData = null
+    }
+  },
+
   _joinRoom: function() {
     if (!this.state.joined) {
       if (this.state.tentativeNick || this.state.nick) {
@@ -152,6 +173,13 @@ module.exports.store = Reflux.createStore({
     var roomStorage = data.room[this.state.roomName] || {}
     if (!this.state.nick) {
       this.state.tentativeNick = roomStorage.nick
+    }
+    if (roomStorage.auth) {
+      this.state.authType = roomStorage.auth.type
+      this.state.authData = roomStorage.auth.data
+      if (!this.state.connected) {
+        this.state.authState = 'stored'
+      }
     }
     this.trigger(this.state)
   },
@@ -195,14 +223,20 @@ module.exports.store = Reflux.createStore({
     })
   },
 
-  tryRoomPasscode: function(passcode) {
-    socket.send({
+  _sendPasscode: function(passcode) {
+    this._authSendId = socket.send({
       type: 'auth',
       data: {
         type: 'passcode',
         passcode: passcode,
       },
     })
+  },
+
+  tryRoomPasscode: function(passcode) {
+    this.state.authData = passcode
+    this._sendPasscode(passcode)
+    this.trigger(this.state)
   },
 
   loadMoreLogs: function() {
