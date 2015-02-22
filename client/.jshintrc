@@ -15,6 +15,7 @@
     "ReactPerf": true,
     "Notification": false,
     "Heim": true,
+    "Raven": true,
     "uiwindow": true,
     "uidocument": true
   }

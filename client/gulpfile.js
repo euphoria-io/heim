@@ -37,6 +37,16 @@ gulp.task('js', function() {
     .pipe(gulp.dest(dest))
 })
 
+gulp.task('raven-js', function() {
+  return browserify('./lib/raven.js')
+    .transform('envify')
+    .bundle()
+    .pipe(source('raven.js'))
+    .pipe(buffer())
+    .on('error', gutil.log.bind(gutil, 'browserify error'))
+    .pipe(gulp.dest(dest))
+})
+
 gulp.task('less', function() {
   return gulp.src('./lib/main.less')
     .pipe(less({compress: true}))
@@ -95,5 +105,5 @@ gulp.task('watch', function () {
   gulp.watch('./static/**/*', ['static'])
 })
 
-gulp.task('build', ['js', 'less', 'static', 'html'])
-gulp.task('default', ['less', 'static', 'html', 'watch', 'watchify'])
+gulp.task('build', ['js', 'raven-js', 'less', 'static', 'html'])
+gulp.task('default', ['raven-js', 'less', 'static', 'html', 'watch', 'watchify'])
