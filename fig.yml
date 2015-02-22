@@ -39,6 +39,7 @@ frontend:
     - client/build:/srv/heim/client/src/build
   environment:
     NODE_ENV: development
+    SENTRY_ENDPOINT: http://sentry@euphoria.local:9000/2
 
 # The upgradedb container runs the upgradedb command against the psql container.
 upgradedb:
