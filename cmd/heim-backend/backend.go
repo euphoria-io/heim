@@ -11,6 +11,7 @@ import (
 	"heim/backend"
 	"heim/backend/console"
 	"heim/backend/psql"
+	_ "heim/cmd" // for -newflags
 	"heim/proto"
 	"heim/proto/security"
 )
