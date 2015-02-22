@@ -56,7 +56,7 @@ module.exports.store = Reflux.createStore({
           this.state.authState = 'needs-passcode'
         }
       } else if (ev.body.type == 'auth-reply') {
-        this._handleAuthReply(ev.body.data)
+        this._handleAuthReply(ev.body.error, ev.body.data)
       } else if (ev.body.type == 'log-reply' && ev.body.data) {
         this._handleLogReply(ev.body.data)
       } else if (ev.body.type == 'who-reply') {
@@ -141,8 +141,8 @@ module.exports.store = Reflux.createStore({
     storage.setRoom(this.state.roomName, 'nick', this.state.nick)
   },
 
-  _handleAuthReply: function(data) {
-    if (data.success) {
+  _handleAuthReply: function(error, data) {
+    if (!error && data.success) {
       this.state.authState = null
       storage.setRoom(this.state.roomName, 'auth', {
         type: this.state.authType,
@@ -152,7 +152,7 @@ module.exports.store = Reflux.createStore({
     } else {
       if (this.state.authState == 'trying-stored') {
         this.state.authState = 'needs-passcode'
-      } else {
+      } else if (this.state.authState == 'trying') {
         this.state.authState = 'failed'
       }
       storage.setRoom(this.state.roomName, 'auth', null)
@@ -165,6 +165,7 @@ module.exports.store = Reflux.createStore({
         this._sendNick(this.state.tentativeNick || this.state.nick)
       }
 
+      this.state.authState = null
       this.state.joined = true
     }
   },
