@@ -245,7 +245,11 @@ func (b *Backend) join(ctx context.Context, room *Room, session proto.Session) e
 	if rp == nil {
 		rp = roomPresence{}
 		b.presence[room.Name] = rp
-		rows, err := b.DbMap.Select(Presence{}, "SELECT * FROM presence WHERE room = $1", room.Name)
+		rows, err := b.DbMap.Select(
+			Presence{},
+			"SELECT room, user_id, session_id, server_id, name, connected, last_activity"+
+				" FROM presence WHERE room = $1",
+			room.Name)
 		if err != nil {
 			logger.Printf("error loading presence for %s: %s", room.Name, err)
 		} else {
@@ -318,10 +322,13 @@ func (b *Backend) latest(ctx context.Context, room *Room, n int, before snowflak
 
 	var query string
 	args := []interface{}{room.Name, n}
+
 	if before.IsZero() {
-		query = "SELECT * FROM message WHERE room = $1 ORDER BY id DESC LIMIT $2"
+		query = "SELECT room, id, parent, posted, sender_id, sender_name, content, encryption_key_id" +
+			" FROM message WHERE room = $1 ORDER BY id DESC LIMIT $2"
 	} else {
-		query = "SELECT * FROM message WHERE room = $1 AND id < $3 ORDER BY id DESC LIMIT $2"
+		query = "SELECT room, id, parent, posted, sender_id, sender_name, content, encryption_key_id" +
+			" FROM message WHERE room = $1 AND id < $3 ORDER BY id DESC LIMIT $2"
 		args = append(args, before.String())
 	}
 

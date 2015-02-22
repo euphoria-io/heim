@@ -138,7 +138,9 @@ func (rb *RoomBinding) MasterKey(ctx context.Context) (proto.RoomKey, error) {
 	rmkb := &RoomMasterKeyBinding{}
 	err := rb.DbMap.SelectOne(
 		rmkb,
-		"SELECT * FROM master_key mk, room_master_key r"+
+		"SELECT mk.id, mk.encrypted_key, mk.iv, mk.nonce,"+
+			" r.room, r.key_id, r.activated, r.expired, r.comment"+
+			" FROM master_key mk, room_master_key r"+
 			" WHERE r.room = $1 AND mk.id = r.key_id AND r.expired < r.activated"+
 			" ORDER BY r.activated DESC LIMIT 1",
 		rb.Name)
@@ -191,7 +193,9 @@ func (rb *RoomBinding) GetCapability(ctx context.Context, id string) (security.C
 	backend.Logger(ctx).Printf("looking up capability %s in room %s", id, rb.Name)
 	err := rb.DbMap.SelectOne(
 		rcb,
-		"SELECT * FROM capability c, room_capability r"+
+		"SELECT c.id, c.encrypted_private_data, c.public_data,"+
+			" r.room, r.capability_id, r.granted, r.revoked"+
+			" FROM capability c, room_capability r"+
 			" WHERE r.room = $1 AND c.id = $2 AND r.revoked < r.granted",
 		rb.Name, id)
 
