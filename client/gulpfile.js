@@ -1,10 +1,11 @@
 var gulp = require('gulp')
 var gutil = require('gulp-util')
-var streamify = require('gulp-streamify')
 var less = require('gulp-less')
 var autoprefixer = require('gulp-autoprefixer')
 var uglify = require('gulp-uglify')
+var sourcemaps = require('gulp-sourcemaps')
 var source = require('vinyl-source-stream')
+var buffer = require('vinyl-buffer')
 var watchify = require('watchify')
 var browserify = require('browserify')
 var react = require('gulp-react')
@@ -18,7 +19,7 @@ function bundler(args) {
 }
 
 gulp.task('js', function() {
-  return bundler()
+  return bundler({debug: true})
     // share some libraries with the global namespace
     // doing this here because these exposes trip up watchify atm
     .require('lodash', {expose: 'lodash'})
@@ -28,7 +29,10 @@ gulp.task('js', function() {
     .require('moment', {expose: 'moment'})
     .bundle()
     .pipe(source('main.js'))
-    .pipe(process.env.NODE_ENV == 'production' ? streamify(uglify()) : gutil.noop())
+    .pipe(buffer())
+    .pipe(sourcemaps.init({loadMaps: true}))
+      .pipe(process.env.NODE_ENV == 'production' ? uglify() : gutil.noop())
+    .pipe(sourcemaps.write('./', {includeContent: true}))
     .on('error', gutil.log.bind(gutil, 'browserify error'))
     .pipe(gulp.dest(dest))
 })
