@@ -16,6 +16,19 @@ psqlclient:
   links:
     - psql
 
+sentry:
+  image: slafs/sentry:7.4
+  ports:
+    - "9000:9000"
+  environment:
+    SENTRY_URL_PREFIX: http://euphoria.local:9000
+    SENTRY_INITIAL_TEAM: euphoria
+    SENTRY_INITIAL_PROJECT: heim-client
+    SENTRY_INITIAL_PLATFORM: javascript
+    SENTRY_INITIAL_KEY: sentry:sentry
+    SENTRY_INITIAL_DOMAINS: euphoria.local
+    SECRET_KEY: onlyfordevelopment
+
 # The frontend container runs an ongoing gulp build.
 frontend:
   command: gulp build
