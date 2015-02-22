@@ -15,7 +15,7 @@ import (
 	"heim/proto"
 	"heim/proto/snowflake"
 
-	"github.com/coopernurse/gorp"
+	"github.com/go-gorp/gorp"
 	"github.com/lib/pq"
 	"golang.org/x/net/context"
 )
