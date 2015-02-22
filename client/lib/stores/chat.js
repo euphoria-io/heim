@@ -187,11 +187,12 @@ module.exports.store = Reflux.createStore({
       return this.state.nickHues[nick]
     }
 
+    // DJBX33A
     var val = 0
     for (var i = 0; i < nick.length; i++) {
-      val += nick.charCodeAt(i)
+      val = val * 33 + nick.charCodeAt(i)
     }
-    this.state.nickHues[nick] = val % 255
+    this.state.nickHues[nick] = (val + 155) % 255
 
     return this.state.nickHues[nick]
   },

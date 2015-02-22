@@ -429,7 +429,7 @@ describe('chat store', function() {
 
     it('should be assigned a hue', function(done) {
       handleSocket({status: 'receive', body: sendEvent}, function(state) {
-        assert.equal(state.messages.last().getIn(['sender', 'hue']), 153)
+        assert.equal(state.messages.last().getIn(['sender', 'hue']), 35)
         done()
       })
     })
@@ -770,7 +770,7 @@ describe('chat store', function() {
     it('should update hue', function(done) {
       handleSocket({status: 'receive', body: whoReply}, function() {
         handleSocket({status: 'receive', body: nickReply}, function(state) {
-          assert.equal(state.who.getIn([nickReply.data.id, 'hue']), 153)
+          assert.equal(state.who.getIn([nickReply.data.id, 'hue']), 35)
           done()
         })
       })
@@ -826,7 +826,7 @@ describe('chat store', function() {
 
     it('should assign a hue', function(done) {
       handleSocket({status: 'receive', body: joinEvent}, function(state) {
-        assert.equal(state.who.getIn([joinEvent.data.id, 'hue']), 161)
+        assert.equal(state.who.getIn([joinEvent.data.id, 'hue']), 145)
         done()
       })
     })
