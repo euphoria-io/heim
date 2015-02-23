@@ -12,26 +12,26 @@ import (
 func decryptPayload(payload interface{}, auth map[string]*Authentication) (interface{}, error) {
 	switch msg := payload.(type) {
 	case proto.Message:
-		return decryptMessage(&msg, auth)
+		return decryptMessage(msg, auth)
 	case proto.SendReply:
-		dm, err := decryptMessage((*proto.Message)(&msg), auth)
+		dm, err := decryptMessage(proto.Message(msg), auth)
 		if err != nil {
 			return nil, err
 		}
-		return *(*proto.SendReply)(dm), nil
+		return proto.SendReply(dm), nil
 	case *proto.SendEvent:
-		dm, err := decryptMessage((*proto.Message)(msg), auth)
+		dm, err := decryptMessage(proto.Message(*msg), auth)
 		if err != nil {
 			return nil, err
 		}
-		return (*proto.SendEvent)(dm), nil
+		return (*proto.SendEvent)(&dm), nil
 	case proto.LogReply:
 		for i, entry := range msg.Log {
 			dm, err := decryptPayload(entry, auth)
 			if err != nil {
 				return nil, err
 			}
-			msg.Log[i] = *(dm.(*proto.Message))
+			msg.Log[i] = dm.(proto.Message)
 		}
 		return msg, nil
 	default:
@@ -64,40 +64,40 @@ func encryptMessage(msg *proto.Message, keyID string, key *security.ManagedKey) 
 	return nil
 }
 
-func decryptMessage(msg *proto.Message, auths map[string]*Authentication) (*proto.Message, error) {
+func decryptMessage(msg proto.Message, auths map[string]*Authentication) (proto.Message, error) {
 	if msg.EncryptionKeyID == "" {
 		return msg, nil
 	}
 
 	auth, ok := auths[msg.EncryptionKeyID]
 	if !ok {
-		return nil, nil
+		return msg, nil
 	}
 
 	if auth.Key.Encrypted() {
-		return nil, security.ErrKeyMustBeDecrypted
+		return msg, security.ErrKeyMustBeDecrypted
 	}
 
 	parts := strings.Split(msg.Content, "/")
 	if len(parts) != 2 {
 		fmt.Printf("bad content: %s\n", msg.Content)
-		return nil, fmt.Errorf("message corrupted")
+		return msg, fmt.Errorf("message corrupted")
 	}
 
 	digest, err := base64.URLEncoding.DecodeString(parts[0])
 	if err != nil {
-		return nil, err
+		return msg, err
 	}
 
 	ciphertext, err := base64.URLEncoding.DecodeString(parts[1])
 	if err != nil {
-		return nil, err
+		return msg, err
 	}
 
 	plaintext, err := security.DecryptGCM(
 		auth.Key, []byte(msg.ID.String()), digest, ciphertext, []byte(msg.Sender.ID))
 	if err != nil {
-		return nil, fmt.Errorf("message decrypt: %s", err)
+		return msg, fmt.Errorf("message decrypt: %s", err)
 	}
 
 	msg.Content = string(plaintext)

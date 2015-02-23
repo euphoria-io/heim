@@ -303,10 +303,11 @@ func (s *session) sendSnapshot() error {
 
 	for i, msg := range msgs {
 		if msg.EncryptionKeyID != "" {
-			if _, err := decryptMessage(&msg, s.auth); err != nil {
+			dmsg, err := decryptMessage(msg, s.auth)
+			if err != nil {
 				continue
 			}
-			msgs[i] = msg
+			msgs[i] = dmsg
 		}
 	}
 
