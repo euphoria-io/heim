@@ -2,7 +2,7 @@
 psql:
   build: containers/psql
   volumes:
-    - psqldata/data:/var/lib/postgresql/data
+    - _psqldata/data:/var/lib/postgresql/data
 
 # The psqlclient container provides a client connection to the psql container.
 # TODO: add volume for persistent readline history, sql dumps, etc.
