@@ -1,23 +1,10 @@
 var React = require('react')
-var cx = React.addons.classSet
 
 
 module.exports = React.createClass({
   displayName: 'UserList',
 
   mixins: [require('react-immutable-render-mixin')],
-
-  getInitialState: function() {
-    return {expanded: false}
-  },
-
-  onMouseEnter: function() {
-    this.setState({expanded: true})
-  },
-
-  onMouseLeave: function() {
-    this.setState({expanded: false})
-  },
 
   render: function() {
     var list
@@ -27,7 +14,7 @@ module.exports = React.createClass({
       .toSeq()
       .filter(user => user.get('name'))
 
-    if (!this.state.expanded) {
+    if (this.props.collapsed) {
       var latest = list
         .sortBy(user => -(user.get('lastSent') || 0))
 
@@ -39,7 +26,7 @@ module.exports = React.createClass({
     list = list.sortBy(user => user.get('name').toLowerCase())
 
     return (
-      <div className={cx({'user-list': true, 'obscured': this.props.obscured && !this.state.expanded})} onMouseEnter={this.onMouseEnter} onMouseLeave={this.onMouseLeave}>
+      <div className="user-list" {...this.props}>
         {list.map(function(user) {
           return <div key={user.get('id')} className="nick" style={{background: 'hsl(' + user.get('hue') + ', 65%, 85%)'}}>{user.get('name')}</div>
         }, this).toArray()}

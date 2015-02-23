@@ -23,12 +23,40 @@ html, body, #container, .chat {
   height: 100%;
 }
 
+button {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.touchable(@bgcolor) {
+  transition: all .25s ease;
+
+  &.touching, body:not(.touch) &:active {
+    background: darken(desaturate(@bgcolor, 15%), 25%);
+    transition: all 0s ease;
+  }
+}
+
+.larger-touch-target(@width, @height) {
+  body.touch &:after {
+    content: '';
+    position: absolute;
+    left: -@width;
+    right: -@width;
+    top: -@height;
+    bottom: -@height;
+  }
+}
+
 @passcode-color: #eedba0;
 
 .hatch-shade {
   background: fade(black, 50%) data-uri('../res/hatching.svg') repeat;
   opacity: .1;
-  z-index: 5;
+  z-index: 10;
 
   &.fill {
     position: absolute;
@@ -145,11 +173,90 @@ html, body, #container, .chat {
       }
     }
 
-    .top-right {
+    .sidebar {
       position: fixed;
       right: 8px;
       top: 8px;
       z-index: 3;
+
+      .top-line {
+        height: 24px;
+        line-height: 24px;
+        text-align: right;
+        margin-top: -8px;
+        padding: 8px 0;
+        margin-bottom: 7px;
+        background: fade(white, 85%);
+        box-shadow: -10px 0 20px 20px fade(white, 85%);
+        border-top-left-radius: 20px;
+        border-bottom-left-radius: 20px;
+        transition: all .25s ease;
+
+        .settings {
+          display: inline-block;
+          width: 18px;
+          height: 18px;
+
+          &:after {
+            content: '';
+            display: block;
+            width: 18px;
+            height: 18px;
+            background: data-uri('../res/cog.svg') no-repeat center center;
+            background-size: cover;
+            opacity: .15;
+            transition: all .15s ease;
+          }
+
+          &:hover:after {
+            opacity: .25;
+          }
+
+          &:active:after {
+            opacity: .3;
+          }
+        }
+
+        & > * {
+          vertical-align: middle;
+        }
+
+        .settings-content {
+          transition: all .15s ease;
+
+          &.settings-enter {
+            opacity: 0;
+            transform: translateX(30px);
+
+            &.settings-enter-active {
+              opacity: 1;
+              transform: translateX(0);
+            }
+          }
+
+          &.settings-leave {
+            opacity: 1;
+            transform: translateX(0);
+
+            &.settings-leave-active {
+              opacity: 0;
+              transform: translateX(30px);
+            }
+          }
+
+          label {
+            padding: 5px;
+            margin-right: 5px;
+            font-size: .8em;
+            background: fade(white, 95%);
+            border-radius: 3px;
+          }
+
+          input {
+            vertical-align: middle;
+          }
+        }
+      }
     }
 
     .user-list {
@@ -160,10 +267,6 @@ html, body, #container, .chat {
       // line so we don't shrink when expanded.
       min-width: 6em;
       transition: opacity .25s ease;
-
-      &.obscured {
-        opacity: .2;
-      }
 
       .nick {
         display: block;
@@ -177,75 +280,82 @@ html, body, #container, .chat {
       }
     }
 
-    .settings-pane {
-      height: 24px;
-      text-align: right;
-      margin-bottom: 5px;
-      transition: all .25s ease;
+    .room {
+      display: inline-block;
+      margin-right: 10px;
 
-      .settings {
-        display: inline-block;
-        width: 18px;
-        height: 18px;
-        background: white;
-        border: none;
-        border-radius: 5px;
-        padding: 0;
-        cursor: pointer;
-
-        &:after {
-          content: '';
-          display: block;
-          width: 18px;
-          height: 18px;
-          background: data-uri('../res/cog.svg') no-repeat center center;
-          background-size: cover;
-          opacity: .15;
-          transition: all .15s ease;
-        }
-
-        &:hover:after {
-          opacity: .25;
-        }
-
-        &:active:after {
-          opacity: .3;
-        }
-      }
-
-      * {
+      & > * {
         vertical-align: middle;
       }
 
-      .settings-content {
-        transition: all .15s ease;
+      .name {
+        color: fade(darkblue, 75%);
+        text-decoration: none;
+        font-weight: bold;
+        border-radius: 4px;
+      }
 
-        &.settings-enter {
-          opacity: 0;
-          transform: translateX(30px);
+      .private {
+        position: relative;
+        margin-left: 7px;
+        padding: 2px 6px;
+        font-size: .8em;
+        background: @passcode-color;
+        color: darken(@passcode-color, 60%);
+        border-radius: 2px;
+        .touchable(@passcode-color);
+        .larger-touch-target(10px, 10px);
 
-          &.settings-enter-active {
-            opacity: 1;
-            transform: translateX(0);
-          }
+        &:before {
+          content: '';
+          display: inline-block;
+          width: 10px;
+          height: 10px;
+          margin-right: 3px;
+          background: data-uri('../res/lock.svg') no-repeat center center;
+          background-size: contain;
+          vertical-align: -1px;
+          opacity: .75;
         }
+      }
+    }
 
-        &.settings-leave {
-          opacity: 1;
-          transform: translateX(0);
+    .topbar-container {
+      position: fixed;
+      left: 0;
+      right: 0;
+      top: 0;
+      height: 20px;
+      z-index: 11;
+    }
 
-          &.settings-leave-active {
-            opacity: 0;
-            transform: translateX(30px);
-          }
-        }
+    .topbar {
+      position: relative;
+      height: 20px;
+      padding: 6px 10px;
+      background: white;
+      box-shadow: 0 0 5px fade(black, 25%);
+      white-space: nowrap;
+      z-index: 2;
+      .no-select;
 
-        label {
-          padding: 5px;
-          margin-right: 5px;
-          font-size: .8em;
-          background: fade(white, 95%);
-          border-radius: 3px;
+      .user-count {
+        display: inline-block;
+        position: absolute;
+        right: 10px;
+        .touchable(#eee);
+        .larger-touch-target(20px, 30px);
+
+        &:before {
+          content: '';
+          display: inline-block;
+          width: 14px;
+          height: 14px;
+          margin-right: 3px;
+          background: data-uri('../res/euphorian.svg') no-repeat center center;
+          background-size: contain;
+          vertical-align: middle;
+          opacity: .75;
         }
       }
     }
@@ -476,6 +586,51 @@ html, body, #container, .chat {
   }
 }
 
+.bubble {
+  position: absolute;
+  display: inline-block;
+  transition: all .15s ease;
+  background: white;
+  color: black;
+  padding: 4px 8px;
+  border-radius: 3px;
+  box-shadow: 0 0 3px fade(black, 25%);
+
+  &.bubble-enter {
+    opacity: 0;
+    transform: translateY(-10px);
+
+    &.bubble-enter-active {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  &.bubble-leave {
+    opacity: 1;
+    transform: translateY(0);
+
+    &.bubble-leave-active {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+  }
+}
+
+.bubble.small-text {
+  font-size: .8em;
+  background: fade(#333, 90%);
+  color: white;
+}
+
+@media (min-width: 500px) {
+  .bubble.privacy-info {
+    position: fixed;
+    top: 36px;
+    right: 8px;
+  }
+}
+
 @media (max-width: 500px) {
   .chat .messages-container {
     padding-left: 0;
@@ -498,6 +653,27 @@ html, body, #container, .chat {
 
     .welcome > .message {
       font-size: .8em;
+    }
+  }
+
+  .bubble.privacy-info {
+    position: fixed;
+    top: 36px;
+    left: 8px;
+  }
+
+  .bubble.users {
+    position: fixed;
+    top: 32px;
+    right: 0;
+    box-shadow: -10px 10px 30px white;
+
+    .user-list {
+      min-width: 0;
+
+      .nick {
+        max-width: 50vw;
+      }
     }
   }
 }

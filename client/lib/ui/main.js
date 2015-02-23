@@ -1,13 +1,12 @@
 var React = require('react/addons')
-var ReactCSSTransitionGroup = React.addons.CSSTransitionGroup
 var cx = React.addons.classSet
 var Reflux = require('reflux')
 
 var actions = require('../actions')
 var Scroller = require('./scroller')
 var Messages = require('./messages')
-var UserList = require('./userlist')
-var NotifyToggle = require('./notifytoggle')
+var ChatSidebar = require('./chatsidebar')
+var ChatTopBar = require('./chattopbar')
 
 
 module.exports = React.createClass({
@@ -24,16 +23,10 @@ module.exports = React.createClass({
     this.setState({scrollbarWidth: width})
   },
 
-  onResize: function(width, height) {
-    this.setState({tiny: height < 300})
-  },
-
-  toggleSettings: function() {
-    this.setState({settingsOpen: !this.state.settingsOpen})
-  },
-
-  showSettings: function() {
-    this.setState({settingsOpen: true})
+  onResize: function(width) {
+    this.setState({
+      thin: width < 500,
+    })
   },
 
   scrollToEntry: function() {
@@ -79,20 +72,10 @@ module.exports = React.createClass({
           onNearTop={actions.loadMoreLogs}
         >
           <div className="messages-content">
-            <div className="top-right" style={{marginRight: this.state.scrollbarWidth}}>
-              <div className="settings-pane">
-                <ReactCSSTransitionGroup transitionName="settings">
-                  {this.state.settingsOpen &&
-                    <span key="content" className="settings-content">
-                      <NotifyToggle />
-                    </span>
-                  }
-                </ReactCSSTransitionGroup>
-                <button type="button" className="settings" onClick={this.toggleSettings} tabIndex="-1" />
-              </div>
-              <UserList users={this.state.chat.who} obscured={this.state.tiny} />
-              {this.state.chat.roomName == 'space' && <div className="norman"><p>norman</p><img src="//i.imgur.com/wAz2oho.jpg" /></div>}
-            </div>
+            {this.state.thin ?
+              <ChatTopBar scrollbarWidth={this.state.scrollbarWidth} who={this.state.chat.who} roomName={this.state.chat.roomName} authType={this.state.chat.authType} />
+              : <ChatSidebar scrollbarWidth={this.state.scrollbarWidth} who={this.state.chat.who} roomName={this.state.chat.roomName} authType={this.state.chat.authType} />
+            }
             <Messages ref="messages" />
           </div>
         </Scroller>

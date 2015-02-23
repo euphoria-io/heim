@@ -61,6 +61,9 @@ document.body.addEventListener('keydown', function(ev) {
 }, false)
 
 if (Heim.isTouch) {
+  React.initializeTouchEvents()
+  document.body.classList.add('touch')
+
   document.body.addEventListener('touchstart', function(ev) {
     ev.target.classList.add('touching')
   }, false)
