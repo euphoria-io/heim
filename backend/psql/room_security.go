@@ -38,9 +38,11 @@ func (rmkb *RoomMasterKeyBinding) ManagedKey() security.ManagedKey {
 	}
 
 	return security.ManagedKey{
-		KeyType:    security.AES128,
-		IV:         dup(rmkb.MasterKey.IV),
-		Ciphertext: dup(rmkb.MasterKey.EncryptedKey),
+		KeyType:      security.AES128,
+		IV:           dup(rmkb.MasterKey.IV),
+		Ciphertext:   dup(rmkb.MasterKey.EncryptedKey),
+		ContextKey:   "room",
+		ContextValue: rmkb.RoomMasterKey.Room,
 	}
 }
 

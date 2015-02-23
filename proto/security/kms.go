@@ -13,7 +13,7 @@ var (
 type KMS interface {
 	GenerateNonce(bytes int) ([]byte, error)
 
-	GenerateEncryptedKey(KeyType) (*ManagedKey, error)
+	GenerateEncryptedKey(keyType KeyType, ctxKey, ctxVal string) (*ManagedKey, error)
 	DecryptKey(*ManagedKey) error
 }
 
@@ -44,23 +44,28 @@ func (kms *localKMS) GenerateNonce(bytes int) ([]byte, error) {
 	return nonce, nil
 }
 
-func (kms *localKMS) GenerateEncryptedKey(keyType KeyType) (*ManagedKey, error) {
+func (kms *localKMS) GenerateEncryptedKey(keyType KeyType, ctxKey, ctxVal string) (*ManagedKey, error) {
 	iv, err := kms.GenerateNonce(mockCipher.BlockSize())
 	if err != nil {
 		return nil, err
 	}
+
 	key, err := kms.GenerateNonce(keyType.KeySize())
 	if err != nil {
 		return nil, err
 	}
+
 	mkey := &ManagedKey{
-		KeyType:   keyType,
-		IV:        iv,
-		Plaintext: key,
+		KeyType:      keyType,
+		IV:           iv,
+		Plaintext:    key,
+		ContextKey:   ctxKey,
+		ContextValue: ctxVal,
 	}
 	if err := kms.xorKey(mkey); err != nil {
 		return nil, err
 	}
+
 	return mkey, nil
 }
 

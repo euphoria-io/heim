@@ -110,9 +110,11 @@ func (t KeyType) Unpad(data []byte) []byte {
 
 type ManagedKey struct {
 	KeyType
-	IV         []byte
-	Plaintext  []byte
-	Ciphertext []byte
+	IV           []byte
+	Plaintext    []byte
+	Ciphertext   []byte
+	ContextKey   string
+	ContextValue string
 }
 
 func (k *ManagedKey) Clone() ManagedKey {

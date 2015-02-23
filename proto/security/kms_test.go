@@ -32,7 +32,7 @@ func TestLocalKMS(t *testing.T) {
 		Convey("Error should be checked when generating iv", func() {
 			n := int64(AES128.BlockSize())
 			kms := LocalKMSWithRNG(io.LimitReader(rand.Reader, n-1))
-			encKey, err := kms.GenerateEncryptedKey(AES128)
+			encKey, err := kms.GenerateEncryptedKey(AES128, "room", "test")
 			So(err, ShouldEqual, io.ErrUnexpectedEOF)
 			So(encKey, ShouldBeNil)
 		})
@@ -40,21 +40,21 @@ func TestLocalKMS(t *testing.T) {
 		Convey("Error should be checked when generating key", func() {
 			n := int64(AES128.BlockSize() + AES128.KeySize())
 			kms := LocalKMSWithRNG(io.LimitReader(rand.Reader, n-1))
-			encKey, err := kms.GenerateEncryptedKey(AES128)
+			encKey, err := kms.GenerateEncryptedKey(AES128, "room", "test")
 			So(err, ShouldEqual, io.ErrUnexpectedEOF)
 			So(encKey, ShouldBeNil)
 		})
 
 		Convey("Should return ErrNoMasterKey if master key isn't configured", func() {
 			kms := LocalKMS()
-			encKey, err := kms.GenerateEncryptedKey(AES128)
+			encKey, err := kms.GenerateEncryptedKey(AES128, "room", "test")
 			So(err, ShouldEqual, ErrNoMasterKey)
 			So(encKey, ShouldBeNil)
 		})
 
 		Convey("Master key is required to be set", func() {
 			kms := LocalKMS()
-			mkey, err := kms.GenerateEncryptedKey(AES128)
+			mkey, err := kms.GenerateEncryptedKey(AES128, "room", "test")
 			So(err, ShouldEqual, ErrNoMasterKey)
 			So(mkey, ShouldBeNil)
 
@@ -76,12 +76,14 @@ func TestLocalKMS(t *testing.T) {
 			// Generate encrypted key and verify iv prefix.
 			kms := LocalKMSWithRNG(bytes.NewReader(randomData))
 			kms.SetMasterKey(make([]byte, mockCipher.KeySize()))
-			mkey, err := kms.GenerateEncryptedKey(AES128)
+			mkey, err := kms.GenerateEncryptedKey(AES128, "room", "test")
 			So(err, ShouldBeNil)
 			So(mkey, ShouldNotBeNil)
 			So(mkey.Encrypted(), ShouldBeTrue)
 			So(len(mkey.IV), ShouldEqual, AES128.BlockSize())
 			So(len(mkey.Ciphertext), ShouldEqual, AES128.KeySize())
+			So(mkey.ContextKey, ShouldEqual, "room")
+			So(mkey.ContextValue, ShouldEqual, "test")
 
 			So(kms.DecryptKey(mkey), ShouldBeNil)
 			So(mkey.Encrypted(), ShouldBeFalse)
@@ -104,7 +106,7 @@ func TestLocalKMS(t *testing.T) {
 	Convey("Encrypted key with bad IV cannot be decrypted", t, func() {
 		kms := LocalKMS()
 		kms.SetMasterKey(make([]byte, mockCipher.KeySize()))
-		mkey, err := kms.GenerateEncryptedKey(AES128)
+		mkey, err := kms.GenerateEncryptedKey(AES128, "room", "test")
 		So(err, ShouldBeNil)
 		mkey.IV = mkey.IV[1:]
 		So(kms.DecryptKey(mkey), ShouldEqual, ErrInvalidKey)
@@ -113,7 +115,7 @@ func TestLocalKMS(t *testing.T) {
 	Convey("Encrypted key with bad Ciphertext cannot be decrypted", t, func() {
 		kms := LocalKMS()
 		kms.SetMasterKey(make([]byte, mockCipher.KeySize()))
-		mkey, err := kms.GenerateEncryptedKey(AES128)
+		mkey, err := kms.GenerateEncryptedKey(AES128, "room", "test")
 		So(err, ShouldBeNil)
 		mkey.Ciphertext = append(mkey.Ciphertext, mkey.Ciphertext...)
 		So(kms.DecryptKey(mkey), ShouldEqual, ErrInvalidKey)

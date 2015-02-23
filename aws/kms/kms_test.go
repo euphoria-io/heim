@@ -32,17 +32,19 @@ func TestKMS(t *testing.T) {
 
 	Convey("GenerateEncryptedKey and Decrypt", t, func() {
 		Convey("AES-256", func() {
-			key, err := kms.GenerateEncryptedKey(security.AES256)
+			key, err := kms.GenerateEncryptedKey(security.AES256, "room", "test")
 			So(err, ShouldBeNil)
 			So(key.Encrypted(), ShouldBeTrue)
 
 			So(kms.DecryptKey(key), ShouldBeNil)
 			So(key.Encrypted(), ShouldBeFalse)
 			So(len(key.Plaintext), ShouldEqual, security.AES256.KeySize())
+			So(key.ContextKey, ShouldEqual, "room")
+			So(key.ContextValue, ShouldEqual, "test")
 		})
 
 		Convey("AES-128", func() {
-			key, err := kms.GenerateEncryptedKey(security.AES128)
+			key, err := kms.GenerateEncryptedKey(security.AES128, "room", "test")
 			So(err, ShouldBeNil)
 			So(key.Encrypted(), ShouldBeTrue)
 
@@ -52,7 +54,7 @@ func TestKMS(t *testing.T) {
 		})
 
 		Convey("Invalid key type", func() {
-			key, err := kms.GenerateEncryptedKey(security.KeyType(255))
+			key, err := kms.GenerateEncryptedKey(security.KeyType(255), "room", "test")
 			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldEqual, "aws kms: key type 255 not supported")
 			So(key, ShouldBeNil)
@@ -62,6 +64,17 @@ func TestKMS(t *testing.T) {
 			err := kms.DecryptKey(&security.ManagedKey{Plaintext: []byte{0}})
 			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldEqual, "aws kms: key is already decrypted")
+		})
+
+		Convey("Invalid context", func() {
+			key, err := kms.GenerateEncryptedKey(security.AES128, "room", "test")
+			So(err, ShouldBeNil)
+			So(key.Encrypted(), ShouldBeTrue)
+
+			key.ContextValue = "test2"
+			err = kms.DecryptKey(key)
+			So(err, ShouldNotBeNil)
+			So(err.Error(), ShouldEqual, "aws kms: error decrypting data key: InvalidCiphertextException")
 		})
 	})
 }

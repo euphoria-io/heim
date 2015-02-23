@@ -164,7 +164,7 @@ func (r *memRoom) GenerateMasterKey(ctx context.Context, kms security.KMS) (prot
 		return nil, err
 	}
 
-	mkey, err := kms.GenerateEncryptedKey(security.AES128)
+	mkey, err := kms.GenerateEncryptedKey(security.AES128, "room", r.name)
 	if err != nil {
 		return nil, err
 	}
