@@ -32,7 +32,7 @@ type session struct {
 	room     proto.Room
 
 	state   cmdState
-	auth    map[string]*Authentication
+	auth    map[string]*proto.Authentication
 	keyID   string
 	onClose func()
 
@@ -79,7 +79,7 @@ func (s *session) Send(
 	ctx context.Context, cmdType proto.PacketType, payload interface{}) error {
 
 	var err error
-	payload, err = decryptPayload(payload, s.auth)
+	payload, err = proto.DecryptPayload(payload, s.auth)
 	if err != nil {
 		return err
 	}
@@ -237,7 +237,7 @@ func (s *session) handleAuth(cmd *proto.Packet) (interface{}, error) {
 
 	switch msg := payload.(type) {
 	case *proto.AuthCommand:
-		auth, err := Authenticate(s.ctx, s.room, msg)
+		auth, err := proto.Authenticate(s.ctx, s.room, msg)
 		if err != nil {
 			return nil, err
 		}
@@ -245,7 +245,7 @@ func (s *session) handleAuth(cmd *proto.Packet) (interface{}, error) {
 			return &proto.AuthReply{Reason: auth.FailureReason}, nil
 		}
 		// TODO: support holding multiple keys
-		s.auth = map[string]*Authentication{auth.KeyID: auth}
+		s.auth = map[string]*proto.Authentication{auth.KeyID: auth}
 		s.keyID = auth.KeyID
 		s.state = s.handleCommand
 		if err := s.join(); err != nil {
@@ -271,7 +271,7 @@ func (s *session) handleCommand(cmd *proto.Packet) (interface{}, error) {
 		if err != nil {
 			return nil, err
 		}
-		return decryptPayload(proto.LogReply{Log: msgs, Before: msg.Before}, s.auth)
+		return proto.DecryptPayload(proto.LogReply{Log: msgs, Before: msg.Before}, s.auth)
 	case *proto.NickCommand:
 		nick, err := proto.NormalizeNick(msg.Name)
 		if err != nil {
@@ -303,7 +303,7 @@ func (s *session) sendSnapshot() error {
 
 	for i, msg := range msgs {
 		if msg.EncryptionKeyID != "" {
-			dmsg, err := decryptMessage(msg, s.auth)
+			dmsg, err := proto.DecryptMessage(msg, s.auth)
 			if err != nil {
 				continue
 			}
@@ -376,7 +376,7 @@ func (s *session) handleSendCommand(cmd *proto.SendCommand) (interface{}, error)
 	}
 
 	if s.keyID != "" {
-		if err := encryptMessage(&msg, s.keyID, s.auth[s.keyID].Key); err != nil {
+		if err := proto.EncryptMessage(&msg, s.keyID, s.auth[s.keyID].Key); err != nil {
 			return nil, err
 		}
 	}
@@ -386,5 +386,5 @@ func (s *session) handleSendCommand(cmd *proto.SendCommand) (interface{}, error)
 		return nil, err
 	}
 
-	return decryptPayload(proto.SendReply(sent), s.auth)
+	return proto.DecryptPayload(proto.SendReply(sent), s.auth)
 }

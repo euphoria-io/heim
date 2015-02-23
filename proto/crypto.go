@@ -1,37 +1,36 @@
-package backend
+package proto
 
 import (
 	"encoding/base64"
 	"fmt"
 	"strings"
 
-	"heim/proto"
 	"heim/proto/security"
 )
 
-func decryptPayload(payload interface{}, auth map[string]*Authentication) (interface{}, error) {
+func DecryptPayload(payload interface{}, auth map[string]*Authentication) (interface{}, error) {
 	switch msg := payload.(type) {
-	case proto.Message:
-		return decryptMessage(msg, auth)
-	case proto.SendReply:
-		dm, err := decryptMessage(proto.Message(msg), auth)
+	case Message:
+		return DecryptMessage(msg, auth)
+	case SendReply:
+		dm, err := DecryptMessage(Message(msg), auth)
 		if err != nil {
 			return nil, err
 		}
-		return proto.SendReply(dm), nil
-	case *proto.SendEvent:
-		dm, err := decryptMessage(proto.Message(*msg), auth)
+		return SendReply(dm), nil
+	case *SendEvent:
+		dm, err := DecryptMessage(Message(*msg), auth)
 		if err != nil {
 			return nil, err
 		}
-		return (*proto.SendEvent)(&dm), nil
-	case proto.LogReply:
+		return (*SendEvent)(&dm), nil
+	case LogReply:
 		for i, entry := range msg.Log {
-			dm, err := decryptPayload(entry, auth)
+			dm, err := DecryptPayload(entry, auth)
 			if err != nil {
 				return nil, err
 			}
-			msg.Log[i] = dm.(proto.Message)
+			msg.Log[i] = dm.(Message)
 		}
 		return msg, nil
 	default:
@@ -39,7 +38,7 @@ func decryptPayload(payload interface{}, auth map[string]*Authentication) (inter
 	}
 }
 
-func encryptMessage(msg *proto.Message, keyID string, key *security.ManagedKey) error {
+func EncryptMessage(msg *Message, keyID string, key *security.ManagedKey) error {
 	if key == nil {
 		return security.ErrInvalidKey
 	}
@@ -64,7 +63,7 @@ func encryptMessage(msg *proto.Message, keyID string, key *security.ManagedKey) 
 	return nil
 }
 
-func decryptMessage(msg proto.Message, auths map[string]*Authentication) (proto.Message, error) {
+func DecryptMessage(msg Message, auths map[string]*Authentication) (Message, error) {
 	if msg.EncryptionKeyID == "" {
 		return msg, nil
 	}
