@@ -2,6 +2,7 @@ package proto
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -46,9 +47,17 @@ func EncryptMessage(msg *Message, keyID string, key *security.ManagedKey) error 
 		return security.ErrKeyMustBeDecrypted
 	}
 
+	payload := &Message{
+		Sender:  msg.Sender,
+		Content: msg.Content,
+	}
+	plaintext, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+
 	// TODO: verify msg.ID makes sense as nonce
 	nonce := []byte(msg.ID.String())
-	plaintext := []byte(msg.Content)
 	data := []byte(msg.Sender.ID)
 
 	digest, ciphertext, err := security.EncryptGCM(key, nonce, plaintext, data)
@@ -58,8 +67,10 @@ func EncryptMessage(msg *Message, keyID string, key *security.ManagedKey) error 
 
 	digestStr := base64.URLEncoding.EncodeToString(digest)
 	cipherStr := base64.URLEncoding.EncodeToString(ciphertext)
+
+	msg.Sender = &IdentityView{ID: msg.Sender.ID}
 	msg.Content = digestStr + "/" + cipherStr
-	msg.EncryptionKeyID = keyID
+	msg.EncryptionKeyID = "v1/" + keyID
 	return nil
 }
 
@@ -68,7 +79,14 @@ func DecryptMessage(msg Message, auths map[string]*Authentication) (Message, err
 		return msg, nil
 	}
 
-	auth, ok := auths[msg.EncryptionKeyID]
+	keyVersion := 0
+	keyID := msg.EncryptionKeyID
+	if strings.HasPrefix(keyID, "v1") {
+		keyVersion = 1
+		keyID = keyID[3:]
+	}
+
+	auth, ok := auths[keyID]
 	if !ok {
 		return msg, nil
 	}
@@ -99,6 +117,18 @@ func DecryptMessage(msg Message, auths map[string]*Authentication) (Message, err
 		return msg, fmt.Errorf("message decrypt: %s", err)
 	}
 
-	msg.Content = string(plaintext)
+	switch keyVersion {
+	case 0:
+		// unversioned keys briefly existed when private rooms first rolled out
+		msg.Content = string(plaintext)
+	case 1:
+		// v1 keys embed an encrypted partial message, hiding the sender and content
+		var payload Message
+		if err := json.Unmarshal(plaintext, &payload); err != nil {
+			return msg, fmt.Errorf("message corrupted: %s", err)
+		}
+		msg.Sender = payload.Sender
+		msg.Content = payload.Content
+	}
 	return msg, nil
 }

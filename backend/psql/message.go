@@ -29,13 +29,15 @@ func NewMessage(
 	*Message, error) {
 
 	msg := &Message{
-		Room:       room.Name,
-		ID:         id.String(),
-		Parent:     parent.String(),
-		Posted:     id.Time(),
-		SenderID:   idView.ID,
-		SenderName: idView.Name,
-		Content:    content,
+		Room:    room.Name,
+		ID:      id.String(),
+		Parent:  parent.String(),
+		Posted:  id.Time(),
+		Content: content,
+	}
+	if idView != nil {
+		msg.SenderID = idView.ID
+		msg.SenderName = idView.Name
 	}
 	if keyID != "" {
 		msg.EncryptionKeyID = sql.NullString{
