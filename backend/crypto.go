@@ -25,6 +25,15 @@ func decryptPayload(payload interface{}, auth map[string]*Authentication) (inter
 			return nil, err
 		}
 		return (*proto.SendEvent)(dm), nil
+	case proto.LogReply:
+		for i, entry := range msg.Log {
+			dm, err := decryptPayload(entry, auth)
+			if err != nil {
+				return nil, err
+			}
+			msg.Log[i] = *(dm.(*proto.Message))
+		}
+		return msg, nil
 	default:
 		return msg, nil
 	}
@@ -57,17 +66,14 @@ func encryptMessage(msg *proto.Message, keyID string, key *security.ManagedKey) 
 
 func decryptMessage(msg *proto.Message, auths map[string]*Authentication) (*proto.Message, error) {
 	if msg.EncryptionKeyID == "" {
-		fmt.Printf("message not encrypted, returning\n")
 		return msg, nil
 	}
 
 	auth, ok := auths[msg.EncryptionKeyID]
 	if !ok {
-		fmt.Printf("we don't hold a key for %s\n", msg.EncryptionKeyID)
 		return nil, nil
 	}
 
-	fmt.Printf("decrypting %#v\n", msg)
 	if auth.Key.Encrypted() {
 		return nil, security.ErrKeyMustBeDecrypted
 	}
@@ -95,6 +101,5 @@ func decryptMessage(msg *proto.Message, auths map[string]*Authentication) (*prot
 	}
 
 	msg.Content = string(plaintext)
-	fmt.Printf("  after decryption: %#v\n", msg)
 	return msg, nil
 }

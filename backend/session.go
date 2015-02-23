@@ -271,7 +271,7 @@ func (s *session) handleCommand(cmd *proto.Packet) (interface{}, error) {
 		if err != nil {
 			return nil, err
 		}
-		return &proto.LogReply{Log: msgs, Before: msg.Before}, nil
+		return decryptPayload(proto.LogReply{Log: msgs, Before: msg.Before}, s.auth)
 	case *proto.NickCommand:
 		nick, err := proto.NormalizeNick(msg.Name)
 		if err != nil {
