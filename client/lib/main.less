@@ -208,12 +208,13 @@ button {
             transition: all .15s ease;
           }
 
-          &:hover:after {
+          body:not(.touch) &:hover:after {
             opacity: .25;
           }
 
-          &:active:after {
+          &.touching:after, body:not(.touch) &:active:after {
             opacity: .3;
+            transition-duration: 0s;
           }
         }
 
