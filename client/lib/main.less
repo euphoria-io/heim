@@ -259,6 +259,9 @@ html, body, #container, .chat {
         background .15s ease;
       .no-select;
 
+      // work around weird webkit trailing text render glitch.
+      -webkit-transform: translate3d(0, 0, 0);
+
       & > * {
         height: 38px;
         padding: 10px;
