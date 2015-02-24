@@ -35,14 +35,11 @@ module.exports = React.createClass({
   },
 
   render: function() {
-    // http://stackoverflow.com/a/6447935
-    var isTouchDevice = 'ontouchstart' in window
-
     return (
       <div className="entry-box welcome">
         <div className="message">
           <h1><strong>Hello{this.state.nickText ? ' ' + this.state.nickText : ''}!</strong> <span className="no-break">Welcome to our discussion.</span></h1>
-          <p>To reply to a message directly, {isTouchDevice ? 'tap' : 'use the arrow keys or click on'} it.</p>
+          <p>To reply to a message directly, {Heim.isTouch ? 'tap' : 'use the arrow keys or click on'} it.</p>
         </div>
         <form className="entry" onSubmit={this.setNick}>
           <label>choose your name to begin:</label>

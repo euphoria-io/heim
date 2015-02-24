@@ -26,6 +26,8 @@ Heim = {
   notification: require('./stores/notification'),
   storage: require('./stores/storage'),
   focus: require('./stores/focus'),
+  // http://stackoverflow.com/a/6447935
+  isTouch: 'ontouchstart' in window,
 }
 
 document.body.addEventListener('keypress', function(ev) {
@@ -57,3 +59,13 @@ document.body.addEventListener('keydown', function(ev) {
   var reactEvent = new SyntheticKeyboardEvent(null, null, ev)
   Heim.actions.keydownOnEntry(reactEvent)
 }, false)
+
+if (Heim.isTouch) {
+  document.body.addEventListener('touchstart', function(ev) {
+    ev.target.classList.add('touching')
+  }, false)
+
+  document.body.addEventListener('touchend', function(ev) {
+    ev.target.classList.remove('touching')
+  }, false)
+}
