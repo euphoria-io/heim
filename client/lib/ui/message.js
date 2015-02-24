@@ -37,18 +37,24 @@ var Message = module.exports = React.createClass({
       marginLeft: -this.props.depth * 10,
     }
 
+    var lineClasses = {
+      'line': true,
+      'focus-highlight': entry || this.props.displayFocusHighlight,
+    }
+
     var content = message.get('content')
     var messageRender
     if (/^\/me/.test(content)) {
       content = content.replace(/^\/me ?/, '')
       messageRender = <MessageText content={content} className="message message-emote" style={{background: 'hsl(' + message.getIn(['sender', 'hue']) + ', 65%, 95%)'}} />
+      lineClasses['line-emote'] = true
     } else {
       messageRender = <MessageText content={content} className="message" />
     }
 
     return (
       <div data-message-id={message.get('id')} className="message-node">
-        <div className={cx({'line': true, 'focus-highlight': entry || this.props.displayFocusHighlight})} onClick={this.focusMessage}>
+        <div className={cx(lineClasses)} onClick={this.focusMessage}>
           <time dateTime={time.toISOString()} title={time.format('MMMM Do YYYY, h:mm:ss a')} style={timeStyle}>
             {time.format('h:mma')}
           </time>

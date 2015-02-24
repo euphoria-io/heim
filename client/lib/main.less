@@ -70,13 +70,11 @@ html, body, #container, .chat {
       transition: all .15s ease;
     }
 
-    .nick, .message-emote {
+    .nick, .line-emote .message {
       background: #eee;
       padding: 2px 4px;
       font-size: .85em;
       border-radius: 2px;
-      border-top-left-radius: 0;
-      border-bottom-left-radius: 0;
     }
 
     .messages {
@@ -119,8 +117,17 @@ html, body, #container, .chat {
           font-size: .85em;
         }
 
-        .message-emote {
-          margin-left: -8px;
+        &.line-emote {
+          .nick {
+            border-top-right-radius: 0;
+            border-bottom-right-radius: 0;
+          }
+
+          .message {
+            margin-left: -8px;
+            border-top-left-radius: 0;
+            border-bottom-left-radius: 0;
+          }
         }
       }
 
