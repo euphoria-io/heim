@@ -37,6 +37,7 @@ gulp.task('less', function() {
     .pipe(less({compress: true}))
     .on('error', function(err) {
       gutil.log(gutil.colors.red('LESS error:'), err.message)
+      this.emit('end')
     })
     .pipe(gulp.dest(dest))
 })
