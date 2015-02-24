@@ -4,7 +4,7 @@
   "description": "heim frontend",
   "main": "index.js",
   "dependencies": {
-    "lodash": "~2.4.1",
+    "lodash": "~3.3.1",
     "react": "~0.12.1",
     "reflux": "~0.2.1",
     "moment": "~2.8.4",
