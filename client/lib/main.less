@@ -27,6 +27,7 @@ button {
   background: none;
   border: none;
   padding: 0;
+  font-size: inherit;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
@@ -297,9 +298,9 @@ button {
 
       .privacy-level {
         position: relative;
-        margin-left: 7px;
         padding: 2px 6px;
         font-size: .8em;
+        margin-left: 7px;
         border-radius: 2px;
         .larger-touch-target(10px, 10px);
 
@@ -309,20 +310,23 @@ button {
         }
 
         &.private {
-          display: flex;
-          align-items: center;
           background: @passcode-color;
           color: darken(@passcode-color, 60%);
           .touchable(@passcode-color);
 
-          &:before {
-            content: '';
-            width: 10px;
-            height: 10px;
-            margin-right: 3px;
-            background: data-uri('../res/lock.svg') no-repeat center center;
-            background-size: contain;
-            opacity: .75;
+          .inner {
+            display: flex;
+            align-items: center;
+
+            &:before {
+              content: '';
+              width: 10px;
+              height: 10px;
+              margin-right: 3px;
+              background: data-uri('../res/lock.svg') no-repeat center center;
+              background-size: contain;
+              opacity: .75;
+            }
           }
         }
       }
@@ -350,21 +354,24 @@ button {
       .no-select;
 
       .user-count {
-        display: flex;
-        align-items: center;
         position: absolute;
         right: 10px;
         .touchable(@neutral-color);
         .larger-touch-target(20px, 30px);
 
-        &:before {
-          content: '';
-          width: 14px;
-          height: 14px;
-          margin-right: 3px;
-          background: data-uri('../res/euphorian.svg') no-repeat center center;
-          background-size: contain;
-          opacity: .75;
+        .inner {
+          display: flex;
+          align-items: center;
+
+          &:before {
+            content: '';
+            width: 14px;
+            height: 14px;
+            margin-right: 3px;
+            background: data-uri('../res/euphorian.svg') no-repeat center center;
+            background-size: contain;
+            opacity: .75;
+          }
         }
       }
     }

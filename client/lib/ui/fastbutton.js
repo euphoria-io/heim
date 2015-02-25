@@ -13,8 +13,11 @@ module.exports = React.createClass({
   },
 
   render: function() {
+    // https://bugzilla.mozilla.org/show_bug.cgi?id=984869#c2
     return (
-      <button {...this.props} onClick={this.onClick} onTouchStart={this.onClick} />
+      <button {...this.props} onClick={this.onClick} onTouchStart={this.onClick}>
+        <div className="inner">{this.props.children}</div>
+      </button>
     )
   },
 })
