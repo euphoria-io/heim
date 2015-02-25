@@ -5,7 +5,7 @@ var Reflux = require('reflux')
 var actions = require('../actions')
 var UserList = require('./userlist')
 var NotifyToggle = require('./notifytoggle')
-var PrivacyBubble = require('./privacybubble')
+var RoomTitle = require('./roomtitle')
 
 
 module.exports = React.createClass({
@@ -39,10 +39,6 @@ module.exports = React.createClass({
     this.setState({userListCollapsed: true})
   },
 
-  showPrivacyInfo: function() {
-    this.refs.privacyInfo.show()
-  },
-
   render: function() {
     return (
       <div className="sidebar" style={{marginRight: this.props.scrollbarWidth}}>
@@ -54,14 +50,10 @@ module.exports = React.createClass({
               </span>
             }
           </ReactCSSTransitionGroup>
-          <span className="room">
-            <a className="name" href={'/room/' + this.props.roomName} onClick={ev => ev.preventDefault()}>&amp;{this.props.roomName}</a>
-            {this.props.authType && <button className="private" onClick={this.showPrivacyInfo}>private</button>}
-          </span>
+          <RoomTitle name={this.props.roomName} authType={this.props.authType} rightOffset={this.props.scrollbarWidth} />
           <button type="button" className="settings" onClick={this.toggleSettings} tabIndex="-1" />
         </div>
         <UserList users={this.props.who} collapsed={this.state.userListCollapsed} onMouseEnter={this.expandUserList} onMouseLeave={this.collapseUserList} />
-        <PrivacyBubble ref="privacyInfo" authType={this.props.authType} rightOffset={this.props.scrollbarWidth} />
         {this.props.roomName == 'space' && <div className="norman"><p>norman</p><img src="//i.imgur.com/wAz2oho.jpg" /></div>}
       </div>
     )
