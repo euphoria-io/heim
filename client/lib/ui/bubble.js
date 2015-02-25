@@ -15,11 +15,13 @@ module.exports = React.createClass({
 
   componentWillMount: function() {
     document.body.addEventListener('click', this.onOutsideClick, false)
+    document.body.addEventListener('touchstart', this.onOutsideClick, false)
     this._hide = _.debounce(this.hide, 0)
   },
 
   componentWillUnmount: function() {
     document.body.removeEventListener('click', this.onOutsideClick, false)
+    document.body.removeEventListener('touchstart', this.onOutsideClick, false)
   },
 
   show: function() {
