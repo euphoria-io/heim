@@ -124,6 +124,10 @@ button {
       transition: all .15s ease;
     }
 
+    .nick, .line {
+      line-height: 1.2em;
+    }
+
     .nick, .line-emote .message {
       background: @neutral-color;
       padding: 2px 4px;
@@ -364,6 +368,8 @@ button {
       .user-count {
         position: absolute;
         right: 10px;
+        .nick;
+        line-height: normal;
         .touchable(@neutral-color);
         .larger-touch-target(20px, 30px);
         .button-icon('../res/euphorian.svg', 14px);
