@@ -39,10 +39,14 @@ module.exports = React.createClass({
   },
 
   tryPasscode: function(ev) {
+    ev.preventDefault()
+    if (this.state.authState == 'trying') {
+      return
+    }
+
     var input = this.refs.input.getDOMNode()
     actions.tryRoomPasscode(input.value)
     input.value = ''
-    ev.preventDefault()
   },
 
   render: function() {
@@ -55,7 +59,7 @@ module.exports = React.createClass({
               : this.state.authState == 'failed' ? 'no dice. try again:'
                 : 'passcode:'
           }</label>
-          <input key="passcode" ref="input" type="password" autoFocus disabled={this.state.connected === false || this.state.authState == 'trying'} />
+          <input key="passcode" ref="input" type="password" autoFocus disabled={this.state.connected === false} />
         </form>
       </div>
     )
