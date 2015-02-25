@@ -14,10 +14,6 @@ module.exports = React.createClass({
     this.refs.userList.show()
   },
 
-  showPrivacyInfo: function() {
-    this.refs.privacyInfo.show()
-  },
-
   render: function() {
     var userCount = this.props.who.filter(user => user.get('name')).size
 
