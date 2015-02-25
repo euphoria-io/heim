@@ -29,7 +29,12 @@ button {
   padding: 0;
   font-size: inherit;
   cursor: pointer;
+
   -webkit-tap-highlight-color: transparent;
+
+  &::-moz-focus-inner {
+    border: 1px dotted transparent;
+  }
 }
 
 .touchable(@bgcolor) {
