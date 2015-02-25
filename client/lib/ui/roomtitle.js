@@ -29,7 +29,7 @@ module.exports = React.createClass({
       <span>
         <span className="room">
           <a className="name" href={'/room/' + this.props.name} onClick={ev => ev.preventDefault()}>&amp;{this.props.name}</a>
-          <button className={'privacy-level ' + privacyLevel} onClick={this.showPrivacyInfo}>{privacyLevel}</button>
+          <button className={'privacy-level ' + privacyLevel} onClick={this.showPrivacyInfo} onTouchStart={this.showPrivacyInfo}>{privacyLevel}</button>
         </span>
         <Bubble ref="privacyInfo" className="small-text privacy-info" rightOffset={this.props.rightOffset}>
           {privacyMsg}
