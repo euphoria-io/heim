@@ -3,9 +3,21 @@ var SyntheticKeyboardEvent = require('react/lib/SyntheticKeyboardEvent')
 
 var Main = require('./ui/main')
 
+
+Heim = {
+  actions: require('./actions'),
+  socket: require('./stores/socket'),
+  chat: require('./stores/chat'),
+  notification: require('./stores/notification'),
+  storage: require('./stores/storage'),
+  focus: require('./stores/focus'),
+  // http://stackoverflow.com/a/6447935
+  isTouch: 'ontouchstart' in window,
+}
+
 var roomName = location.pathname.match(/(\w+)\/$/)[1]
 document.title = roomName
-require('./actions').connect(roomName)
+Heim.actions.connect(roomName)
 
 if (React.addons && React.addons.Perf) {
   ReactPerf = React.addons.Perf
@@ -18,17 +30,6 @@ React.render(
   <Main />,
   document.getElementById('container')
 )
-
-Heim = {
-  actions: require('./actions'),
-  socket: require('./stores/socket'),
-  chat: require('./stores/chat'),
-  notification: require('./stores/notification'),
-  storage: require('./stores/storage'),
-  focus: require('./stores/focus'),
-  // http://stackoverflow.com/a/6447935
-  isTouch: 'ontouchstart' in window,
-}
 
 document.body.addEventListener('keypress', function(ev) {
   if (ev.target.nodeName == 'INPUT' && ev.target.type == 'text') {
