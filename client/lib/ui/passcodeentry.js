@@ -13,6 +13,7 @@ module.exports = React.createClass({
     require('./entrymixin'),
     Reflux.listenTo(chat.store, '_onChatUpdate'),
     Reflux.listenTo(actions.focusEntry, 'focus'),
+    Reflux.listenTo(actions.keydownOnEntry, 'proxyKeyDown'),
   ],
 
   componentWillMount: function() {

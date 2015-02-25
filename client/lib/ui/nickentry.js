@@ -11,6 +11,7 @@ module.exports = React.createClass({
     require('./entrymixin'),
     Reflux.connect(require('../stores/chat').store, 'chat'),
     Reflux.listenTo(actions.focusEntry, 'focus'),
+    Reflux.listenTo(actions.keydownOnEntry, 'proxyKeyDown'),
   ],
 
   getInitialState: function() {

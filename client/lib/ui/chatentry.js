@@ -109,10 +109,14 @@ module.exports = React.createClass({
       return
     }
 
-    this.saveEntryState()
-
     var input = this.refs.input.getDOMNode()
     var length = input.value.length
+
+    if (ev.target != input && this.proxyKeyDown(ev)) {
+      return
+    }
+
+    this.saveEntryState()
 
     if (length) {
       if (ev.key == 'Enter') {
