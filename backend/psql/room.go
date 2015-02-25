@@ -196,7 +196,7 @@ func (rb *RoomBinding) GetCapability(ctx context.Context, id string) (security.C
 		"SELECT c.id, c.encrypted_private_data, c.public_data,"+
 			" r.room, r.capability_id, r.granted, r.revoked"+
 			" FROM capability c, room_capability r"+
-			" WHERE r.room = $1 AND c.id = $2 AND r.revoked < r.granted",
+			" WHERE r.room = $1 AND r.capability_id = $2 AND c.id = $2 AND r.revoked < r.granted",
 		rb.Name, id)
 
 	if err != nil {
