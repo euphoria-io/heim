@@ -10,6 +10,7 @@ module.exports = React.createClass({
   displayName: 'PasscodeEntry',
 
   mixins: [
+    require('./entrymixin'),
     Reflux.listenTo(chat.store, '_onChatUpdate'),
     Reflux.listenTo(actions.focusEntry, 'focus'),
   ],
@@ -32,10 +33,6 @@ module.exports = React.createClass({
       connected: chatState.connected,
       authState: chatState.authState,
     })
-  },
-
-  focus: function() {
-    this.refs.input.getDOMNode().focus()
   },
 
   tryPasscode: function(ev) {

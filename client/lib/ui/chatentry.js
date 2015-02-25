@@ -9,6 +9,7 @@ module.exports = React.createClass({
   displayName: 'ChatEntry',
 
   mixins: [
+    require('./entrymixin'),
     Reflux.connect(chat.store, 'chat'),
     Reflux.listenTo(actions.focusEntry, 'focus'),
     Reflux.listenTo(actions.keydownOnEntry, 'onKeyDown'),
@@ -23,16 +24,6 @@ module.exports = React.createClass({
       nickText: null,
       nickFocused: false,
     }
-  },
-
-  focus: function(withChar) {
-    var node = this.refs.input.getDOMNode()
-    if (withChar) {
-      node.value += withChar
-      this.saveEntryState()
-    }
-    node.focus()
-    actions.scrollToEntry()
   },
 
   chatMove: function(dir) {
@@ -191,10 +182,5 @@ module.exports = React.createClass({
         <input key="msg" ref="input" type="text" autoFocus defaultValue={this.state.chat.entryText} onChange={this.saveEntryState} onKeyDown={this.onKeyDown} onClick={this.saveEntryState} onFocus={actions.scrollToEntry} onKeyPress={actions.scrollToEntry} />
       </form>
     )
-  },
-
-  componentWillUnmount: function() {
-    // FIXME: hack to work around Reflux #156.
-    this.replaceState = function() {}
   },
 })
