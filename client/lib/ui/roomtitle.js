@@ -27,7 +27,7 @@ module.exports = React.createClass({
     }
 
     return (
-      <span>
+      <span className="room-container">
         <span className="room">
           <a className="name" href={'/room/' + this.props.name} onClick={ev => ev.preventDefault()}>&amp;{this.props.name}</a>
           <FastButton className={'privacy-level ' + privacyLevel} onClick={this.showPrivacyInfo}>{privacyLevel}</FastButton>

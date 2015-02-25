@@ -182,8 +182,7 @@ button {
       z-index: 3;
 
       .top-line {
-        height: 24px;
-        line-height: 24px;
+        display: flex;
         text-align: right;
         margin-top: -8px;
         padding: 8px 0;
@@ -220,10 +219,6 @@ button {
           }
         }
 
-        & > * {
-          vertical-align: middle;
-        }
-
         .settings-content {
           transition: all .15s ease;
 
@@ -257,6 +252,7 @@ button {
 
           input {
             vertical-align: middle;
+            margin: 0 4px;
           }
         }
       }
@@ -283,8 +279,12 @@ button {
       }
     }
 
+    .room-container {
+      display: inherit;
+    }
+
     .room {
-      display: inline-block;
+      display: inline-flex;
       margin-right: 10px;
 
       .name {
@@ -337,8 +337,10 @@ button {
     }
 
     .topbar {
+      display: flex;
       position: relative;
       height: 20px;
+      line-height: 20px;
       padding: 6px 10px;
       background: white;
       box-shadow: 0 0 8px fade(black, 25%);
@@ -347,7 +349,6 @@ button {
       .no-select;
 
       .user-count {
-        display: inline-block;
         position: absolute;
         right: 10px;
         .touchable(#eee);
@@ -518,7 +519,6 @@ button {
 
         input {
           margin-right: .35em;
-          vertical-align: middle;
         }
       }
     }
