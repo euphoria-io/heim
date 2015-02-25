@@ -31,6 +31,14 @@ module.exports = React.createClass({
     this.setState({visible: false})
   },
 
+  toggle: function() {
+    if (this.state.visible) {
+      this._hide()
+    } else {
+      this.show()
+    }
+  },
+
   onOutsideClick: function(ev) {
     // queue hide so that if the click triggers a show, we don't hide and then
     // immediately reshow.

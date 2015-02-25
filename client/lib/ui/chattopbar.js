@@ -12,7 +12,7 @@ module.exports = React.createClass({
   mixins: [require('react-immutable-render-mixin')],
 
   showUserList: function() {
-    this.refs.userList.show()
+    this.refs.userList.toggle()
   },
 
   render: function() {
