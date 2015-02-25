@@ -15,7 +15,6 @@ module.exports = React.createClass({
   mixins: [
     Reflux.connect(require('../stores/chat').store, 'chat'),
     Reflux.connect(require('../stores/focus').store, 'focus'),
-    Reflux.listenTo(actions.showSettings, 'showSettings'),
     Reflux.listenTo(actions.scrollToEntry, 'scrollToEntry'),
   ],
 
