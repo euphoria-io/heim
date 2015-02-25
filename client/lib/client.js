@@ -32,7 +32,8 @@ React.render(
 )
 
 document.body.addEventListener('keypress', function(ev) {
-  if (ev.target.nodeName == 'INPUT' && ev.target.type == 'text') {
+  if (ev.target.nodeName == 'INPUT' &&
+       (ev.target.type == 'text' || ev.target.type == 'password')) {
     return
   }
 
