@@ -49,7 +49,7 @@ func (setRoomPasscode) run(c *console, args []string) error {
 		return err
 	}
 
-	c.Printf("Passcode added to test: %s\n", capability.CapabilityID())
+	c.Printf("Passcode added to %s: %s\n", args[0], capability.CapabilityID())
 	return nil
 }
 
