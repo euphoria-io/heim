@@ -52,6 +52,7 @@ button {
   }
 }
 
+@neutral-color: #e8e8e8;
 @public-color: lighten(blue, 43%);
 @passcode-color: #eedba0;
 
@@ -101,7 +102,7 @@ button {
     }
 
     .nick, .line-emote .message {
-      background: #eee;
+      background: @neutral-color;
       padding: 2px 4px;
       font-size: .85em;
       border-radius: 2px;
@@ -353,7 +354,7 @@ button {
         align-items: center;
         position: absolute;
         right: 10px;
-        .touchable(#eee);
+        .touchable(@neutral-color);
         .larger-touch-target(20px, 30px);
 
         &:before {
@@ -374,7 +375,7 @@ button {
       display: flex;
       flex-direction: row;
       box-sizing: border-box;
-      background: #eee;
+      background: @neutral-color;
       border: none;
       border-bottom: 3px solid transparent;
       box-shadow: 0 0 10px fade(black, 10%) inset;
