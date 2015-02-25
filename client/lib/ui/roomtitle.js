@@ -18,11 +18,11 @@ module.exports = React.createClass({
     switch (this.props.authType) {
       case 'passcode':
         privacyLevel = 'private'
-        privacyMsg = 'this room requires a passcode for entry.'
+        privacyMsg = 'this room requires a passcode for entry'
         break
       default:
         privacyLevel = 'public'
-        privacyMsg = 'anyone with a link can join this room.'
+        privacyMsg = 'anyone with a link can join this room'
     }
 
     return (
