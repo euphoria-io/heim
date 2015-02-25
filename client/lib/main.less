@@ -53,6 +53,23 @@ button {
   }
 }
 
+.button-icon(@url, @size, @spacing: 3px, @opacity: .75) {
+  .inner {
+    display: flex;
+    align-items: center;
+
+    &:before {
+      content: '';
+      width: @size;
+      height: @size;
+      margin-right: @spacing;
+      background: data-uri(@url) no-repeat center center;
+      background-size: contain;
+      opacity: @opacity;
+    }
+  }
+}
+
 @neutral-color: #e8e8e8;
 @public-color: lighten(blue, 43%);
 @passcode-color: #eedba0;
@@ -313,21 +330,7 @@ button {
           background: @passcode-color;
           color: darken(@passcode-color, 60%);
           .touchable(@passcode-color);
-
-          .inner {
-            display: flex;
-            align-items: center;
-
-            &:before {
-              content: '';
-              width: 10px;
-              height: 10px;
-              margin-right: 3px;
-              background: data-uri('../res/lock.svg') no-repeat center center;
-              background-size: contain;
-              opacity: .75;
-            }
-          }
+          .button-icon('../res/lock.svg', 10px);
         }
       }
     }
@@ -358,21 +361,7 @@ button {
         right: 10px;
         .touchable(@neutral-color);
         .larger-touch-target(20px, 30px);
-
-        .inner {
-          display: flex;
-          align-items: center;
-
-          &:before {
-            content: '';
-            width: 14px;
-            height: 14px;
-            margin-right: 3px;
-            background: data-uri('../res/euphorian.svg') no-repeat center center;
-            background-size: contain;
-            opacity: .75;
-          }
-        }
+        .button-icon('../res/euphorian.svg', 14px);
       }
     }
 
