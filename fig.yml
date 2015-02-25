@@ -29,7 +29,7 @@ upgradedb:
   links:
     - psql
   volumes:
-    - upgradedb:/migrations
+    - backend/psql/migrations:/migrations
 
 # The backend container runs the backend server against the psql container.
 backend:
