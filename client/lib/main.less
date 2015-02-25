@@ -308,19 +308,19 @@ button {
         }
 
         &.private {
+          display: flex;
+          align-items: center;
           background: @passcode-color;
           color: darken(@passcode-color, 60%);
           .touchable(@passcode-color);
 
           &:before {
             content: '';
-            display: inline-block;
             width: 10px;
             height: 10px;
             margin-right: 3px;
             background: data-uri('../res/lock.svg') no-repeat center center;
             background-size: contain;
-            vertical-align: -1px;
             opacity: .75;
           }
         }
@@ -349,6 +349,8 @@ button {
       .no-select;
 
       .user-count {
+        display: flex;
+        align-items: center;
         position: absolute;
         right: 10px;
         .touchable(#eee);
@@ -356,13 +358,11 @@ button {
 
         &:before {
           content: '';
-          display: inline-block;
           width: 14px;
           height: 14px;
           margin-right: 3px;
           background: data-uri('../res/euphorian.svg') no-repeat center center;
           background-size: contain;
-          vertical-align: middle;
           opacity: .75;
         }
       }
