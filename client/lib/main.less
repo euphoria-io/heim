@@ -51,6 +51,7 @@ button {
   }
 }
 
+@public-color: lighten(blue, 43%);
 @passcode-color: #eedba0;
 
 .hatch-shade {
@@ -285,10 +286,6 @@ button {
       display: inline-block;
       margin-right: 10px;
 
-      & > * {
-        vertical-align: middle;
-      }
-
       .name {
         color: fade(darkblue, 75%);
         text-decoration: none;
@@ -296,27 +293,34 @@ button {
         border-radius: 4px;
       }
 
-      .private {
-        position: relative;
+      .privacy-level {
         margin-left: 7px;
         padding: 2px 6px;
         font-size: .8em;
-        background: @passcode-color;
-        color: darken(@passcode-color, 60%);
         border-radius: 2px;
-        .touchable(@passcode-color);
         .larger-touch-target(10px, 10px);
 
-        &:before {
-          content: '';
-          display: inline-block;
-          width: 10px;
-          height: 10px;
-          margin-right: 3px;
-          background: data-uri('../res/lock.svg') no-repeat center center;
-          background-size: contain;
-          vertical-align: -1px;
-          opacity: .75;
+        &.public {
+          background: @public-color;
+          .touchable(@public-color);
+        }
+
+        &.private {
+          background: @passcode-color;
+          color: darken(@passcode-color, 60%);
+          .touchable(@passcode-color);
+
+          &:before {
+            content: '';
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            margin-right: 3px;
+            background: data-uri('../res/lock.svg') no-repeat center center;
+            background-size: contain;
+            vertical-align: -1px;
+            opacity: .75;
+          }
         }
       }
     }

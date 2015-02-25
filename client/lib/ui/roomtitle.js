@@ -13,14 +13,26 @@ module.exports = React.createClass({
   },
 
   render: function() {
+    var privacyLevel
+    var privacyMsg
+    switch (this.props.authType) {
+      case 'passcode':
+        privacyLevel = 'private'
+        privacyMsg = 'this room requires a passcode for entry.'
+        break
+      default:
+        privacyLevel = 'public'
+        privacyMsg = 'anyone with a link can join this room.'
+    }
+
     return (
       <span>
         <span className="room">
           <a className="name" href={'/room/' + this.props.name} onClick={ev => ev.preventDefault()}>&amp;{this.props.name}</a>
-          {this.props.authType && <button className="private" onClick={this.showPrivacyInfo}>private</button>}
+          <button className={'privacy-level ' + privacyLevel} onClick={this.showPrivacyInfo}>{privacyLevel}</button>
         </span>
         <Bubble ref="privacyInfo" className="small-text privacy-info" rightOffset={this.props.rightOffset}>
-          {this.props.authType == 'passcode' && 'this room requires a passcode for entry.'}
+          {privacyMsg}
         </Bubble>
       </span>
     )
