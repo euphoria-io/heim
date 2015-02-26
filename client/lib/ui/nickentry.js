@@ -2,12 +2,14 @@ var React = require('react')
 var Reflux = require('reflux')
 
 var actions = require('../actions')
+var FastButton = require('./fastbutton')
 
 
 module.exports = React.createClass({
   displayName: 'NickEntry',
 
   mixins: [
+    React.addons.LinkedStateMixin,
     require('./entrymixin'),
     Reflux.connect(require('../stores/chat').store, 'chat'),
     Reflux.listenTo(actions.focusEntry, 'focus'),
@@ -15,33 +17,30 @@ module.exports = React.createClass({
   ],
 
   getInitialState: function() {
-    return {nickText: ''}
+    return {value: ''}
   },
 
   setNick: function(ev) {
-    var input = this.refs.input.getDOMNode()
-    actions.setNick(input.value)
+    this.refs.input.getDOMNode().focus()
+    ev.preventDefault()
+
+    actions.setNick(this.state.value)
     setTimeout(function() {
       actions.showSettings()
     }, 250)
-    ev.preventDefault()
-  },
-
-  previewNick: function() {
-    var input = this.refs.input.getDOMNode()
-    this.setState({nickText: input.value})
   },
 
   render: function() {
     return (
       <div className="entry-box welcome">
         <div className="message">
-          <h1><strong>Hello{this.state.nickText ? ' ' + this.state.nickText : ''}!</strong> <span className="no-break">Welcome to our discussion.</span></h1>
+          <h1><strong>Hello{this.state.value ? ' ' + this.state.value : ''}!</strong> <span className="no-break">Welcome to our discussion.</span></h1>
           <p>To reply to a message directly, {Heim.isTouch ? 'tap' : 'use the arrow keys or click on'} it.</p>
         </div>
-        <form className="entry" onSubmit={this.setNick}>
+        <form className={cx({'entry': true, 'empty': !this.state.value.length})} onSubmit={this.setNick}>
           <label>choose your name to begin:</label>
-          <input key="nick" ref="input" type="text" autoFocus disabled={this.state.chat.connected === false} onChange={this.previewNick} />
+          <input key="nick" ref="input" type="text" autoFocus valueLink={this.linkState('value')} disabled={this.state.chat.connected === false} />
+          {Heim.isTouch && <FastButton vibrate className="send" onClick={this.setNick} />}
         </form>
       </div>
     )
