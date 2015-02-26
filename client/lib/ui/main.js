@@ -65,7 +65,7 @@ module.exports = React.createClass({
           className={cx({
             'messages-container': true,
             'focus-highlighting': !!this.state.chat.focusedMessage,
-            'form-focus': this.state.focus.windowFocused && this.state.chat.connected,
+            'form-focus': this.state.focus.windowFocused && this.state.chat.connected !== false,
           })}
           onScrollbarSize={this.onScrollbarSize}
           onResize={this.onResize}
