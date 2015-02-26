@@ -37,12 +37,27 @@ button {
   }
 }
 
-.touchable(@bgcolor) {
+.touchable {
   transition: all .25s ease;
 
   &.touching, body:not(.touch) &:active {
-    background: darken(desaturate(@bgcolor, 15%), 25%);
     transition: all 0s ease;
+  }
+}
+
+.touchable-bg(@bgcolor) {
+  .touchable;
+
+  &.touching, body:not(.touch) &:active {
+    background: darken(desaturate(@bgcolor, 15%), 25%);
+  }
+}
+
+.touchable-opacity(@opacity: .65) {
+  .touchable;
+
+  &.touching, body:not(.touch) &:active {
+    opacity: @opacity;
   }
 }
 
@@ -332,13 +347,13 @@ button {
 
         &.public {
           background: @public-color;
-          .touchable(@public-color);
+          .touchable-bg(@public-color);
         }
 
         &.private {
           background: @passcode-color;
           color: darken(@passcode-color, 60%);
-          .touchable(@passcode-color);
+          .touchable-bg(@passcode-color);
           .button-icon('../res/lock.svg', 10px);
         }
       }
@@ -370,7 +385,7 @@ button {
         right: 10px;
         .nick;
         line-height: normal;
-        .touchable(@neutral-color);
+        .touchable-bg(@neutral-color);
         .larger-touch-target(20px, 30px);
         .button-icon('../res/euphorian.svg', 14px);
       }
