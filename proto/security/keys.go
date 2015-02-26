@@ -124,10 +124,12 @@ func (k *ManagedKey) Clone() ManagedKey {
 		return w
 	}
 	return ManagedKey{
-		KeyType:    k.KeyType,
-		IV:         dup(k.IV),
-		Plaintext:  dup(k.Plaintext),
-		Ciphertext: dup(k.Ciphertext),
+		KeyType:      k.KeyType,
+		IV:           dup(k.IV),
+		Plaintext:    dup(k.Plaintext),
+		Ciphertext:   dup(k.Ciphertext),
+		ContextKey:   k.ContextKey,
+		ContextValue: k.ContextValue,
 	}
 }
 

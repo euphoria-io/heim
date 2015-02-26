@@ -3,6 +3,7 @@ package security
 import (
 	"bytes"
 	"crypto/rand"
+	"crypto/sha256"
 	"io"
 	"testing"
 
@@ -81,7 +82,7 @@ func TestLocalKMS(t *testing.T) {
 			So(mkey, ShouldNotBeNil)
 			So(mkey.Encrypted(), ShouldBeTrue)
 			So(len(mkey.IV), ShouldEqual, AES128.BlockSize())
-			So(len(mkey.Ciphertext), ShouldEqual, AES128.KeySize())
+			So(len(mkey.Ciphertext), ShouldEqual, AES128.KeySize()+sha256.Size)
 			So(mkey.ContextKey, ShouldEqual, "room")
 			So(mkey.ContextValue, ShouldEqual, "test")
 

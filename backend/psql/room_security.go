@@ -37,13 +37,14 @@ func (rmkb *RoomMasterKeyBinding) ManagedKey() security.ManagedKey {
 		return w
 	}
 
-	return security.ManagedKey{
+	mkey := security.ManagedKey{
 		KeyType:      security.AES128,
 		IV:           dup(rmkb.MasterKey.IV),
 		Ciphertext:   dup(rmkb.MasterKey.EncryptedKey),
 		ContextKey:   "room",
 		ContextValue: rmkb.RoomMasterKey.Room,
 	}
+	return mkey
 }
 
 type RoomCapabilityBinding struct {
