@@ -4,6 +4,7 @@ var Reflux = require('reflux')
 
 var actions = require('../actions')
 var chat = require('../stores/chat')
+var FastButton = require('./fastbutton')
 
 module.exports = React.createClass({
   displayName: 'ChatEntry',
@@ -23,6 +24,7 @@ module.exports = React.createClass({
     return {
       nickText: null,
       nickFocused: false,
+      empty: true,
     }
   },
 
@@ -95,13 +97,24 @@ module.exports = React.createClass({
     actions.focusMessage(target && target.dataset.messageId)
   },
 
-  chatSend: function(text) {
+  chatSend: function(ev) {
+    var input = this.refs.input.getDOMNode()
+
+    // refocus input after send button presses
+    input.focus()
+    ev.preventDefault()
+
     if (!this.state.chat.connected) {
       return
     }
-    actions.sendMessage(text, this.state.chat.focusedMessage)
+
+    if (!input.value.length) {
+      return
+    }
+    actions.sendMessage(input.value, this.state.chat.focusedMessage)
     actions.setEntryText('')
-    this.refs.input.getDOMNode().value = ''
+    input.value = ''
+    this.setState({empty: true})
   },
 
   onKeyDown: function(ev) {
@@ -118,12 +131,12 @@ module.exports = React.createClass({
 
     this.saveEntryState()
 
-    if (length) {
-      if (ev.key == 'Enter') {
-        this.chatSend(input.value)
-        ev.preventDefault()
-      }
-    } else {
+    if (ev.key == 'Enter') {
+      this.chatSend(ev)
+      return
+    }
+
+    if (!length) {
       switch (ev.key) {
         case 'ArrowLeft':
           this.chatMove('left')
@@ -165,6 +178,7 @@ module.exports = React.createClass({
   saveEntryState: function() {
     var input = this.refs.input.getDOMNode()
     actions.setEntryText(input.value, input.selectionStart, input.selectionEnd)
+    this.setState({empty: !input.value.length})
   },
 
   render: function() {
@@ -176,7 +190,7 @@ module.exports = React.createClass({
     }
 
     return (
-      <form className="entry">
+      <form className={cx({'entry': true, 'empty': this.state.empty})} onSubmit={ev => ev.preventDefault()}>
         <div className="nick-box">
           <div className="auto-size-container">
             <input className="nick" ref="nick" value={nick} onFocus={this.onNickFocus} onBlur={this.onNickBlur} onChange={this.onNickChange} />
@@ -184,6 +198,7 @@ module.exports = React.createClass({
           </div>
         </div>
         <input key="msg" ref="input" type="text" autoFocus defaultValue={this.state.chat.entryText} onChange={this.saveEntryState} onKeyDown={this.onKeyDown} onClick={this.saveEntryState} onFocus={actions.scrollToEntry} onKeyPress={actions.scrollToEntry} />
+        {Heim.isTouch && <FastButton vibrate className="send" onClick={this.chatSend} />}
       </form>
     )
   },

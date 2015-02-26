@@ -455,6 +455,16 @@ button {
           white-space: pre;
         }
       }
+
+      .send {
+        position: relative;
+        width: 38px;
+        height: 38px;
+        background: data-uri('../res/send.svg') no-repeat center center;
+        background-size: 24px;
+        opacity: .25;
+        .larger-touch-target(30px, 30px);
+      }
     }
 
     .messages .entry {
@@ -500,6 +510,11 @@ button {
 
       label {
         color: darkgreen;
+      }
+
+      &:not(.empty) .send {
+        opacity: .5;
+        .touchable-opacity;
       }
     }
 
