@@ -13,6 +13,7 @@ Heim = {
   focus: require('./stores/focus'),
   // http://stackoverflow.com/a/6447935
   isTouch: 'ontouchstart' in window,
+  isAndroid: /android/i.test(navigator.userAgent),
 }
 
 var roomName = location.pathname.match(/(\w+)\/$/)[1]

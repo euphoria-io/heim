@@ -115,6 +115,13 @@ module.exports = React.createClass({
     actions.setEntryText('')
     input.value = ''
     this.setState({empty: true})
+
+    if (Heim.isAndroid) {
+      // Emptying the input value doesn't reset the Android keyboard state.
+      // This seems to work without causing a flicker.
+      input.blur()
+      input.focus()
+    }
   },
 
   onKeyDown: function(ev) {
