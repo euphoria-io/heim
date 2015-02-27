@@ -148,17 +148,18 @@ module.exports = React.createClass({
     var scrollHeight = node.scrollHeight
     var target = node.querySelector(this.props.target)
     var canScroll = viewHeight < scrollHeight
+    var edgeSpace = Math.min(this.props.edgeSpace, viewHeight / 2)
 
     var posRef, oldPos
     if (forceTargetInView || this._targetInView) {
       var viewShrunk = viewHeight < this._lastViewHeight
       var hasGrown = scrollHeight > this._lastScrollHeight
       var fromBottom = scrollHeight - (node.scrollTop + viewHeight)
-      var canScrollBottom = canScroll && fromBottom <= this.props.edgeSpace
+      var canScrollBottom = canScroll && fromBottom <= edgeSpace
 
       var targetBox = target.getBoundingClientRect()
       var targetPos = targetBox.top
-      var clampedPos = clamp(displayTop + this.props.edgeSpace - targetBox.height, targetPos, displayTop + viewHeight - this.props.edgeSpace)
+      var clampedPos = clamp(displayTop + edgeSpace - targetBox.height, targetPos, displayTop + viewHeight - edgeSpace)
 
       var movingTowardsEdge = Math.sign(targetPos - this._anchorPos) != Math.sign(clampedPos - targetPos)
       var pastEdge = clampedPos != targetPos
