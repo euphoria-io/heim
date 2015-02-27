@@ -194,6 +194,10 @@ module.exports = React.createClass({
       nick = this.state.nickText
     } else {
       nick = this.state.chat.tentativeNick || this.state.chat.nick
+
+      if (nick === null) {
+        nick = 'loading...'
+      }
     }
 
     return (
