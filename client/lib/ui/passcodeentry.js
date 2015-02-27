@@ -55,14 +55,14 @@ module.exports = React.createClass({
     return (
       <div className="entry-box passcode">
         <p className="message">This room requires a passcode.</p>
-        <form className={cx({'entry': true, 'empty': !this.state.value.length})} onSubmit={this.tryPasscode}>
+        <form className="entry" onSubmit={this.tryPasscode}>
           <label>{
             this.state.authState == 'trying' ? 'trying...'
               : this.state.authState == 'failed' ? 'no dice. try again:'
                 : 'passcode:'
           }</label>
           <input key="passcode" ref="input" type="password" autoFocus valueLink={this.linkState('value')} disabled={this.state.connected === false} />
-          {Heim.isTouch && <FastButton vibrate className="send" onClick={this.tryPasscode} />}
+          {Heim.isTouch && <FastButton vibrate className="send" disabled={!this.state.value.length} onClick={this.tryPasscode} />}
         </form>
       </div>
     )

@@ -37,10 +37,10 @@ module.exports = React.createClass({
           <h1><strong>Hello{this.state.value ? ' ' + this.state.value : ''}!</strong> <span className="no-break">Welcome to our discussion.</span></h1>
           <p>To reply to a message directly, {Heim.isTouch ? 'tap' : 'use the arrow keys or click on'} it.</p>
         </div>
-        <form className={cx({'entry': true, 'empty': !this.state.value.length})} onSubmit={this.setNick}>
+        <form className="entry" onSubmit={this.setNick}>
           <label>choose your name to begin:</label>
           <input key="nick" ref="input" type="text" autoFocus valueLink={this.linkState('value')} disabled={this.state.chat.connected === false} />
-          {Heim.isTouch && <FastButton vibrate className="send" onClick={this.setNick} />}
+          {Heim.isTouch && <FastButton vibrate className="send" disabled={!this.state.value.length} onClick={this.setNick} />}
         </form>
       </div>
     )

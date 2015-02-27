@@ -197,7 +197,7 @@ module.exports = React.createClass({
     }
 
     return (
-      <form className={cx({'entry': true, 'empty': this.state.empty})} onSubmit={ev => ev.preventDefault()}>
+      <form className="entry" onSubmit={ev => ev.preventDefault()}>
         <div className="nick-box">
           <div className="auto-size-container">
             <input className="nick" ref="nick" value={nick} onFocus={this.onNickFocus} onBlur={this.onNickBlur} onChange={this.onNickChange} />
@@ -205,7 +205,7 @@ module.exports = React.createClass({
           </div>
         </div>
         <input key="msg" ref="input" type="text" autoFocus defaultValue={this.state.chat.entryText} onChange={this.saveEntryState} onKeyDown={this.onKeyDown} onClick={this.saveEntryState} onFocus={actions.scrollToEntry} onKeyPress={actions.scrollToEntry} />
-        {Heim.isTouch && <FastButton vibrate className="send" onClick={this.chatSend} />}
+        {Heim.isTouch && <FastButton vibrate className="send" disabled={this.state.empty} onClick={this.chatSend} />}
       </form>
     )
   },

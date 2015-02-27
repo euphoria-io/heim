@@ -8,7 +8,7 @@ module.exports = React.createClass({
   onClick: function(ev) {
     if (Heim.isTouch) {
       if (ev.type == 'touchstart') {
-        if (this.props.vibrate && Heim.isAndroid && navigator.vibrate) {
+        if (this.props.vibrate && !this.props.disabled && Heim.isAndroid && navigator.vibrate) {
           navigator.vibrate(3)
         }
 
