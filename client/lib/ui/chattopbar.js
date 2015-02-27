@@ -24,10 +24,10 @@ module.exports = React.createClass({
       <div className="topbar-container" style={{marginRight: this.props.scrollbarWidth + 1}}>
         <div className="topbar">
           <RoomTitle name={this.props.roomName} authType={this.props.authType} />
-          {userCount > 0 && <FastButton fastTouch className="user-count" onClick={this.showUserList}>{userCount}</FastButton>}
+          <FastButton fastTouch className="user-count" onClick={this.showUserList}>{userCount}</FastButton>
         </div>
         <Bubble ref="userList" className="users" rightOffset={this.props.scrollbarWidth + 1}>
-          <UserList users={this.props.who} />
+          {userCount > 0 ? <UserList users={this.props.who} /> : <div className="nick">nobody here</div>}
         </Bubble>
       </div>
     )
