@@ -6,9 +6,20 @@ module.exports = React.createClass({
   displayName: 'FastButton',
 
   onClick: function(ev) {
-    if (Heim.isTouch && ev.type != 'touchstart') {
-      return
+    if (Heim.isTouch) {
+      if (ev.type == 'touchstart') {
+        if (this.props.vibrate && Heim.isAndroid && navigator.vibrate) {
+          navigator.vibrate(3)
+        }
+
+        if (!this.fastTouch) {
+          return
+        }
+      } else if (this.fastTouch) {
+        return
+      }
     }
+
     this.props.onClick(ev)
   },
 

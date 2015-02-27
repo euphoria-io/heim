@@ -30,7 +30,7 @@ module.exports = React.createClass({
       <span className="room-container">
         <span className="room">
           <a className="name" href={'/room/' + this.props.name} onClick={ev => ev.preventDefault()}>&amp;{this.props.name}</a>
-          <FastButton className={'privacy-level ' + privacyLevel} onClick={this.showPrivacyInfo}>{privacyLevel}</FastButton>
+          <FastButton fastTouch className={'privacy-level ' + privacyLevel} onClick={this.showPrivacyInfo}>{privacyLevel}</FastButton>
         </span>
         <Bubble ref="privacyInfo" className="small-text privacy-info" rightOffset={this.props.rightOffset}>
           {privacyMsg}
