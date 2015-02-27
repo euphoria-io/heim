@@ -458,12 +458,15 @@ button {
 
       .send {
         position: relative;
-        width: 38px;
+        width: 22px;
         height: 38px;
-        background: data-uri('../res/send.svg') no-repeat center center;
+        padding: 0;
+        padding-right: 10px;
+        box-sizing: content-box;
+        background: data-uri('../res/send.svg') no-repeat left center;
         background-size: 24px;
         opacity: .25;
-        .larger-touch-target(30px, 30px);
+        .larger-touch-target(5px, 30px);
       }
     }
 
@@ -489,6 +492,11 @@ button {
         height: 32px;
         padding-top: 6px;
         padding-bottom: 6px;
+      }
+
+      & > .send {
+        padding: 0;
+        padding-right: 6px;
       }
     }
 
