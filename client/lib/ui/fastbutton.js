@@ -12,10 +12,10 @@ module.exports = React.createClass({
           navigator.vibrate(3)
         }
 
-        if (!this.fastTouch) {
+        if (!this.props.fastTouch) {
           return
         }
-      } else if (this.fastTouch) {
+      } else if (this.props.fastTouch) {
         return
       }
     }
