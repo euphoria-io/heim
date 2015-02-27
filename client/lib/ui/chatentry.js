@@ -16,6 +16,10 @@ module.exports = React.createClass({
     Reflux.listenTo(actions.keydownOnEntry, 'onKeyDown'),
   ],
 
+  componentWillMount: function() {
+    this.setState({empty: !this.state.chat.entryText})
+  },
+
   componentDidMount: function() {
     this.refs.input.getDOMNode().setSelectionRange(this.state.chat.entrySelectionStart, this.state.chat.entrySelectionEnd)
   },
