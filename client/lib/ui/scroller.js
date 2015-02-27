@@ -18,6 +18,7 @@ module.exports = React.createClass({
     this._checkScroll = _.throttle(this.checkScroll, 150)
     this._finishScroll = _.debounce(this.finishScroll, 100)
     this._targetInView = false
+    this._lastViewHeight = 0
     this._lastScrollHeight = 0
     this._lastScrollTop = 0
     this._anchor = null
@@ -75,11 +76,11 @@ module.exports = React.createClass({
     // it's in view), or the centermost child element.
     var node = this.refs.scroller.getDOMNode()
     var displayTop = node.offsetTop
-    var displayHeight = node.offsetHeight
+    var viewHeight = node.offsetHeight
 
     var target = node.querySelector(this.props.target)
     var targetPos = target.getBoundingClientRect().top
-    this._targetInView = targetPos >= displayTop + target.offsetHeight && targetPos < displayTop + displayHeight
+    this._targetInView = targetPos >= displayTop + target.offsetHeight && targetPos < displayTop + viewHeight
 
     var anchor
     if (this._targetInView) {
@@ -96,6 +97,7 @@ module.exports = React.createClass({
     }
     this._lastScrollTop = node.scrollTop
     this._lastScrollHeight = node.scrollHeight
+    this._lastViewHeight = viewHeight
   },
 
   checkScrollbar: function() {
@@ -142,20 +144,21 @@ module.exports = React.createClass({
     //
     var node = this.refs.scroller.getDOMNode()
     var displayTop = node.offsetTop
-    var displayHeight = node.offsetHeight
+    var viewHeight = node.offsetHeight
     var scrollHeight = node.scrollHeight
     var target = node.querySelector(this.props.target)
-    var canScroll = displayHeight < scrollHeight
+    var canScroll = viewHeight < scrollHeight
 
     var posRef, oldPos
     if (forceTargetInView || this._targetInView) {
+      var viewShrunk = viewHeight < this._lastViewHeight
       var hasGrown = scrollHeight > this._lastScrollHeight
-      var fromBottom = scrollHeight - (node.scrollTop + displayHeight)
+      var fromBottom = scrollHeight - (node.scrollTop + viewHeight)
       var canScrollBottom = canScroll && fromBottom <= this.props.edgeSpace
 
       var targetBox = target.getBoundingClientRect()
       var targetPos = targetBox.top
-      var clampedPos = clamp(displayTop + this.props.edgeSpace - targetBox.height, targetPos, displayTop + displayHeight - this.props.edgeSpace)
+      var clampedPos = clamp(displayTop + this.props.edgeSpace - targetBox.height, targetPos, displayTop + viewHeight - this.props.edgeSpace)
 
       var movingTowardsEdge = Math.sign(targetPos - this._anchorPos) != Math.sign(clampedPos - targetPos)
       var pastEdge = clampedPos != targetPos
@@ -163,7 +166,7 @@ module.exports = React.createClass({
       var jumping = Math.abs(targetPos - this._anchorPos) > 3 * target.offsetHeight
 
       var shouldHoldPos = hasGrown || (movingPastEdge && !jumping)
-      var shouldScrollBottom = hasGrown && canScrollBottom
+      var shouldScrollBottom = hasGrown && canScrollBottom || viewShrunk
 
       posRef = target
       if (this._targetInView && shouldHoldPos && !shouldScrollBottom) {
