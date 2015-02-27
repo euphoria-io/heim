@@ -21,9 +21,13 @@ module.exports = React.createClass({
         privacyLevel = 'private'
         privacyMsg = 'this room requires a passcode for entry'
         break
-      default:
+      case 'public':
         privacyLevel = 'public'
         privacyMsg = 'anyone with a link can join this room'
+        break
+      default:
+        privacyLevel = 'connecting...'
+        privacyMsg = 'waiting for server response'
     }
 
     return (

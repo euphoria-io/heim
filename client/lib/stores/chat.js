@@ -165,6 +165,10 @@ module.exports.store = Reflux.createStore({
         this._sendNick(this.state.tentativeNick || this.state.nick)
       }
 
+      if (!this.state.authType) {
+        this.state.authType = 'public'
+      }
+
       this.state.authState = null
       this.state.joined = true
     }
