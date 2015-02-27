@@ -15,8 +15,13 @@ module.exports = React.createClass({
   mixins: [
     Reflux.connect(require('../stores/chat').store, 'chat'),
     Reflux.connect(require('../stores/focus').store, 'focus'),
+    Reflux.listenTo(actions.focusMessage, 'focusMessage'),
     Reflux.listenTo(actions.scrollToEntry, 'scrollToEntry'),
   ],
+
+  componentWillMount: function() {
+    this._lastFocusMessage = 0
+  },
 
   onScrollbarSize: function(width) {
     this.setState({scrollbarWidth: width})
@@ -26,6 +31,21 @@ module.exports = React.createClass({
     this.setState({
       thin: width < 500,
     })
+  },
+
+  focusMessage: function() {
+    this._lastFocusMessage = Date.now()
+  },
+
+  onScroll: function() {
+    if (Date.now() - this._lastFocusMessage < 250) {
+      return
+    }
+
+    var activeEl = document.activeElement
+    if (Heim.isTouch && this.getDOMNode().contains(activeEl) && activeEl.nodeName == 'INPUT') {
+      activeEl.blur()
+    }
   },
 
   scrollToEntry: function() {
@@ -69,6 +89,7 @@ module.exports = React.createClass({
           })}
           onScrollbarSize={this.onScrollbarSize}
           onResize={this.onResize}
+          onScroll={this.onScroll}
           onNearTop={actions.loadMoreLogs}
         >
           <div className="messages-content">

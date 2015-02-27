@@ -55,6 +55,9 @@ module.exports = React.createClass({
   onScroll: function() {
     this._checkScroll()
     this.updateAnchorPos()
+    if (!this._scrollQueued) {
+      this.props.onScroll()
+    }
   },
 
   componentDidUpdate: function() {
