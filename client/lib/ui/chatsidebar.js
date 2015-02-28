@@ -3,8 +3,10 @@ var ReactCSSTransitionGroup = React.addons.CSSTransitionGroup
 var Reflux = require('reflux')
 
 var actions = require('../actions')
+var update = require('../stores/update')
 var UserList = require('./userlist')
 var NotifyToggle = require('./notifytoggle')
+var FastButton = require('./fastbutton')
 var RoomTitle = require('./roomtitle')
 
 
@@ -54,6 +56,7 @@ module.exports = React.createClass({
           <button type="button" className="settings" onClick={this.toggleSettings} tabIndex="-1" />
         </div>
         <UserList users={this.props.who} collapsed={this.state.userListCollapsed} onMouseEnter={this.expandUserList} onMouseLeave={this.collapseUserList} />
+        {this.props.updateReady && <FastButton className="update-button" onClick={update.perform}><p>update ready<em>click to reload</em></p></FastButton>}
         {this.props.roomName == 'space' && <div className="norman"><p>norman</p><img src="//i.imgur.com/wAz2oho.jpg" /></div>}
       </div>
     )

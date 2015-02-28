@@ -13,7 +13,7 @@ module.exports = React.createClass({
   displayName: 'Scroller',
 
   componentWillMount: function() {
-    window.addEventListener('resize', this.onResize)
+    uiwindow.addEventListener('resize', this.onResize)
     this._onScroll = _.throttle(this.onScroll, 100)
     this._checkScroll = _.throttle(this.checkScroll, 150)
     this._finishScroll = _.debounce(this.finishScroll, 100)
@@ -33,7 +33,7 @@ module.exports = React.createClass({
   },
 
   componentWillUnmount: function() {
-    window.removeEventListener('resize', this.onResize)
+    uiwindow.removeEventListener('resize', this.onResize)
   },
 
   onResize: function() {
@@ -91,7 +91,7 @@ module.exports = React.createClass({
       this._anchorPos = targetPos
     } else {
       var box = this.getDOMNode().getBoundingClientRect()
-      anchor = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2)
+      anchor = uidocument.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2)
       if (!anchor) {
         console.warn('scroller: unable to find anchor')  // jshint ignore:line
       }
@@ -195,7 +195,7 @@ module.exports = React.createClass({
         // scrollTop doesn't happen promptly during inertial scrolling. It turns
         // out that setting scrollTop inside a requestAnimationFrame callback
         // circumvents this issue.
-        window.requestAnimationFrame(function() {
+        uiwindow.requestAnimationFrame(function() {
           // Time passes before the frame, so we need to update the deltas.
           delta = posRef.getBoundingClientRect().top - oldPos
           scrollDelta = node.scrollTop - this._lastScrollTop

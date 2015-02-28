@@ -15,6 +15,7 @@ module.exports = React.createClass({
   mixins: [
     Reflux.connect(require('../stores/chat').store, 'chat'),
     Reflux.connect(require('../stores/focus').store, 'focus'),
+    Reflux.connect(require('../stores/update').store, 'update'),
     Reflux.listenTo(actions.focusMessage, 'focusMessage'),
     Reflux.listenTo(actions.scrollToEntry, 'scrollToEntry'),
   ],
@@ -42,7 +43,7 @@ module.exports = React.createClass({
       return
     }
 
-    var activeEl = document.activeElement
+    var activeEl = uidocument.activeElement
     if (Heim.isTouch && this.getDOMNode().contains(activeEl) && activeEl.nodeName == 'INPUT') {
       activeEl.blur()
     }
@@ -59,7 +60,7 @@ module.exports = React.createClass({
   },
 
   onClick: function(ev) {
-    if (!window.getSelection().isCollapsed || ev.target.nodeName == 'BUTTON') {
+    if (!uiwindow.getSelection().isCollapsed || ev.target.nodeName == 'BUTTON') {
       return
     }
 
@@ -93,7 +94,7 @@ module.exports = React.createClass({
           onNearTop={actions.loadMoreLogs}
         >
           <div className="messages-content">
-            <InfoBar scrollbarWidth={this.state.scrollbarWidth} who={this.state.chat.who} roomName={this.state.chat.roomName} authType={this.state.chat.authType} />
+            <InfoBar scrollbarWidth={this.state.scrollbarWidth} who={this.state.chat.who} roomName={this.state.chat.roomName} authType={this.state.chat.authType} updateReady={this.state.update.get('ready')} />
             <Messages ref="messages" />
           </div>
         </Scroller>

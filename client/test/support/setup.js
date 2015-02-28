@@ -28,3 +28,5 @@ support.resetStore = function(store) {
 }
 
 module.exports = support
+window.uiwindow = window
+window.uidocument = document

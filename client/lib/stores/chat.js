@@ -17,7 +17,9 @@ module.exports.store = Reflux.createStore({
 
   init: function() {
     this.state = {
+      serverVersion: null,
       connected: null,
+      canJoin: null,
       joined: false,
       roomName: null,
       tentativeNick: null,
@@ -34,6 +36,8 @@ module.exports.store = Reflux.createStore({
       entrySelectionStart: null,
       entrySelectionEnd: null,
     }
+
+    this._joinWhenReady = false
   },
 
   getInitialState: function() {
@@ -47,10 +51,12 @@ module.exports.store = Reflux.createStore({
         this._handleMessagesData([message])
         this.state.messages.add(message)
       } else if (ev.body.type == 'snapshot-event') {
+        this.state.serverVersion = ev.body.data.version
         this._handleWhoReply(ev.body.data)
         this._handleLogReply(ev.body.data)
-        this._joinRoom()
+        this._joinReady()
       } else if (ev.body.type == 'bounce-event') {
+        this.state.canJoin = false
         this.state.authType = 'passcode'
         if (this.state.authState != 'trying-stored') {
           this.state.authState = 'needs-passcode'
@@ -98,6 +104,7 @@ module.exports.store = Reflux.createStore({
     } else if (ev.status == 'close') {
       this.state.connected = false
       this.state.joined = false
+      this.state.canJoin = false
     }
     this.trigger(this.state)
   },
@@ -157,7 +164,7 @@ module.exports.store = Reflux.createStore({
         type: this.state.authType,
         data: this.state.authData,
       })
-      this._joinRoom()
+      this._joinReady()
     } else {
       if (this.state.authState == 'trying-stored') {
         this.state.authState = 'needs-passcode'
@@ -167,8 +174,15 @@ module.exports.store = Reflux.createStore({
     }
   },
 
+  _joinReady: function() {
+    this.state.canJoin = true
+    if (this._joinWhenReady) {
+      this._joinRoom()
+    }
+  },
+
   _joinRoom: function() {
-    if (!this.state.joined) {
+    if (!this.state.joined && this.state.canJoin) {
       if (this.state.tentativeNick || this.state.nick) {
         this._sendNick(this.state.tentativeNick || this.state.nick)
       }
@@ -214,6 +228,11 @@ module.exports.store = Reflux.createStore({
     this.state.roomName = roomName
     storage.load()
     this.trigger(this.state)
+  },
+
+  joinRoom: function() {
+    this._joinWhenReady = true
+    this._joinRoom()
   },
 
   setNick: function(nick) {

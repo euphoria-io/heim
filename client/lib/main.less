@@ -92,6 +92,7 @@ button {
 
 @neutral-color: #e8e8e8;
 @public-color: lighten(blue, 43%);
+@welcome-color: #e5f2e5;
 @passcode-color: #eedba0;
 
 .hatch-shade {
@@ -106,6 +107,10 @@ button {
     top: 0;
     bottom: 0;
   }
+}
+
+iframe.js {
+  display: none;
 }
 
 .chat {
@@ -219,6 +224,9 @@ button {
     }
 
     .sidebar {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
       position: fixed;
       right: 8px;
       top: 8px;
@@ -298,6 +306,34 @@ button {
             vertical-align: middle;
             margin: 0 4px;
           }
+        }
+      }
+
+      .update-button {
+        margin-top: 15px;
+      }
+    }
+
+    .update-button {
+      margin-left: auto;
+      background: @welcome-color;
+      border: 1px solid darken(@welcome-color, 30%);
+      border-radius: 3px;
+      padding: 6px 8px;
+      font-size: .8em;
+      .button-icon('../res/update.svg', 24px, 8px);
+      .touchable-bg(@welcome-color);
+
+      p {
+        text-align: left;
+        margin: 0;
+
+        em {
+          display: block;
+          font-size: .8em;
+          margin-top: 1px;
+          opacity: .65;
+          font-style: normal;
         }
       }
     }
@@ -381,14 +417,27 @@ button {
       z-index: 2;
       .no-select;
 
+      .right {
+        display: flex;
+        align-self: flex-end;
+        margin-left: auto;
+      }
+
       .user-count {
-        position: absolute;
-        right: 10px;
         .nick;
         line-height: normal;
+        margin-left: 10px;
         .touchable-bg(@neutral-color);
         .larger-touch-target(20px, 30px);
         .button-icon('../res/euphorian.svg', 14px);
+      }
+
+      .update {
+        background: @welcome-color;
+        border-radius: 3px;
+        padding: 3px 6px;
+        .button-icon('../res/update.svg', 14px, 0);
+        .touchable-bg(@welcome-color);
       }
     }
 
@@ -486,7 +535,7 @@ button {
 
       .nick-box {
         padding-left: 8px;
-        padding-right: 6px;
+        padding-right: 8px;
       }
 
       & > * {
@@ -568,12 +617,11 @@ button {
     }
 
     .entry-box.welcome {
-      @color: #e5f2e5;
-      background: @color;
+      background: @welcome-color;
 
       .message {
-        border-top: 1px solid darken(@color, 30%);
-        border-bottom: 1px solid darken(@color, 30%);
+        border-top: 1px solid darken(@welcome-color, 30%);
+        border-bottom: 1px solid darken(@welcome-color, 30%);
       }
     }
 
@@ -731,5 +779,13 @@ button {
         max-width: 50vw;
       }
     }
+  }
+
+  .bubble.update {
+    position: fixed;
+    top: 40px;
+    right: 6px;
+    padding: 0;
+    background: none;
   }
 }

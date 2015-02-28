@@ -122,7 +122,7 @@ module.exports.store = Reflux.createStore({
 
     this.notification = new Notification(message, options)
     this.notification.onclick = function() {
-      window.focus()
+      uiwindow.focus()
       actions.focusMessage(messageId)
     }
     this.notification.onclose = this.resetNotification
@@ -130,5 +130,19 @@ module.exports.store = Reflux.createStore({
     this._closeTimeout = setTimeout(this.closeNotification, this.timeout)
   },
 
-  setFavicon: require('favicon-setter'),
+  setFavicon: function(href) {
+    // via github.com/HenrikJoreteg/favicon-setter
+    // modified to use uidocument instead of document
+    var head = uidocument.getElementsByTagName('head')[0]
+    var faviconId = 'favicon'
+    var link = uidocument.createElement('link')
+    var oldLink = uidocument.getElementById(faviconId)
+    link.id = faviconId
+    link.rel = 'shortcut icon'
+    link.href = href
+    if (oldLink) {
+      head.removeChild(oldLink)
+    }
+    head.appendChild(link)
+  },
 })

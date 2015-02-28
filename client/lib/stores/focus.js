@@ -8,8 +8,8 @@ module.exports.store = Reflux.createStore({
       focusChangedAt: null,
     }
 
-    window.addEventListener('focus', this.windowFocused.bind(this), false)
-    window.addEventListener('blur', this.windowBlurred.bind(this), false)
+    uiwindow.addEventListener('focus', this.windowFocused.bind(this), false)
+    uiwindow.addEventListener('blur', this.windowBlurred.bind(this), false)
   },
 
   getInitialState: function() {

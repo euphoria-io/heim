@@ -13,6 +13,8 @@
   "globals": {
     "ReactPerf": true,
     "Notification": false,
-    "Heim": true
+    "Heim": true,
+    "uiwindow": true,
+    "uidocument": true
   }
 }

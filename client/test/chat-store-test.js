@@ -125,6 +125,7 @@ describe('chat store', function() {
     'id': '',
     'type': 'snapshot-event',
     'data': {
+      'version': 'deadbeef',
       'listing': whoReply.data.listing,
       'log': logReply.data.log,
     }
@@ -331,12 +332,21 @@ describe('chat store', function() {
         assert.equal(state.connected, false)
       })
     })
+
+    it('should set joined and canJoin state to false', function(done) {
+      handleSocket({status: 'close'}, function(state) {
+        assert.equal(state.joined, false)
+        assert.equal(state.canJoin, false)
+        done()
+      })
+    })
   })
 
   describe('when reconnecting', function() {
     beforeEach(function() {
       chat.store.state.roomName = 'ezzie'
       chat.store.storageChange(mockStorage)
+      chat.store.joinRoom()
       chat.store.socketEvent({status: 'open'})
       chat.store.socketEvent({status: 'receive', body: successfulAuthReplyEvent})
       chat.store.socketEvent({status: 'receive', body: snapshotReply})
@@ -694,39 +704,66 @@ describe('chat store', function() {
     checkLogs(snapshotReply)
     checkUsers(snapshotReply)
 
-    it('should set joined state to true', function(done) {
+    it('should update server version', function(done) {
       handleSocket({status: 'receive', body: snapshotReply}, function(state) {
-        assert.equal(state.joined, true)
+        assert.equal(state.serverVersion, snapshotReply.data.version)
         done()
       })
     })
 
-    it('should clear auth state', function(done) {
-      chat.store.state.authState = 'trying-stored'
+    it('should set canJoin state to true', function(done) {
       handleSocket({status: 'receive', body: snapshotReply}, function(state) {
-        assert.equal(state.authState, null)
+        assert.equal(state.canJoin, true)
         done()
       })
     })
 
-    it('should trigger sending stored nick', function(done) {
-      chat.store.state.roomName = 'ezzie'
-      chat.store.storageChange(mockStorage)
-      handleSocket({status: 'receive', body: snapshotReply}, function() {
-        sinon.assert.calledWithExactly(socket.send, {
-          type: 'nick',
-          data: {name: mockStorage.room.ezzie.nick},
+    describe('on join', function() {
+      beforeEach(function() {
+        chat.store.joinRoom()
+      })
+
+      it('should set joined state to true', function(done) {
+        handleSocket({status: 'receive', body: snapshotReply}, function(state) {
+          assert.equal(state.joined, true)
+          done()
         })
-        done()
       })
-    })
 
-    it('should not send stored nick if unset', function(done) {
-      chat.store.state.roomName = 'ezzie'
-      chat.store.storageChange({room: {}})
-      handleSocket({status: 'receive', body: snapshotReply}, function() {
-        sinon.assert.notCalled(socket.send)
-        done()
+      it('should set auth type state to public if no bounce event received', function(done) {
+        handleSocket({status: 'receive', body: snapshotReply}, function(state) {
+          assert.equal(state.authType, 'public')
+          done()
+        })
+      })
+
+      it('should clear auth state', function(done) {
+        chat.store.state.authState = 'trying-stored'
+        handleSocket({status: 'receive', body: snapshotReply}, function(state) {
+          assert.equal(state.authState, null)
+          done()
+        })
+      })
+
+      it('should trigger sending stored nick', function(done) {
+        chat.store.state.roomName = 'ezzie'
+        chat.store.storageChange(mockStorage)
+        handleSocket({status: 'receive', body: snapshotReply}, function() {
+          sinon.assert.calledWithExactly(socket.send, {
+            type: 'nick',
+            data: {name: mockStorage.room.ezzie.nick},
+          })
+          done()
+        })
+      })
+
+      it('should not send stored nick if unset', function(done) {
+        chat.store.state.roomName = 'ezzie'
+        chat.store.storageChange({room: {}})
+        handleSocket({status: 'receive', body: snapshotReply}, function() {
+          sinon.assert.notCalled(socket.send)
+          done()
+        })
       })
     })
   })
@@ -877,6 +914,13 @@ describe('chat store', function() {
       })
     })
 
+    it('should set canJoin state to false', function(done) {
+      handleSocket({status: 'receive', body: bounceEvent}, function(state) {
+        assert.equal(state.canJoin, false)
+        done()
+      })
+    })
+
     describe('if not trying a stored passcode', function() {
       it('should set auth state to "needs-passcode"', function(done) {
         handleSocket({status: 'receive', body: bounceEvent}, function(state) {
@@ -921,8 +965,8 @@ describe('chat store', function() {
     })
 
     describe('if successful', function() {
-      chat.store.state.authState = null
       it('should save auth data in storage, send nick, and set joined state', function(done) {
+        chat.store.joinRoom()
         chat.store.state.nick = 'tester'
         handleSocket({status: 'receive', body: successfulAuthReplyEvent}, function(state) {
           sinon.assert.calledOnce(storage.setRoom)
@@ -932,6 +976,7 @@ describe('chat store', function() {
             type: 'nick',
             data: {name: 'tester'},
           })
+          assert.equal(state.canJoin, true)
           assert.equal(state.joined, true)
           done()
         })

@@ -14,12 +14,12 @@ module.exports = React.createClass({
   },
 
   componentWillMount: function() {
-    document.body.addEventListener(Heim.isTouch ? 'touchstart' : 'click', this.onOutsideClick, false)
+    uidocument.body.addEventListener(Heim.isTouch ? 'touchstart' : 'click', this.onOutsideClick, false)
     this._hide = _.debounce(this.hide, 0)
   },
 
   componentWillUnmount: function() {
-    document.body.removeEventListener(Heim.isTouch ? 'touchstart' : 'click', this.onOutsideClick, false)
+    uidocument.body.removeEventListener(Heim.isTouch ? 'touchstart' : 'click', this.onOutsideClick, false)
   },
 
   show: function() {

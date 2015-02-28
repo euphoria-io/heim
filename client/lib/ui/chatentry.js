@@ -35,7 +35,7 @@ module.exports = React.createClass({
   chatMove: function(dir) {
     // FIXME: quick'n'dirty hack. a real tree traversal in the store
     // would be more efficient and testable.
-    var elems = document.querySelectorAll('.reply-anchor, .entry')
+    var elems = uidocument.querySelectorAll('.reply-anchor, .entry')
     var idx = _.indexOf(elems, this.getDOMNode())
     if (idx == -1) {
       throw new Error('could not locate entry in document')

@@ -11,8 +11,7 @@
     "autolinker": "~0.15.0",
     "immutable": "~3.4.1",
     "react-immutable-render-mixin": "~0.7.0",
-    "eventemitter3": "~0.1.6",
-    "favicon-setter": "~0.1.1"
+    "eventemitter3": "~0.1.6"
   },
   "devDependencies": {
     "browserify": "~8.1.1",

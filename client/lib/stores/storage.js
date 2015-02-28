@@ -30,7 +30,7 @@ module.exports.store = Reflux.createStore({
       this.state.room = {}
     }
 
-    window.addEventListener('storage', this.onStorageUpdate, false)
+    uiwindow.addEventListener('storage', this.onStorageUpdate, false)
 
     this.trigger(this.state)
   },

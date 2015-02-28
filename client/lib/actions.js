@@ -13,6 +13,7 @@ module.exports = Reflux.createActions([
   'setNick',
   'tryRoomPasscode',
   'connect',
+  'joinRoom',
 ])
 
 // sync so that we connect in the load tick
