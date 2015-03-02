@@ -2,7 +2,7 @@
 
 set -ex
 
-go install heim/cmd/heim-backend
+go install -ldflags "-X main.version `git --git-dir=src/heim/.git rev-parse HEAD`" heim/cmd/heim-backend
 
 control_flags=
 
