@@ -12,6 +12,8 @@ type TestBackend struct {
 	version string
 }
 
+func (b *TestBackend) Close() {}
+
 func (b *TestBackend) Version() string { return b.version }
 
 func (b *TestBackend) GetRoom(name string) (proto.Room, error) {

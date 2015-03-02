@@ -13,12 +13,15 @@ const MaxNickLength = 36
 type Identity interface {
 	ID() string
 	Name() string
+	ServerID() string
 	View() *IdentityView
 }
 
 type IdentityView struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	ServerID  string `json:"server_id"`
+	ServerEra string `json:"server_era"`
 }
 
 // NormalizeNick validates and normalizes a proposed name from a user.

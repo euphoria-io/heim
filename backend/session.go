@@ -24,12 +24,13 @@ var (
 type cmdState func(*proto.Packet) (interface{}, error)
 
 type session struct {
-	ctx      context.Context
-	cancel   context.CancelFunc
-	conn     *websocket.Conn
-	identity *memIdentity
-	serverID string
-	room     proto.Room
+	ctx       context.Context
+	cancel    context.CancelFunc
+	conn      *websocket.Conn
+	identity  *memIdentity
+	serverID  string
+	serverEra string
+	room      proto.Room
 
 	state   cmdState
 	auth    map[string]*proto.Authentication
@@ -42,18 +43,21 @@ type session struct {
 	outstandingPings uint32
 }
 
-func newSession(ctx context.Context, conn *websocket.Conn, serverID string, room proto.Room) *session {
+func newSession(
+	ctx context.Context, conn *websocket.Conn, serverID, serverEra string, room proto.Room) *session {
+
 	id := conn.RemoteAddr().String()
 	loggingCtx := LoggingContext(ctx, fmt.Sprintf("[%s] ", id))
 	cancellableCtx, cancel := context.WithCancel(loggingCtx)
 
 	session := &session{
-		ctx:      cancellableCtx,
-		cancel:   cancel,
-		conn:     conn,
-		identity: newMemIdentity(id),
-		serverID: serverID,
-		room:     room,
+		ctx:       cancellableCtx,
+		cancel:    cancel,
+		conn:      conn,
+		identity:  newMemIdentity(id, serverID, serverEra),
+		serverID:  serverID,
+		serverEra: serverEra,
+		room:      room,
 
 		incoming: make(chan *proto.Packet),
 		outgoing: make(chan *proto.Packet, 100),
@@ -72,6 +76,7 @@ func (s *session) Close() {
 
 func (s *session) ID() string               { return s.conn.RemoteAddr().String() }
 func (s *session) ServerID() string         { return s.serverID }
+func (s *session) ServerEra() string        { return s.serverEra }
 func (s *session) Identity() proto.Identity { return s.identity }
 func (s *session) SetName(name string)      { s.identity.name = name }
 

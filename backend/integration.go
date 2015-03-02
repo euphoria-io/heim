@@ -176,9 +176,10 @@ func snowflakes(n int) []snowflake.Snowflake {
 func IntegrationTest(factory func() proto.Backend) {
 	runTest := func(test testSuite) {
 		backend := factory()
+		defer backend.Close()
 		kms := security.LocalKMS()
 		kms.SetMasterKey(make([]byte, security.AES256.KeySize()))
-		app := NewServer(backend, kms, "test1", "")
+		app := NewServer(backend, kms, "test1", "era1", "")
 		server := httptest.NewServer(app)
 		defer server.Close()
 		test(&serverUnderTest{backend, app, server})
@@ -207,13 +208,14 @@ func testLurker(s *serverUnderTest) {
 		id2 := conn2.LocalAddr().String()
 
 		conn2.expectSnapshot(s.backend.Version(),
-			[]string{fmt.Sprintf(`{"id":"%s","name":"guest"}`, id1)},
+			[]string{fmt.Sprintf(`{"id":"%s","name":"guest","server_id":"test1","server_era":"era1"}`, id1)},
 			nil)
 
 		conn2.send("1", "nick", `{"name":"speaker"}`)
 		conn2.expect("1", "nick-reply", `{"id":"%s","from":"guest","to":"speaker"}`, id2)
 
-		conn1.expect("", "join-event", `{"id":"%s","name":"guest"}`, id2)
+		conn1.expect("", "join-event",
+			`{"id":"%s","name":"guest","server_id":"test1","server_era":"era1"}`, id2)
 		conn1.expect("", "nick-event", `{"id":"%s","from":"guest","to":"speaker"}`, id2)
 	})
 }
@@ -239,14 +241,16 @@ func testBroadcast(s *serverUnderTest) {
 
 			conn.expectSnapshot(s.backend.Version(), listingParts, nil)
 			listingParts = append(listingParts,
-				fmt.Sprintf(`{"id":"%s","name":"%s"}`, ids[i].ID, ids[i].Name))
+				fmt.Sprintf(`{"id":"%s","name":"%s","server_id":"test1","server_era":"era1"}`,
+					ids[i].ID, ids[i].Name))
 
 			conn.expect("1", "nick-reply",
 				`{"id":"%s","from":"guest","to":"%s"}`, ids[i].ID, ids[i].Name)
 			conn.expect("2", "who-reply", `{"listing":[%s]}`, strings.Join(listingParts, ","))
 
 			for _, c := range conns[:i] {
-				c.expect("", "join-event", `{"id":"%s","name":"guest"}`, ids[i].ID)
+				c.expect("", "join-event",
+					`{"id":"%s","name":"guest","server_id":"test1","server_era":"era1"}`, ids[i].ID)
 				c.expect("", "nick-event",
 					`{"id":"%s","from":"guest","to":"%s"}`, ids[i].ID, ids[i].Name)
 			}
@@ -261,30 +265,31 @@ func testBroadcast(s *serverUnderTest) {
 		sfs := snowflakes(2)
 		sf1 := sfs[0]
 		sf2 := sfs[1]
+		server := `"server_id":"test1","server_era":"era1"`
 
 		conns[1].send("2", "send", `{"content":"hi"}`)
 		conns[0].expect("", "send-event",
-			`{"id":"%s","time":1,"sender":{"id":"%s","name":"%s"},"content":"hi"}`,
-			sf1, ids[1].ID, ids[1].Name)
+			`{"id":"%s","time":1,"sender":{"id":"%s","name":"%s",%s},"content":"hi"}`,
+			sf1, ids[1].ID, ids[1].Name, server)
 
 		conns[2].send("2", "send", `{"content":"bye"}`)
 		conns[0].expect("", "send-event",
-			`{"id":"%s","time":2,"sender":{"id":"%s","name":"%s"},"content":"bye"}`,
-			sf2, ids[2].ID, ids[2].Name)
+			`{"id":"%s","time":2,"sender":{"id":"%s","name":"%s",%s},"content":"bye"}`,
+			sf2, ids[2].ID, ids[2].Name, server)
 
 		conns[1].expect("2", "send-reply",
-			`{"id":"%s","time":1,"sender":{"id":"%s","name":"%s"},"content":"hi"}`,
-			sf1, ids[1].ID, ids[1].Name)
+			`{"id":"%s","time":1,"sender":{"id":"%s","name":"%s",%s},"content":"hi"}`,
+			sf1, ids[1].ID, ids[1].Name, server)
 		conns[1].expect("", "send-event",
-			`{"id":"%s","time":2,"sender":{"id":"%s","name":"%s"},"content":"bye"}`,
-			sf2, ids[2].ID, ids[2].Name)
+			`{"id":"%s","time":2,"sender":{"id":"%s","name":"%s",%s},"content":"bye"}`,
+			sf2, ids[2].ID, ids[2].Name, server)
 
 		conns[2].expect("", "send-event",
-			`{"id":"%s","time":1,"sender":{"id":"%s","name":"%s"},"content":"hi"}`,
-			sf1, ids[1].ID, ids[1].Name)
+			`{"id":"%s","time":1,"sender":{"id":"%s","name":"%s",%s},"content":"hi"}`,
+			sf1, ids[1].ID, ids[1].Name, server)
 		conns[2].expect("2", "send-reply",
-			`{"id":"%s","time":2,"sender":{"id":"%s","name":"%s"},"content":"bye"}`,
-			sf2, ids[2].ID, ids[2].Name)
+			`{"id":"%s","time":2,"sender":{"id":"%s","name":"%s",%s},"content":"bye"}`,
+			sf2, ids[2].ID, ids[2].Name, server)
 	})
 }
 
@@ -301,25 +306,26 @@ func testThreading(s *serverUnderTest) {
 		sfs := snowflakes(2)
 		sf1 := sfs[0]
 		sf2 := sfs[1]
+		server := `"server_id":"test1","server_era":"era1"`
 
 		conn.expectSnapshot(s.backend.Version(), nil, nil)
 
 		conn.send("1", "send", `{"content":"root"}`)
 		conn.expect("1", "send-reply",
-			`{"id":"%s","time":1,"sender":{"id":"%s","name":"guest"},"content":"root"}`,
-			sf1, id.ID)
+			`{"id":"%s","time":1,"sender":{"id":"%s","name":"guest",%s},"content":"root"}`,
+			sf1, id.ID, server)
 
 		conn.send("2", "send", `{"parent":"%s","content":"ch1"}`, sf1)
 		conn.expect("2", "send-reply",
-			`{"id":"%s","parent":"%s","time":2,"sender":{"id":"%s","name":"guest"},"content":"ch1"}`,
-			sf2, sf1, id.ID)
+			`{"id":"%s","parent":"%s","time":2,"sender":{"id":"%s","name":"guest",%s},"content":"ch1"}`,
+			sf2, sf1, id.ID, server)
 
 		conn.send("3", "log", `{"n":10}`)
 		conn.expect("3", "log-reply",
 			`{"log":[`+
-				`{"id":"%s","time":1,"sender":{"id":"%s","name":"guest"},"content":"root"},`+
-				`{"id":"%s","parent":"%s","time":2,"sender":{"id":"%s","name":"guest"},"content":"ch1"}]}`,
-			sf1, id.ID, sf2, sf1, id.ID)
+				`{"id":"%s","time":1,"sender":{"id":"%s","name":"guest",%s},"content":"root"},`+
+				`{"id":"%s","parent":"%s","time":2,"sender":{"id":"%s","name":"guest",%s},"content":"ch1"}]}`,
+			sf1, id.ID, server, sf2, sf1, id.ID, server)
 	})
 }
 
@@ -327,7 +333,7 @@ func testPresence(factory func() proto.Backend) {
 	backend := factory()
 	kms := security.LocalKMS()
 	kms.SetMasterKey(make([]byte, security.AES256.KeySize()))
-	app := NewServer(backend, kms, "test1", "")
+	app := NewServer(backend, kms, "test1", "era1", "")
 	server := httptest.NewServer(app)
 	defer server.Close()
 	s := &serverUnderTest{backend, app, server}
@@ -340,19 +346,24 @@ func testPresence(factory func() proto.Backend) {
 
 		other := s.Connect("presence")
 		other.expectSnapshot(s.backend.Version(),
-			[]string{fmt.Sprintf(`{"id":"%s","name":"guest"}`, selfID)}, nil)
+			[]string{
+				fmt.Sprintf(`{"id":"%s","name":"guest","server_id":"test1","server_era":"era1"}`, selfID),
+			}, nil)
 		otherID := other.LocalAddr().String()
 
-		self.expect("", "join-event", `{"id":"%s","name":"guest"}`, otherID)
+		self.expect("", "join-event",
+			`{"id":"%s","name":"guest","server_id":"test1","server_era":"era1"}`, otherID)
 		self.send("1", "who", "")
+		server := `"server_id":"test1","server_era":"era1"`
 		self.expect("1", "who-reply",
-			`{"listing":[{"id":"%s","name":"guest"},{"id":"%s","name":"guest"}]}`, selfID, otherID)
+			`{"listing":[{"id":"%s","name":"guest",%s},{"id":"%s","name":"guest",%s}]}`,
+			selfID, server, otherID, server)
 
 		other.Close()
-		self.expect("", "part-event", `{"id":"%s","name":"guest"}`, otherID)
+		self.expect("", "part-event", `{"id":"%s","name":"guest",%s}`, otherID, server)
 
 		self.send("2", "who", "")
-		self.expect("2", "who-reply", `{"listing":[{"id":"%s","name":"guest"}]}`, selfID)
+		self.expect("2", "who-reply", `{"listing":[{"id":"%s","name":"guest",%s}]}`, selfID, server)
 	})
 
 	Convey("Join after other party, other party parts", func() {
@@ -364,20 +375,25 @@ func testPresence(factory func() proto.Backend) {
 		defer self.Close()
 		selfID := self.LocalAddr().String()
 		self.expectSnapshot(s.backend.Version(),
-			[]string{fmt.Sprintf(`{"id":"%s","name":"guest"}`, otherID)},
+			[]string{
+				fmt.Sprintf(`{"id":"%s","name":"guest","server_id":"test1","server_era":"era1"}`,
+					otherID)},
 			nil)
 
-		other.expect("", "join-event", `{"id":"%s","name":"guest"}`, selfID)
+		other.expect("", "join-event",
+			`{"id":"%s","name":"guest","server_id":"test1","server_era":"era1"}`, selfID)
 		self.send("1", "who", "")
+		server := `"server_id":"test1","server_era":"era1"`
 		self.expect("1", "who-reply",
-			`{"listing":[{"id":"%s","name":"guest"},{"id":"%s","name":"guest"}]}`, otherID, selfID)
+			`{"listing":[{"id":"%s","name":"guest",%s},{"id":"%s","name":"guest",%s}]}`,
+			otherID, server, selfID, server)
 
 		other.Close()
-		self.expect("", "part-event", `{"id":"%s","name":"guest"}`, otherID)
+		self.expect("", "part-event", `{"id":"%s","name":"guest",%s}`, otherID, server)
 
 		self.send("2", "who", "")
 		self.expect("2", "who-reply",
-			`{"listing":[{"id":"%s","name":"guest"}]}`, selfID)
+			`{"listing":[{"id":"%s","name":"guest",%s}]}`, selfID, server)
 	})
 
 	/*
@@ -392,7 +408,7 @@ func testPresence(factory func() proto.Backend) {
 		defer server2.Close()
 		s2 := &serverUnderTest{backend2, app2, server2}
 
-		Convey("Learns presence on startup", func() {
+		SkipConvey("Learns presence on startup", func() {
 			self1 := s.Connect("presence3")
 			defer self1.Close()
 			self1.expectSnapshot(s.backend.Version(), nil, nil)
@@ -407,7 +423,7 @@ func testPresence(factory func() proto.Backend) {
 		})
 
 		// TODO:
-		SkipConvey("Loses presence on shutdown", func() {
+		SkipSkipConvey("Loses presence on shutdown", func() {
 		})
 	*/
 

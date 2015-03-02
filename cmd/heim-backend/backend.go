@@ -9,11 +9,13 @@ import (
 
 	"heim/aws/kms"
 	"heim/backend"
+	"heim/backend/cluster"
 	"heim/backend/console"
 	"heim/backend/psql"
 	_ "heim/cmd" // for -newflags
 	"heim/proto"
 	"heim/proto/security"
+	"heim/proto/snowflake"
 )
 
 var (
@@ -34,29 +36,56 @@ var (
 var version string
 
 func main() {
+	if err := run(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+}
+
+func run() error {
 	flag.Parse()
 
-	b, err := psql.NewBackend(*psqlDSN, version)
+	id, err := os.Hostname()
 	if err != nil {
-		fmt.Printf("error: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("hostname error: %s", err)
+	}
+
+	era, err := snowflake.New()
+	if err != nil {
+		return fmt.Errorf("era error: %s", err)
+	}
+
+	serverDesc := &cluster.PeerDesc{
+		ID:      id,
+		Era:     era.String(),
+		Version: version,
+	}
+
+	c, err := cluster.EtcdClusterFromFlags(serverDesc)
+	if err != nil {
+		return fmt.Errorf("cluster error: %s", err)
 	}
 
 	kms, err := getKMS()
 	if err != nil {
-		fmt.Printf("error: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("kms error: %s", err)
 	}
+
+	b, err := psql.NewBackend(*psqlDSN, c, serverDesc)
+	if err != nil {
+		return fmt.Errorf("backend error: %s", err)
+	}
+	defer b.Close()
 
 	if err := controller(b, kms); err != nil {
-		fmt.Printf("error: %s\n", err)
-		os.Exit(1)
+		return fmt.Errorf("controller error: %s", err)
 	}
 
-	server := backend.NewServer(b, kms, *id, *static)
+	server := backend.NewServer(b, kms, serverDesc.ID, serverDesc.Era, *static)
 
-	fmt.Printf("serving on %s\n", *addr)
+	fmt.Printf("serving era %s on %s\n", serverDesc.Era, *addr)
 	http.ListenAndServe(*addr, newVersioningHandler(server))
+	return nil
 }
 
 func controller(b proto.Backend, kms security.KMS) error {

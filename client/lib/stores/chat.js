@@ -79,6 +79,15 @@ module.exports.store = Reflux.createStore({
           .set(ev.body.data.id, Immutable.fromJS(ev.body.data))
       } else if (ev.body.type == 'part-event') {
         this.state.who = this.state.who.delete(ev.body.data.id)
+      } else if (ev.body.type == 'network-event') {
+        if (ev.body.data.type == 'partition') {
+          var id = ev.body.data.server_id
+          var era = ev.body.data.server_era
+          console.log('filtering by', id, era)
+          this.state.who = this.state.who.filter(v => {
+            return v.get('server_id') != id || v.get('server_era') != era
+          })
+        }
       }
     } else if (ev.status == 'open') {
       this.state.connected = true

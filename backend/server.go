@@ -23,15 +23,17 @@ var upgrader = websocket.Upgrader{
 
 type Server struct {
 	ID         string
+	Era        string
 	r          *mux.Router
 	b          proto.Backend
 	kms        security.KMS
 	staticPath string
 }
 
-func NewServer(backend proto.Backend, kms security.KMS, id, staticPath string) *Server {
+func NewServer(backend proto.Backend, kms security.KMS, id, era, staticPath string) *Server {
 	s := &Server{
 		ID:         id,
+		Era:        era,
 		b:          backend,
 		kms:        kms,
 		staticPath: staticPath,
@@ -100,7 +102,7 @@ func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
 	}
 	defer conn.Close()
 
-	session := newSession(ctx, conn, s.ID, room)
+	session := newSession(ctx, conn, s.ID, s.Era, room)
 
 	if err = session.serve(); err != nil {
 		// TODO: error handling

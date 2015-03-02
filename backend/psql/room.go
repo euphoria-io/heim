@@ -21,11 +21,6 @@ type Room struct {
 	FoundedBy string `db:"founded_by"`
 }
 
-func (Room) AfterCreateTable(db *sql.DB) error {
-	_, err := db.Exec("CREATE INDEX room_founded_by ON room(founded_by)")
-	return err
-}
-
 func (r *Room) Bind(b *Backend) *RoomBinding {
 	return &RoomBinding{
 		Backend: b,
@@ -55,7 +50,6 @@ func (rb *RoomBinding) Part(ctx context.Context, session proto.Session) error {
 func (rb *RoomBinding) Send(ctx context.Context, session proto.Session, msg proto.Message) (
 	proto.Message, error) {
 
-	logger(ctx).Printf("Send\n")
 	return rb.Backend.sendMessageToRoom(ctx, rb.Room, session, msg, session)
 }
 
@@ -65,6 +59,24 @@ func (rb *RoomBinding) Listing(ctx context.Context) (proto.Listing, error) {
 
 func (rb *RoomBinding) RenameUser(ctx context.Context, session proto.Session, formerName string) (
 	*proto.NickEvent, error) {
+
+	presence := &Presence{
+		Room:      rb.Name,
+		ServerID:  rb.desc.ID,
+		ServerEra: rb.desc.Era,
+		SessionID: session.ID(),
+		Updated:   time.Now(),
+	}
+	err := presence.SetFact(&proto.Presence{
+		IdentityView:   *session.Identity().View(),
+		LastInteracted: presence.Updated,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("presence marshal error: %s", err)
+	}
+	if _, err := rb.DbMap.Update(presence); err != nil {
+		return nil, fmt.Errorf("presence update error: %s", err)
+	}
 
 	event := &proto.NickEvent{
 		ID:   session.Identity().ID(),

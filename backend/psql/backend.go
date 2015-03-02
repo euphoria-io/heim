@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"heim/backend"
+	"heim/backend/cluster"
 	"heim/proto"
 	"heim/proto/snowflake"
 
@@ -33,10 +34,9 @@ var schema = map[string]struct {
 	"message":         {Message{}, []string{"Room", "ID"}},
 	"room_master_key": {RoomMasterKey{}, []string{"Room", "KeyID"}},
 	"room_capability": {RoomCapability{}, []string{"Room", "CapabilityID"}},
-}
 
-type AfterCreateTabler interface {
-	AfterCreateTable(*sql.DB) error
+	// Presence.
+	"presence": {Presence{}, []string{"Room", "Topic", "ServerID", "ServerEra", "SessionID"}},
 }
 
 type Backend struct {
@@ -45,26 +45,43 @@ type Backend struct {
 	*gorp.DbMap
 
 	dsn       string
-	version   string
 	cancel    context.CancelFunc
-	presence  map[string]roomPresence
-	liveNicks map[string]string
+	cluster   cluster.Cluster
+	desc      *cluster.PeerDesc
+	peers     map[string]string
+	listeners map[string]ListenerMap
 }
 
-func NewBackend(dsn, version string) (*Backend, error) {
-	log.Printf("psql backend %s on %s", version, dsn)
+func NewBackend(dsn string, c cluster.Cluster, serverDesc *cluster.PeerDesc) (*Backend, error) {
+	log.Printf("psql backend %s on %s", serverDesc.Version, dsn)
 
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("sql.Open: %s", err)
 	}
 
-	b := &Backend{DB: db, dsn: dsn, version: version}
-	b.start()
+	b := &Backend{
+		DB:        db,
+		dsn:       dsn,
+		desc:      serverDesc,
+		cluster:   c,
+		peers:     map[string]string{},
+		listeners: map[string]ListenerMap{},
+	}
+
+	b.peers[serverDesc.ID] = serverDesc.Era
+	for _, desc := range c.Peers() {
+		b.peers[desc.ID] = desc.Era
+	}
+
+	if err := b.start(); err != nil {
+		return nil, err
+	}
+
 	return b, nil
 }
 
-func (b *Backend) start() {
+func (b *Backend) start() error {
 	b.DbMap = &gorp.DbMap{Db: b.DB, Dialect: gorp.PostgresDialect{}}
 	// TODO: make debug configurable
 	b.DbMap.TraceOn("[gorp]", log.New(os.Stdout, "", log.LstdFlags))
@@ -73,34 +90,22 @@ func (b *Backend) start() {
 		b.DbMap.AddTableWithName(item.Table, name).SetKeys(false, item.PrimaryKey...)
 	}
 
+	if _, err := b.DbMap.Exec("DELETE FROM presence WHERE server_id = $1", b.desc.ID); err != nil {
+		return fmt.Errorf("presence reset error: %s", err)
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	b.cancel = cancel
 	go b.background(ctx)
-}
-
-func (b *Backend) UpgradeDB() error {
-	// TODO: inspect existing schema and adapt; for now, assume empty DB
-	return b.createSchema()
-}
-
-func (b *Backend) createSchema() error {
-	if err := b.DbMap.CreateTables(); err != nil {
-		return err
-	}
-
-	for name, item := range schema {
-		if after, ok := item.Table.(AfterCreateTabler); ok {
-			if err := after.AfterCreateTable(b.DB); err != nil {
-				return fmt.Errorf("%s post-creation: %s", name, err)
-			}
-		}
-	}
-
 	return nil
 }
 
-func (b *Backend) Version() string { return b.version }
-func (b *Backend) Close()          { b.cancel() }
+func (b *Backend) Version() string { return b.desc.Version }
+
+func (b *Backend) Close() {
+	b.cancel()
+	b.cluster.Part()
+}
 
 func (b *Backend) background(ctx context.Context) {
 	logger := backend.Logger(ctx)
@@ -111,11 +116,38 @@ func (b *Backend) background(ctx context.Context) {
 		panic("pq listen: " + err.Error())
 	}
 
+	peerWatcher := b.cluster.Watch()
+	keepalive := time.NewTicker(3 * cluster.TTL / 4)
+	defer keepalive.Stop()
+
 	for {
 		select {
-		// TODO: add keep-alive timeout to trigger ping
 		case <-ctx.Done():
 			return
+		case <-keepalive.C:
+			if err := b.cluster.Update(b.desc); err != nil {
+				logger.Printf("cluster: keepalive error: %s", err)
+			}
+		case event := <-peerWatcher:
+			b.Lock()
+			switch e := event.(type) {
+			case *cluster.PeerJoinedEvent:
+				logger.Printf("cluster: peer %s joining with era %s", e.ID, e.Era)
+				b.peers[e.ID] = e.Era
+			case *cluster.PeerAliveEvent:
+				if prevEra := b.peers[e.ID]; prevEra != e.Era {
+					b.invalidatePeer(ctx, e.ID, prevEra)
+					logger.Printf("cluster: peer %s changing era from %s to %s", e.ID, prevEra, e.Era)
+				}
+				b.peers[e.ID] = e.Era
+			case *cluster.PeerLostEvent:
+				logger.Printf("cluster: peer %s departing", e.ID)
+				if era, ok := b.peers[e.ID]; ok {
+					b.invalidatePeer(ctx, e.ID, era)
+					delete(b.peers, e.ID)
+				}
+			}
+			b.Unlock()
 		case notice := <-listener.Notify:
 			if notice == nil {
 				// TODO: notify clients of potential hiccup
@@ -130,29 +162,8 @@ func (b *Backend) background(ctx context.Context) {
 				continue
 			}
 
-			if msg.Event.Type == proto.NickEventType {
-				payload, err := msg.Event.Payload()
-				nickEvent, ok := payload.(*proto.NickEvent)
-				if err != nil || !ok {
-					logger.Printf("error: pq listen: invalid nick event: %s", err)
-					logger.Printf("         payload: %#v", notice.Extra)
-				} else {
-					b.Lock()
-					if b.presence == nil {
-						b.presence = map[string]roomPresence{}
-					}
-					rp := b.presence[msg.Room]
-					if rp == nil {
-						rp = roomPresence{}
-						b.presence[msg.Room] = rp
-					}
-					rp.rename(nickEvent)
-					b.Unlock()
-				}
-			}
-
-			if rp, ok := b.presence[msg.Room]; ok {
-				if err := rp.broadcast(ctx, msg.Event, msg.Exclude...); err != nil {
+			if lm, ok := b.listeners[msg.Room]; ok {
+				if err := lm.Broadcast(ctx, msg.Event, msg.Exclude...); err != nil {
 					logger.Printf("error: pq listen: broadcast error on %s: %s", msg.Room, err)
 				}
 				continue
@@ -235,46 +246,36 @@ func (b *Backend) join(ctx context.Context, room *Room, session proto.Session) e
 	b.Lock()
 	defer b.Unlock()
 
-	logger := backend.Logger(ctx)
-
-	if b.presence == nil {
-		b.presence = map[string]roomPresence{}
+	// Add session to listeners.
+	lm, ok := b.listeners[room.Name]
+	if !ok {
+		lm = ListenerMap{}
+		b.listeners[room.Name] = lm
 	}
+	lm[session.ID()] = session
 
-	rp := b.presence[room.Name]
-	if rp == nil {
-		rp = roomPresence{}
-		b.presence[room.Name] = rp
-		rows, err := b.DbMap.Select(
-			Presence{},
-			"SELECT room, user_id, session_id, server_id, name, connected, last_activity"+
-				" FROM presence WHERE room = $1",
-			room.Name)
-		if err != nil {
-			logger.Printf("error loading presence for %s: %s", room.Name, err)
-		} else {
-			for _, row := range rows {
-				p := row.(*Presence)
-				rp.load(p.SessionID, p.UserID, p.Name)
-			}
-		}
-		_ = rows
+	// Broadcast a presence event.
+	// TODO: make this an explicit action via the Room protocol, to support encryption
+
+	presence := &Presence{
+		Room:      room.Name,
+		ServerID:  b.desc.ID,
+		ServerEra: b.desc.Era,
+		SessionID: session.ID(),
+		Updated:   time.Now(),
 	}
-
-	rp.join(session)
-
-	if err := b.DbMap.Insert(&Presence{
-		Room:         room.Name,
-		SessionID:    session.ID(),
-		UserID:       session.Identity().ID(),
-		ServerID:     session.ServerID(),
-		Name:         session.Identity().Name(),
-		Connected:    true,
-		LastActivity: time.Now(),
-	}); err != nil {
-		logger.Printf("failed to persist join: %s", err)
+	err := presence.SetFact(&proto.Presence{
+		IdentityView:   *session.Identity().View(),
+		LastInteracted: presence.Updated,
+	})
+	if err != nil {
+		return fmt.Errorf("presence marshal error: %s", err)
 	}
-
+	if err := b.DbMap.Insert(presence); err != nil {
+		return fmt.Errorf("presence insert error: %s", err)
+	}
+	fmt.Printf("joining session: %#v\n", session)
+	fmt.Printf(" -> %#v\n", session.Identity().View())
 	return b.broadcast(ctx, room, session,
 		proto.JoinEventType, proto.PresenceEvent(*session.Identity().View()), session)
 }
@@ -283,28 +284,53 @@ func (b *Backend) part(ctx context.Context, room *Room, session proto.Session) e
 	b.Lock()
 	defer b.Unlock()
 
-	if rp, ok := b.presence[room.Name]; ok {
-		rp.part(session)
+	if lm, ok := b.listeners[room.Name]; ok {
+		delete(lm, session.ID())
 	}
 
 	_, err := b.DbMap.Exec(
-		"UPDATE presence SET connected = false WHERE room = $1 AND session_id = $2",
-		room.Name, session.ID())
+		"DELETE FROM presence"+
+			" WHERE room = $1 AND server_id = $2 AND server_era = $3 AND session_id = $4",
+		room.Name, b.desc.ID, b.desc.Era, session.ID())
 	if err != nil {
 		backend.Logger(ctx).Printf("failed to persist departure: %s", err)
 	}
 
+	// Broadcast a presence event.
+	// TODO: make this an explicit action via the Room protocol, to support encryption
 	return b.broadcast(ctx, room, session,
 		proto.PartEventType, proto.PresenceEvent(*session.Identity().View()), session)
 }
 
 func (b *Backend) listing(ctx context.Context, room *Room) (proto.Listing, error) {
+	// TODO: return presence in an envelope, to support encryption
+	// TODO: cache for performance
+
+	rows, err := b.DbMap.Select(
+		Presence{},
+		"SELECT room, topic, server_id, server_era, session_id, updated, key_id, fact"+
+			" FROM presence WHERE room = $1",
+		room.Name)
+	if err != nil {
+		return nil, fmt.Errorf("presence listing error: %s", err)
+	}
+
 	result := proto.Listing{}
-	for _, rc := range b.presence[room.Name] {
-		for _, session := range rc.sessions {
-			result = append(result, *session.Identity().View())
+	for _, row := range rows {
+		p := row.(*Presence)
+		fmt.Printf("presence row: %#v\n", p)
+		if b.peers[p.ServerID] == p.ServerEra {
+			if view, err := p.IdentityView(); err == nil {
+				result = append(result, view)
+			} else {
+				fmt.Printf("ignoring presence row because error: %s\n", err)
+			}
+		} else {
+			fmt.Printf("ignoring presence row because era doesn't match (%s != %s)\n",
+				p.ServerEra, b.peers[p.ServerID])
 		}
 	}
+
 	sort.Sort(result)
 	return result, nil
 }
@@ -324,11 +350,13 @@ func (b *Backend) latest(ctx context.Context, room *Room, n int, before snowflak
 	args := []interface{}{room.Name, n}
 
 	if before.IsZero() {
-		query = "SELECT room, id, parent, posted, sender_id, sender_name, content, encryption_key_id" +
-			" FROM message WHERE room = $1 ORDER BY id DESC LIMIT $2"
+		query = ("SELECT room, id, parent, posted, sender_id, sender_name, server_id, server_era," +
+			" content, encryption_key_id" +
+			" FROM message WHERE room = $1 ORDER BY id DESC LIMIT $2")
 	} else {
-		query = "SELECT room, id, parent, posted, sender_id, sender_name, content, encryption_key_id" +
-			" FROM message WHERE room = $1 AND id < $3 ORDER BY id DESC LIMIT $2"
+		query = ("SELECT room, id, parent, posted, sender_id, sender_name, server_id, server_era," +
+			" content, encryption_key_id" +
+			" FROM message WHERE room = $1 AND id < $3 ORDER BY id DESC LIMIT $2")
 		args = append(args, before.String())
 	}
 
@@ -344,6 +372,25 @@ func (b *Backend) latest(ctx context.Context, room *Room, n int, before snowflak
 	}
 
 	return results, nil
+}
+
+// invalidatePeer must be called with lock held
+func (b *Backend) invalidatePeer(ctx context.Context, id, era string) {
+	logger := backend.Logger(ctx)
+	packet, err := proto.MakeEvent(&proto.NetworkEvent{
+		Type:      "partition",
+		ServerID:  id,
+		ServerEra: era,
+	})
+	if err != nil {
+		logger.Printf("cluster: make network event error: %s", err)
+		return
+	}
+	for _, lm := range b.listeners {
+		if err := lm.Broadcast(ctx, packet); err != nil {
+			logger.Printf("cluster: network event error: %s", err)
+		}
+	}
 }
 
 type BroadcastMessage struct {

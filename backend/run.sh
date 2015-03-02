@@ -17,4 +17,5 @@ fi
     -http :80 \
     -psql 'postgres://postgres:heimlich@psql/heim?sslmode=disable' \
     -kms-local-key-file /keys/masterkey \
+    -etcd-peers http://etcd:4001 -etcd /dev/euphoria.io \
     $control_flags

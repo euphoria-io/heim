@@ -1,7 +1,7 @@
 package psql
 
 import (
-	"database/sql"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -11,23 +11,32 @@ import (
 )
 
 type Presence struct {
-	Room         string
-	UserID       string `db:"user_id"`
-	SessionID    string `db:"session_id"`
-	ServerID     string `db:"server_id"`
-	Name         string
-	Connected    bool
-	LastActivity time.Time `db:"last_activity"`
+	Room      string
+	Topic     string
+	ServerID  string `db:"server_id"`
+	ServerEra string `db:"server_era"`
+	SessionID string `db:"session_id"`
+	Updated   time.Time
+	KeyID     string `db:"key_id"`
+	Fact      []byte
 }
 
-func (Presence) AfterCreateTable(db *sql.DB) error {
-	if _, err := db.Exec("CREATE INDEX presence_room ON presence(room)"); err != nil {
+func (p *Presence) SetFact(fact *proto.Presence) error {
+	fmt.Printf("presence fact: %#v\n", fact)
+	data, err := json.Marshal(fact)
+	if err != nil {
 		return err
 	}
-	if _, err := db.Exec("CREATE INDEX presence_user_id ON presence(user_id)"); err != nil {
-		return err
-	}
+	p.Fact = data
 	return nil
+}
+
+func (p *Presence) IdentityView() (proto.IdentityView, error) {
+	var fact proto.Presence
+	if err := json.Unmarshal(p.Fact, &fact); err != nil {
+		return proto.IdentityView{}, err
+	}
+	return fact.IdentityView, nil
 }
 
 type roomConn struct {

@@ -1,3 +1,7 @@
+# The etcd container coordinates our single-node cluster.
+etcd:
+  build: containers/etcd
+
 # The psql container runs the postgres server from the psqldata/data directory.
 psql:
   build: containers/psql
@@ -35,6 +39,7 @@ upgradedb:
 backend:
   build: backend
   links:
+    - etcd
     - psql
   volumes:
     - .:/go/src/heim
@@ -44,3 +49,17 @@ backend:
   ports:
     - "8080:80"
     - "2222:2222"
+
+# This secondary backend container is available to test multinode clusters.
+backend2:
+  build: backend
+  links:
+    - etcd
+    - psql
+  volumes:
+    - .:/go/src/heim
+    - deps/godeps:/godeps
+    - client/build:/srv/heim/client/src/build
+    - backend/console/keys:/keys
+  ports:
+    - "8081:80"

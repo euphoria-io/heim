@@ -15,13 +15,10 @@ type Message struct {
 	Posted          time.Time
 	SenderID        string `db:"sender_id"`
 	SenderName      string `db:"sender_name"`
+	ServerID        string `db:"server_id"`
+	ServerEra       string `db:"server_era"`
 	Content         string
 	EncryptionKeyID sql.NullString `db:"encryption_key_id"`
-}
-
-func (Message) AfterCreateTable(db *sql.DB) error {
-	_, err := db.Exec("CREATE INDEX message_room_parent ON message(room, parent)")
-	return err
 }
 
 func NewMessage(
@@ -38,6 +35,8 @@ func NewMessage(
 	if idView != nil {
 		msg.SenderID = idView.ID
 		msg.SenderName = idView.Name
+		msg.ServerID = idView.ServerID
+		msg.ServerEra = idView.ServerEra
 	}
 	if keyID != "" {
 		msg.EncryptionKeyID = sql.NullString{
@@ -51,8 +50,13 @@ func NewMessage(
 func (m *Message) ToBackend() proto.Message {
 	msg := proto.Message{
 		UnixTime: m.Posted.Unix(),
-		Sender:   &proto.IdentityView{ID: m.SenderID, Name: m.SenderName},
-		Content:  m.Content,
+		Sender: &proto.IdentityView{
+			ID:        m.SenderID,
+			Name:      m.SenderName,
+			ServerID:  m.ServerID,
+			ServerEra: m.ServerEra,
+		},
+		Content: m.Content,
 	}
 
 	// ignore id parsing errors

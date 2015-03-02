@@ -17,8 +17,6 @@ var (
 	AuthEventType = AuthType.Event()
 	AuthReplyType = AuthType.Reply()
 
-	BounceEventType = PacketType("bounce").Event()
-
 	SendType      = PacketType("send")
 	SendEventType = SendType.Event()
 	SendReplyType = SendType.Reply()
@@ -40,6 +38,8 @@ var (
 	WhoEventType = WhoType.Event()
 	WhoReplyType = WhoType.Reply()
 
+	BounceEventType   = PacketType("bounce").Event()
+	NetworkEventType  = PacketType("network").Event()
 	SnapshotEventType = PacketType("snapshot").Event()
 
 	ErrorReplyType = PacketType("error").Reply()
@@ -106,6 +106,12 @@ type SnapshotEvent struct {
 	Log     []Message `json:"log"`
 }
 
+type NetworkEvent struct {
+	Type      string `json:"type"` // for now, always "partition"
+	ServerID  string `json:"server_id"`
+	ServerEra string `json:"server_era"`
+}
+
 type WhoCommand struct{}
 
 type WhoReply struct {
@@ -158,6 +164,8 @@ func (cmd *Packet) Payload() (interface{}, error) {
 		payload = &AuthReply{}
 	case BounceEventType:
 		payload = &BounceEvent{}
+	case NetworkEventType:
+		payload = &NetworkEvent{}
 	case SnapshotEventType:
 		payload = &SnapshotEvent{}
 	case WhoType:
@@ -209,6 +217,8 @@ func MakeEvent(payload interface{}) (*Packet, error) {
 	switch payload.(type) {
 	case *BounceEvent:
 		packet.Type = BounceEventType
+	case *NetworkEvent:
+		packet.Type = NetworkEventType
 	case *SnapshotEvent:
 		packet.Type = SnapshotEventType
 	default:
