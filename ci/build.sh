@@ -18,7 +18,8 @@ test_backend() {
   cd ${SRCDIR}
   psql -c 'create database heimtest;' -U postgres -h $POSTGRES_PORT_5432_TCP_ADDR
   export DSN="postgres://postgres@$POSTGRES_PORT_5432_TCP_ADDR/heimtest?sslmode=disable"
-  go test -v heim/...
+  go install github.com/coreos/etcd
+  PATH="${PATH}":${SRCDIR}/heim/deps/godeps/bin go test -v heim/...
 }
 
 test_client() {
