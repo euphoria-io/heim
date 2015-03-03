@@ -28,6 +28,15 @@ test_client() {
   gulp lint && mochify
 }
 
+generate_manifest() {
+    echo 'Generating manifest...'
+    (
+        cd "$1"
+        find . -path ./MANIFEST.txt -prune -o -type f -exec md5sum {} \; \
+            | sed -e 's@^\([0-9a-f]\+\) \+\./\(.*\)$@\2\t\1@g' | tee MANIFEST.txt
+    )
+}
+
 build_release() {
   export NODE_ENV=production
   cd ${SRCDIR}/heim/client
@@ -38,6 +47,7 @@ build_release() {
 
   mv ${SRCDIR}/heim/client/build /var/cache/drone/bin/static
   cd /var/cache/drone/bin
+  generate_manifest static
   find static -type f | xargs heimlich heim-backend
 
   s3cmd put heim-backend.hzp s3://heim-release/${DRONE_COMMIT}
