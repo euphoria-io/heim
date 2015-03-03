@@ -81,9 +81,9 @@ module.exports.store = Reflux.createStore({
         this.state.who = this.state.who.delete(ev.body.data.id)
       } else if (ev.body.type == 'network-event') {
         if (ev.body.data.type == 'partition') {
+          // jshint camelcase: false
           var id = ev.body.data.server_id
           var era = ev.body.data.server_era
-          console.log('filtering by', id, era)
           this.state.who = this.state.who.filter(v => {
             return v.get('server_id') != id || v.get('server_era') != era
           })
