@@ -18,12 +18,12 @@ var (
 	etcdPath  = flag.String("etcd", "", "etcd path for cluster coordination")
 
 	peerEvents = prometheus.NewCounter(prometheus.CounterOpts{
-		Name: "peer-events",
+		Name: "peer_events",
 		Help: "Count of cluster peer events observed by this backend.",
 	})
 
 	peerWatchErrors = prometheus.NewCounter(prometheus.CounterOpts{
-		Name: "peer-watch-errors",
+		Name: "peer_watch_errors",
 		Help: "Count of errors encountered while watching for peer events.",
 	})
 )
