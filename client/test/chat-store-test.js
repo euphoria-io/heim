@@ -938,36 +938,30 @@ describe('chat store', function() {
       })
     })
 
+    function testAuthFail(body) {
+      describe('if stored auth unsuccessful', function() {
+        it('should set auth state to "needs-passcode"', function() {
+          chat.store.state.authState = 'trying-stored'
+          handleSocket({status: 'receive', body: body}, function(state) {
+            assert.equal(state.authState, 'needs-passcode')
+          })
+        })
+      })
+
+      describe('if auth unsuccessful', function() {
+        it('should set auth state to "failed"', function() {
+          chat.store.state.authState = 'trying'
+          handleSocket({status: 'receive', body: body}, function(state) {
+            assert.equal(state.authState, 'failed')
+          })
+        })
+      })
+    }
+
     describe('in case of error', function() {
-      it('should clear stored auth data', function() {
-        chat.store.state.authState = 'trying-stored'
-        handleSocket({status: 'receive', body: errorAuthReplyEvent}, function() {
-          sinon.assert.calledOnce(storage.setRoom)
-          sinon.assert.calledWithExactly(storage.setRoom, 'ezzie', 'auth', null)
-        })
-      })
+      testAuthFail(errorAuthReplyEvent)
     })
 
-    describe('if stored auth unsuccessful', function() {
-      it('should clear stored auth data and set auth state to "needs-passcode"', function() {
-        chat.store.state.authState = 'trying-stored'
-        handleSocket({status: 'receive', body: incorrectAuthReplyEvent}, function(state) {
-          sinon.assert.calledOnce(storage.setRoom)
-          sinon.assert.calledWithExactly(storage.setRoom, 'ezzie', 'auth', null)
-          assert.equal(state.authState, 'needs-passcode')
-        })
-      })
-    })
-
-    describe('if auth unsuccessful', function() {
-      it('should clear stored auth data and set auth state to "failed"', function() {
-        chat.store.state.authState = 'trying'
-        handleSocket({status: 'receive', body: incorrectAuthReplyEvent}, function(state) {
-          sinon.assert.calledOnce(storage.setRoom)
-          sinon.assert.calledWithExactly(storage.setRoom, 'ezzie', 'auth', null)
-          assert.equal(state.authState, 'failed')
-        })
-      })
-    })
+    testAuthFail(incorrectAuthReplyEvent)
   })
 })

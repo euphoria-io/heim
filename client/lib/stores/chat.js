@@ -164,7 +164,6 @@ module.exports.store = Reflux.createStore({
       } else if (this.state.authState == 'trying') {
         this.state.authState = 'failed'
       }
-      storage.setRoom(this.state.roomName, 'auth', null)
     }
   },
 
