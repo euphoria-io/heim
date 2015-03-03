@@ -17,6 +17,11 @@ var (
 	etcdAddrs = flag.String("etcd-peers", "", "comma-separated addresses of etcd peers")
 	etcdPath  = flag.String("etcd", "", "etcd path for cluster coordination")
 
+	selfAnnouncements = prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "self_announcements",
+		Help: "Count of self-announcements to the cluster by this backend.",
+	})
+
 	peerEvents = prometheus.NewCounter(prometheus.CounterOpts{
 		Name: "peer_events",
 		Help: "Count of cluster peer events observed by this backend.",
@@ -29,6 +34,7 @@ var (
 )
 
 func init() {
+	prometheus.MustRegister(selfAnnouncements)
 	prometheus.MustRegister(peerEvents)
 	prometheus.MustRegister(peerWatchErrors)
 }
@@ -120,6 +126,7 @@ func (e *etcdCluster) update(desc *PeerDesc) (uint64, error) {
 	if err != nil {
 		return 0, fmt.Errorf("set on %s: %s", e.me, err)
 	}
+	selfAnnouncements.Inc()
 	e.m.Lock()
 	e.peers[desc.ID] = *desc
 	e.m.Unlock()
