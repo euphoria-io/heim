@@ -57,7 +57,7 @@ module.exports = React.createClass({
         </div>
         <UserList users={this.props.who} collapsed={this.state.userListCollapsed} onMouseEnter={this.expandUserList} onMouseLeave={this.collapseUserList} />
         {this.props.updateReady && <FastButton className="update-button" onClick={update.perform}><p>update ready<em>click to reload</em></p></FastButton>}
-        {this.props.roomName == 'space' && <div className="norman"><p>norman</p><img src="//i.imgur.com/wAz2oho.jpg" /></div>}
+        {this.props.roomName == 'space' && <div className="norman"><p>norman</p><img src="//i.imgur.com/45wJkX7.jpg" /></div>}
       </div>
     )
   },
