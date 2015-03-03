@@ -2,6 +2,7 @@ var gulp = require('gulp')
 var gutil = require('gulp-util')
 var streamify = require('gulp-streamify')
 var less = require('gulp-less')
+var autoprefixer = require('gulp-autoprefixer')
 var uglify = require('gulp-uglify')
 var source = require('vinyl-source-stream')
 var watchify = require('watchify')
@@ -35,6 +36,7 @@ gulp.task('js', function() {
 gulp.task('less', function() {
   return gulp.src('./lib/main.less')
     .pipe(less({compress: true}))
+    .pipe(autoprefixer({cascade: false}))
     .on('error', function(err) {
       gutil.log(gutil.colors.red('LESS error:'), err.message)
       this.emit('end')

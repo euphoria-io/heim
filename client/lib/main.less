@@ -1,11 +1,3 @@
-.no-select {
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -o-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
-}
-
 body {
   margin: 0;
 
@@ -415,7 +407,7 @@ iframe.js {
       box-shadow: 0 0 8px fade(black, 25%);
       white-space: nowrap;
       z-index: 2;
-      .no-select;
+      user-select: none;
 
       .right {
         display: flex;
@@ -455,7 +447,7 @@ iframe.js {
         box-shadow .15s ease,
         border .15s ease,
         background .15s ease;
-      .no-select;
+      user-select: none;
 
       // work around weird webkit trailing text render glitch.
       -webkit-transform: translate3d(0, 0, 0);
