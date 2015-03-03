@@ -393,6 +393,8 @@ func (b *Backend) invalidatePeer(ctx context.Context, id, era string) {
 	}
 }
 
+func (b *Backend) Peers() []cluster.PeerDesc { return b.cluster.Peers() }
+
 type BroadcastMessage struct {
 	Room    string
 	Exclude []string

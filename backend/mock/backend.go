@@ -3,6 +3,7 @@ package mock
 import (
 	"sync"
 
+	"heim/backend/cluster"
 	"heim/proto"
 )
 
@@ -32,3 +33,5 @@ func (b *TestBackend) GetRoom(name string) (proto.Room, error) {
 	b.rooms[name] = room
 	return room, nil
 }
+
+func (b *TestBackend) Peers() []cluster.PeerDesc { return nil }
