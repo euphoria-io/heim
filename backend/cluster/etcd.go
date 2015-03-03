@@ -10,12 +10,28 @@ import (
 	"time"
 
 	"github.com/coreos/go-etcd/etcd"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 var (
 	etcdAddrs = flag.String("etcd-peers", "", "comma-separated addresses of etcd peers")
 	etcdPath  = flag.String("etcd", "", "etcd path for cluster coordination")
+
+	peerEvents = prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "peer-events",
+		Help: "Count of cluster peer events observed by this backend.",
+	})
+
+	peerWatchErrors = prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "peer-watch-errors",
+		Help: "Count of errors encountered while watching for peer events.",
+	})
 )
+
+func init() {
+	prometheus.MustRegister(peerEvents)
+	prometheus.MustRegister(peerWatchErrors)
+}
 
 func EtcdClusterFromFlags(desc *PeerDesc) (Cluster, error) {
 	return EtcdCluster(*etcdPath, strings.Split(*etcdAddrs, ","), desc)
@@ -127,10 +143,12 @@ func (e *etcdCluster) watch(waitIndex uint64) {
 				break
 			}
 			fmt.Printf("cluster error: watch: %s\n", err)
+			peerWatchErrors.Inc()
 			break
 		}
 		if resp == nil {
 			fmt.Printf("cluster error: watch: nil response\n")
+			peerWatchErrors.Inc()
 			break
 		}
 
@@ -142,6 +160,7 @@ func (e *etcdCluster) watch(waitIndex uint64) {
 			var desc PeerDesc
 			if err := json.Unmarshal([]byte(resp.Node.Value), &desc); err != nil {
 				fmt.Printf("cluster error: set: %s\n", err)
+				peerWatchErrors.Inc()
 				continue
 			}
 			e.m.Lock()
@@ -153,11 +172,13 @@ func (e *etcdCluster) watch(waitIndex uint64) {
 			} else {
 				e.ch <- &PeerJoinedEvent{desc}
 			}
+			peerEvents.Inc()
 		case "expire", "delete":
 			e.m.Lock()
 			delete(e.peers, peerID)
 			e.m.Unlock()
 			e.ch <- &PeerLostEvent{PeerDesc{ID: peerID}}
+			peerEvents.Inc()
 		default:
 			//fmt.Printf("ignoring watch event: %v\n", resp)
 		}
