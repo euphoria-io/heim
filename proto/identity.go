@@ -19,7 +19,7 @@ type Identity interface {
 
 type IdentityView struct {
 	ID        string `json:"id"`
-	Name      string `json:"name,omitempty"`
+	Name      string `json:"name"`
 	ServerID  string `json:"server_id"`
 	ServerEra string `json:"server_era"`
 }
