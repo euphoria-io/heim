@@ -67,6 +67,15 @@ describe('storage store', function() {
       }))
     })
 
+    it('should not save unchanged values', function() {
+      storage.store.set(testKey, testValue)
+      support.clock.tick(1000)
+      localStorage.setItem.reset()
+      storage.store.set(testKey, testValue)
+      support.clock.tick(1000)
+      sinon.assert.notCalled(localStorage.setItem)
+    })
+
     it('should trigger an update event', function(done) {
       support.listenOnce(storage.store, function(state) {
         assert.equal(state[testKey], testValue)
@@ -97,6 +106,15 @@ describe('storage store', function() {
           }
         }
       }))
+    })
+
+    it('should not save unchanged values', function() {
+      storage.store.setRoom(testRoom, testKey, testValue)
+      support.clock.tick(1000)
+      localStorage.setItem.reset()
+      storage.store.setRoom(testRoom, testKey, testValue)
+      support.clock.tick(1000)
+      sinon.assert.notCalled(localStorage.setItem)
     })
 
     it('should create room config object and trigger an update event', function(done) {

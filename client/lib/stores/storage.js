@@ -49,6 +49,9 @@ module.exports.store = Reflux.createStore({
   },
 
   set: function(key, value) {
+    if (_.isEqual(this.state[key], value)) {
+      return
+    }
     this._dirtyChanges[key] = value
     this.state[key] = value
     this.trigger(this.state)
@@ -56,6 +59,10 @@ module.exports.store = Reflux.createStore({
   },
 
   setRoom: function(room, key, value) {
+    if (this.state.room[room] && _.isEqual(this.state.room[room][key], value)) {
+      return
+    }
+
     var change = {room: {}}
     change.room[room] = {}
     change.room[room][key] = value
