@@ -41,7 +41,7 @@ module.exports.store = Reflux.createStore({
   focusChange: function(state) {
     this.focus = state.windowFocused
     if (this.focus) {
-      this.setFavicon('/static/favicon.png')
+      Heim.setFavicon('/static/favicon.png')
       this.closeNotification()
     }
   },
@@ -112,7 +112,7 @@ module.exports.store = Reflux.createStore({
       return
     }
 
-    this.setFavicon('/static/favicon-active.png')
+    Heim.setFavicon('/static/favicon-active.png')
 
     if (!this.state.enabled || this.notification) {
       return
@@ -128,21 +128,5 @@ module.exports.store = Reflux.createStore({
     this.notification.onclose = this.resetNotification
 
     this._closeTimeout = setTimeout(this.closeNotification, this.timeout)
-  },
-
-  setFavicon: function(href) {
-    // via github.com/HenrikJoreteg/favicon-setter
-    // modified to use uidocument instead of document
-    var head = uidocument.getElementsByTagName('head')[0]
-    var faviconId = 'favicon'
-    var link = uidocument.createElement('link')
-    var oldLink = uidocument.getElementById(faviconId)
-    link.id = faviconId
-    link.rel = 'shortcut icon'
-    link.href = href
-    if (oldLink) {
-      head.removeChild(oldLink)
-    }
-    head.appendChild(link)
   },
 })

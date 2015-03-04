@@ -27,4 +27,8 @@ support.resetStore = function(store) {
   store.emitter.removeAllListeners()
 }
 
+window.Heim = {
+  setFavicon: function() {},
+}
+
 module.exports = support

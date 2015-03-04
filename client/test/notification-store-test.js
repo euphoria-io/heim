@@ -12,13 +12,13 @@ describe('notification store', function() {
 
   beforeEach(function() {
     sinon.stub(storage, 'set')
-    sinon.stub(notification.store, 'setFavicon')
+    sinon.stub(Heim, 'setFavicon')
   })
 
   afterEach(function() {
     window.Notification = _Notification
     storage.set.restore()
-    notification.store.setFavicon.restore()
+    Heim.setFavicon.restore()
   })
 
   describe('when unsupported', function() {
@@ -181,8 +181,8 @@ describe('notification store', function() {
 
         it('should change to active favicon', function() {
           notification.store.chatUpdate(mockChatState)
-          sinon.assert.calledOnce(notification.store.setFavicon)
-          sinon.assert.calledWithExactly(notification.store.setFavicon, '/static/favicon-active.png')
+          sinon.assert.calledOnce(Heim.setFavicon)
+          sinon.assert.calledWithExactly(Heim.setFavicon, '/static/favicon-active.png')
         })
       })
 
@@ -240,12 +240,12 @@ describe('notification store', function() {
         notification.store.focusChange({windowFocused: false})
         notification.store.storageChange({notify: true})
         notification.store.chatUpdate(mockChatState)
-        sinon.assert.calledOnce(notification.store.setFavicon)
-        notification.store.setFavicon.reset()
+        sinon.assert.calledOnce(Heim.setFavicon)
+        Heim.setFavicon.reset()
 
         notification.store.focusChange({windowFocused: true})
-        sinon.assert.calledOnce(notification.store.setFavicon)
-        sinon.assert.calledWithExactly(notification.store.setFavicon, '/static/favicon.png')
+        sinon.assert.calledOnce(Heim.setFavicon)
+        sinon.assert.calledWithExactly(Heim.setFavicon, '/static/favicon.png')
       })
     })
 

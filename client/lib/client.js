@@ -2,6 +2,7 @@
 window.uiwindow = window.top
 window.uidocument = window.top.document
 
+var _ = require('lodash')
 var React = require('react/addons')
 var SyntheticKeyboardEvent = require('react/lib/SyntheticKeyboardEvent')
 var EventListeners = require('./eventlisteners')
@@ -22,6 +23,8 @@ Heim = {
   storage: require('./stores/storage'),
   focus: require('./stores/focus'),
   update: require('./stores/update'),
+
+  setFavicon: _.partial(require('./setfavicon'), uidocument),
 
   // http://stackoverflow.com/a/6447935
   isTouch: 'ontouchstart' in window,
