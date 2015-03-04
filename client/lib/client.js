@@ -87,15 +87,17 @@ Heim.attachUI = function(hash) {
 Heim.prepareUpdate = function(hash) {
   Heim.update.setReady(false)
 
-  var frame
-  frame = uidocument.getElementById('env-update')
-  if (!frame) {
-    frame = uidocument.createElement('iframe')
-    frame.id = 'env-update'
-    frame.className = 'js'
-    uidocument.body.appendChild(frame)
+  var frame = uidocument.getElementById('env-update')
+  if (frame) {
+    frame.parentNode.removeChild(frame)
   }
 
+  frame = uidocument.createElement('iframe')
+  frame.id = 'env-update'
+  frame.className = 'js'
+  uidocument.body.appendChild(frame)
+
+  frame.contentDocument.open()
   var context = frame.contentWindow
   context.onReady = function() {
     var removeListener = context.Heim.chat.store.listen(function(chatState) {
@@ -120,6 +122,7 @@ Heim.prepareUpdate = function(hash) {
     context.Heim.actions.connect(roomName)
   }
   context.document.write('<script src="/static/main.js?v=' + hash +  '"></sc'+'ript>')
+  context.document.close()
 }
 
 if (window.onReady) {
