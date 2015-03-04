@@ -4,9 +4,17 @@ window.uidocument = window.top.document
 
 var React = require('react/addons')
 var SyntheticKeyboardEvent = require('react/lib/SyntheticKeyboardEvent')
+var EventListeners = require('./eventlisteners')
 var Main = require('./ui/main')
 
+
+var evs = new EventListeners()
+
 Heim = {
+  _evs: evs,
+  addEventListener: evs.addEventListener.bind(evs),
+  removeEventListener: evs.removeEventListener.bind(evs),
+
   actions: require('./actions'),
   socket: require('./stores/socket'),
   chat: require('./stores/chat'),
@@ -14,6 +22,7 @@ Heim = {
   storage: require('./stores/storage'),
   focus: require('./stores/focus'),
   update: require('./stores/update'),
+
   // http://stackoverflow.com/a/6447935
   isTouch: 'ontouchstart' in window,
   isAndroid: /android/i.test(navigator.userAgent),
@@ -39,7 +48,7 @@ Heim.attachUI = function(hash) {
   window.top.Heim = Heim
   window.top.require = require
 
-  uidocument.body.addEventListener('keypress', function(ev) {
+  Heim.addEventListener(uidocument.body, 'keypress', function(ev) {
     if (ev.target.nodeName == 'INPUT' &&
          (ev.target.type == 'text' || ev.target.type == 'password')) {
       return
@@ -55,7 +64,7 @@ Heim.attachUI = function(hash) {
     }
   }, true)
 
-  uidocument.body.addEventListener('keydown', function(ev) {
+  Heim.addEventListener(uidocument.body, 'keydown', function(ev) {
     if (ev.target.nodeName == 'INPUT') {
       return
     }
@@ -74,14 +83,19 @@ Heim.attachUI = function(hash) {
     React.initializeTouchEvents()
     uidocument.body.classList.add('touch')
 
-    uidocument.body.addEventListener('touchstart', function(ev) {
+    Heim.addEventListener(uidocument.body, 'touchstart', function(ev) {
       ev.target.classList.add('touching')
     }, false)
 
-    uidocument.body.addEventListener('touchend', function(ev) {
+    Heim.addEventListener(uidocument.body, 'touchend', function(ev) {
       ev.target.classList.remove('touching')
     }, false)
   }
+}
+
+Heim.detachUI = function() {
+  evs.removeAllEventListeners()
+  Heim.ui.unmountComponent()
 }
 
 Heim.prepareUpdate = function(hash) {
@@ -105,7 +119,7 @@ Heim.prepareUpdate = function(hash) {
         removeListener()
 
         // let go of #container
-        Heim.ui.unmountComponent()
+        Heim.detachUI()
 
         // attach new React component to #container
         context.Heim.attachUI(hash)

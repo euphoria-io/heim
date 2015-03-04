@@ -13,7 +13,7 @@ module.exports = React.createClass({
   displayName: 'Scroller',
 
   componentWillMount: function() {
-    uiwindow.addEventListener('resize', this.onResize)
+    Heim.addEventListener(uiwindow, 'resize', this.onResize)
     this._onScroll = _.throttle(this.onScroll, 100)
     this._checkScroll = _.throttle(this.checkScroll, 150)
     this._finishScroll = _.debounce(this.finishScroll, 100)
@@ -33,7 +33,7 @@ module.exports = React.createClass({
   },
 
   componentWillUnmount: function() {
-    uiwindow.removeEventListener('resize', this.onResize)
+    Heim.removeEventListener(uiwindow, 'resize', this.onResize)
   },
 
   onResize: function() {
