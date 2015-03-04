@@ -18,24 +18,34 @@ var (
 	etcdPath  = flag.String("etcd", "", "etcd path for cluster coordination")
 
 	selfAnnouncements = prometheus.NewCounter(prometheus.CounterOpts{
-		Name: "self_announcements",
-		Help: "Count of self-announcements to the cluster by this backend.",
+		Name:      "self_announcements",
+		Subsystem: "peer",
+		Help:      "Count of self-announcements to the cluster by this backend.",
 	})
 
 	peerEvents = prometheus.NewCounter(prometheus.CounterOpts{
-		Name: "peer_events",
-		Help: "Count of cluster peer events observed by this backend.",
+		Name:      "events",
+		Subsystem: "peer",
+		Help:      "Count of cluster peer events observed by this backend.",
+	})
+
+	peerLiveCount = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name:      "live_count",
+		Subsystem: "peer",
+		Help:      "Count of peers currently live (including self).",
 	})
 
 	peerWatchErrors = prometheus.NewCounter(prometheus.CounterOpts{
-		Name: "peer_watch_errors",
-		Help: "Count of errors encountered while watching for peer events.",
+		Name:      "watch_errors",
+		Subsystem: "peer",
+		Help:      "Count of errors encountered while watching for peer events.",
 	})
 )
 
 func init() {
 	prometheus.MustRegister(selfAnnouncements)
 	prometheus.MustRegister(peerEvents)
+	prometheus.MustRegister(peerLiveCount)
 	prometheus.MustRegister(peerWatchErrors)
 }
 
@@ -189,5 +199,7 @@ func (e *etcdCluster) watch(waitIndex uint64) {
 		default:
 			//fmt.Printf("ignoring watch event: %v\n", resp)
 		}
+
+		peerLiveCount.Set(float64(len(e.peers)))
 	}
 }
