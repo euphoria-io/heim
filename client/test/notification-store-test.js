@@ -12,11 +12,13 @@ describe('notification store', function() {
 
   beforeEach(function() {
     sinon.stub(storage, 'set')
+    sinon.stub(notification.store, 'setFavicon')
   })
 
   afterEach(function() {
     window.Notification = _Notification
     storage.set.restore()
+    notification.store.setFavicon.restore()
   })
 
   describe('when unsupported', function() {
@@ -178,13 +180,9 @@ describe('notification store', function() {
         })
 
         it('should change to active favicon', function() {
-          sinon.stub(notification.store, 'setFavicon')
-
           notification.store.chatUpdate(mockChatState)
           sinon.assert.calledOnce(notification.store.setFavicon)
           sinon.assert.calledWithExactly(notification.store.setFavicon, '/static/favicon-active.png')
-
-          notification.store.setFavicon.restore()
         })
       })
 
@@ -239,8 +237,6 @@ describe('notification store', function() {
       })
 
       it('should reset favicon when window focused', function() {
-        sinon.stub(notification.store, 'setFavicon')
-
         notification.store.focusChange({windowFocused: false})
         notification.store.storageChange({notify: true})
         notification.store.chatUpdate(mockChatState)
@@ -250,8 +246,6 @@ describe('notification store', function() {
         notification.store.focusChange({windowFocused: true})
         sinon.assert.calledOnce(notification.store.setFavicon)
         sinon.assert.calledWithExactly(notification.store.setFavicon, '/static/favicon.png')
-
-        notification.store.setFavicon.restore()
       })
     })
 
@@ -261,12 +255,12 @@ describe('notification store', function() {
         notification.store.storageChange({notify: true})
         notification.store.chatUpdate(mockChatState)
         sinon.stub(actions, 'focusMessage')
-        sinon.stub(window, 'focus')
+        window.uiwindow = {focus: sinon.stub()}
       })
 
       afterEach(function() {
         actions.focusMessage.restore()
-        window.focus.restore()
+        delete window.uiwindow
       })
 
       it('should not open another notification', function() {
@@ -281,7 +275,7 @@ describe('notification store', function() {
 
       it('should focus window and notification when clicked', function() {
         fakeNotification.onclick()
-        sinon.assert.calledOnce(window.focus)
+        sinon.assert.calledOnce(window.uiwindow.focus)
         sinon.assert.calledOnce(actions.focusMessage)
         sinon.assert.calledWithExactly(actions.focusMessage, 'id1')
       })

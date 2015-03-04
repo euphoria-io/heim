@@ -48,6 +48,14 @@ Heim.attachUI = function(hash) {
   window.top.Heim = Heim
   window.top.require = require
 
+  Heim.addEventListener(uiwindow, 'storage', Heim.storage.storageChange, false)
+
+  Heim.addEventListener(uiwindow, 'focus', Heim.focus.windowFocused, false)
+  Heim.addEventListener(uiwindow, 'blur', Heim.focus.windowBlurred, false)
+  if (uidocument.hasFocus()) {
+    Heim.focus.windowFocused()
+  }
+
   Heim.addEventListener(uidocument.body, 'keypress', function(ev) {
     if (ev.target.nodeName == 'INPUT' &&
          (ev.target.type == 'text' || ev.target.type == 'password')) {

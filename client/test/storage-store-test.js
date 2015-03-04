@@ -128,6 +128,16 @@ describe('storage store', function() {
   })
 
   describe('receiving a storage event', function() {
+    it('should be ignored before storage loaded', function() {
+      sinon.stub(storage.store, 'trigger')
+      storage.store.storageChange({key: 'data', newValue: 'early'})
+      assert.equal(storage.store.state, null)
+      sinon.assert.notCalled(storage.store.trigger)
+      storage.store.trigger.restore()
+    })
+  })
+
+  describe('receiving a storage event', function() {
     beforeEach(function() {
       fakeStorage.data = JSON.stringify({})
       storage.store.load()
@@ -138,12 +148,12 @@ describe('storage store', function() {
         assert.equal(state.hello, 'ezzie')
         done()
       })
-      storage.store.onStorageUpdate({key: 'data', newValue: JSON.stringify({'hello': 'ezzie'})})
+      storage.store.storageChange({key: 'data', newValue: JSON.stringify({'hello': 'ezzie'})})
     })
 
     it('should ignore changes to unknown storage keys', function() {
       sinon.stub(storage.store, 'trigger')
-      storage.store.onStorageUpdate({key: 'ezzie', newValue: 'bark!'})
+      storage.store.storageChange({key: 'ezzie', newValue: 'bark!'})
       sinon.assert.notCalled(storage.store.trigger)
       storage.store.trigger.restore()
     })
@@ -151,7 +161,7 @@ describe('storage store', function() {
     it('should not trigger an update if unchanged', function() {
       storage.store.set('hello', 'ezzie')
       sinon.stub(storage.store, 'trigger')
-      storage.store.onStorageUpdate({key: 'data', newValue: JSON.stringify({'hello': 'ezzie'})})
+      storage.store.storageChange({key: 'data', newValue: JSON.stringify({'hello': 'ezzie'})})
       sinon.assert.notCalled(storage.store.trigger)
       storage.store.trigger.restore()
     })
@@ -162,7 +172,7 @@ describe('storage store', function() {
         assert.equal(state.hello, 'ezzie')
         done()
       })
-      storage.store.onStorageUpdate({key: 'data', newValue: JSON.stringify({'hello': 'max', 'test': 'abcdef'})})
+      storage.store.storageChange({key: 'data', newValue: JSON.stringify({'hello': 'max', 'test': 'abcdef'})})
     })
 
     it('should change previously dirty values after a save', function(done) {
@@ -172,7 +182,7 @@ describe('storage store', function() {
         assert.equal(state.hello, 'max')
         done()
       })
-      storage.store.onStorageUpdate({key: 'data', newValue: JSON.stringify({'hello': 'max'})})
+      storage.store.storageChange({key: 'data', newValue: JSON.stringify({'hello': 'max'})})
     })
   })
 })

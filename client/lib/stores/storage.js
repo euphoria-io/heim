@@ -6,6 +6,7 @@ var storeActions = Reflux.createActions([
   'load',
   'set',
   'setRoom',
+  'storageChange',
 ])
 _.extend(module.exports, storeActions)
 
@@ -30,12 +31,14 @@ module.exports.store = Reflux.createStore({
       this.state.room = {}
     }
 
-    uiwindow.addEventListener('storage', this.onStorageUpdate, false)
-
     this.trigger(this.state)
   },
 
-  onStorageUpdate: function(ev) {
+  storageChange: function(ev) {
+    if (!this.state) {
+      return
+    }
+
     if (ev.key != 'data') {
       return
     }

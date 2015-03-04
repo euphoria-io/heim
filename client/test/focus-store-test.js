@@ -9,14 +9,10 @@ describe('focus store', function() {
     support.resetStore(focus.store)
   })
 
-  function windowEvent(name) {
-    var ev = document.createEvent('Event')
-    ev.initEvent(name, false, false)
-    window.dispatchEvent(ev)
-  }
-
-  it('should initialize with window focused', function() {
-    assert.equal(focus.store.getInitialState().windowFocused, true)
+  it('should initialize with window unfocused', function() {
+    var initialState = focus.store.getInitialState()
+    assert.equal(initialState.windowFocused, false)
+    assert.equal(initialState.focusChangedAt, null)
   })
 
   describe('when window focused', function() {
@@ -27,7 +23,7 @@ describe('focus store', function() {
         done()
       })
 
-      windowEvent('focus')
+      focus.store.windowFocused()
     })
   })
 
@@ -39,7 +35,7 @@ describe('focus store', function() {
         done()
       })
 
-      windowEvent('blur')
+      focus.store.windowBlurred()
     })
   })
 })

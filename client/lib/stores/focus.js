@@ -1,15 +1,21 @@
+var _ = require('lodash')
 var Reflux = require('reflux')
 
 
+var storeActions = Reflux.createActions([
+  'windowFocused',
+  'windowBlurred',
+])
+_.extend(module.exports, storeActions)
+
 module.exports.store = Reflux.createStore({
+  listenables: storeActions,
+
   init: function() {
     this.state = {
-      windowFocused: true,
+      windowFocused: false,
       focusChangedAt: null,
     }
-
-    uiwindow.addEventListener('focus', this.windowFocused.bind(this), false)
-    uiwindow.addEventListener('blur', this.windowBlurred.bind(this), false)
   },
 
   getInitialState: function() {
