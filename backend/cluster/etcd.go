@@ -130,7 +130,7 @@ func (e *etcdCluster) update(desc *PeerDesc) (uint64, error) {
 	e.m.Lock()
 	e.peers[desc.ID] = *desc
 	e.m.Unlock()
-	return resp.EtcdIndex + 1, nil
+	return resp.Node.ModifiedIndex + 1, nil
 }
 
 func (e *etcdCluster) Part() {
@@ -159,7 +159,7 @@ func (e *etcdCluster) watch(waitIndex uint64) {
 			break
 		}
 
-		waitIndex = resp.EtcdIndex + 1
+		waitIndex = resp.Node.ModifiedIndex + 1
 
 		peerID := strings.TrimLeft(strings.TrimPrefix(resp.Node.Key, e.root), "/")
 		switch resp.Action {

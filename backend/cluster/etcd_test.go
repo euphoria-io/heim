@@ -55,8 +55,7 @@ func TestEtcdCluster(t *testing.T) {
 		b.Update(&cluster.PeerDesc{ID: "b", Era: "1"})
 		b.Update(&cluster.PeerDesc{ID: "b", Era: "2"})
 		So(<-a.Watch(), ShouldResemble, &cluster.PeerJoinedEvent{cluster.PeerDesc{ID: "b", Era: "0"}})
-		So(<-a.Watch(), ShouldResemble, &cluster.PeerAliveEvent{cluster.PeerDesc{ID: "b", Era: "0"}})
-		//So(<-a.Watch(), ShouldResemble, &cluster.PeerAliveEvent{cluster.PeerDesc{ID: "b", Era: "1"}})
-		//So(<-a.Watch(), ShouldResemble, &cluster.PeerAliveEvent{cluster.PeerDesc{ID: "b", Era: "2"}})
+		So(<-a.Watch(), ShouldResemble, &cluster.PeerAliveEvent{cluster.PeerDesc{ID: "b", Era: "1"}})
+		So(<-a.Watch(), ShouldResemble, &cluster.PeerAliveEvent{cluster.PeerDesc{ID: "b", Era: "2"}})
 	})
 }
