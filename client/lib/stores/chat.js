@@ -90,9 +90,7 @@ module.exports.store = Reflux.createStore({
           // jshint camelcase: false
           var id = ev.body.data.server_id
           var era = ev.body.data.server_era
-          this.state.who = this.state.who.filter(v => {
-            return v.get('server_id') != id || v.get('server_era') != era
-          })
+          this.state.who = this.state.who.filter(v => v.get('server_id') != id || v.get('server_era') != era)
         }
       }
     } else if (ev.status == 'open') {
