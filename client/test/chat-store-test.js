@@ -98,14 +98,20 @@ describe('chat store', function() {
         {
           'id': '32.64.96.128:12344',
           'name': '000tester',
+          'server_id': '1a2a3a4a5a6a',
+          'server_era': '1b2b3b4b5b6b',
         },
         {
           'id': '32.64.96.128:12345',
           'name': 'guest',
+          'server_id': '1a2a3a4a5a6a',
+          'server_era': '1b2b3b4b5b6b',
         },
         {
           'id': '32.64.96.128:12346',
           'name': 'tester2',
+          'server_id': '1x2x3x4x5x6x',
+          'server_era': '1y2y3y4y5y6y',
         },
       ]
     }
@@ -851,6 +857,8 @@ describe('chat store', function() {
       'data': {
         'id': '32.64.96.128:12347',
         'name': '32.64.96.128:12347',
+        'server_id': '1a2a3a4a5a6a',
+        'server_era': '1b2b3b4b5b6b',
       }
     }
 
@@ -1008,5 +1016,27 @@ describe('chat store', function() {
     })
 
     testAuthFail(incorrectAuthReplyEvent)
+  })
+
+  describe('received network partition events', function() {
+    var networkPartitionEvent = {
+      'id': '1',
+      'type': 'network-event',
+      'data': {
+        'type': 'partition',
+        'server_id': '1a2a3a4a5a6a',
+        'server_era': '1b2b3b4b5b6b',
+      },
+    }
+
+    it('should remove all associated users from the user list', function(done) {
+      handleSocket({status: 'receive', body: whoReply}, function() {
+        handleSocket({status: 'receive', body: networkPartitionEvent}, function(state) {
+          assert.equal(state.who.size, 1)
+          assert.equal(state.who.first().get('id'), whoReply.data.listing[2].id)
+          done()
+        })
+      })
+    })
   })
 })
