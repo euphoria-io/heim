@@ -2,10 +2,10 @@ var _ = require('lodash')
 var Reflux = require('reflux')
 
 
-var storeActions = Reflux.createActions([
-  'windowFocused',
-  'windowBlurred',
-])
+var storeActions = Reflux.createActions({
+  'windowFocused': {sync: true},
+  'windowBlurred': {sync: true},
+})
 _.extend(module.exports, storeActions)
 
 module.exports.store = Reflux.createStore({
