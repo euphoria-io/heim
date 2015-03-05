@@ -51,8 +51,19 @@ Heim.attachUI = function(hash) {
   var Main = require('./ui/main')
 
   uidocument.title = roomName
-  if (hash) {
-    uidocument.getElementById('css').href = '/static/main.css' + (hash ? '?v=' + hash : '')
+
+  var cssEl = uidocument.getElementById('css')
+  var cssURL = '/static/main.css' + (hash ? '?v=' + hash : '')
+  if (cssEl.parentNode != uidocument.head || cssEl.getAttribute('href') != cssURL) {
+    var newCSSEl = cssEl.cloneNode()
+    newCSSEl.href = cssURL
+    cssEl.id = 'css-old'
+    uidocument.head.appendChild(newCSSEl)
+
+    // allow both stylesheets to coexist briefly in an attempt to avoid FOUSC
+    setTimeout(function() {
+      cssEl.parentNode.removeChild(cssEl)
+    }, 30)
   }
 
   Heim.addEventListener(uiwindow, 'storage', Heim.storage.storageChange, false)
