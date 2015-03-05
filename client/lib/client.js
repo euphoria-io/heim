@@ -3,10 +3,9 @@ window.uiwindow = window.top
 window.uidocument = window.top.document
 
 var _ = require('lodash')
-var React = require('react/addons')
-var SyntheticKeyboardEvent = require('react/lib/SyntheticKeyboardEvent')
+require('setimmediate')
+
 var EventListeners = require('./eventlisteners')
-var Main = require('./ui/main')
 
 
 var evs = new EventListeners()
@@ -33,9 +32,10 @@ Heim = {
 
 Heim.hook = Heim.plugins.hook
 
-if (React.addons && React.addons.Perf) {
-  ReactPerf = React.addons.Perf
-  if (location.hash == '#perf') {
+if (location.hash == '#perf') {
+  var React = require('react/addons')
+  if (React.addons && React.addons.Perf) {
+    ReactPerf = React.addons.Perf
     ReactPerf.start()
   }
 }
@@ -43,17 +43,17 @@ if (React.addons && React.addons.Perf) {
 var roomName = location.pathname.match(/(\w+)\/$/)[1]
 
 Heim.attachUI = function(hash) {
+  var Reflux = require('reflux')
+  Reflux.nextTick(setImmediate)
+
+  var React = require('react/addons')
+  var SyntheticKeyboardEvent = require('react/lib/SyntheticKeyboardEvent')
+  var Main = require('./ui/main')
+
   uidocument.title = roomName
   if (hash) {
     uidocument.getElementById('css').href = '/static/main.css' + (hash ? '?v=' + hash : '')
   }
-
-  Heim.ui = React.render(
-    <Main />,
-    uidocument.getElementById('container')
-  )
-  window.top.Heim = Heim
-  window.top.require = require
 
   Heim.addEventListener(uiwindow, 'storage', Heim.storage.storageChange, false)
 
@@ -106,6 +106,15 @@ Heim.attachUI = function(hash) {
       ev.target.classList.remove('touching')
     }, false)
   }
+
+  setImmediate(function() {
+    Heim.ui = React.render(
+      <Main />,
+      uidocument.getElementById('container')
+    )
+  })
+  window.top.Heim = Heim
+  window.top.require = require
 }
 
 Heim.detachUI = function() {
@@ -155,12 +164,17 @@ Heim.prepareUpdate = function(hash) {
   context.document.close()
 }
 
-Heim.plugins.load()
-
-if (window.onReady) {
-  window.onReady()
-} else {
+if (!window.onReady) {
   Heim.actions.connect(roomName)
   Heim.actions.joinRoom()
-  Heim.attachUI()
 }
+
+setImmediate(function() {
+  Heim.plugins.load()
+
+  if (window.onReady) {
+    window.onReady()
+  } else {
+    Heim.attachUI()
+  }
+})

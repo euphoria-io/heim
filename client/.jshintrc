@@ -11,6 +11,7 @@
   "undef": true,
   "esnext": true,
   "globals": {
+    "setImmediate": true,
     "ReactPerf": true,
     "Notification": false,
     "Heim": true,

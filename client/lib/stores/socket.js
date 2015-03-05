@@ -8,6 +8,8 @@ var storeActions = Reflux.createActions([
 ])
 _.extend(module.exports, storeActions)
 
+storeActions.connect.sync = true
+
 module.exports.store = Reflux.createStore({
   listenables: storeActions,
 
