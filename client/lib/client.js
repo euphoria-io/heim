@@ -149,6 +149,7 @@ Heim.prepareUpdate = function(hash) {
     context.Heim.actions.connect(roomName)
   }
   context.document.write('<script src="/static/main.js?v=' + hash +  '"></sc'+'ript>')
+  context.document.write('<link rel="stylesheet" type="text/css" id="css" href="/static/main.css?v=' + hash + '">')
   context.document.close()
 }
 
