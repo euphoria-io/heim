@@ -153,23 +153,16 @@ func (e *etcdCluster) Watch() chan PeerEvent { return e.ch }
 func (e *etcdCluster) watch(waitIndex uint64) {
 	defer close(e.ch)
 
+	recv := make(chan *etcd.Response)
+	go e.c.Watch(e.root, waitIndex, true, recv, e.stop)
+
 	for {
-		resp, err := e.c.Watch(e.root, waitIndex, true, nil, e.stop)
-		if err != nil {
-			if err == etcd.ErrWatchStoppedByUser {
-				break
-			}
-			fmt.Printf("cluster error: watch: %s\n", err)
-			peerWatchErrors.Inc()
-			break
-		}
+		resp := <-recv
 		if resp == nil {
 			fmt.Printf("cluster error: watch: nil response\n")
 			peerWatchErrors.Inc()
 			break
 		}
-
-		waitIndex = resp.Node.ModifiedIndex + 1
 
 		peerID := strings.TrimLeft(strings.TrimPrefix(resp.Node.Key, e.root), "/")
 		switch resp.Action {
@@ -181,23 +174,28 @@ func (e *etcdCluster) watch(waitIndex uint64) {
 				continue
 			}
 			e.m.Lock()
-			_, updated := e.peers[desc.ID]
+			prev, updated := e.peers[desc.ID]
 			e.peers[desc.ID] = desc
 			e.m.Unlock()
 			if updated {
+				if prev.Era != desc.Era {
+					fmt.Printf("peer watch: update %s\n", desc.ID)
+				}
 				e.ch <- &PeerAliveEvent{desc}
 			} else {
+				fmt.Printf("peer watch: set %s\n", desc.ID)
 				e.ch <- &PeerJoinedEvent{desc}
 			}
 			peerEvents.Inc()
 		case "expire", "delete":
+			fmt.Printf("peer watch: %s %s\n", resp.Action, peerID)
 			e.m.Lock()
 			delete(e.peers, peerID)
 			e.m.Unlock()
 			e.ch <- &PeerLostEvent{PeerDesc{ID: peerID}}
 			peerEvents.Inc()
 		default:
-			//fmt.Printf("ignoring watch event: %v\n", resp)
+			fmt.Printf("peer watch: ignoring watch event: %v\n", resp)
 		}
 
 		peerLiveCount.Set(float64(len(e.peers)))
