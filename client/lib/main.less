@@ -108,6 +108,7 @@ iframe.js {
 .chat {
   @time-margin: 70px;
   @messages-padding: 10px;
+  @nick-spacing: 6px;
   display: flex;
   flex-direction: column;
   background: gray;
@@ -183,7 +184,7 @@ iframe.js {
         time, .nick {
           display: inline-block;
           flex-shrink: 0;
-          margin-right: 6px;
+          margin-right: @nick-spacing;
           font-size: .85em;
         }
 
@@ -502,6 +503,10 @@ iframe.js {
         }
       }
 
+      .nick-box {
+        padding-right: @nick-spacing;
+      }
+
       .send {
         position: relative;
         width: 22px;
@@ -531,7 +536,7 @@ iframe.js {
 
       .nick-box {
         padding-left: 8px;
-        padding-right: 8px;
+        padding-right: @nick-spacing;
       }
 
       & > * {
