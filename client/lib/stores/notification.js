@@ -31,7 +31,7 @@ module.exports.store = Reflux.createStore({
 
     this.focus = true
     this.notification = null
-    this._lastMsgId = null
+    this._lastMsgId = false
 
     if (this.state.supported) {
       this.state.permission = Notification.permission == 'granted'
@@ -76,24 +76,28 @@ module.exports.store = Reflux.createStore({
   },
 
   chatUpdate: function(state) {
-    var lastMsg = state.messages.last()
-    if (!lastMsg) {
-      return
-    }
-
     if (!state.joined) {
       return
     }
 
-    var lastMsgId = lastMsg.get('id')
-    if (lastMsgId == this._lastMsgId) {
+    var lastMsg = state.messages.last()
+    var lastMsgId
+    if (lastMsg) {
+      lastMsgId = lastMsg.get('id')
+    }
+
+    if (this._lastMsgId === false) {
+      this._lastMsgId = lastMsgId
       return
     }
-    this._lastMsgId = lastMsgId
-    this.notify(state.roomName, lastMsgId, {
-      icon: '/static/icon.png',
-      body: lastMsg.getIn(['sender', 'name']) + ': ' + lastMsg.get('content'),
-    })
+
+    if (lastMsgId && lastMsgId != this._lastMsgId) {
+      this.notify(state.roomName, lastMsgId, {
+        icon: '/static/icon.png',
+        body: lastMsg.getIn(['sender', 'name']) + ': ' + lastMsg.get('content'),
+      })
+      this._lastMsgId = lastMsgId
+    }
   },
 
   closeNotification: function() {

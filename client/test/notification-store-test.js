@@ -105,6 +105,11 @@ describe('notification store', function() {
       'content': 'woof!',
     }
 
+    var mockChatStateEmpty = {
+      joined: true,
+      messages: Immutable.fromJS([])
+    }
+
     var mockChatState = {
       joined: true,
       roomName: 'ezzie',
@@ -112,8 +117,6 @@ describe('notification store', function() {
         message1,
       ])
     }
-
-    var mockChatStateNotJoined = _.extend({}, mockChatState, {joined: false})
 
     var mockChatStateDupe = {
       joined: true,
@@ -128,11 +131,6 @@ describe('notification store', function() {
         message1,
         message2,
       ])
-    }
-
-    var mockChatStateEmpty = {
-      joined: true,
-      messages: Immutable.fromJS([])
     }
 
     var fakeNotification
@@ -176,8 +174,24 @@ describe('notification store', function() {
         notification.store.storageChange({notify: true})
       })
 
+      describe('first message state loaded', function() {
+        it('should not display a notification', function() {
+          notification.store.chatUpdate(mockChatState)
+          sinon.assert.notCalled(Notification)
+        })
+      })
+
+      describe('receiving a message before joined', function() {
+        it('should not display a notification', function() {
+          notification.store.chatUpdate(_.extend({}, mockChatStateEmpty, {joined: false}))
+          notification.store.chatUpdate(_.extend({}, mockChatState, {joined: false}))
+          sinon.assert.notCalled(Notification)
+        })
+      })
+
       describe('receiving a message', function() {
         it('should display a notification', function() {
+          notification.store.chatUpdate(mockChatStateEmpty)
           notification.store.chatUpdate(mockChatState)
           sinon.assert.calledOnce(Notification)
           sinon.assert.calledWithExactly(Notification, 'ezzie', {
@@ -187,21 +201,16 @@ describe('notification store', function() {
         })
 
         it('should change to active favicon', function() {
+          notification.store.chatUpdate(mockChatStateEmpty)
           notification.store.chatUpdate(mockChatState)
           sinon.assert.calledOnce(Heim.setFavicon)
           sinon.assert.calledWithExactly(Heim.setFavicon, '/static/favicon-active.png')
         })
       })
 
-      describe('receiving a message before joined', function() {
-        it('should not display a notification', function() {
-          notification.store.chatUpdate(mockChatStateNotJoined)
-          sinon.assert.notCalled(Notification)
-        })
-      })
-
       describe('receiving the same message again', function() {
         it('should not display a notification', function() {
+          notification.store.chatUpdate(mockChatStateEmpty)
           notification.store.chatUpdate(mockChatState)
           fakeNotification.close()
           notification.store.chatUpdate(mockChatStateDupe)
@@ -211,6 +220,7 @@ describe('notification store', function() {
 
       describe('closing and receiving a new message', function() {
         it('should display a second notification', function() {
+          notification.store.chatUpdate(mockChatStateEmpty)
           notification.store.chatUpdate(mockChatState)
           fakeNotification.close()
           notification.store.chatUpdate(mockChatState2)
@@ -237,6 +247,7 @@ describe('notification store', function() {
       it('should not open notifications when focused', function() {
         notification.store.focusChange({windowFocused: true})
         notification.store.storageChange({notify: true})
+        notification.store.chatUpdate(mockChatStateEmpty)
         notification.store.chatUpdate(mockChatState)
         sinon.assert.notCalled(Notification)
       })
@@ -244,6 +255,7 @@ describe('notification store', function() {
       it('should close notification when window focused', function() {
         notification.store.focusChange({windowFocused: false})
         notification.store.storageChange({notify: true})
+        notification.store.chatUpdate(mockChatStateEmpty)
         notification.store.chatUpdate(mockChatState)
         sinon.assert.calledOnce(Notification)
         notification.store.focusChange({windowFocused: true})
@@ -253,6 +265,7 @@ describe('notification store', function() {
       it('should reset favicon when window focused', function() {
         notification.store.focusChange({windowFocused: false})
         notification.store.storageChange({notify: true})
+        notification.store.chatUpdate(mockChatStateEmpty)
         notification.store.chatUpdate(mockChatState)
         sinon.assert.calledOnce(Heim.setFavicon)
         Heim.setFavicon.reset()
@@ -267,6 +280,7 @@ describe('notification store', function() {
       beforeEach(function() {
         notification.store.focusChange({windowFocused: false})
         notification.store.storageChange({notify: true})
+        notification.store.chatUpdate(mockChatStateEmpty)
         notification.store.chatUpdate(mockChatState)
         sinon.stub(actions, 'focusMessage')
         window.uiwindow = {focus: sinon.stub()}

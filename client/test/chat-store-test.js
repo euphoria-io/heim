@@ -973,19 +973,11 @@ describe('chat store', function() {
     })
 
     describe('if successful', function() {
-      it('should save auth data in storage, send nick, and set joined state', function(done) {
-        chat.store.joinRoom()
-        chat.store.state.nick = 'tester'
+      it('should save auth data in storage', function(done) {
         handleSocket({status: 'receive', body: successfulAuthReplyEvent}, function(state) {
           sinon.assert.calledOnce(storage.setRoom)
           sinon.assert.calledWithExactly(storage.setRoom, 'ezzie', 'auth', {type: 'passcode', data: 'hunter2'})
           assert.equal(state.authState, null)
-          sinon.assert.calledWithExactly(socket.send, {
-            type: 'nick',
-            data: {name: 'tester'},
-          })
-          assert.equal(state.canJoin, true)
-          assert.equal(state.joined, true)
           done()
         })
       })

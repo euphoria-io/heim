@@ -18,9 +18,9 @@ module.exports.store = Reflux.createStore({
   init: function() {
     this.state = {
       serverVersion: null,
-      connected: null,
+      connected: null,  // => socket connected
       canJoin: null,
-      joined: false,
+      joined: false,  // => received snapshot; sent nick; ui ready
       roomName: null,
       tentativeNick: null,
       nick: null,
@@ -162,7 +162,6 @@ module.exports.store = Reflux.createStore({
         type: this.state.authType,
         data: this.state.authData,
       })
-      this._joinReady()
     } else {
       if (this.state.authState == 'trying-stored') {
         this.state.authState = 'needs-passcode'
