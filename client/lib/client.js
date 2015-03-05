@@ -42,7 +42,9 @@ var roomName = location.pathname.match(/(\w+)\/$/)[1]
 
 Heim.attachUI = function(hash) {
   uidocument.title = roomName
-  uidocument.getElementById('css').href = '/static/main.css' + (hash ? '?v=' + hash : '')
+  if (hash) {
+    uidocument.getElementById('css').href = '/static/main.css' + (hash ? '?v=' + hash : '')
+  }
 
   Heim.ui = React.render(
     <Main />,
