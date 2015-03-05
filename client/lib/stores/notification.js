@@ -81,6 +81,10 @@ module.exports.store = Reflux.createStore({
       return
     }
 
+    if (!state.joined) {
+      return
+    }
+
     var lastMsgId = lastMsg.get('id')
     if (lastMsgId == this._lastMsgId) {
       return

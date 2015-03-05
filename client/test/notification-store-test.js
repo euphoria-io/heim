@@ -1,3 +1,4 @@
+var _ = require('lodash')
 var support = require('./support/setup')
 var assert = require('assert')
 var sinon = require('sinon')
@@ -105,19 +106,24 @@ describe('notification store', function() {
     }
 
     var mockChatState = {
+      joined: true,
       roomName: 'ezzie',
       messages: new Tree('time').reset([
         message1,
       ])
     }
 
+    var mockChatStateNotJoined = _.extend({}, mockChatState, {joined: false})
+
     var mockChatStateDupe = {
+      joined: true,
       messages: new Tree('time').reset([
         message1,
       ])
     }
 
     var mockChatState2 = {
+      joined: true,
       messages: new Tree('time').reset([
         message1,
         message2,
@@ -125,6 +131,7 @@ describe('notification store', function() {
     }
 
     var mockChatStateEmpty = {
+      joined: true,
       messages: Immutable.fromJS([])
     }
 
@@ -183,6 +190,13 @@ describe('notification store', function() {
           notification.store.chatUpdate(mockChatState)
           sinon.assert.calledOnce(Heim.setFavicon)
           sinon.assert.calledWithExactly(Heim.setFavicon, '/static/favicon-active.png')
+        })
+      })
+
+      describe('receiving a message before joined', function() {
+        it('should not display a notification', function() {
+          notification.store.chatUpdate(mockChatStateNotJoined)
+          sinon.assert.notCalled(Notification)
         })
       })
 
