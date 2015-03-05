@@ -12,7 +12,6 @@ var Main = require('./ui/main')
 var evs = new EventListeners()
 
 Heim = {
-  _evs: evs,
   addEventListener: evs.addEventListener.bind(evs),
   removeEventListener: evs.removeEventListener.bind(evs),
 
