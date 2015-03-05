@@ -3,7 +3,6 @@ var ReactCSSTransitionGroup = React.addons.CSSTransitionGroup
 var Reflux = require('reflux')
 
 var actions = require('../actions')
-var plugins = require('../stores/plugins')
 var update = require('../stores/update')
 var UserList = require('./userlist')
 var NotifyToggle = require('./notifytoggle')
@@ -15,6 +14,7 @@ module.exports = React.createClass({
   displayName: 'ChatSidebar',
 
   mixins: [
+    require('./hooksmixin'),
     require('react-immutable-render-mixin'),
     Reflux.listenTo(actions.showSettings, 'showSettings'),
   ],
@@ -58,7 +58,7 @@ module.exports = React.createClass({
         </div>
         <UserList users={this.props.who} collapsed={this.state.userListCollapsed} onMouseEnter={this.expandUserList} onMouseLeave={this.collapseUserList} />
         {this.props.updateReady && <FastButton className="update-button" onClick={update.perform}><p>update ready<em>{Heim.isTouch ? 'tap' : 'click'} to reload</em></p></FastButton>}
-        {plugins.triggerHook('sidebar', this.props, this.state)}
+        {this.templateHook('sidebar')}
       </div>
     )
   },

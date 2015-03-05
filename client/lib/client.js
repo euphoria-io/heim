@@ -32,6 +32,8 @@ Heim = {
   isAndroid: /android/i.test(navigator.userAgent),
 }
 
+Heim.hook = Heim.plugins.hook
+
 if (React.addons && React.addons.Perf) {
   ReactPerf = React.addons.Perf
   if (location.hash == '#perf') {

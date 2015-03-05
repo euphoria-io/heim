@@ -1,30 +1,40 @@
 var React = require('react')
 
 
-Heim.plugins.hooks.pageBottom.listen(function(results, props, state) {
-  if (state.chat.roomName == 'thedrawingroom') {
-    results.push(<style key="drawingroom-style" dangerouslySetInnerHTML={{__html:`
+Heim.hook('page-bottom', function() {
+  if (this.state.chat.roomName != 'thedrawingroom') {
+    return
+  }
+
+  return (
+    <style key="drawingroom-style" dangerouslySetInnerHTML={{__html:`
       .nick {
         background: #e8e8e8 !important;
       }
-    `}} />)
-  }
+    `}} />
+  )
 })
 
-Heim.plugins.hooks.sidebar.listen(function(results, props, state) {
-  if (props.roomName == 'space') {
-    results.push(
-      <div key="norman" className="norman">
-        <p>norman</p>
-        <img src="//i.imgur.com/45wJkX7.jpg" />
-      </div>
-    )
+Heim.hook('sidebar', function() {
+  if (this.props.roomName != 'space') {
+    return
   }
+
+  return (
+    <div key="norman" className="norman">
+      <p>norman</p>
+      <img src="//i.imgur.com/45wJkX7.jpg" />
+    </div>
+  )
 })
 
-Heim.plugins.hooks.pageBottom.listen(function(results, props, state) {
-  if (state.chat.roomName == 'space') {
-    results.push(<style key="drawingroom-style" dangerouslySetInnerHTML={{__html:`
+Heim.hook('page-bottom', function() {
+  if (this.state.chat.roomName != 'space') {
+    return
+  }
+
+  return (
+    <style key="norman-style" dangerouslySetInnerHTML={{__html:`
       .norman {
         margin-top: 15px;
         text-align: right;
@@ -54,6 +64,6 @@ Heim.plugins.hooks.pageBottom.listen(function(results, props, state) {
         min-width: 50px;
         max-width: 100px;
       }
-    `}} />)
-  }
+    `}} />
+  )
 })

@@ -1,16 +1,20 @@
 var _ = require('lodash')
 var Reflux = require('reflux')
 
+var Hooks = require('../hooks')
+
 
 var storeActions = Reflux.createActions([
   'load',
 ])
 _.extend(module.exports, storeActions)
 
-var hooks = module.exports.hooks = Reflux.createActions({
-  'pageBottom': {sync: true},
-  'sidebar': {sync: true},
-})
+var hooks = module.exports.hooks = new Hooks(
+  'page-bottom',
+  'sidebar'
+)
+
+module.exports.hook = hooks.register.bind(hooks)
 
 module.exports.store = Reflux.createStore({
   listenables: storeActions,
@@ -18,13 +22,4 @@ module.exports.store = Reflux.createStore({
   load: function() {
     require('../fauxplugins')
   },
-
-
-  triggerHook: function(hookName, props, state) {
-    var results = []
-    hooks[hookName](results, props, state)
-    return results
-  },
 })
-
-module.exports.triggerHook = module.exports.store.triggerHook

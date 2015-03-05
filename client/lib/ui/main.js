@@ -3,7 +3,6 @@ var cx = React.addons.classSet
 var Reflux = require('reflux')
 
 var actions = require('../actions')
-var plugins = require('../stores/plugins')
 var Scroller = require('./scroller')
 var Messages = require('./messages')
 var ChatSidebar = require('./chatsidebar')
@@ -14,6 +13,7 @@ module.exports = React.createClass({
   displayName: 'Main',
 
   mixins: [
+    require('./hooksmixin'),
     Reflux.connect(require('../stores/chat').store, 'chat'),
     Reflux.connect(require('../stores/focus').store, 'focus'),
     Reflux.connect(require('../stores/update').store, 'update'),
@@ -99,7 +99,7 @@ module.exports = React.createClass({
             <Messages ref="messages" />
           </div>
         </Scroller>
-        {plugins.triggerHook('pageBottom', this.props, this.state)}
+        {this.templateHook('page-bottom')}
       </div>
     )
   },
