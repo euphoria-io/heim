@@ -3,6 +3,7 @@ var cx = React.addons.classSet
 var Reflux = require('reflux')
 
 var actions = require('../actions')
+var plugins = require('../stores/plugins')
 var Scroller = require('./scroller')
 var Messages = require('./messages')
 var ChatSidebar = require('./chatsidebar')
@@ -98,6 +99,7 @@ module.exports = React.createClass({
             <Messages ref="messages" />
           </div>
         </Scroller>
+        {plugins.triggerHook('pageBottom', this.props, this.state)}
       </div>
     )
   },

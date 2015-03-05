@@ -23,6 +23,7 @@ Heim = {
   storage: require('./stores/storage'),
   focus: require('./stores/focus'),
   update: require('./stores/update'),
+  plugins: require('./stores/plugins'),
 
   setFavicon: _.partial(require('./setfavicon'), uidocument),
 
@@ -152,6 +153,8 @@ Heim.prepareUpdate = function(hash) {
   context.document.write('<link rel="stylesheet" type="text/css" id="css" href="/static/main.css?v=' + hash + '">')
   context.document.close()
 }
+
+Heim.plugins.load()
 
 if (window.onReady) {
   window.onReady()
