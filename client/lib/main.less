@@ -416,6 +416,7 @@ iframe.js {
       }
 
       .user-count {
+        position: relative;
         .nick;
         line-height: normal;
         margin-left: 10px;
@@ -425,11 +426,14 @@ iframe.js {
       }
 
       .update {
+        position: relative;
         background: @welcome-color;
         border-radius: 3px;
         padding: 3px 6px;
+        z-index: 3;
         .button-icon('../res/update.svg', 14px, 0);
         .touchable-bg(@welcome-color);
+        .larger-touch-target(5px, 10px);
       }
     }
 
