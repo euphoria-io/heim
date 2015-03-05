@@ -8,6 +8,19 @@ Heim.hook('page-bottom', function() {
 
   return (
     <style key="drawingroom-style" dangerouslySetInnerHTML={{__html:`
+      .chat {
+        background: #333;
+      }
+
+      .chat .messages-container .room .name {
+        color: #222;
+      }
+
+      .chat time {
+        opacity: .5;
+      }
+
+      .chat .messages-container .room .privacy-level,
       .nick {
         background: #e8e8e8 !important;
       }
