@@ -188,6 +188,21 @@ iframe.js {
           font-size: .85em;
         }
 
+        .embeds {
+          display: block;
+          margin-top: 4px;
+
+          img {
+            display: inline-block;
+            max-height: 120px;
+            border-radius: 3px;
+          }
+
+          * + * {
+            margin-left: 8px;
+          }
+        }
+
         &.line-emote {
           .nick {
             border-top-right-radius: 0;
@@ -718,6 +733,10 @@ iframe.js {
 
         time {
           display: none;
+        }
+
+        .embeds {
+          margin-left: .5em;
         }
       }
     }

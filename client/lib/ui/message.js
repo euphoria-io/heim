@@ -1,3 +1,4 @@
+var _ = require('lodash')
 var React = require('react')
 var cx = React.addons.classSet
 var moment = require('moment')
@@ -52,6 +53,17 @@ var Message = module.exports = React.createClass({
       messageRender = <MessageText content={content} className="message" />
     }
 
+    var messageEmbeds
+    var embedURLs = /i.imgur.com\/[\w\.]+/g
+    var embeds = content.match(embedURLs)
+    if (embeds) {
+      var embedTags = _.map(embeds, (url, idx) => {
+        url = '//' + url
+        return <a key={idx} href={url} target="_blank"><img src={url} /></a>
+      })
+      messageEmbeds = <div className="embeds">{embedTags}</div>
+    }
+
     return (
       <div data-message-id={message.get('id')} className="message-node">
         <div className={cx(lineClasses)} onClick={this.focusMessage}>
@@ -59,7 +71,10 @@ var Message = module.exports = React.createClass({
             {time.format('h:mma')}
           </time>
           <span className="nick" style={{background: 'hsl(' + message.getIn(['sender', 'hue']) + ', 65%, 85%)'}}>{message.getIn(['sender', 'name'])}</span>
-          {messageRender}
+          <span className="content">
+            {messageRender}
+            {messageEmbeds}
+          </span>
         </div>
         {(children.size > 0 || entry) &&
           <div className="replies">
