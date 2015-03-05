@@ -11,6 +11,10 @@ Heim.hook('page-bottom', function() {
       .nick {
         background: #e8e8e8 !important;
       }
+
+      a {
+        color: black;
+      }
     `}} />
   )
 })
