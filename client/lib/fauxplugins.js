@@ -13,7 +13,9 @@ Heim.hook('page-bottom', function() {
       }
 
       a {
-        color: black;
+        color: #444;
+        text-decoration: none;
+        font-weight: bold;
       }
     `}} />
   )
