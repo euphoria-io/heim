@@ -35,8 +35,8 @@ Heim.hook = Heim.plugins.hook
 if (location.hash == '#perf') {
   var React = require('react/addons')
   if (React.addons && React.addons.Perf) {
-    ReactPerf = React.addons.Perf
-    ReactPerf.start()
+    uiwindow.ReactPerf = React.addons.Perf
+    uiwindow.ReactPerf.start()
   }
 }
 
