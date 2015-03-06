@@ -92,6 +92,14 @@ module.exports.store = Reflux.createStore({
           var era = ev.body.data.server_era
           this.state.who = this.state.who.filter(v => v.get('server_id') != id || v.get('server_era') != era)
         }
+      } else if (ev.body.type == 'ping-event') {
+        // TODO: set timeout on ev.body.data.next to monitor connectivity
+        socket.send({
+          type: 'ping-reply',
+          data: {
+            time: ev.body.data.time
+          }
+        })
       }
     } else if (ev.status == 'open') {
       this.state.connected = true

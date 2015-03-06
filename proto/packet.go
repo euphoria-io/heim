@@ -34,6 +34,10 @@ var (
 	NickEventType = NickType.Event()
 	NickReplyType = NickType.Reply()
 
+	PingType      = PacketType("ping")
+	PingEventType = PingType.Event()
+	PingReplyType = PingType.Reply()
+
 	WhoType      = PacketType("who")
 	WhoEventType = WhoType.Event()
 	WhoReplyType = WhoType.Reply()
@@ -82,6 +86,17 @@ type NickReply struct {
 }
 
 type NickEvent NickReply
+
+type PingCommand struct {
+	UnixTime     int64 `json:"time"`
+	NextUnixTime int64 `json:"next"`
+}
+
+type PingEvent PingCommand
+
+type PingReply struct {
+	UnixTime int64 `json:"time"`
+}
 
 type AuthCommand struct {
 	Type     AuthOption `json:"type"`
@@ -156,6 +171,12 @@ func (cmd *Packet) Payload() (interface{}, error) {
 		payload = &NickReply{}
 	case NickEventType:
 		payload = &NickEvent{}
+	case PingType:
+		payload = &PingCommand{}
+	case PingEventType:
+		payload = &PingEvent{}
+	case PingReplyType:
+		payload = &PingReply{}
 	case AuthType:
 		payload = &AuthCommand{}
 	case AuthEventType:
@@ -217,6 +238,8 @@ func MakeEvent(payload interface{}) (*Packet, error) {
 	switch payload.(type) {
 	case *BounceEvent:
 		packet.Type = BounceEventType
+	case *PingEvent:
+		packet.Type = PingEventType
 	case *NetworkEvent:
 		packet.Type = NetworkEventType
 	case *SnapshotEvent:

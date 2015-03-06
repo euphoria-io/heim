@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"sync/atomic"
 	"time"
 
 	"heim/proto"
@@ -17,8 +16,10 @@ import (
 const MaxKeepAliveMisses = 3
 
 var (
-	KeepAlive       = 20 * time.Second
+	KeepAlive = 20 * time.Second
+
 	ErrUnresponsive = fmt.Errorf("connection unresponsive")
+	ErrReplaced     = fmt.Errorf("connection replaced")
 )
 
 type cmdState func(*proto.Packet) (interface{}, error)
@@ -40,7 +41,9 @@ type session struct {
 	incoming chan *proto.Packet
 	outgoing chan *proto.Packet
 
-	outstandingPings uint32
+	outstandingPings  int
+	maybeAbandoned    bool
+	expectedPingReply int64
 }
 
 func newSession(
@@ -62,8 +65,6 @@ func newSession(
 		incoming: make(chan *proto.Packet),
 		outgoing: make(chan *proto.Packet, 100),
 	}
-
-	conn.SetPongHandler(session.handlePong)
 
 	return session
 }
@@ -106,11 +107,6 @@ func (s *session) Send(
 	return nil
 }
 
-func (s *session) handlePong(string) error {
-	atomic.StoreUint32(&s.outstandingPings, 0)
-	return nil
-}
-
 func (s *session) serve() error {
 	defer func() {
 		if s.onClose != nil {
@@ -140,7 +136,7 @@ func (s *session) serve() error {
 
 	go s.readMessages()
 
-	keepalive := time.NewTimer(KeepAlive)
+	keepalive := time.NewTicker(KeepAlive)
 	defer keepalive.Stop()
 
 	for {
@@ -150,25 +146,52 @@ func (s *session) serve() error {
 			return s.ctx.Err()
 
 		case <-keepalive.C:
-			// keepalive expired
-			if pings := atomic.AddUint32(&s.outstandingPings, 1); pings > MaxKeepAliveMisses {
+			logger.Printf("keepalive triggered")
+
+			// keepalive timeout triggered
+			if s.maybeAbandoned {
+				logger.Printf("connection replaced")
+				return ErrReplaced
+			}
+
+			if s.outstandingPings > MaxKeepAliveMisses {
 				logger.Printf("connection timed out")
 				return ErrUnresponsive
 			}
 
-			if err := s.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+			now := time.Now()
+			cmd, err := proto.MakeEvent(&proto.PingEvent{
+				UnixTime:     now.Unix(),
+				NextUnixTime: now.Add(3 * KeepAlive / 2).Unix(),
+			})
+			if err != nil {
+				logger.Printf("error: ping event: %s", err)
+				return err
+			}
+			data, err := cmd.Encode()
+			if err != nil {
+				logger.Printf("error: ping event encode: %s", err)
 				return err
 			}
 
-		case cmd := <-s.incoming:
-			keepalive.Stop()
+			if err := s.conn.WriteMessage(websocket.TextMessage, data); err != nil {
+				logger.Printf("error: write ping event: %s", err)
+				return err
+			}
 
+			s.expectedPingReply = now.Unix()
+			s.outstandingPings++
+		case cmd := <-s.incoming:
 			reply, err := s.state(cmd)
 			if err != nil {
 				logger.Printf("error: %v: %s", s.state, err)
 				reply = err
 			}
+			if reply == nil {
+				continue
+			}
 
+			// Write the response back over the socket.
 			resp, err := proto.MakeResponse(cmd.ID, cmd.Type, reply)
 			if err != nil {
 				logger.Printf("error: Response: %s", err)
@@ -185,9 +208,6 @@ func (s *session) serve() error {
 				logger.Printf("error: write message: %s", err)
 				return err
 			}
-
-			keepalive.Reset(KeepAlive)
-
 		case cmd := <-s.outgoing:
 			data, err := cmd.Encode()
 			if err != nil {
@@ -289,6 +309,13 @@ func (s *session) handleCommand(cmd *proto.Packet) (interface{}, error) {
 			return nil, err
 		}
 		return proto.NickReply(*event), nil
+	case *proto.PingReply:
+		if msg.UnixTime == s.expectedPingReply {
+			s.outstandingPings = 0
+		} else if s.outstandingPings > 1 {
+			s.outstandingPings--
+		}
+		return nil, nil
 	case *proto.WhoCommand:
 		listing, err := s.room.Listing(s.ctx)
 		if err != nil {
