@@ -60,11 +60,15 @@ module.exports = React.createClass({
     }
   },
 
-  componentDidUpdate: function() {
+  onUpdate: function() {
     this.scroll()
     this.updateAnchorPos()
     this.checkScrollbar()
     this._checkScroll()
+  },
+
+  componentDidUpdate: function() {
+    this.onUpdate()
     this._waitingForUpdate = false
   },
 
@@ -216,7 +220,7 @@ module.exports = React.createClass({
 
   render: function() {
     return (
-      <div ref="scroller" onScroll={this._onScroll} className={this.props.className}>
+      <div ref="scroller" onScroll={this._onScroll} onLoad={this.onUpdate} className={this.props.className}>
         {this.props.children}
       </div>
     )
