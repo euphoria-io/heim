@@ -44,24 +44,26 @@ var Message = module.exports = React.createClass({
     }
 
     var content = message.get('content')
+
+    var messageEmbeds
+    var embeds = []
+    content = content.replace(/(?:https?:\/\/)?(?:i.)?imgur.com\/([\w]+)(\.?\w+)/g, (match, id, ext, offset) => {
+      embeds.push(<a key={offset} href={'//imgur.com/' + id} target="_blank"><img src={'//i.imgur.com/' + id + (ext == '.gif' ? '' : 't') + ext} /></a>)
+      return ''
+    })
+    if (embeds.length) {
+      messageEmbeds = <div className="embeds">{embeds}</div>
+    }
+
     var messageRender
-    if (/^\/me/.test(content)) {
+    if (!_.trim(content)) {
+      messageRender = null
+    } else if (/^\/me/.test(content)) {
       content = content.replace(/^\/me ?/, '')
       messageRender = <MessageText content={content} className="message message-emote" style={{background: 'hsl(' + message.getIn(['sender', 'hue']) + ', 65%, 95%)'}} />
       lineClasses['line-emote'] = true
     } else {
       messageRender = <MessageText content={content} className="message" />
-    }
-
-    var messageEmbeds
-    var embedURLs = /i.imgur.com\/[\w\.]+/g
-    var embeds = content.match(embedURLs)
-    if (embeds) {
-      var embedTags = _.map(embeds, (url, idx) => {
-        url = '//' + url
-        return <a key={idx} href={url} target="_blank"><img src={url} /></a>
-      })
-      messageEmbeds = <div className="embeds">{embedTags}</div>
     }
 
     return (

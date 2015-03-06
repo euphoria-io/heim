@@ -190,17 +190,20 @@ iframe.js {
 
         .embeds {
           display: block;
-          margin-top: 4px;
+          margin: 0 -4px;
+          text-indent: 0;
 
           img {
             display: inline-block;
-            height: 150px;
+            height: 160px;
+            margin: 0 4px;
             border-radius: 3px;
+            box-shadow: 0 0 1px fade(black, 35%);
           }
+        }
 
-          * + * {
-            margin-left: 8px;
-          }
+        .message + .embeds {
+          margin-top: 4px;
         }
 
         &.line-emote {
@@ -736,7 +739,8 @@ iframe.js {
         }
 
         .embeds {
-          margin-left: .5em;
+          display: inline-block;
+          vertical-align: top;
         }
       }
     }
