@@ -338,6 +338,9 @@ iframe.js {
     .messages .entry {
       margin: -10px;
       margin-top: 10px;
+
+      // without this, Mobile Safari mysteriously adds empty space underneath
+      overflow: hidden;
     }
 
     .replies .entry {
