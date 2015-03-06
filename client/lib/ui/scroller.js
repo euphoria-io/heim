@@ -2,8 +2,14 @@ var _ = require('lodash')
 var React = require('react')
 
 
-// http://stackoverflow.com/a/16459606
-var isWebkit = 'WebkitAppearance' in document.documentElement.style
+// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/sign
+Math.sign = Math.sign || function(x) {
+  x = +x  // convert to a number
+  if (x === 0 || isNaN(x)) {
+    return x
+  }
+  return x > 0 ? 1 : -1
+}
 
 function clamp(min, v, max) {
   return Math.min(Math.max(min, v), max)
