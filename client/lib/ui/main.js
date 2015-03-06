@@ -80,6 +80,7 @@ module.exports = React.createClass({
     return (
       <div className="chat" onMouseDownCapture={this.onMouseDown} onClickCapture={this.onClick}>
         {this.state.chat.authState && this.state.chat.authState != 'trying-stored' && <div className="hatch-shade fill" />}
+        <InfoBar scrollbarWidth={this.state.scrollbarWidth} who={this.state.chat.who} roomName={this.state.chat.roomName} authType={this.state.chat.authType} updateReady={this.state.update.get('ready')} />
         <Scroller
           ref="scroller"
           target=".entry"
@@ -95,7 +96,6 @@ module.exports = React.createClass({
           onNearTop={actions.loadMoreLogs}
         >
           <div className="messages-content">
-            <InfoBar scrollbarWidth={this.state.scrollbarWidth} who={this.state.chat.who} roomName={this.state.chat.roomName} authType={this.state.chat.authType} updateReady={this.state.update.get('ready')} />
             <Messages ref="messages" />
           </div>
         </Scroller>

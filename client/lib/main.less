@@ -113,11 +113,19 @@ iframe.js {
   flex-direction: column;
   background: gray;
 
+  .nick {
+    background: @neutral-color;
+    padding: 2px 4px;
+    font-size: .85em;
+    border-radius: 2px;
+  }
+
   .messages-container {
     position: relative;
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
     padding-left: @time-margin;
     height: 100%;
 
@@ -141,11 +149,8 @@ iframe.js {
       line-height: 1.2em;
     }
 
-    .nick, .line-emote .message {
-      background: @neutral-color;
-      padding: 2px 4px;
-      font-size: .85em;
-      border-radius: 2px;
+    .line-emote .message {
+      .nick;
     }
 
     .messages {
@@ -244,228 +249,6 @@ iframe.js {
         padding-top: 3px;
         box-sizing: border-box;
         text-align: right;
-      }
-    }
-
-    .sidebar {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      position: fixed;
-      right: 8px;
-      top: 8px;
-      z-index: 3;
-
-      .top-line {
-        display: flex;
-        justify-content: flex-end;
-        text-align: right;
-        margin-top: -8px;
-        padding: 8px 0;
-        margin-bottom: 7px;
-        background: fade(white, 85%);
-        box-shadow: -10px 0 20px 20px fade(white, 85%);
-        border-top-left-radius: 20px;
-        border-bottom-left-radius: 20px;
-        transition: all .25s ease;
-
-        .settings {
-          display: inline-block;
-          width: 18px;
-          height: 18px;
-
-          &:after {
-            content: '';
-            display: block;
-            width: 18px;
-            height: 18px;
-            background: data-uri('../res/cog.svg') no-repeat center center;
-            background-size: cover;
-            opacity: .15;
-            transition: all .15s ease;
-          }
-
-          body:not(.touch) &:hover:after {
-            opacity: .25;
-          }
-
-          &.touching:after, body:not(.touch) &:active:after {
-            opacity: .3;
-            transition-duration: 0s;
-          }
-        }
-
-        .settings-content {
-          transition: all .15s ease;
-
-          &.settings-enter {
-            opacity: 0;
-            transform: translateX(30px);
-
-            &.settings-enter-active {
-              opacity: 1;
-              transform: translateX(0);
-            }
-          }
-
-          &.settings-leave {
-            opacity: 1;
-            transform: translateX(0);
-
-            &.settings-leave-active {
-              opacity: 0;
-              transform: translateX(30px);
-            }
-          }
-
-          label {
-            padding: 5px;
-            margin-right: 5px;
-            font-size: .8em;
-            background: fade(white, 95%);
-            border-radius: 3px;
-          }
-
-          input {
-            vertical-align: middle;
-            margin: 0 4px;
-          }
-        }
-      }
-
-      .update-button {
-        margin-top: 15px;
-      }
-    }
-
-    .update-button {
-      margin-left: auto;
-      background: @welcome-color;
-      border: 1px solid darken(@welcome-color, 30%);
-      border-radius: 3px;
-      padding: 6px 8px;
-      font-size: .8em;
-      .button-icon('../res/update.svg', 24px, 8px);
-      .touchable-bg(@welcome-color);
-
-      p {
-        text-align: left;
-        margin: 0;
-
-        em {
-          display: block;
-          font-size: .8em;
-          margin-top: 1px;
-          opacity: .65;
-          font-style: normal;
-        }
-      }
-    }
-
-    .user-list {
-      text-align: right;
-      overflow-y: auto;
-      max-height: 80vh;
-      // ensure that the user list is wider than the disappearing [+N more]
-      // line so we don't shrink when expanded.
-      min-width: 6em;
-      transition: opacity .25s ease;
-
-      .nick {
-        display: block;
-        float: right;
-        clear: both;
-        margin: 2px 0;
-        box-shadow: 0 0 5px white;
-        white-space: nowrap;
-        max-width: 30vw;
-        overflow: hidden;
-      }
-    }
-
-    .room-container {
-      display: inherit;
-    }
-
-    .room {
-      display: inline-flex;
-      margin-right: 10px;
-
-      .name {
-        color: fade(darkblue, 75%);
-        text-decoration: none;
-        font-weight: bold;
-        border-radius: 4px;
-      }
-
-      .privacy-level {
-        position: relative;
-        padding: 2px 6px;
-        font-size: .8em;
-        margin-left: 7px;
-        border-radius: 2px;
-        .larger-touch-target(10px, 10px);
-
-        &.public {
-          background: @public-color;
-          .touchable-bg(@public-color);
-        }
-
-        &.private {
-          background: @passcode-color;
-          color: darken(@passcode-color, 60%);
-          .touchable-bg(@passcode-color);
-          .button-icon('../res/lock.svg', 10px);
-        }
-      }
-    }
-
-    .topbar-container {
-      position: fixed;
-      left: 0;
-      right: 0;
-      top: 0;
-      height: 20px;
-      z-index: 11;
-    }
-
-    .topbar {
-      display: flex;
-      position: relative;
-      height: 20px;
-      line-height: 20px;
-      padding: 6px 10px;
-      background: white;
-      box-shadow: 0 0 8px fade(black, 25%);
-      white-space: nowrap;
-      z-index: 2;
-      user-select: none;
-
-      .right {
-        display: flex;
-        align-self: flex-end;
-        margin-left: auto;
-      }
-
-      .user-count {
-        position: relative;
-        .nick;
-        line-height: normal;
-        margin-left: 10px;
-        .button-icon('../res/euphorian.svg', 14px);
-        .touchable-bg(@neutral-color);
-        .larger-touch-target(20px, 30px);
-      }
-
-      .update {
-        position: relative;
-        background: @welcome-color;
-        border-radius: 3px;
-        padding: 3px 6px;
-        z-index: 3;
-        .button-icon('../res/update.svg', 14px, 0);
-        .touchable-bg(@welcome-color);
-        .larger-touch-target(5px, 10px);
       }
     }
 
@@ -683,6 +466,228 @@ iframe.js {
           color: darken(desaturate(@passcode-color, 25%), 50%);
         }
       }
+    }
+  }
+
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    position: fixed;
+    right: 8px;
+    top: 8px;
+    z-index: 3;
+
+    .top-line {
+      display: flex;
+      justify-content: flex-end;
+      text-align: right;
+      margin-top: -8px;
+      padding: 8px 0;
+      margin-bottom: 7px;
+      background: fade(white, 85%);
+      box-shadow: -10px 0 20px 20px fade(white, 85%);
+      border-top-left-radius: 20px;
+      border-bottom-left-radius: 20px;
+      transition: all .25s ease;
+
+      .settings {
+        display: inline-block;
+        width: 18px;
+        height: 18px;
+
+        &:after {
+          content: '';
+          display: block;
+          width: 18px;
+          height: 18px;
+          background: data-uri('../res/cog.svg') no-repeat center center;
+          background-size: cover;
+          opacity: .15;
+          transition: all .15s ease;
+        }
+
+        body:not(.touch) &:hover:after {
+          opacity: .25;
+        }
+
+        &.touching:after, body:not(.touch) &:active:after {
+          opacity: .3;
+          transition-duration: 0s;
+        }
+      }
+
+      .settings-content {
+        transition: all .15s ease;
+
+        &.settings-enter {
+          opacity: 0;
+          transform: translateX(30px);
+
+          &.settings-enter-active {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+
+        &.settings-leave {
+          opacity: 1;
+          transform: translateX(0);
+
+          &.settings-leave-active {
+            opacity: 0;
+            transform: translateX(30px);
+          }
+        }
+
+        label {
+          padding: 5px;
+          margin-right: 5px;
+          font-size: .8em;
+          background: fade(white, 95%);
+          border-radius: 3px;
+        }
+
+        input {
+          vertical-align: middle;
+          margin: 0 4px;
+        }
+      }
+    }
+
+    .update-button {
+      margin-top: 15px;
+    }
+  }
+
+  .update-button {
+    margin-left: auto;
+    background: @welcome-color;
+    border: 1px solid darken(@welcome-color, 30%);
+    border-radius: 3px;
+    padding: 6px 8px;
+    font-size: .8em;
+    .button-icon('../res/update.svg', 24px, 8px);
+    .touchable-bg(@welcome-color);
+
+    p {
+      text-align: left;
+      margin: 0;
+
+      em {
+        display: block;
+        font-size: .8em;
+        margin-top: 1px;
+        opacity: .65;
+        font-style: normal;
+      }
+    }
+  }
+
+  .user-list {
+    text-align: right;
+    overflow-y: auto;
+    max-height: 80vh;
+    // ensure that the user list is wider than the disappearing [+N more]
+    // line so we don't shrink when expanded.
+    min-width: 6em;
+    transition: opacity .25s ease;
+
+    .nick {
+      display: block;
+      float: right;
+      clear: both;
+      margin: 2px 0;
+      box-shadow: 0 0 5px white;
+      white-space: nowrap;
+      max-width: 30vw;
+      overflow: hidden;
+    }
+  }
+
+  .room-container {
+    display: inherit;
+  }
+
+  .room {
+    display: inline-flex;
+    margin-right: 10px;
+
+    .name {
+      color: fade(darkblue, 75%);
+      text-decoration: none;
+      font-weight: bold;
+      border-radius: 4px;
+    }
+
+    .privacy-level {
+      position: relative;
+      padding: 2px 6px;
+      font-size: .8em;
+      margin-left: 7px;
+      border-radius: 2px;
+      .larger-touch-target(10px, 10px);
+
+      &.public {
+        background: @public-color;
+        .touchable-bg(@public-color);
+      }
+
+      &.private {
+        background: @passcode-color;
+        color: darken(@passcode-color, 60%);
+        .touchable-bg(@passcode-color);
+        .button-icon('../res/lock.svg', 10px);
+      }
+    }
+  }
+
+  .topbar-container {
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 20px;
+    z-index: 11;
+  }
+
+  .topbar {
+    display: flex;
+    position: relative;
+    height: 20px;
+    line-height: 20px;
+    padding: 6px 10px;
+    background: white;
+    box-shadow: 0 0 8px fade(black, 25%);
+    white-space: nowrap;
+    z-index: 2;
+    user-select: none;
+
+    .right {
+      display: flex;
+      align-self: flex-end;
+      margin-left: auto;
+    }
+
+    .user-count {
+      position: relative;
+      .nick;
+      line-height: normal;
+      margin-left: 10px;
+      .button-icon('../res/euphorian.svg', 14px);
+      .touchable-bg(@neutral-color);
+      .larger-touch-target(20px, 30px);
+    }
+
+    .update {
+      position: relative;
+      background: @welcome-color;
+      border-radius: 3px;
+      padding: 3px 6px;
+      z-index: 3;
+      .button-icon('../res/update.svg', 14px, 0);
+      .touchable-bg(@welcome-color);
+      .larger-touch-target(5px, 10px);
     }
   }
 }
