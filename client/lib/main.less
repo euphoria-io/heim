@@ -328,19 +328,6 @@ iframe.js {
       .nick-box {
         padding-right: @nick-spacing;
       }
-
-      .send {
-        position: relative;
-        width: 22px;
-        height: 38px;
-        padding: 0;
-        padding-right: 10px;
-        box-sizing: content-box;
-        background: data-uri('../res/send.svg') no-repeat left center;
-        background-size: 24px;
-        opacity: .25;
-        .larger-touch-target(5px, 30px);
-      }
     }
 
     .messages .entry {
@@ -369,11 +356,6 @@ iframe.js {
         padding-top: 6px;
         padding-bottom: 6px;
       }
-
-      & > .send {
-        padding: 0;
-        padding-right: 6px;
-      }
     }
 
     .message-list:last-child {
@@ -390,11 +372,6 @@ iframe.js {
 
       input.nick {
         box-shadow: none;
-      }
-
-      .send:enabled {
-        opacity: .5;
-        .touchable-opacity;
       }
     }
 

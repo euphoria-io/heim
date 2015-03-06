@@ -2,7 +2,6 @@ var React = require('react')
 var Reflux = require('reflux')
 
 var actions = require('../actions')
-var FastButton = require('./fastbutton')
 
 
 module.exports = React.createClass({
@@ -40,7 +39,6 @@ module.exports = React.createClass({
         <form className="entry" onSubmit={this.setNick}>
           <label>choose your name to begin:</label>
           <input key="nick" ref="input" type="text" autoFocus valueLink={this.linkState('value')} disabled={this.state.chat.connected === false} />
-          {Heim.isTouch && <FastButton vibrate className="send" disabled={!this.state.value.length} onClick={this.setNick} />}
         </form>
       </div>
     )

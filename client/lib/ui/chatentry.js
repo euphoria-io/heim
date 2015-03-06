@@ -4,7 +4,6 @@ var Reflux = require('reflux')
 
 var actions = require('../actions')
 var chat = require('../stores/chat')
-var FastButton = require('./fastbutton')
 
 module.exports = React.createClass({
   displayName: 'ChatEntry',
@@ -104,8 +103,6 @@ module.exports = React.createClass({
   chatSend: function(ev) {
     var input = this.refs.input.getDOMNode()
 
-    // refocus input after send button presses
-    input.focus()
     ev.preventDefault()
 
     if (!this.state.chat.connected) {
@@ -213,7 +210,6 @@ module.exports = React.createClass({
           </div>
         </div>
         <input key="msg" ref="input" type="text" autoFocus defaultValue={this.state.chat.entryText} onChange={this.saveEntryState} onKeyDown={this.onKeyDown} onClick={this.saveEntryState} onFocus={actions.scrollToEntry} onKeyPress={actions.scrollToEntry} />
-        {Heim.isTouch && <FastButton vibrate className="send" disabled={this.state.empty} onClick={this.chatSend} />}
       </form>
     )
   },

@@ -4,7 +4,6 @@ var Reflux = require('reflux')
 
 var actions = require('../actions')
 var chat = require('../stores/chat')
-var FastButton = require('./fastbutton')
 
 
 module.exports = React.createClass({
@@ -62,7 +61,6 @@ module.exports = React.createClass({
                 : 'passcode:'
           }</label>
           <input key="passcode" ref="input" type="password" autoFocus valueLink={this.linkState('value')} disabled={this.state.connected === false} />
-          {Heim.isTouch && <FastButton vibrate className="send" disabled={!this.state.value.length} onClick={this.tryPasscode} />}
         </form>
       </div>
     )
