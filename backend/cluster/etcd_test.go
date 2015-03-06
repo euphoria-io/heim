@@ -3,6 +3,7 @@ package cluster_test
 import (
 	"heim/backend/cluster"
 	"heim/backend/cluster/clustertest"
+	"heim/proto/security"
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
@@ -58,4 +59,59 @@ func TestEtcdCluster(t *testing.T) {
 		So(<-a.Watch(), ShouldResemble, &cluster.PeerAliveEvent{cluster.PeerDesc{ID: "b", Era: "1"}})
 		So(<-a.Watch(), ShouldResemble, &cluster.PeerAliveEvent{cluster.PeerDesc{ID: "b", Era: "2"}})
 	})
+
+	Convey("Secrets are created if necessary", t, func() {
+		kms := security.LocalKMS()
+		a := s.Join("/secrets1", "a", "0")
+		defer a.Part()
+
+		secret, err := a.GetSecret(kms, "test1", 16)
+		So(err, ShouldBeNil)
+		So(len(secret), ShouldEqual, 16)
+
+		secretCopy, err := a.GetSecret(kms, "test1", 16)
+		So(err, ShouldBeNil)
+		So(string(secretCopy), ShouldEqual, string(secret))
+	})
+
+	Convey("Race to create secret is conceded gracefully", t, func() {
+		kms := &syncKMS{
+			KMS: security.LocalKMS(),
+			c:   make(chan struct{}),
+		}
+
+		a := s.Join("/secrets1", "a", "0")
+		defer a.Part()
+
+		sc := make(chan []byte)
+		errc := make(chan error)
+		go func() {
+			s, err := a.GetSecret(kms, "test2", 16)
+			errc <- err
+			sc <- s
+		}()
+
+		// Synchronize with secret generation.
+		<-kms.c
+
+		// Set the secret before releasing the goroutine.
+		secret, err := a.GetSecret(kms.KMS, "test2", 16)
+		So(err, ShouldBeNil)
+
+		// Release the goroutine and verify it gets the secret that was set.
+		kms.c <- struct{}{}
+		So(<-errc, ShouldBeNil)
+		So(string(<-sc), ShouldEqual, string(secret))
+	})
+}
+
+type syncKMS struct {
+	security.KMS
+	c chan struct{}
+}
+
+func (s *syncKMS) GenerateNonce(bytes int) ([]byte, error) {
+	s.c <- struct{}{}
+	<-s.c
+	return s.KMS.GenerateNonce(bytes)
 }

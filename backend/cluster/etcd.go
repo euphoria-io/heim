@@ -1,9 +1,11 @@
 package cluster
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"heim/proto/security"
 	"sort"
 	"strings"
 	"sync"
@@ -87,7 +89,7 @@ func (e *etcdCluster) key(format string, args ...interface{}) string {
 }
 
 func (e *etcdCluster) init(desc *PeerDesc) error {
-	resp, err := e.c.Get(e.root, false, false)
+	resp, err := e.c.Get(e.key("/heim"), false, false)
 	if err != nil {
 		if etcdErr, ok := err.(*etcd.EtcdError); ok && etcdErr.ErrorCode == 100 {
 			return nil
@@ -131,7 +133,7 @@ func (e *etcdCluster) update(desc *PeerDesc) (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	e.me = e.key("/%s", desc.ID)
+	e.me = e.key("/heim/%s", desc.ID)
 	resp, err := e.c.Set(e.me, string(valueBytes), uint64(TTL/time.Second))
 	if err != nil {
 		return 0, fmt.Errorf("set on %s: %s", e.me, err)
@@ -154,7 +156,7 @@ func (e *etcdCluster) watch(waitIndex uint64) {
 	defer close(e.ch)
 
 	recv := make(chan *etcd.Response)
-	go e.c.Watch(e.root, waitIndex, true, recv, e.stop)
+	go e.c.Watch(e.key("/heim"), waitIndex, true, recv, e.stop)
 
 	for {
 		resp := <-recv
@@ -164,7 +166,7 @@ func (e *etcdCluster) watch(waitIndex uint64) {
 			break
 		}
 
-		peerID := strings.TrimLeft(strings.TrimPrefix(resp.Node.Key, e.root), "/")
+		peerID := strings.TrimLeft(strings.TrimPrefix(resp.Node.Key, e.key("/heim")), "/")
 		switch resp.Action {
 		case "set":
 			var desc PeerDesc
@@ -200,4 +202,44 @@ func (e *etcdCluster) watch(waitIndex uint64) {
 
 		peerLiveCount.Set(float64(len(e.peers)))
 	}
+}
+
+func (e *etcdCluster) GetSecret(kms security.KMS, name string, bytes int) ([]byte, error) {
+	resp, err := e.c.Get(e.key("/secrets/%s", name), false, false)
+	if err != nil {
+		if etcdErr, ok := err.(*etcd.EtcdError); ok && etcdErr.ErrorCode == 100 {
+			return e.setSecret(kms, name, bytes)
+		}
+		return nil, err
+	}
+
+	secret, err := hex.DecodeString(resp.Node.Value)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(secret) != bytes {
+		return nil, fmt.Errorf("secret inconsistent: expected %d bytes, got %d", bytes, len(secret))
+	}
+
+	return secret, nil
+}
+
+func (e *etcdCluster) setSecret(kms security.KMS, name string, bytes int) ([]byte, error) {
+	// Generate our own key.
+	secret, err := kms.GenerateNonce(bytes)
+	if err != nil {
+		return nil, err
+	}
+
+	// Try to stake our claim on this secret.
+	if _, err := e.c.Create(e.key("/secrets/%s", name), hex.EncodeToString(secret), 0); err != nil {
+		if etcdErr, ok := err.(*etcd.EtcdError); ok && etcdErr.ErrorCode == 105 {
+			// Lost the race, try to use GetSecret again.
+			return e.GetSecret(kms, name, bytes)
+		}
+		return nil, err
+	}
+
+	return secret, nil
 }

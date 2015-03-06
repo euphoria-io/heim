@@ -1,12 +1,14 @@
 package cluster
 
 import (
+	"heim/proto/security"
 	"time"
 )
 
 var TTL = 30 * time.Second
 
 type Cluster interface {
+	GetSecret(kms security.KMS, name string, bytes int) ([]byte, error)
 	Update(desc *PeerDesc) error
 	Part()
 	Peers() []PeerDesc
