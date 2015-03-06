@@ -82,6 +82,14 @@ button {
   }
 }
 
+.fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+}
+
 @neutral-color: #e8e8e8;
 @public-color: lighten(blue, 43%);
 @welcome-color: #e5f2e5;
@@ -91,14 +99,6 @@ button {
   background: fade(black, 50%) data-uri('../res/hatching.svg') repeat;
   opacity: .1;
   z-index: 10;
-
-  &.fill {
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 0;
-    bottom: 0;
-  }
 }
 
 iframe.js {
@@ -193,12 +193,25 @@ iframe.js {
           margin: 0 -4px;
           text-indent: 0;
 
-          img {
+          a {
+            position: relative;
             display: inline-block;
-            height: 160px;
             margin: 0 4px;
             border-radius: 3px;
-            box-shadow: 0 0 1px fade(black, 35%);
+            line-height: 0;
+            font-size: 0;
+
+            &:before {
+              content: '';
+              .fill;
+              border-radius: 3px;
+              box-shadow: 0 0 1px fade(black, 65%) inset;
+            }
+          }
+
+          img {
+            height: 160px;
+            border-radius: 3px;
           }
         }
 
