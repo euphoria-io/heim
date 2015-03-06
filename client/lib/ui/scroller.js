@@ -89,12 +89,12 @@ module.exports = React.createClass({
     // it's in view), or the centermost child element.
     var node = this.refs.scroller.getDOMNode()
     var nodeBox = node.getBoundingClientRect()
-    var displayTop = nodeBox.top
+    var viewTop = nodeBox.top
     var viewHeight = nodeBox.height
 
     var target = node.querySelector(this.props.target)
     var targetPos = target.getBoundingClientRect().top
-    this._targetInView = targetPos >= displayTop + target.offsetHeight && targetPos < displayTop + viewHeight
+    this._targetInView = targetPos >= viewTop + target.offsetHeight && targetPos < viewTop + viewHeight
 
     var anchor
     if (this._targetInView) {
@@ -158,7 +158,7 @@ module.exports = React.createClass({
     //
     var node = this.refs.scroller.getDOMNode()
     var nodeBox = node.getBoundingClientRect()
-    var displayTop = nodeBox.top
+    var viewTop = nodeBox.top
     var viewHeight = nodeBox.height
     var scrollHeight = node.scrollHeight
     var target = node.querySelector(this.props.target)
@@ -174,7 +174,7 @@ module.exports = React.createClass({
 
       var targetBox = target.getBoundingClientRect()
       var targetPos = targetBox.top
-      var clampedPos = clamp(displayTop + edgeSpace - targetBox.height, targetPos, displayTop + viewHeight - edgeSpace)
+      var clampedPos = clamp(viewTop + edgeSpace - targetBox.height, targetPos, viewTop + viewHeight - edgeSpace)
 
       var movingTowardsEdge = Math.sign(targetPos - this._anchorPos) != Math.sign(clampedPos - targetPos)
       var pastEdge = clampedPos != targetPos
