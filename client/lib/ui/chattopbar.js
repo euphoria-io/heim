@@ -35,7 +35,7 @@ module.exports = React.createClass({
           </div>
         </div>
         <Bubble ref="userList" className="users" rightOffset={this.props.scrollbarWidth + 1}>
-          {userCount > 0 ? <UserList users={this.props.who} /> : <div className="nick">nobody here</div>}
+          {userCount > 0 ? <UserList users={this.props.who} /> : <div className="nick">nobody here :(</div>}
         </Bubble>
         <Bubble ref="updateBubble" className="update" rightOffset={this.props.scrollbarWidth + 1}>
           <FastButton className="update-button" onClick={update.perform}><p>update ready<em>{Heim.isTouch ? 'tap' : 'click'} to reload</em></p></FastButton>
