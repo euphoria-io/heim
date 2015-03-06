@@ -15,6 +15,11 @@ html, body, #container, .chat {
   height: 100%;
 }
 
+* {
+  // disable iOS / Android tap highlighting
+  -webkit-tap-highlight-color: transparent;
+}
+
 button {
   background: none;
   border: none;
@@ -22,8 +27,6 @@ button {
   margin: 0;
   font-size: inherit;
   cursor: pointer;
-
-  -webkit-tap-highlight-color: transparent;
 
   &::-moz-focus-inner {
     border: 1px dotted transparent;
