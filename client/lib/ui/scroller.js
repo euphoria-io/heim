@@ -88,8 +88,9 @@ module.exports = React.createClass({
     // Record the position of our point of reference. Either the target (if
     // it's in view), or the centermost child element.
     var node = this.refs.scroller.getDOMNode()
-    var displayTop = node.offsetTop
-    var viewHeight = node.offsetHeight
+    var nodeBox = node.getBoundingClientRect()
+    var displayTop = nodeBox.top
+    var viewHeight = nodeBox.height
 
     var target = node.querySelector(this.props.target)
     var targetPos = target.getBoundingClientRect().top
@@ -156,8 +157,9 @@ module.exports = React.createClass({
     // anchor element.
     //
     var node = this.refs.scroller.getDOMNode()
-    var displayTop = node.offsetTop
-    var viewHeight = node.offsetHeight
+    var nodeBox = node.getBoundingClientRect()
+    var displayTop = nodeBox.top
+    var viewHeight = nodeBox.height
     var scrollHeight = node.scrollHeight
     var target = node.querySelector(this.props.target)
     var canScroll = viewHeight < scrollHeight
