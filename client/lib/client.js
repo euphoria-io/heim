@@ -27,6 +27,7 @@ Heim = {
 
   // http://stackoverflow.com/a/6447935
   isTouch: 'ontouchstart' in window,
+  isChrome: /chrome/i.test(navigator.userAgent),
   isAndroid: /android/i.test(navigator.userAgent),
 }
 

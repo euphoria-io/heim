@@ -194,7 +194,7 @@ module.exports = React.createClass({
     var delta = posRef.getBoundingClientRect().top - oldPos
     var scrollDelta = node.scrollTop - this._lastScrollTop
     if (delta && canScroll) {
-      if (isWebkit) {
+      if (Heim.isChrome) {
         // Note: mobile Webkit does this funny thing where getting/setting
         // scrollTop doesn't happen promptly during inertial scrolling. It turns
         // out that setting scrollTop inside a requestAnimationFrame callback
