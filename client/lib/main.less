@@ -754,6 +754,12 @@ iframe.js {
         .embeds {
           display: inline-block;
           vertical-align: top;
+          width: 0;
+        }
+
+        // if there's text, push embeds to the next line
+        .message + .embeds {
+          display: block;
         }
       }
     }
