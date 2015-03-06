@@ -29,6 +29,7 @@ Heim = {
   isTouch: 'ontouchstart' in window,
   isChrome: /chrome/i.test(navigator.userAgent),
   isAndroid: /android/i.test(navigator.userAgent),
+  isiOS: /ipad|iphone|ipod/i.test(navigator.userAgent),
 }
 
 Heim.hook = Heim.plugins.hook

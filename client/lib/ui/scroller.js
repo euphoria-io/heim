@@ -224,9 +224,24 @@ module.exports = React.createClass({
     this.scroll(true)
   },
 
+  onTouchStart: function() {
+    // prevent overscroll from bleeding out in Mobile Safari
+    if (!Heim.isiOS) {
+      return
+    }
+
+    // http://stackoverflow.com/a/14130056
+    var node = this.refs.scroller.getDOMNode()
+    if (node.scrollTop === 0) {
+      node.scrollTop = 1
+    } else if (node.scrollHeight === node.scrollTop + node.offsetHeight) {
+      node.scrollTop -= 1
+    }
+  },
+
   render: function() {
     return (
-      <div ref="scroller" onScroll={this._onScroll} onLoad={this.onUpdate} className={this.props.className}>
+      <div ref="scroller" onScroll={this._onScroll} onLoad={this.onUpdate} onTouchStart={this.onTouchStart} className={this.props.className}>
         {this.props.children}
       </div>
     )

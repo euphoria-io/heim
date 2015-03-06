@@ -75,10 +75,17 @@ module.exports = React.createClass({
     }
   },
 
+  onTouchMove: function(ev) {
+    // prevent inertial scrolling of the top level in Mobile Safari
+    if (Heim.isiOS && !this.refs.scroller.getDOMNode().contains(ev.target)) {
+      ev.preventDefault()
+    }
+  },
+
   render: function() {
     var InfoBar = this.state.thin ? ChatTopBar : ChatSidebar
     return (
-      <div className="chat" onMouseDownCapture={this.onMouseDown} onClickCapture={this.onClick}>
+      <div className="chat" onMouseDownCapture={this.onMouseDown} onClickCapture={this.onClick} onTouchMove={this.onTouchMove}>
         {this.state.chat.authState && this.state.chat.authState != 'trying-stored' && <div className="hatch-shade fill" />}
         <InfoBar scrollbarWidth={this.state.scrollbarWidth} who={this.state.chat.who} roomName={this.state.chat.roomName} authType={this.state.chat.authType} updateReady={this.state.update.get('ready')} />
         <Scroller
