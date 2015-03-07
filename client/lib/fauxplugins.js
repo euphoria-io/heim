@@ -12,7 +12,7 @@ Heim.hook('page-bottom', function() {
         background: #333;
       }
 
-      .chat .messages-container .room .name {
+      .chat .room .name {
         color: #222;
       }
 
@@ -20,7 +20,7 @@ Heim.hook('page-bottom', function() {
         opacity: .5;
       }
 
-      .chat .messages-container .room .privacy-level,
+      .chat .room .privacy-level,
       .nick {
         background: #e8e8e8 !important;
       }
