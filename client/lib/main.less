@@ -127,7 +127,7 @@ iframe.js {
   flex-direction: column;
   background: gray;
 
-  .nick {
+  .nick, .text-rect {
     background: @neutral-color;
     padding: 2px 4px;
     font-size: .85em;
@@ -164,7 +164,7 @@ iframe.js {
     }
 
     .line-emote .message {
-      .nick;
+      .text-rect;
     }
 
     .messages {
@@ -245,7 +245,8 @@ iframe.js {
           }
 
           .message {
-            margin-left: -8px;
+            margin-left: -6px;
+            padding-left: 3px;
             border-top-left-radius: 0;
             border-bottom-left-radius: 0;
           }
