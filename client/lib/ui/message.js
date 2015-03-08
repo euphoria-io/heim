@@ -47,8 +47,8 @@ var Message = module.exports = React.createClass({
 
     var messageEmbeds
     var embeds = []
-    content = content.replace(/(?:https?:\/\/)?(?:www\.|i\.)?imgur.com\/([\w]+)(\.?\w*)/g, (match, id, ext, offset, string) => {
-      if (id == 'gallery') {
+    content = content.replace(/(?:https?:\/\/)?(?:www\.|i\.)?imgur.com\/(\w+)(\.\w+)?(\S*)/g, (match, id, ext, rest, offset, string) => {
+      if (rest) {
         return string
       }
       embeds.push(<a key={offset} href={'//imgur.com/' + id} target="_blank"><img src={'//i.imgur.com/' + id + (ext == '.gif' ? '' : 't') + (ext || '.jpg')} /></a>)
