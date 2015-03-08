@@ -36,9 +36,13 @@ gulp.task('js', function() {
 gulp.task('less', function() {
   return gulp.src('./lib/main.less')
     .pipe(less({compress: true}))
-    .pipe(autoprefixer({cascade: false}))
     .on('error', function(err) {
       gutil.log(gutil.colors.red('LESS error:'), err.message)
+      this.emit('end')
+    })
+    .pipe(autoprefixer({cascade: false}))
+    .on('error', function(err) {
+      gutil.log(gutil.colors.red('autoprefixer error:'), err.message)
       this.emit('end')
     })
     .pipe(gulp.dest(dest))
