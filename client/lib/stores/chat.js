@@ -230,6 +230,7 @@ module.exports.store = Reflux.createStore({
   joinRoom: function() {
     this._joinWhenReady = true
     this._joinRoom()
+    this.trigger(this.state)
   },
 
   setNick: function(nick) {
