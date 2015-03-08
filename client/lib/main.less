@@ -2,6 +2,11 @@ body {
   margin: 0;
   text-size-adjust: none;
 
+  &.ready {
+    opacity: 1;
+    transition: opacity .1s ease-out;
+  }
+
   &, input {
     font-family: Droid Sans, sans-serif;
     font-size: 12pt;

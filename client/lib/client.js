@@ -125,12 +125,14 @@ Heim.attachUI = function(hash) {
       <Main />,
       uidocument.getElementById('container')
     )
+    uidocument.body.classList.add('ready')
   })
   window.top.Heim = Heim
   window.top.require = require
 }
 
 Heim.detachUI = function() {
+  uidocument.body.classList.remove('ready')
   evs.removeAllEventListeners()
   Heim.ui.unmountComponent()
 }
