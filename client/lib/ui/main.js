@@ -87,7 +87,7 @@ module.exports = React.createClass({
     return (
       <div className="chat" onMouseDownCapture={this.onMouseDown} onClickCapture={this.onClick} onTouchMove={this.onTouchMove}>
         {this.state.chat.authState && this.state.chat.authState != 'trying-stored' && <div className="hatch-shade fill" />}
-        <InfoBar scrollbarWidth={this.state.scrollbarWidth} who={this.state.chat.who} roomName={this.state.chat.roomName} authType={this.state.chat.authType} updateReady={this.state.update.get('ready')} />
+        <InfoBar scrollbarWidth={this.state.scrollbarWidth} who={this.state.chat.who} roomName={this.state.chat.roomName} joined={this.state.chat.joined} authType={this.state.chat.authType} updateReady={this.state.update.get('ready')} />
         <Scroller
           ref="scroller"
           target=".entry"

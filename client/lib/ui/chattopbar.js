@@ -31,7 +31,7 @@ module.exports = React.createClass({
           <RoomTitle name={this.props.roomName} authType={this.props.authType} />
           <div className="right">
             {this.props.updateReady && <FastButton fastTouch className="update" onClick={this.showUpdateBubble} />}
-            <FastButton fastTouch className="user-count" onClick={this.showUserList}>{userCount}</FastButton>
+            {this.props.joined && <FastButton fastTouch className="user-count" onClick={this.showUserList}>{userCount}</FastButton>}
           </div>
         </div>
         <Bubble ref="userList" className="users" rightOffset={this.props.scrollbarWidth + 1}>
