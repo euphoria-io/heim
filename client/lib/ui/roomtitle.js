@@ -16,7 +16,7 @@ module.exports = React.createClass({
   render: function() {
     var privacyLevel
     var privacyMsg
-    switch (this.props.authType) {
+    switch (this.props.joined && this.props.authType) {
       case 'passcode':
         privacyLevel = 'private'
         privacyMsg = 'this room requires a passcode for entry'

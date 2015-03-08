@@ -28,7 +28,7 @@ module.exports = React.createClass({
     return (
       <div className="topbar-container" style={{marginRight: this.props.scrollbarWidth + 1}}>
         <div className="topbar">
-          <RoomTitle name={this.props.roomName} authType={this.props.authType} />
+          <RoomTitle name={this.props.roomName} authType={this.props.authType} joined={this.props.joined} />
           <div className="right">
             {this.props.updateReady && <FastButton fastTouch className="update" onClick={this.showUpdateBubble} />}
             {this.props.joined && <FastButton fastTouch className="user-count" onClick={this.showUserList}>{userCount}</FastButton>}

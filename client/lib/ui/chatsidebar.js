@@ -53,7 +53,7 @@ module.exports = React.createClass({
               </span>
             }
           </ReactCSSTransitionGroup>
-          <RoomTitle name={this.props.roomName} authType={this.props.authType} rightOffset={this.props.scrollbarWidth} />
+          <RoomTitle name={this.props.roomName} authType={this.props.authType} rightOffset={this.props.scrollbarWidth} joined={this.props.joined} />
           <button type="button" className="settings" onClick={this.toggleSettings} tabIndex="-1" />
         </div>
         <UserList users={this.props.who} collapsed={this.state.userListCollapsed} onMouseEnter={this.expandUserList} onMouseLeave={this.collapseUserList} />
