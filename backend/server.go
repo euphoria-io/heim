@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"path"
+	"sync"
 	"time"
 
 	"heim/backend/cluster"
@@ -41,6 +42,8 @@ type Server struct {
 	kms        security.KMS
 	staticPath string
 	sc         *securecookie.SecureCookie
+
+	m sync.Mutex
 
 	agentIDGenerator func() ([]byte, error)
 }

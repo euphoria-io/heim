@@ -24,4 +24,8 @@ type Session interface {
 
 	// Close terminates the Session and disconnects the client.
 	Close()
+
+	// CheckAbandoned() issues an immediate ping to the session with a short
+	// timeout.
+	CheckAbandoned() error
 }

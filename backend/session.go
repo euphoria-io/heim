@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -17,7 +18,8 @@ import (
 const MaxKeepAliveMisses = 3
 
 var (
-	KeepAlive = 20 * time.Second
+	KeepAlive     = 20 * time.Second
+	FastKeepAlive = 2 * time.Second
 
 	ErrUnresponsive = fmt.Errorf("connection unresponsive")
 	ErrReplaced     = fmt.Errorf("connection replaced")
@@ -44,20 +46,21 @@ type session struct {
 	incoming chan *proto.Packet
 	outgoing chan *proto.Packet
 
-	outstandingPings  int
-	maybeAbandoned    bool
-	expectedPingReply int64
+	m                   sync.Mutex
+	maybeAbandoned      bool
+	outstandingPings    int
+	expectedPingReply   int64
+	fastKeepAliveCancel context.CancelFunc
 }
 
 func newSession(
 	ctx context.Context, conn *websocket.Conn, serverID, serverEra string, room proto.Room,
 	agentID []byte) *session {
 
-	loggingCtx := LoggingContext(ctx, fmt.Sprintf("[%x] ", agentID))
-	cancellableCtx, cancel := context.WithCancel(loggingCtx)
-
 	nextID := atomic.AddUint64(&sessionIDCounter, 1)
 	sessionID := fmt.Sprintf("%x-%08x", agentID, nextID)
+	loggingCtx := LoggingContext(ctx, fmt.Sprintf("[%s] ", sessionID))
+	cancellableCtx, cancel := context.WithCancel(loggingCtx)
 
 	session := &session{
 		ctx:       cancellableCtx,
@@ -115,6 +118,7 @@ func (s *session) Send(
 
 func (s *session) serve() error {
 	defer func() {
+		s.finishFastKeepalive()
 		if s.onClose != nil {
 			s.onClose()
 		}
@@ -154,39 +158,14 @@ func (s *session) serve() error {
 		case <-keepalive.C:
 			logger.Printf("keepalive triggered")
 
-			// keepalive timeout triggered
-			if s.maybeAbandoned {
-				logger.Printf("connection replaced")
-				return ErrReplaced
-			}
-
 			if s.outstandingPings > MaxKeepAliveMisses {
 				logger.Printf("connection timed out")
 				return ErrUnresponsive
 			}
 
-			now := time.Now()
-			cmd, err := proto.MakeEvent(&proto.PingEvent{
-				UnixTime:     now.Unix(),
-				NextUnixTime: now.Add(3 * KeepAlive / 2).Unix(),
-			})
-			if err != nil {
-				logger.Printf("error: ping event: %s", err)
+			if err := s.sendPing(); err != nil {
 				return err
 			}
-			data, err := cmd.Encode()
-			if err != nil {
-				logger.Printf("error: ping event encode: %s", err)
-				return err
-			}
-
-			if err := s.conn.WriteMessage(websocket.TextMessage, data); err != nil {
-				logger.Printf("error: write ping event: %s", err)
-				return err
-			}
-
-			s.expectedPingReply = now.Unix()
-			s.outstandingPings++
 		case cmd := <-s.incoming:
 			reply, err := s.state(cmd)
 			if err != nil {
@@ -316,6 +295,7 @@ func (s *session) handleCommand(cmd *proto.Packet) (interface{}, error) {
 		}
 		return proto.NickReply(*event), nil
 	case *proto.PingReply:
+		s.finishFastKeepalive()
 		if msg.UnixTime == s.expectedPingReply {
 			s.outstandingPings = 0
 		} else if s.outstandingPings > 1 {
@@ -426,4 +406,73 @@ func (s *session) handleSendCommand(cmd *proto.SendCommand) (interface{}, error)
 	}
 
 	return proto.DecryptPayload(proto.SendReply(sent), s.auth)
+}
+
+func (s *session) sendPing() error {
+	logger := Logger(s.ctx)
+	now := time.Now()
+	cmd, err := proto.MakeEvent(&proto.PingEvent{
+		UnixTime:     now.Unix(),
+		NextUnixTime: now.Add(3 * KeepAlive / 2).Unix(),
+	})
+	if err != nil {
+		logger.Printf("error: ping event: %s", err)
+		return err
+	}
+	data, err := cmd.Encode()
+	if err != nil {
+		logger.Printf("error: ping event encode: %s", err)
+		return err
+	}
+
+	if err := s.conn.WriteMessage(websocket.TextMessage, data); err != nil {
+		logger.Printf("error: write ping event: %s", err)
+		return err
+	}
+
+	s.expectedPingReply = now.Unix()
+	s.outstandingPings++
+	return nil
+}
+
+func (s *session) CheckAbandoned() error {
+	s.m.Lock()
+	defer s.m.Unlock()
+
+	logger := Logger(s.ctx)
+
+	if s.maybeAbandoned {
+		// already in fast-keepalive state
+		return nil
+	}
+	s.maybeAbandoned = true
+
+	child, cancel := context.WithCancel(s.ctx)
+	s.fastKeepAliveCancel = cancel
+
+	go func() {
+		logger.Printf("starting fast-keepalive timer")
+		timer := time.After(FastKeepAlive)
+		select {
+		case <-child.Done():
+			logger.Printf("aliased session still alive")
+		case <-timer:
+			logger.Printf("connection replaced")
+			// TODO: cancel with ErrReplaced
+			s.Close()
+		}
+	}()
+
+	return s.sendPing()
+}
+
+func (s *session) finishFastKeepalive() {
+	s.m.Lock()
+	defer s.m.Unlock()
+
+	if s.maybeAbandoned {
+		s.maybeAbandoned = false
+		s.fastKeepAliveCancel()
+		s.fastKeepAliveCancel = nil
+	}
 }
