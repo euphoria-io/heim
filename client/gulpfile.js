@@ -61,6 +61,7 @@ gulp.task('raven-js', ['js'], function() {
         .bundle()
         .pipe(source('raven.js'))
         .pipe(buffer())
+        .pipe(process.env.NODE_ENV == 'production' ? uglify() : gutil.noop())
         .on('error', gutil.log.bind(gutil, 'browserify error'))
         .pipe(gulp.dest(dest))
     })
