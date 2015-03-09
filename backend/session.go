@@ -156,8 +156,6 @@ func (s *session) serve() error {
 			return s.ctx.Err()
 
 		case <-keepalive.C:
-			logger.Printf("keepalive triggered")
-
 			if s.outstandingPings > MaxKeepAliveMisses {
 				logger.Printf("connection timed out")
 				return ErrUnresponsive
@@ -294,6 +292,8 @@ func (s *session) handleCommand(cmd *proto.Packet) (interface{}, error) {
 			return nil, err
 		}
 		return proto.NickReply(*event), nil
+	case *proto.PingCommand:
+		return &proto.PingReply{UnixTime: msg.UnixTime}, nil
 	case *proto.PingReply:
 		s.finishFastKeepalive()
 		if msg.UnixTime == s.expectedPingReply {
