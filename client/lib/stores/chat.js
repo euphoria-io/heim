@@ -56,7 +56,7 @@ module.exports.store = Reflux.createStore({
       if (ev.body.type == 'send-event' || ev.body.type == 'send-reply') {
         var message = ev.body.data
         var processedMessages = this._handleMessagesData([message])
-        this.state.messages.addAll(processedMessages)
+        this.state.messages.add(processedMessages)
       } else if (ev.body.type == 'snapshot-event') {
         this.state.serverVersion = ev.body.data.version
         this.state.sessionId = ev.body.data.session_id
@@ -142,7 +142,7 @@ module.exports.store = Reflux.createStore({
     this.state.earliestLog = data.log[0].id
     var log = this._handleMessagesData(data.log)
     if (data.before) {
-      this.state.messages.addAll(log)
+      this.state.messages.add(log)
     } else {
       this.state.messages.reset(log)
     }

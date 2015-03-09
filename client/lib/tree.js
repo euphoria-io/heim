@@ -17,11 +17,12 @@ _.extend(Tree.prototype, {
       })
   },
 
-  add: function(entry, _silent) {
+  _add: function(entry) {
     if (!entry.parent) {
       entry.parent = '__root'
     }
 
+    var changed = false
     var newNode = this._node(entry)
     var newId = newNode.get('id')
 
@@ -36,7 +37,9 @@ _.extend(Tree.prototype, {
 
     if (_.has(this.index, newId)) {
       // merge in orphans
-      newNode = this.index[newId].mergeDeep(newNode)
+      var oldNode = this.index[newId]
+      newNode = oldNode.mergeDeep(newNode)
+      changed = !Immutable.is(oldNode, newNode)
     }
 
     this.index[newId] = newNode
@@ -47,12 +50,14 @@ _.extend(Tree.prototype, {
       this._lastValue = entry[this.sortProp]
     }
 
-    if (!_silent) {
-      this.changes.emit(parentId, parentNode)
-    }
+    return changed
   },
 
-  addAll: function(entries, _silent) {
+  add: function(entries, _silent) {
+    if (!_.isArray(entries)) {
+      entries = [entries]
+    }
+
     var changed = {}
     _.each(entries, function(entry) {
       var parentId = entry.parent || '__root'
@@ -62,7 +67,9 @@ _.extend(Tree.prototype, {
     }, this)
 
     _.each(entries, function(entry) {
-      this.add(entry, true)
+      if (this._add(entry)) {
+        changed[entry.id] = true
+      }
     }, this)
 
     // NOTE: we do not re-sort children if _silent. currently, _silent
@@ -94,7 +101,7 @@ _.extend(Tree.prototype, {
     this.size = 0
 
     if (entries) {
-      this.addAll(entries, null, true)
+      this.add(entries, true)
     }
     this.changes.emit('__root', this.index.__root)
     return this

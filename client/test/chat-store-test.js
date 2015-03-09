@@ -446,6 +446,12 @@ describe('chat store', function() {
       }
     }
 
+    var pastSendEvent = {
+      'id': '2',
+      'type': 'send-event',
+      'data': message1,
+    }
+
     it('should be appended to log', function(done) {
       handleSocket({status: 'receive', body: sendEvent}, function(state) {
         assert(state.messages.last().isSuperset(Immutable.fromJS(sendEvent.data)))
@@ -471,6 +477,15 @@ describe('chat store', function() {
       handleSocket({status: 'receive', body: sendEvent}, function() {
         handleSocket({status: 'receive', body: sendReplyEvent}, function(state) {
           assert(state.messages.get('id2').get('children').contains('id3'))
+          done()
+        })
+      })
+    })
+
+    it('should be sorted by timestamp', function(done) {
+      handleSocket({status: 'receive', body: sendEvent}, function() {
+        handleSocket({status: 'receive', body: pastSendEvent}, function(state) {
+          assert.deepEqual(state.messages.get('__root').get('children').toJS(), ['id1', 'id2'])
           done()
         })
       })

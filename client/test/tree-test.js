@@ -106,7 +106,7 @@ describe('Tree', function() {
       ]
 
       beforeEach(function() {
-        tree.addAll(entries)
+        tree.add(entries)
       })
 
       function check() {
@@ -140,7 +140,7 @@ describe('Tree', function() {
       describe('after re-adding the same nodes', function() {
         beforeEach(function() {
           tree.changes.emit.reset()
-          tree.addAll(entries)
+          tree.add(entries)
         })
 
         describe('should not change', function() {
@@ -170,11 +170,18 @@ describe('Tree', function() {
 
       describe('after adding the missing parent', function() {
         beforeEach(function() {
+          tree.changes.emit.reset()
           tree.add({id: 'wtf', parent: '1', value: 'j0', time: 6})
         })
 
         it('should update the size', function() {
           assert.equal(tree.size, 4)
+        })
+
+        it('should trigger a change event on the child and parent', function() {
+          sinon.assert.calledTwice(tree.changes.emit)
+          sinon.assert.calledWithExactly(tree.changes.emit, '1', tree.get('1'))
+          sinon.assert.calledWithExactly(tree.changes.emit, 'wtf', tree.get('wtf'))
         })
 
         it('should visit all nodes in a map traversal', function() {
