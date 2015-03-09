@@ -1,7 +1,9 @@
 package cluster
 
 import (
+	"fmt"
 	"heim/proto/security"
+	"sync"
 	"time"
 )
 
@@ -12,7 +14,7 @@ type Cluster interface {
 	Update(desc *PeerDesc) error
 	Part()
 	Peers() []PeerDesc
-	Watch() chan PeerEvent
+	Watch() <-chan PeerEvent
 }
 
 type PeerEvent interface {
@@ -44,3 +46,100 @@ type PeerList []PeerDesc
 func (ps PeerList) Len() int           { return len(ps) }
 func (ps PeerList) Less(i, j int) bool { return ps[i].ID < ps[j].ID }
 func (ps PeerList) Swap(i, j int)      { ps[i], ps[j] = ps[j], ps[i] }
+
+type TestCluster struct {
+	sync.Mutex
+	peers   map[string]PeerDesc
+	secrets map[string][]byte
+	c       chan PeerEvent
+	myID    string
+}
+
+func (tc *TestCluster) GetSecret(kms security.KMS, name string, bytes int) ([]byte, error) {
+	tc.Lock()
+	defer tc.Unlock()
+
+	if secret, ok := tc.secrets[name]; ok {
+		if len(secret) != bytes {
+			return nil, fmt.Errorf("secret inconsistent: expected %d bytes, got %d", bytes, len(secret))
+		}
+		return secret, nil
+	}
+
+	secret, err := kms.GenerateNonce(bytes)
+	if err != nil {
+		return nil, err
+	}
+
+	if tc.secrets == nil {
+		tc.secrets = map[string][]byte{name: secret}
+	} else {
+		tc.secrets[name] = secret
+	}
+	return secret, nil
+}
+
+func (tc *TestCluster) update(desc *PeerDesc) PeerEvent {
+	tc.Lock()
+	defer tc.Unlock()
+
+	if tc.myID == "" {
+		tc.myID = desc.ID
+	}
+
+	if tc.c == nil {
+		tc.peers[desc.ID] = *desc
+		return nil
+	}
+
+	_, ok := tc.peers[desc.ID]
+	tc.peers[desc.ID] = *desc
+	if ok {
+		return &PeerAliveEvent{*desc}
+	} else {
+		return &PeerJoinedEvent{*desc}
+	}
+}
+
+func (tc *TestCluster) Update(desc *PeerDesc) error {
+	if event := tc.update(desc); event != nil {
+		tc.c <- event
+	}
+	return nil
+}
+
+func (tc *TestCluster) part() PeerEvent {
+	tc.Lock()
+	defer tc.Unlock()
+	desc, ok := tc.peers[tc.myID]
+	delete(tc.peers, tc.myID)
+	if ok {
+		return &PeerLostEvent{desc}
+	}
+	return nil
+}
+
+func (tc *TestCluster) Part() {
+	if event := tc.part(); event != nil {
+		tc.c <- event
+	}
+}
+
+func (tc *TestCluster) Peers() []PeerDesc {
+	tc.Lock()
+	defer tc.Unlock()
+	peers := []PeerDesc{}
+	for _, peer := range tc.peers {
+		peers = append(peers, peer)
+	}
+	return peers
+}
+
+func (tc *TestCluster) Watch() <-chan PeerEvent {
+	tc.Lock()
+	defer tc.Unlock()
+	if tc.c == nil {
+		tc.c = make(chan PeerEvent)
+	}
+	return tc.c
+}

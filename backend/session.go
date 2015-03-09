@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"sync/atomic"
 	"time"
 
 	"heim/proto"
@@ -20,6 +21,8 @@ var (
 
 	ErrUnresponsive = fmt.Errorf("connection unresponsive")
 	ErrReplaced     = fmt.Errorf("connection replaced")
+
+	sessionIDCounter uint64
 )
 
 type cmdState func(*proto.Packet) (interface{}, error)
@@ -47,17 +50,20 @@ type session struct {
 }
 
 func newSession(
-	ctx context.Context, conn *websocket.Conn, serverID, serverEra string, room proto.Room) *session {
+	ctx context.Context, conn *websocket.Conn, serverID, serverEra string, room proto.Room,
+	agentID []byte) *session {
 
-	id := conn.RemoteAddr().String()
-	loggingCtx := LoggingContext(ctx, fmt.Sprintf("[%s] ", id))
+	loggingCtx := LoggingContext(ctx, fmt.Sprintf("[%x] ", agentID))
 	cancellableCtx, cancel := context.WithCancel(loggingCtx)
+
+	nextID := atomic.AddUint64(&sessionIDCounter, 1)
+	sessionID := fmt.Sprintf("%x-%08x", agentID, nextID)
 
 	session := &session{
 		ctx:       cancellableCtx,
 		cancel:    cancel,
 		conn:      conn,
-		identity:  newMemIdentity(id, serverID, serverEra),
+		identity:  newMemIdentity(sessionID, serverID, serverEra),
 		serverID:  serverID,
 		serverEra: serverEra,
 		room:      room,
@@ -75,7 +81,7 @@ func (s *session) Close() {
 	s.cancel()
 }
 
-func (s *session) ID() string               { return s.conn.RemoteAddr().String() }
+func (s *session) ID() string               { return s.identity.ID() }
 func (s *session) ServerID() string         { return s.serverID }
 func (s *session) ServerEra() string        { return s.serverEra }
 func (s *session) Identity() proto.Identity { return s.identity }
@@ -349,9 +355,10 @@ func (s *session) sendSnapshot() error {
 	}
 
 	snapshot := &proto.SnapshotEvent{
-		Version: s.room.Version(),
-		Listing: listing,
-		Log:     msgs,
+		SessionID: s.ID(),
+		Version:   s.room.Version(),
+		Listing:   listing,
+		Log:       msgs,
 	}
 
 	event, err := proto.MakeEvent(snapshot)

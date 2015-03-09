@@ -13,7 +13,7 @@ import (
 type Listing []IdentityView
 
 func (l Listing) Len() int           { return len(l) }
-func (l Listing) Less(i, j int) bool { return l[i].ID < l[j].ID }
+func (l Listing) Less(i, j int) bool { return l[i].Name < l[j].Name }
 func (l Listing) Swap(i, j int)      { l[i], l[j] = l[j], l[i] }
 
 // A Room is a nexus of communication. Users connect to a Room via

@@ -150,7 +150,7 @@ func (e *etcdCluster) Part() {
 	e.c.Delete(e.me, false)
 }
 
-func (e *etcdCluster) Watch() chan PeerEvent { return e.ch }
+func (e *etcdCluster) Watch() <-chan PeerEvent { return e.ch }
 
 func (e *etcdCluster) watch(waitIndex uint64) {
 	defer close(e.ch)

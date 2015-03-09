@@ -116,9 +116,10 @@ type BounceEvent struct {
 }
 
 type SnapshotEvent struct {
-	Version string    `json:"version"`
-	Listing Listing   `json:"listing"`
-	Log     []Message `json:"log"`
+	SessionID string    `json:"session_id"`
+	Version   string    `json:"version"`
+	Listing   Listing   `json:"listing"`
+	Log       []Message `json:"log"`
 }
 
 type NetworkEvent struct {

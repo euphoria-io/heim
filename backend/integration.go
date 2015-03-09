@@ -10,6 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"heim/backend/cluster"
 	"heim/proto"
 	"heim/proto/security"
 	"heim/proto/snowflake"
@@ -78,12 +79,15 @@ func (s *serverUnderTest) Connect(roomName string) *testConn {
 	url := strings.Replace(s.server.URL, "http:", "ws:", 1) + "/room/" + roomName + "/ws"
 	conn, _, err := websocket.DefaultDialer.Dial(url, nil)
 	So(err, ShouldBeNil)
-	return &testConn{conn}
+	return &testConn{Conn: conn}
 }
 
 type testConn struct {
 	*websocket.Conn
+	sessionID string
 }
+
+func (tc *testConn) id() string { return tc.sessionID }
 
 func (tc *testConn) send(id, cmdType, data string, args ...interface{}) {
 	if len(args) > 0 {
@@ -131,6 +135,12 @@ func (tc *testConn) expect(id, cmdType, data string, args ...interface{}) {
 	expectedPayload, err := expected.Payload()
 	So(err, ShouldBeNil)
 
+	if packetType == proto.SnapshotEventType {
+		snapshot := payload.(*proto.SnapshotEvent)
+		tc.sessionID = snapshot.SessionID
+		snapshot.SessionID = "???"
+	}
+
 	So(payload, ShouldResemble, expectedPayload)
 }
 
@@ -150,7 +160,8 @@ func (tc *testConn) expectError(id, cmdType, errFormat string, errArgs ...interf
 }
 
 func (tc *testConn) expectSnapshot(version string, listingParts []string, logParts []string) {
-	tc.expect("", "snapshot-event", `{"version":"%s","listing":[%s],"log":[%s]}`,
+	tc.expect("", "snapshot-event",
+		`{"session_id":"???","version":"%s","listing":[%s],"log":[%s]}`,
 		version, strings.Join(listingParts, ","), strings.Join(logParts, ","))
 }
 
@@ -174,14 +185,22 @@ func snowflakes(n int) []snowflake.Snowflake {
 }
 
 func IntegrationTest(factory func() proto.Backend) {
+	agentIDCounter := 0
+
 	runTest := func(test testSuite) {
 		backend := factory()
 		defer backend.Close()
 		kms := security.LocalKMS()
 		kms.SetMasterKey(make([]byte, security.AES256.KeySize()))
-		app := NewServer(backend, kms, "test1", "era1", "")
+		app, err := NewServer(backend, &cluster.TestCluster{}, kms, "test1", "era1", "")
+		So(err, ShouldBeNil)
+		app.agentIDGenerator = func() ([]byte, error) {
+			agentIDCounter++
+			return []byte(fmt.Sprintf("%d", agentIDCounter)), nil
+		}
 		server := httptest.NewServer(app)
 		defer server.Close()
+		defer server.CloseClientConnections()
 		test(&serverUnderTest{backend, app, server})
 	}
 
@@ -199,17 +218,17 @@ func testLurker(s *serverUnderTest) {
 	Convey("Lurker", func() {
 		conn1 := s.Connect("lurker")
 		defer conn1.Close()
-		id1 := conn1.LocalAddr().String()
 
 		conn1.expectSnapshot(s.backend.Version(), nil, nil)
+		id1 := conn1.id()
 
 		conn2 := s.Connect("lurker")
 		defer conn2.Close()
-		id2 := conn2.LocalAddr().String()
 
 		conn2.expectSnapshot(s.backend.Version(),
 			[]string{fmt.Sprintf(`{"id":"%s","server_id":"test1","server_era":"era1"}`, id1)},
 			nil)
+		id2 := conn2.id()
 
 		conn2.send("1", "nick", `{"name":"speaker"}`)
 		conn2.expect("1", "nick-reply", `{"id":"%s","from":"","to":"speaker"}`, id2)
@@ -234,12 +253,12 @@ func testBroadcast(s *serverUnderTest) {
 		for i := range conns {
 			conn := s.Connect("broadcast")
 			conns[i] = conn
-			me := conn.LocalAddr().String()
-			ids[i] = proto.IdentityView{ID: me, Name: fmt.Sprintf("user%d", i)}
 			conn.send("1", "nick", `{"name":"user%d"}`, i)
 			conn.send("2", "who", "")
 
 			conn.expectSnapshot(s.backend.Version(), listingParts, nil)
+			me := conn.id()
+			ids[i] = proto.IdentityView{ID: me, Name: fmt.Sprintf("user%d", i)}
 			listingParts = append(listingParts,
 				fmt.Sprintf(`{"id":"%s","name":"%s","server_id":"test1","server_era":"era1"}`,
 					ids[i].ID, ids[i].Name))
@@ -301,14 +320,14 @@ func testThreading(s *serverUnderTest) {
 		conn := s.Connect("threading")
 		defer conn.Close()
 
-		id := &proto.IdentityView{ID: conn.LocalAddr().String(), Name: "user"}
+		conn.expectSnapshot(s.backend.Version(), nil, nil)
+
+		id := &proto.IdentityView{ID: conn.id(), Name: "user"}
 		id.Name = id.ID
 		sfs := snowflakes(2)
 		sf1 := sfs[0]
 		sf2 := sfs[1]
 		server := `"server_id":"test1","server_era":"era1"`
-
-		conn.expectSnapshot(s.backend.Version(), nil, nil)
 
 		conn.send("1", "send", `{"content":"root"}`)
 		conn.expect("1", "send-reply",
@@ -333,23 +352,30 @@ func testPresence(factory func() proto.Backend) {
 	backend := factory()
 	kms := security.LocalKMS()
 	kms.SetMasterKey(make([]byte, security.AES256.KeySize()))
-	app := NewServer(backend, kms, "test1", "era1", "")
+	app, err := NewServer(backend, &cluster.TestCluster{}, kms, "test1", "era1", "")
+	So(err, ShouldBeNil)
+	agentIDCounter := 0
+	app.agentIDGenerator = func() ([]byte, error) {
+		agentIDCounter++
+		return []byte(fmt.Sprintf("%d", agentIDCounter)), nil
+	}
 	server := httptest.NewServer(app)
 	defer server.Close()
+	defer server.CloseClientConnections()
 	s := &serverUnderTest{backend, app, server}
 
 	Convey("Other party joins then parts", func() {
 		self := s.Connect("presence")
 		defer self.Close()
 		self.expectSnapshot(s.backend.Version(), nil, nil)
-		selfID := self.LocalAddr().String()
+		selfID := self.id()
 
 		other := s.Connect("presence")
 		other.expectSnapshot(s.backend.Version(),
 			[]string{
 				fmt.Sprintf(`{"id":"%s","server_id":"test1","server_era":"era1"}`, selfID),
 			}, nil)
-		otherID := other.LocalAddr().String()
+		otherID := other.id()
 
 		self.expect("", "join-event",
 			`{"id":"%s","server_id":"test1","server_era":"era1"}`, otherID)
@@ -368,17 +394,17 @@ func testPresence(factory func() proto.Backend) {
 
 	Convey("Join after other party, other party parts", func() {
 		other := s.Connect("presence2")
-		otherID := other.LocalAddr().String()
 		other.expectSnapshot(s.backend.Version(), nil, nil)
+		otherID := other.id()
 
 		self := s.Connect("presence2")
 		defer self.Close()
-		selfID := self.LocalAddr().String()
 		self.expectSnapshot(s.backend.Version(),
 			[]string{
 				fmt.Sprintf(`{"id":"%s","server_id":"test1","server_era":"era1"}`,
 					otherID)},
 			nil)
+		selfID := self.id()
 
 		other.expect("", "join-event",
 			`{"id":"%s","server_id":"test1","server_era":"era1"}`, selfID)
@@ -412,14 +438,14 @@ func testPresence(factory func() proto.Backend) {
 			self1 := s.Connect("presence3")
 			defer self1.Close()
 			self1.expectSnapshot(s.backend.Version(), nil, nil)
-			id1 := self1.LocalAddr().String()
+			id1 := self1.id()
 
 			self2 := s2.Connect("presence3")
 			defer self2.Close()
 			self2.expectSnapshot(s.backend.Version(),
 				[]string{fmt.Sprintf(`{"id":"%s"}`, id1)}, nil)
 			fmt.Printf("ok!\n")
-			//id2 := self2.LocalAddr().String()
+			//id2 := self2.id()
 		})
 
 		// TODO:

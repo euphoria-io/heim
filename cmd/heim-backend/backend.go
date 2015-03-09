@@ -81,7 +81,10 @@ func run() error {
 		return fmt.Errorf("controller error: %s", err)
 	}
 
-	server := backend.NewServer(b, kms, serverDesc.ID, serverDesc.Era, *static)
+	server, err := backend.NewServer(b, c, kms, serverDesc.ID, serverDesc.Era, *static)
+	if err != nil {
+		return fmt.Errorf("server error: %s", err)
+	}
 
 	fmt.Printf("serving era %s on %s\n", serverDesc.Era, *addr)
 	http.ListenAndServe(*addr, newVersioningHandler(server))
