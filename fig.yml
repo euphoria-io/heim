@@ -34,9 +34,9 @@ frontend:
   command: gulp build
   build: client
   volumes:
-    - client:/srv/heim/client/src
-    - deps/node_modules:/srv/heim/client/src/node_modules
-    - client/build:/srv/heim/client/src/build
+    - .:/srv/heim/
+    - deps/node_modules:/srv/heim/client/node_modules
+    - client/build:/srv/heim/client/build
   environment:
     NODE_ENV: development
     SENTRY_ENDPOINT: http://sentry@euphoria.local:9000/2

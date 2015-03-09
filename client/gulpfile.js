@@ -8,11 +8,23 @@ var source = require('vinyl-source-stream')
 var buffer = require('vinyl-buffer')
 var watchify = require('watchify')
 var browserify = require('browserify')
+var envify = require('envify/custom')
 var react = require('gulp-react')
 var jshint = require('gulp-jshint')
+var exec = require('child_process').exec
 
 
 var dest = './build'
+
+// via https://github.com/tblobaum/git-rev
+function shell(cmd, cb) {
+  exec(cmd, { cwd: __dirname }, function(err, stdout) {
+    if (err) {
+      throw err
+    }
+    cb(stdout.trim())
+  })
+}
 
 function bundler(args) {
   return browserify('./lib/client.js', args)
@@ -37,14 +49,22 @@ gulp.task('js', function() {
     .pipe(gulp.dest(dest))
 })
 
-gulp.task('raven-js', function() {
-  return browserify('./lib/raven.js')
-    .transform('envify')
-    .bundle()
-    .pipe(source('raven.js'))
-    .pipe(buffer())
-    .on('error', gutil.log.bind(gutil, 'browserify error'))
-    .pipe(gulp.dest(dest))
+gulp.task('raven-js', ['js'], function() {
+  shell('git rev-parse HEAD', function(gitRev) {
+    shell('md5sum build/main.js | cut -d " " -f 1', function(releaseHash) {
+      return browserify('./lib/raven.js')
+        .transform(envify({
+          SENTRY_ENDPOINT: process.env.SENTRY_ENDPOINT,
+          HEIM_RELEASE: releaseHash,
+          HEIM_GIT_COMMIT: gitRev,
+        }))
+        .bundle()
+        .pipe(source('raven.js'))
+        .pipe(buffer())
+        .on('error', gutil.log.bind(gutil, 'browserify error'))
+        .pipe(gulp.dest(dest))
+    })
+  })
 })
 
 gulp.task('less', function() {
