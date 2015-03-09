@@ -4,6 +4,7 @@
   "description": "heim frontend",
   "main": "index.js",
   "dependencies": {
+    "raven-js": "~1.1.17",
     "lodash": "~3.3.1",
     "react": "~0.12.1",
     "reflux": "~0.2.1",

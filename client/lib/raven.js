@@ -1,2 +1,2 @@
-Raven = require('./vendor/raven')
+Raven = require('raven-js')
 Raven.config(process.env.SENTRY_ENDPOINT).install()
