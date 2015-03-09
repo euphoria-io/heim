@@ -423,30 +423,13 @@ describe('chat store', function() {
     var sendEvent = {
       'id': '0',
       'type': 'send-event',
-      'data': {
-        'id': 'id1',
-        'time': 123456,
-        'sender': {
-          'id': '32.64.96.128:12345',
-          'name': 'tester',
-        },
-        'content': 'test',
-      }
+      'data': message2,
     }
 
     var sendReplyEvent = {
       'id': '1',
       'type': 'send-event',
-      'data': {
-        'id': 'id2',
-        'parent': 'id1',
-        'time': 123456,
-        'sender': {
-          'id': '32.64.96.128:12345',
-          'name': 'tester',
-        },
-        'content': 'test',
-      }
+      'data': message3,
     }
 
     var sendMentionEvent = {
@@ -487,7 +470,7 @@ describe('chat store', function() {
     it('should be stored as children of parent', function(done) {
       handleSocket({status: 'receive', body: sendEvent}, function() {
         handleSocket({status: 'receive', body: sendReplyEvent}, function(state) {
-          assert(state.messages.get('id1').get('children').contains('id2'))
+          assert(state.messages.get('id2').get('children').contains('id3'))
           done()
         })
       })
