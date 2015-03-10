@@ -3,7 +3,7 @@ package psql
 import (
 	"time"
 
-	"heim/proto/security"
+	"euphoria.io/heim/proto/security"
 )
 
 type RoomMasterKey struct {

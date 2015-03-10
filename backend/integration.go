@@ -10,12 +10,11 @@ import (
 	"sync/atomic"
 	"time"
 
+	"euphoria.io/heim/backend/cluster"
+	"euphoria.io/heim/proto"
+	"euphoria.io/heim/proto/security"
+	"euphoria.io/heim/proto/snowflake"
 	"euphoria.io/scope"
-
-	"heim/backend/cluster"
-	"heim/proto"
-	"heim/proto/security"
-	"heim/proto/snowflake"
 
 	"github.com/gorilla/websocket"
 

@@ -3,10 +3,9 @@ package console
 import (
 	"testing"
 
+	"euphoria.io/heim/backend/mock"
+	"euphoria.io/heim/proto/security"
 	"euphoria.io/scope"
-
-	"heim/backend/mock"
-	"heim/proto/security"
 
 	. "github.com/smartystreets/goconvey/convey"
 )

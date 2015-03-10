@@ -8,11 +8,10 @@ import (
 	"sync"
 	"time"
 
+	"euphoria.io/heim/backend/cluster"
+	"euphoria.io/heim/proto"
+	"euphoria.io/heim/proto/security"
 	"euphoria.io/scope"
-
-	"heim/backend/cluster"
-	"heim/proto"
-	"heim/proto/security"
 
 	gorillactx "github.com/gorilla/context"
 	"github.com/gorilla/mux"

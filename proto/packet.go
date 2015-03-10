@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"heim/proto/snowflake"
+	"euphoria.io/heim/proto/snowflake"
 )
 
 type PacketType string

@@ -3,10 +3,9 @@ package mock
 import (
 	"sync"
 
+	"euphoria.io/heim/proto"
+	"euphoria.io/heim/proto/snowflake"
 	"euphoria.io/scope"
-
-	"heim/proto"
-	"heim/proto/snowflake"
 )
 
 type memLog struct {

@@ -3,7 +3,7 @@ package console
 import (
 	"fmt"
 
-	"heim/proto/security"
+	"euphoria.io/heim/proto/security"
 )
 
 func init() {

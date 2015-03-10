@@ -4,7 +4,7 @@ import (
 	"flag"
 	"testing"
 
-	"heim/proto/security"
+	"euphoria.io/heim/proto/security"
 
 	. "github.com/smartystreets/goconvey/convey"
 )

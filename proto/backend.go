@@ -1,7 +1,7 @@
 package proto
 
 import (
-	"heim/backend/cluster"
+	"euphoria.io/heim/backend/cluster"
 )
 
 // A Backend provides Rooms and an implementation version.

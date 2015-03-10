@@ -3,10 +3,9 @@ package mock
 import (
 	"sync"
 
+	"euphoria.io/heim/backend"
+	"euphoria.io/heim/proto"
 	"euphoria.io/scope"
-
-	"heim/backend"
-	"heim/proto"
 )
 
 type session struct {

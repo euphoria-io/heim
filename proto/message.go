@@ -3,7 +3,7 @@ package proto
 import (
 	"encoding/json"
 
-	"heim/proto/snowflake"
+	"euphoria.io/heim/proto/snowflake"
 )
 
 // A Message is a node in a Room's Log. It corresponds to a chat message, or

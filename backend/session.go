@@ -8,10 +8,9 @@ import (
 	"sync/atomic"
 	"time"
 
+	"euphoria.io/heim/proto"
+	"euphoria.io/heim/proto/snowflake"
 	"euphoria.io/scope"
-
-	"heim/proto"
-	"heim/proto/snowflake"
 
 	"github.com/gorilla/websocket"
 )

@@ -3,7 +3,7 @@ package kms
 import (
 	"fmt"
 
-	"heim/proto/security"
+	"euphoria.io/heim/proto/security"
 
 	"github.com/awslabs/aws-sdk-go/aws"
 	"github.com/awslabs/aws-sdk-go/gen/kms"

@@ -3,7 +3,6 @@ package clustertest
 import (
 	"bufio"
 	"fmt"
-	"heim/backend/cluster"
 	"io"
 	"io/ioutil"
 	"net"
@@ -13,6 +12,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"euphoria.io/heim/backend/cluster"
 )
 
 func pickPort() (int, error) {

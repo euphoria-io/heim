@@ -3,8 +3,8 @@ package mock
 import (
 	"sync"
 
-	"heim/backend/cluster"
-	"heim/proto"
+	"euphoria.io/heim/backend/cluster"
+	"euphoria.io/heim/proto"
 )
 
 type TestBackend struct {

@@ -1,7 +1,7 @@
 package backend
 
 import (
-	"heim/proto"
+	"euphoria.io/heim/proto"
 )
 
 type memIdentity struct {

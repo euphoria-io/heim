@@ -56,7 +56,7 @@ backend:
     - etcd
     - psql
   volumes:
-    - .:/go/src/heim
+    - .:/go/src/euphoria.io/heim
     - deps/godeps:/godeps
     - client/build:/srv/heim/client/src/build
     - backend/console/keys:/keys
@@ -71,7 +71,7 @@ backend2:
     - etcd
     - psql
   volumes:
-    - .:/go/src/heim
+    - .:/go/src/euphoria.io/heim
     - deps/godeps:/godeps
     - client/build:/srv/heim/client/src/build
     - backend/console/keys:/keys

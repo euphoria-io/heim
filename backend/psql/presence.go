@@ -5,9 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"euphoria.io/heim/proto"
 	"euphoria.io/scope"
-
-	"heim/proto"
 )
 
 type Presence struct {

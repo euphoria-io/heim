@@ -6,12 +6,11 @@ import (
 	"sync"
 	"time"
 
+	"euphoria.io/heim/backend"
+	"euphoria.io/heim/proto"
+	"euphoria.io/heim/proto/security"
+	"euphoria.io/heim/proto/snowflake"
 	"euphoria.io/scope"
-
-	"heim/backend"
-	"heim/proto"
-	"heim/proto/security"
-	"heim/proto/snowflake"
 )
 
 type memRoom struct {

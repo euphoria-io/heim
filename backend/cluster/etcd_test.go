@@ -1,10 +1,11 @@
 package cluster_test
 
 import (
-	"heim/backend/cluster"
-	"heim/backend/cluster/clustertest"
-	"heim/proto/security"
 	"testing"
+
+	"euphoria.io/heim/backend/cluster"
+	"euphoria.io/heim/backend/cluster/clustertest"
+	"euphoria.io/heim/proto/security"
 
 	. "github.com/smartystreets/goconvey/convey"
 )

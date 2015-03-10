@@ -5,11 +5,12 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"heim/proto/security"
 	"sort"
 	"strings"
 	"sync"
 	"time"
+
+	"euphoria.io/heim/proto/security"
 
 	"github.com/coreos/go-etcd/etcd"
 	"github.com/prometheus/client_golang/prometheus"

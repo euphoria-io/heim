@@ -7,10 +7,10 @@ import (
 	"os"
 	"testing"
 
-	"heim/backend"
-	"heim/backend/cluster"
-	"heim/backend/cluster/clustertest"
-	"heim/proto"
+	"euphoria.io/heim/backend"
+	"euphoria.io/heim/backend/cluster"
+	"euphoria.io/heim/backend/cluster/clustertest"
+	"euphoria.io/heim/proto"
 
 	"github.com/rubenv/sql-migrate"
 

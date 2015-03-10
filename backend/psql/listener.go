@@ -2,9 +2,9 @@ package psql
 
 import (
 	"fmt"
-	"heim/proto"
 	"strings"
 
+	"euphoria.io/heim/proto"
 	"euphoria.io/scope"
 )
 

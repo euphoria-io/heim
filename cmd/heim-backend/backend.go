@@ -7,15 +7,15 @@ import (
 	"net/http"
 	"os"
 
-	"heim/aws/kms"
-	"heim/backend"
-	"heim/backend/cluster"
-	"heim/backend/console"
-	"heim/backend/psql"
-	_ "heim/cmd" // for -newflags
-	"heim/proto"
-	"heim/proto/security"
-	"heim/proto/snowflake"
+	"euphoria.io/heim/aws/kms"
+	"euphoria.io/heim/backend"
+	"euphoria.io/heim/backend/cluster"
+	"euphoria.io/heim/backend/console"
+	"euphoria.io/heim/backend/psql"
+	_ "euphoria.io/heim/cmd" // for -newflags
+	"euphoria.io/heim/proto"
+	"euphoria.io/heim/proto/security"
+	"euphoria.io/heim/proto/snowflake"
 )
 
 var (

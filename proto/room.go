@@ -3,9 +3,8 @@ package proto
 import (
 	"time"
 
+	"euphoria.io/heim/proto/security"
 	"euphoria.io/scope"
-
-	"heim/proto/security"
 )
 
 // A Listing is a sortable list of Identitys present in a Room.

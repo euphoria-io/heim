@@ -4,8 +4,8 @@ import (
 	"database/sql"
 	"time"
 
-	"heim/proto"
-	"heim/proto/snowflake"
+	"euphoria.io/heim/proto"
+	"euphoria.io/heim/proto/snowflake"
 )
 
 type Message struct {

@@ -6,10 +6,9 @@ import (
 	"fmt"
 	"io"
 
+	"euphoria.io/heim/proto"
+	"euphoria.io/heim/proto/security"
 	"euphoria.io/scope"
-
-	"heim/proto"
-	"heim/proto/security"
 )
 
 type ioterm interface {

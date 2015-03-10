@@ -10,8 +10,8 @@ import (
 	"os"
 	"strings"
 
-	"heim/proto"
-	"heim/proto/security"
+	"euphoria.io/heim/proto"
+	"euphoria.io/heim/proto/security"
 
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/terminal"

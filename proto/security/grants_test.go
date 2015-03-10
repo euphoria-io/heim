@@ -8,12 +8,11 @@ import (
 	"testing"
 	"time"
 
+	"euphoria.io/heim/backend/mock"
+	"euphoria.io/heim/proto"
+	"euphoria.io/heim/proto/security"
+	"euphoria.io/heim/proto/snowflake"
 	"euphoria.io/scope"
-
-	"heim/backend/mock"
-	"heim/proto"
-	"heim/proto/security"
-	"heim/proto/snowflake"
 
 	. "github.com/smartystreets/goconvey/convey"
 )

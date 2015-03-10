@@ -2,9 +2,10 @@ package cluster
 
 import (
 	"fmt"
-	"heim/proto/security"
 	"sync"
 	"time"
+
+	"euphoria.io/heim/proto/security"
 )
 
 var TTL = 30 * time.Second

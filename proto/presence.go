@@ -3,7 +3,7 @@ package proto
 import (
 	"time"
 
-	"heim/proto/snowflake"
+	"euphoria.io/heim/proto/snowflake"
 )
 
 type Presence struct {

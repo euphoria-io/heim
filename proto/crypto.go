@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"heim/proto/security"
+	"euphoria.io/heim/proto/security"
 )
 
 func DecryptPayload(payload interface{}, auth map[string]*Authentication) (interface{}, error) {

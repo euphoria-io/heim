@@ -5,9 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"euphoria.io/heim/proto/security"
 	"euphoria.io/scope"
-
-	"heim/proto/security"
 )
 
 type AuthOption string

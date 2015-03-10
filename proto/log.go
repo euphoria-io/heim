@@ -1,8 +1,7 @@
 package proto
 
 import (
-	"heim/proto/snowflake"
-
+	"euphoria.io/heim/proto/snowflake"
 	"euphoria.io/scope"
 )
 
