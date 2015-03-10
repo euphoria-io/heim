@@ -46,7 +46,9 @@ var roomName = location.pathname.match(/(\w+)\/$/)[1]
 
 Heim.attachUI = function(hash) {
   var Reflux = require('reflux')
-  Reflux.nextTick(setImmediate)
+
+  // IE9+ requires this bind: https://msdn.microsoft.com/en-us/library/ie/gg622930(v=vs.85).aspx
+  Reflux.nextTick(setImmediate.bind(window))
 
   var React = require('react/addons')
   var SyntheticKeyboardEvent = require('react/lib/SyntheticKeyboardEvent')
