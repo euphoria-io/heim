@@ -4,27 +4,27 @@ set -ex
 
 PATH=${PATH}:/var/cache/drone/bin
 SRCDIR=/var/cache/drone/src
+HEIMDIR=${SRCDIR}/euphoria.io/heim
 DEPSDIR=/var/cache/heim-deps
 
 setup_deps() {
-  ${DEPSDIR}/deps.sh link ${SRCDIR}/heim
+  ${DEPSDIR}/deps.sh link ${HEIMDIR}
   # required for running gulp out of that directory.
-  ln -s ${DEPSDIR}/node_modules ${SRCDIR}/heim/node_modules
-  PATH=${PATH}:${SRCDIR}/heim/node_modules/.bin
-  GOPATH=${SRCDIR}/heim/deps/godeps:${GOPATH}
+  ln -s ${DEPSDIR}/node_modules ${HEIMDIR}/node_modules
+  PATH=${PATH}:${HEIMDIR}/node_modules/.bin
+  GOPATH=${HEIMDIR}/deps/godeps:${GOPATH}
 }
 
 test_backend() {
-  cd ${SRCDIR}
   psql -c 'create database heimtest;' -U postgres -h $POSTGRES_PORT_5432_TCP_ADDR
   export DSN="postgres://postgres@$POSTGRES_PORT_5432_TCP_ADDR/heimtest?sslmode=disable"
   go install github.com/coreos/etcd
-  PATH="${PATH}":${SRCDIR}/heim/deps/godeps/bin go test -v heim/...
+  PATH="${PATH}":${HEIMDIR}/deps/godeps/bin go test -v euphoria.io/heim/...
 }
 
 test_client() {
   export NODE_ENV=development
-  cd ${SRCDIR}/heim/client
+  cd ${HEIMDIR}/client
   gulp lint && mochify
 }
 
@@ -39,13 +39,13 @@ generate_manifest() {
 
 build_release() {
   export NODE_ENV=production
-  cd ${SRCDIR}/heim/client
+  cd ${HEIMDIR}/client
   gulp build
 
-  go install -ldflags "-X main.version ${DRONE_COMMIT}" heim/cmd/heim-backend
-  go install heim/cmd/heimlich
+  go install -ldflags "-X main.version ${DRONE_COMMIT}" euphoria.io/heim/cmd/heim-backend
+  go install euphoria.io/heim/cmd/heimlich
 
-  mv ${SRCDIR}/heim/client/build /var/cache/drone/bin/static
+  mv ${HEIMDIR}/client/build /var/cache/drone/bin/static
   cd /var/cache/drone/bin
   generate_manifest static
   find static -type f | xargs heimlich heim-backend
@@ -64,7 +64,7 @@ build_release() {
   fi
 }
 
-mv ${SRCDIR}/github.com/euphoria-io/heim ${SRCDIR}
+mv ${SRCDIR}/github.com/euphoria-io ${SRCDIR}/euphoria.io
 
 setup_deps
 
