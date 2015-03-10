@@ -2,7 +2,7 @@ var React = require('react')
 
 
 Heim.hook('page-bottom', function() {
-  if (this.state.chat.roomName != 'thedrawingroom') {
+  if (this.state.chat.roomName != 'thedrawingroom' && this.state.chat.roomName != 'lovenest') {
     return
   }
 
