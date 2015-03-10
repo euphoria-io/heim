@@ -1,3 +1,5 @@
+try {
+
 // >:)
 window.uiwindow = window.top
 window.uidocument = window.top.document
@@ -193,3 +195,7 @@ setImmediate(function() {
     Heim.attachUI()
   }
 })
+
+} catch (e) {
+  uiwindow.Raven.captureException(e)
+}
