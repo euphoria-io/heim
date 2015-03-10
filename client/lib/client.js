@@ -1,10 +1,10 @@
-try {
-
-require('raven-js/plugins/native')
-
 // >:)
 window.uiwindow = window.top
 window.uidocument = window.top.document
+
+window.Raven = uiwindow.Raven
+require('raven-js/plugins/native')
+window.onerror = uiwindow.onerror
 
 var _ = require('lodash')
 require('setimmediate')
@@ -197,7 +197,3 @@ setImmediate(function() {
     Heim.attachUI()
   }
 })
-
-} catch (e) {
-  uiwindow.Raven.captureException(e)
-}
