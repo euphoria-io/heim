@@ -2,10 +2,6 @@
 window.uiwindow = window.top
 window.uidocument = window.top.document
 
-window.Raven = uiwindow.Raven
-require('raven-js/plugins/native')
-window.onerror = uiwindow.onerror
-
 var _ = require('lodash')
 require('setimmediate')
 
@@ -178,6 +174,7 @@ Heim.prepareUpdate = function(hash) {
     })
     context.Heim.actions.connect(roomName)
   }
+  context.document.write('<script src="/static/raven.js?v=' + hash +  '"></sc'+'ript>')
   context.document.write('<script src="/static/main.js?v=' + hash +  '"></sc'+'ript>')
   context.document.write('<link rel="stylesheet" type="text/css" id="css" href="/static/main.css?v=' + hash + '">')
   context.document.close()
