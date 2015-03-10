@@ -1,5 +1,7 @@
 try {
 
+require('raven-js/plugins/native')
+
 // >:)
 window.uiwindow = window.top
 window.uidocument = window.top.document
