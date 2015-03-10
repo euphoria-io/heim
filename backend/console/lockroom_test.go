@@ -3,16 +3,16 @@ package console
 import (
 	"testing"
 
+	"euphoria.io/scope"
+
 	"heim/backend/mock"
 	"heim/proto/security"
-
-	"golang.org/x/net/context"
 
 	. "github.com/smartystreets/goconvey/convey"
 )
 
 func TestSetRoomPasscode(t *testing.T) {
-	ctx := context.Background()
+	ctx := scope.New()
 	kms := security.LocalKMS()
 	kms.SetMasterKey(make([]byte, security.AES256.KeySize()))
 
@@ -61,7 +61,7 @@ func TestSetRoomPasscode(t *testing.T) {
 }
 
 func TestLockRoom(t *testing.T) {
-	ctx := context.Background()
+	ctx := scope.New()
 	kms := security.LocalKMS()
 	kms.SetMasterKey(make([]byte, security.AES256.KeySize()))
 

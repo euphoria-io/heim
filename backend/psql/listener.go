@@ -5,12 +5,12 @@ import (
 	"heim/proto"
 	"strings"
 
-	"golang.org/x/net/context"
+	"euphoria.io/scope"
 )
 
 type ListenerMap map[string]proto.Session
 
-func (lm ListenerMap) Broadcast(ctx context.Context, event *proto.Packet, exclude ...string) error {
+func (lm ListenerMap) Broadcast(ctx scope.Context, event *proto.Packet, exclude ...string) error {
 	payload, err := event.Payload()
 	if err != nil {
 		return err

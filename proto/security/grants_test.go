@@ -8,12 +8,12 @@ import (
 	"testing"
 	"time"
 
+	"euphoria.io/scope"
+
 	"heim/backend/mock"
 	"heim/proto"
 	"heim/proto/security"
 	"heim/proto/snowflake"
-
-	"golang.org/x/net/context"
 
 	. "github.com/smartystreets/goconvey/convey"
 )
@@ -22,7 +22,7 @@ func TestGrants(t *testing.T) {
 	Convey("Grant a capability on a room", t, func() {
 		kms := security.LocalKMS()
 		kms.SetMasterKey(make([]byte, security.AES256.KeySize()))
-		ctx := context.Background()
+		ctx := scope.New()
 		backend := &mock.TestBackend{}
 		room, err := backend.GetRoom("test")
 		So(err, ShouldBeNil)

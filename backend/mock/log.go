@@ -3,10 +3,10 @@ package mock
 import (
 	"sync"
 
+	"euphoria.io/scope"
+
 	"heim/proto"
 	"heim/proto/snowflake"
-
-	"golang.org/x/net/context"
 )
 
 type memLog struct {
@@ -23,9 +23,7 @@ func (log *memLog) post(msg *proto.Message) {
 	log.msgs = append(log.msgs, msg)
 }
 
-func (log *memLog) Latest(ctx context.Context, n int, before snowflake.Snowflake) (
-	[]proto.Message, error) {
-
+func (log *memLog) Latest(ctx scope.Context, n int, before snowflake.Snowflake) ([]proto.Message, error) {
 	log.Lock()
 	defer log.Unlock()
 

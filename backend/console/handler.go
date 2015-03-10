@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"io"
 
+	"euphoria.io/scope"
+
 	"heim/proto"
 	"heim/proto/security"
-
-	"golang.org/x/net/context"
 )
 
 type ioterm interface {
@@ -20,7 +20,7 @@ type ioterm interface {
 
 func cmdConsole(ctrl *Controller, cmd string, term ioterm) *console {
 	c := &console{
-		ctx:     context.Background(),
+		ctx:     scope.New(),
 		backend: ctrl.backend,
 		kms:     ctrl.kms,
 		ioterm:  term,
@@ -34,7 +34,7 @@ type console struct {
 	ioterm
 	*flag.FlagSet
 
-	ctx     context.Context
+	ctx     scope.Context
 	backend proto.Backend
 	kms     security.KMS
 }

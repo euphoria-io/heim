@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"golang.org/x/net/context"
+	"euphoria.io/scope"
 )
 
 // Capability is a generic handle on a cryptographic grant of access.
@@ -81,7 +81,7 @@ func (c *capability) EncryptedPayload() []byte {
 }
 
 func GrantCapabilityOnSubject(
-	ctx context.Context, kms KMS, nonce []byte, encryptedSubjectKey, clientKey *ManagedKey) (
+	ctx scope.Context, kms KMS, nonce []byte, encryptedSubjectKey, clientKey *ManagedKey) (
 	Capability, error) {
 
 	// Decrypt subject key.
@@ -95,7 +95,7 @@ func GrantCapabilityOnSubject(
 }
 
 func GrantCapabilityOnSubjectWithPasscode(
-	ctx context.Context, kms KMS, nonce []byte, encryptedSubjectKey *ManagedKey, passcode []byte) (
+	ctx scope.Context, kms KMS, nonce []byte, encryptedSubjectKey *ManagedKey, passcode []byte) (
 	Capability, error) {
 
 	clientKey := KeyFromPasscode(passcode, nonce, AES128.KeySize())

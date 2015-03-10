@@ -10,13 +10,14 @@ import (
 	"sync/atomic"
 	"time"
 
+	"euphoria.io/scope"
+
 	"heim/backend/cluster"
 	"heim/proto"
 	"heim/proto/security"
 	"heim/proto/snowflake"
 
 	"github.com/gorilla/websocket"
-	"golang.org/x/net/context"
 
 	. "github.com/smartystreets/goconvey/convey"
 )
@@ -459,7 +460,7 @@ func testAuthentication(s *serverUnderTest) {
 	room, err := s.backend.GetRoom("private")
 	So(err, ShouldBeNil)
 
-	ctx := context.Background()
+	ctx := scope.New()
 	kms := security.LocalKMS()
 	kms.SetMasterKey(make([]byte, security.AES256.KeySize()))
 	rkey, err := room.GenerateMasterKey(ctx, kms)

@@ -3,9 +3,9 @@ package mock
 import (
 	"testing"
 
-	"heim/proto"
+	"euphoria.io/scope"
 
-	"golang.org/x/net/context"
+	"heim/proto"
 
 	. "github.com/smartystreets/goconvey/convey"
 )
@@ -15,7 +15,7 @@ func TestRoomPresence(t *testing.T) {
 	userA2 := newSession("A")
 	userB := newSession("B")
 
-	ctx := context.Background()
+	ctx := scope.New()
 	room := newMemRoom("test", "testver")
 
 	Convey("First join", t, func() {
@@ -58,7 +58,7 @@ func TestRoomBroadcast(t *testing.T) {
 	userB := newSession("B")
 	userC := newSession("C")
 
-	ctx := context.Background()
+	ctx := scope.New()
 	room := newMemRoom("test", "testver")
 
 	Convey("Setup", t, func() {

@@ -1,8 +1,6 @@
 package proto
 
-import (
-	"golang.org/x/net/context"
-)
+import "euphoria.io/scope"
 
 // A Session is a connection between a client and a Room.
 type Session interface {
@@ -20,7 +18,7 @@ type Session interface {
 	SetName(name string)
 
 	// Send sends a packet to the Session's client.
-	Send(context.Context, PacketType, interface{}) error
+	Send(scope.Context, PacketType, interface{}) error
 
 	// Close terminates the Session and disconnects the client.
 	Close()

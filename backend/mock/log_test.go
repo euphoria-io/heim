@@ -3,15 +3,15 @@ package mock
 import (
 	"testing"
 
-	"heim/proto"
+	"euphoria.io/scope"
 
-	"golang.org/x/net/context"
+	"heim/proto"
 
 	. "github.com/smartystreets/goconvey/convey"
 )
 
 func TestMemLogLatest(t *testing.T) {
-	ctx := context.Background()
+	ctx := scope.New()
 	msgs := []proto.Message{
 		{ID: 1, Content: "A"},
 		{ID: 2, Content: "B"},

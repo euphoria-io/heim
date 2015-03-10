@@ -3,10 +3,10 @@ package mock
 import (
 	"sync"
 
+	"euphoria.io/scope"
+
 	"heim/backend"
 	"heim/proto"
-
-	"golang.org/x/net/context"
 )
 
 type session struct {
@@ -33,7 +33,7 @@ func (s *session) SetName(name string)   { s.name = name }
 
 func (s *session) Identity() proto.Identity { return backend.NewIdentity(s.id, s.name) }
 
-func (s *session) Send(ctx context.Context, cmdType proto.PacketType, payload interface{}) error {
+func (s *session) Send(ctx scope.Context, cmdType proto.PacketType, payload interface{}) error {
 	s.Lock()
 	s.history = append(s.history, message{cmdType, payload})
 	s.Unlock()

@@ -11,6 +11,8 @@ import (
 	"sync"
 	"time"
 
+	"euphoria.io/scope"
+
 	"heim/backend"
 	"heim/backend/cluster"
 	"heim/proto"
@@ -18,7 +20,6 @@ import (
 
 	"github.com/go-gorp/gorp"
 	"github.com/lib/pq"
-	"golang.org/x/net/context"
 )
 
 var schema = map[string]struct {
@@ -45,7 +46,7 @@ type Backend struct {
 	*gorp.DbMap
 
 	dsn       string
-	cancel    context.CancelFunc
+	cancel    func()
 	cluster   cluster.Cluster
 	desc      *cluster.PeerDesc
 	peers     map[string]string
@@ -94,8 +95,8 @@ func (b *Backend) start() error {
 		return fmt.Errorf("presence reset error: %s", err)
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	b.cancel = cancel
+	ctx := scope.New()
+	b.cancel = ctx.Cancel
 	go b.background(ctx)
 	return nil
 }
@@ -107,7 +108,7 @@ func (b *Backend) Close() {
 	b.cluster.Part()
 }
 
-func (b *Backend) background(ctx context.Context) {
+func (b *Backend) background(ctx scope.Context) {
 	logger := backend.Logger(ctx)
 
 	listener := pq.NewListener(b.dsn, 200*time.Millisecond, 5*time.Second, nil)
@@ -196,8 +197,8 @@ func (b *Backend) GetRoom(name string) (proto.Room, error) {
 }
 
 func (b *Backend) sendMessageToRoom(
-	ctx context.Context, room *Room, session proto.Session, msg proto.Message,
-	exclude ...proto.Session) (proto.Message, error) {
+	ctx scope.Context, room *Room, session proto.Session, msg proto.Message, exclude ...proto.Session) (
+	proto.Message, error) {
 
 	stored, err := NewMessage(room, msg.Sender, msg.ID, msg.Parent, msg.EncryptionKeyID, msg.Content)
 	if err != nil {
@@ -214,7 +215,7 @@ func (b *Backend) sendMessageToRoom(
 }
 
 func (b *Backend) broadcast(
-	ctx context.Context, room *Room, session proto.Session, packetType proto.PacketType,
+	ctx scope.Context, room *Room, session proto.Session, packetType proto.PacketType,
 	payload interface{}, exclude ...proto.Session) error {
 
 	encodedPayload, err := json.Marshal(payload)
@@ -242,7 +243,7 @@ func (b *Backend) broadcast(
 	return err
 }
 
-func (b *Backend) join(ctx context.Context, room *Room, session proto.Session) error {
+func (b *Backend) join(ctx scope.Context, room *Room, session proto.Session) error {
 	b.Lock()
 	defer b.Unlock()
 
@@ -280,7 +281,7 @@ func (b *Backend) join(ctx context.Context, room *Room, session proto.Session) e
 		proto.JoinEventType, proto.PresenceEvent(*session.Identity().View()), session)
 }
 
-func (b *Backend) part(ctx context.Context, room *Room, session proto.Session) error {
+func (b *Backend) part(ctx scope.Context, room *Room, session proto.Session) error {
 	b.Lock()
 	defer b.Unlock()
 
@@ -302,7 +303,7 @@ func (b *Backend) part(ctx context.Context, room *Room, session proto.Session) e
 		proto.PartEventType, proto.PresenceEvent(*session.Identity().View()), session)
 }
 
-func (b *Backend) listing(ctx context.Context, room *Room) (proto.Listing, error) {
+func (b *Backend) listing(ctx scope.Context, room *Room) (proto.Listing, error) {
 	// TODO: return presence in an envelope, to support encryption
 	// TODO: cache for performance
 
@@ -335,7 +336,7 @@ func (b *Backend) listing(ctx context.Context, room *Room) (proto.Listing, error
 	return result, nil
 }
 
-func (b *Backend) latest(ctx context.Context, room *Room, n int, before snowflake.Snowflake) (
+func (b *Backend) latest(ctx scope.Context, room *Room, n int, before snowflake.Snowflake) (
 	[]proto.Message, error) {
 
 	if n <= 0 {
@@ -375,7 +376,7 @@ func (b *Backend) latest(ctx context.Context, room *Room, n int, before snowflak
 }
 
 // invalidatePeer must be called with lock held
-func (b *Backend) invalidatePeer(ctx context.Context, id, era string) {
+func (b *Backend) invalidatePeer(ctx scope.Context, id, era string) {
 	logger := backend.Logger(ctx)
 	packet, err := proto.MakeEvent(&proto.NetworkEvent{
 		Type:      "partition",

@@ -6,12 +6,12 @@ import (
 	"sync"
 	"time"
 
+	"euphoria.io/scope"
+
 	"heim/backend"
 	"heim/proto"
 	"heim/proto/security"
 	"heim/proto/snowflake"
-
-	"golang.org/x/net/context"
 )
 
 type memRoom struct {
@@ -38,13 +38,11 @@ func newMemRoom(name, version string) *memRoom {
 
 func (r *memRoom) Version() string { return r.version }
 
-func (r *memRoom) Latest(ctx context.Context, n int, before snowflake.Snowflake) (
-	[]proto.Message, error) {
-
+func (r *memRoom) Latest(ctx scope.Context, n int, before snowflake.Snowflake) ([]proto.Message, error) {
 	return r.log.Latest(ctx, n, before)
 }
 
-func (r *memRoom) Join(ctx context.Context, session proto.Session) error {
+func (r *memRoom) Join(ctx scope.Context, session proto.Session) error {
 	r.Lock()
 	defer r.Unlock()
 
@@ -67,7 +65,7 @@ func (r *memRoom) Join(ctx context.Context, session proto.Session) error {
 		proto.PresenceEvent(*session.Identity().View()), session)
 }
 
-func (r *memRoom) Part(ctx context.Context, session proto.Session) error {
+func (r *memRoom) Part(ctx scope.Context, session proto.Session) error {
 	r.Lock()
 	defer r.Unlock()
 
@@ -88,7 +86,7 @@ func (r *memRoom) Part(ctx context.Context, session proto.Session) error {
 		proto.PresenceEvent(*session.Identity().View()), session)
 }
 
-func (r *memRoom) Send(ctx context.Context, session proto.Session, message proto.Message) (
+func (r *memRoom) Send(ctx scope.Context, session proto.Session, message proto.Message) (
 	proto.Message, error) {
 
 	r.Lock()
@@ -106,8 +104,7 @@ func (r *memRoom) Send(ctx context.Context, session proto.Session, message proto
 }
 
 func (r *memRoom) broadcast(
-	ctx context.Context, cmdType proto.PacketType, payload interface{},
-	excluding ...proto.Session) error {
+	ctx scope.Context, cmdType proto.PacketType, payload interface{}, excluding ...proto.Session) error {
 
 	excMap := make(map[string]struct{}, len(excluding))
 	for _, x := range excluding {
@@ -128,7 +125,7 @@ func (r *memRoom) broadcast(
 	return nil
 }
 
-func (r *memRoom) Listing(ctx context.Context) (proto.Listing, error) {
+func (r *memRoom) Listing(ctx scope.Context) (proto.Listing, error) {
 	listing := proto.Listing{}
 	for _, sessions := range r.live {
 		for _, session := range sessions {
@@ -140,7 +137,8 @@ func (r *memRoom) Listing(ctx context.Context) (proto.Listing, error) {
 }
 
 func (r *memRoom) RenameUser(
-	ctx context.Context, session proto.Session, formerName string) (*proto.NickEvent, error) {
+	ctx scope.Context, session proto.Session, formerName string) (*proto.NickEvent, error) {
+
 	backend.Logger(ctx).Printf(
 		"renaming %s from %s to %s\n", session.ID(), formerName, session.Identity().Name())
 	payload := &proto.NickEvent{
@@ -151,14 +149,14 @@ func (r *memRoom) RenameUser(
 	return payload, r.broadcast(ctx, proto.NickType, payload, session)
 }
 
-func (r *memRoom) MasterKey(ctx context.Context) (proto.RoomKey, error) {
+func (r *memRoom) MasterKey(ctx scope.Context) (proto.RoomKey, error) {
 	if r.key == nil {
 		return nil, nil
 	}
 	return r.key, nil
 }
 
-func (r *memRoom) GenerateMasterKey(ctx context.Context, kms security.KMS) (proto.RoomKey, error) {
+func (r *memRoom) GenerateMasterKey(ctx scope.Context, kms security.KMS) (proto.RoomKey, error) {
 	nonce, err := kms.GenerateNonce(security.AES128.KeySize())
 	if err != nil {
 		return nil, err
@@ -178,14 +176,14 @@ func (r *memRoom) GenerateMasterKey(ctx context.Context, kms security.KMS) (prot
 	return r.key, nil
 }
 
-func (r *memRoom) SaveCapability(ctx context.Context, capability security.Capability) error {
+func (r *memRoom) SaveCapability(ctx scope.Context, capability security.Capability) error {
 	r.Lock()
 	r.capabilities[capability.CapabilityID()] = capability
 	r.Unlock()
 	return nil
 }
 
-func (r *memRoom) GetCapability(ctx context.Context, id string) (security.Capability, error) {
+func (r *memRoom) GetCapability(ctx scope.Context, id string) (security.Capability, error) {
 	return r.capabilities[id], nil
 }
 

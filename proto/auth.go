@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"heim/proto/security"
+	"euphoria.io/scope"
 
-	"golang.org/x/net/context"
+	"heim/proto/security"
 )
 
 type AuthOption string
@@ -23,7 +23,7 @@ type Authentication struct {
 	FailureReason string
 }
 
-func Authenticate(ctx context.Context, room Room, cmd *AuthCommand) (*Authentication, error) {
+func Authenticate(ctx scope.Context, room Room, cmd *AuthCommand) (*Authentication, error) {
 	switch cmd.Type {
 	case AuthPasscode:
 		return authenticateWithPasscode(ctx, room, cmd.Passcode)
@@ -32,7 +32,7 @@ func Authenticate(ctx context.Context, room Room, cmd *AuthCommand) (*Authentica
 	}
 }
 
-func authenticateWithPasscode(ctx context.Context, room Room, passcode string) (
+func authenticateWithPasscode(ctx scope.Context, room Room, passcode string) (
 	*Authentication, error) {
 
 	mkey, err := room.MasterKey(ctx)

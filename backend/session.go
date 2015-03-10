@@ -8,11 +8,12 @@ import (
 	"sync/atomic"
 	"time"
 
+	"euphoria.io/scope"
+
 	"heim/proto"
 	"heim/proto/snowflake"
 
 	"github.com/gorilla/websocket"
-	"golang.org/x/net/context"
 )
 
 const MaxKeepAliveMisses = 3
@@ -30,8 +31,7 @@ var (
 type cmdState func(*proto.Packet) (interface{}, error)
 
 type session struct {
-	ctx       context.Context
-	cancel    context.CancelFunc
+	ctx       scope.Context
 	conn      *websocket.Conn
 	identity  *memIdentity
 	serverID  string
@@ -50,21 +50,19 @@ type session struct {
 	maybeAbandoned      bool
 	outstandingPings    int
 	expectedPingReply   int64
-	fastKeepAliveCancel context.CancelFunc
+	fastKeepAliveCancel func()
 }
 
 func newSession(
-	ctx context.Context, conn *websocket.Conn, serverID, serverEra string, room proto.Room,
+	ctx scope.Context, conn *websocket.Conn, serverID, serverEra string, room proto.Room,
 	agentID []byte) *session {
 
 	nextID := atomic.AddUint64(&sessionIDCounter, 1)
 	sessionID := fmt.Sprintf("%x-%08x", agentID, nextID)
-	loggingCtx := LoggingContext(ctx, fmt.Sprintf("[%s] ", sessionID))
-	cancellableCtx, cancel := context.WithCancel(loggingCtx)
+	ctx = LoggingContext(ctx, fmt.Sprintf("[%s] ", sessionID))
 
 	session := &session{
-		ctx:       cancellableCtx,
-		cancel:    cancel,
+		ctx:       ctx,
 		conn:      conn,
 		identity:  newMemIdentity(sessionID, serverID, serverEra),
 		serverID:  serverID,
@@ -81,7 +79,7 @@ func newSession(
 func (s *session) Close() {
 	logger := Logger(s.ctx)
 	logger.Printf("closing session")
-	s.cancel()
+	s.ctx.Cancel()
 }
 
 func (s *session) ID() string               { return s.identity.ID() }
@@ -90,9 +88,7 @@ func (s *session) ServerEra() string        { return s.serverEra }
 func (s *session) Identity() proto.Identity { return s.identity }
 func (s *session) SetName(name string)      { s.identity.name = name }
 
-func (s *session) Send(
-	ctx context.Context, cmdType proto.PacketType, payload interface{}) error {
-
+func (s *session) Send(ctx scope.Context, cmdType proto.PacketType, payload interface{}) error {
 	var err error
 	payload, err = proto.DecryptPayload(payload, s.auth)
 	if err != nil {
@@ -447,8 +443,8 @@ func (s *session) CheckAbandoned() error {
 	}
 	s.maybeAbandoned = true
 
-	child, cancel := context.WithCancel(s.ctx)
-	s.fastKeepAliveCancel = cancel
+	child := s.ctx.Fork()
+	s.fastKeepAliveCancel = child.Cancel
 
 	go func() {
 		logger.Printf("starting fast-keepalive timer")
@@ -458,8 +454,7 @@ func (s *session) CheckAbandoned() error {
 			logger.Printf("aliased session still alive")
 		case <-timer:
 			logger.Printf("connection replaced")
-			// TODO: cancel with ErrReplaced
-			s.Close()
+			s.ctx.Terminate(ErrReplaced)
 		}
 	}()
 

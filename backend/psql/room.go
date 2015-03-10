@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"time"
 
+	"euphoria.io/scope"
+
 	"heim/backend"
 	"heim/proto"
 	"heim/proto/security"
 	"heim/proto/snowflake"
-
-	"golang.org/x/net/context"
 )
 
 var notImpl = fmt.Errorf("not implemented")
@@ -33,31 +33,31 @@ type RoomBinding struct {
 	*Room
 }
 
-func (rb *RoomBinding) Latest(ctx context.Context, n int, before snowflake.Snowflake) (
+func (rb *RoomBinding) Latest(ctx scope.Context, n int, before snowflake.Snowflake) (
 	[]proto.Message, error) {
 
 	return rb.Backend.latest(ctx, rb.Room, n, before)
 }
 
-func (rb *RoomBinding) Join(ctx context.Context, session proto.Session) error {
+func (rb *RoomBinding) Join(ctx scope.Context, session proto.Session) error {
 	return rb.Backend.join(ctx, rb.Room, session)
 }
 
-func (rb *RoomBinding) Part(ctx context.Context, session proto.Session) error {
+func (rb *RoomBinding) Part(ctx scope.Context, session proto.Session) error {
 	return rb.Backend.part(ctx, rb.Room, session)
 }
 
-func (rb *RoomBinding) Send(ctx context.Context, session proto.Session, msg proto.Message) (
+func (rb *RoomBinding) Send(ctx scope.Context, session proto.Session, msg proto.Message) (
 	proto.Message, error) {
 
 	return rb.Backend.sendMessageToRoom(ctx, rb.Room, session, msg, session)
 }
 
-func (rb *RoomBinding) Listing(ctx context.Context) (proto.Listing, error) {
+func (rb *RoomBinding) Listing(ctx scope.Context) (proto.Listing, error) {
 	return rb.Backend.listing(ctx, rb.Room)
 }
 
-func (rb *RoomBinding) RenameUser(ctx context.Context, session proto.Session, formerName string) (
+func (rb *RoomBinding) RenameUser(ctx scope.Context, session proto.Session, formerName string) (
 	*proto.NickEvent, error) {
 
 	presence := &Presence{
@@ -86,8 +86,7 @@ func (rb *RoomBinding) RenameUser(ctx context.Context, session proto.Session, fo
 	return event, rb.Backend.broadcast(ctx, rb.Room, session, proto.NickEventType, event, session)
 }
 
-func (rb *RoomBinding) GenerateMasterKey(
-	ctx context.Context, kms security.KMS) (proto.RoomKey, error) {
+func (rb *RoomBinding) GenerateMasterKey(ctx scope.Context, kms security.KMS) (proto.RoomKey, error) {
 
 	// Generate unique ID for storing new key in DB.
 	keyID, err := snowflake.New()
@@ -146,7 +145,7 @@ func (rb *RoomBinding) GenerateMasterKey(
 	return rmkb, nil
 }
 
-func (rb *RoomBinding) MasterKey(ctx context.Context) (proto.RoomKey, error) {
+func (rb *RoomBinding) MasterKey(ctx scope.Context) (proto.RoomKey, error) {
 	rmkb := &RoomMasterKeyBinding{}
 	err := rb.DbMap.SelectOne(
 		rmkb,
@@ -165,7 +164,7 @@ func (rb *RoomBinding) MasterKey(ctx context.Context) (proto.RoomKey, error) {
 	return rmkb, nil
 }
 
-func (rb *RoomBinding) SaveCapability(ctx context.Context, capability security.Capability) error {
+func (rb *RoomBinding) SaveCapability(ctx scope.Context, capability security.Capability) error {
 	transaction, err := rb.DbMap.Begin()
 	if err != nil {
 		return err
@@ -199,7 +198,7 @@ func (rb *RoomBinding) SaveCapability(ctx context.Context, capability security.C
 	return nil
 }
 
-func (rb *RoomBinding) GetCapability(ctx context.Context, id string) (security.Capability, error) {
+func (rb *RoomBinding) GetCapability(ctx scope.Context, id string) (security.Capability, error) {
 	rcb := &RoomCapabilityBinding{}
 
 	backend.Logger(ctx).Printf("looking up capability %s in room %s", id, rb.Name)

@@ -8,6 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"euphoria.io/scope"
+
 	"heim/backend/cluster"
 	"heim/proto"
 	"heim/proto/security"
@@ -17,8 +19,6 @@ import (
 	"github.com/gorilla/securecookie"
 	"github.com/gorilla/websocket"
 	"github.com/prometheus/client_golang/prometheus"
-
-	"golang.org/x/net/context"
 )
 
 const (
@@ -156,7 +156,7 @@ func (s *Server) getAgentID(w http.ResponseWriter, r *http.Request) ([]byte, *ht
 }
 
 func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
-	ctx := context.Background()
+	ctx := scope.New()
 	logger := Logger(ctx)
 
 	// Resolve the room.

@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	"heim/proto"
+	"euphoria.io/scope"
 
-	"golang.org/x/net/context"
+	"heim/proto"
 )
 
 type Presence struct {
@@ -65,8 +65,7 @@ func (rp roomPresence) join(session proto.Session) {
 
 func (rp roomPresence) part(session proto.Session) { delete(rp, session.ID()) }
 
-func (rp roomPresence) broadcast(
-	ctx context.Context, event *proto.Packet, exclude ...string) error {
+func (rp roomPresence) broadcast(ctx scope.Context, event *proto.Packet, exclude ...string) error {
 
 	payload, err := event.Payload()
 	if err != nil {

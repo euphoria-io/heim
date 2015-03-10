@@ -4,7 +4,7 @@ import (
 	"log"
 	"os"
 
-	"golang.org/x/net/context"
+	"euphoria.io/scope"
 )
 
 type logCtxKey int
@@ -12,14 +12,15 @@ type logCtxKey int
 const logCtx logCtxKey = 0
 const logFlags = log.LstdFlags
 
-func Logger(ctx context.Context) *log.Logger {
-	if logger, ok := ctx.Value(logCtx).(*log.Logger); ok {
+func Logger(ctx scope.Context) *log.Logger {
+	if logger, ok := ctx.Get(logCtx).(*log.Logger); ok {
 		return logger
 	}
 	return log.New(os.Stdout, "[???] ", logFlags)
 }
 
-func LoggingContext(parent context.Context, prefix string) context.Context {
+func LoggingContext(ctx scope.Context, prefix string) scope.Context {
 	logger := log.New(os.Stdout, prefix, logFlags)
-	return context.WithValue(parent, logCtx, logger)
+	ctx.Set(logCtx, logger)
+	return ctx
 }
