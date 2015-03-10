@@ -12,9 +12,15 @@ import (
 // TODO: these should be Sessions
 type Listing []IdentityView
 
-func (l Listing) Len() int           { return len(l) }
-func (l Listing) Less(i, j int) bool { return l[i].Name < l[j].Name }
-func (l Listing) Swap(i, j int)      { l[i], l[j] = l[j], l[i] }
+func (l Listing) Len() int      { return len(l) }
+func (l Listing) Swap(i, j int) { l[i], l[j] = l[j], l[i] }
+
+func (l Listing) Less(i, j int) bool {
+	if l[i].Name == l[j].Name {
+		return l[i].ID < l[j].ID
+	}
+	return l[i].Name < l[j].Name
+}
 
 // A Room is a nexus of communication. Users connect to a Room via
 // Session and interact.
