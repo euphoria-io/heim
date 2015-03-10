@@ -32,7 +32,7 @@ module.exports.store = Reflux.createStore({
     if (loc.protocol == 'https:') {
       scheme = 'wss'
     }
-    return scheme + ':' + loc.host + '/room/' + roomName + '/ws'
+    return scheme + '://' + loc.host + '/room/' + roomName + '/ws'
   },
 
   _open: function() {
