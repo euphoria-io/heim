@@ -159,6 +159,13 @@ func (tc *testConn) expectError(id, cmdType, errFormat string, errArgs ...interf
 	So(err.Error(), ShouldEqual, errMsg)
 }
 
+func (tc *testConn) expectPing() {
+	fmt.Printf("reading packet, expecting ping-event\n")
+	packetType, payload := tc.readPacket()
+	fmt.Printf("%s received %v, %#v\n", tc.RemoteAddr(), packetType, payload)
+	So(packetType, ShouldEqual, "ping-event")
+}
+
 func (tc *testConn) expectSnapshot(version string, listingParts []string, logParts []string) {
 	tc.expect("", "snapshot-event",
 		`{"session_id":"???","version":"%s","listing":[%s],"log":[%s]}`,
@@ -219,12 +226,14 @@ func testLurker(s *serverUnderTest) {
 		conn1 := s.Connect("lurker")
 		defer conn1.Close()
 
+		conn1.expectPing()
 		conn1.expectSnapshot(s.backend.Version(), nil, nil)
 		id1 := conn1.id()
 
 		conn2 := s.Connect("lurker")
 		defer conn2.Close()
 
+		conn2.expectPing()
 		conn2.expectSnapshot(s.backend.Version(),
 			[]string{fmt.Sprintf(`{"id":"%s","server_id":"test1","server_era":"era1"}`, id1)},
 			nil)
@@ -256,6 +265,7 @@ func testBroadcast(s *serverUnderTest) {
 			conn.send("1", "nick", `{"name":"user%d"}`, i)
 			conn.send("2", "who", "")
 
+			conn.expectPing()
 			conn.expectSnapshot(s.backend.Version(), listingParts, nil)
 			me := conn.id()
 			ids[i] = proto.IdentityView{ID: me, Name: fmt.Sprintf("user%d", i)}
@@ -320,6 +330,7 @@ func testThreading(s *serverUnderTest) {
 		conn := s.Connect("threading")
 		defer conn.Close()
 
+		conn.expectPing()
 		conn.expectSnapshot(s.backend.Version(), nil, nil)
 
 		id := &proto.IdentityView{ID: conn.id(), Name: "user"}
@@ -367,10 +378,12 @@ func testPresence(factory func() proto.Backend) {
 	Convey("Other party joins then parts", func() {
 		self := s.Connect("presence")
 		defer self.Close()
+		self.expectPing()
 		self.expectSnapshot(s.backend.Version(), nil, nil)
 		selfID := self.id()
 
 		other := s.Connect("presence")
+		other.expectPing()
 		other.expectSnapshot(s.backend.Version(),
 			[]string{
 				fmt.Sprintf(`{"id":"%s","server_id":"test1","server_era":"era1"}`, selfID),
@@ -394,11 +407,13 @@ func testPresence(factory func() proto.Backend) {
 
 	Convey("Join after other party, other party parts", func() {
 		other := s.Connect("presence2")
+		other.expectPing()
 		other.expectSnapshot(s.backend.Version(), nil, nil)
 		otherID := other.id()
 
 		self := s.Connect("presence2")
 		defer self.Close()
+		self.expectPing()
 		self.expectSnapshot(s.backend.Version(),
 			[]string{
 				fmt.Sprintf(`{"id":"%s","server_id":"test1","server_era":"era1"}`,
@@ -474,6 +489,7 @@ func testAuthentication(s *serverUnderTest) {
 	Convey("Access denied", func() {
 		conn := s.Connect("private")
 		defer conn.Close()
+		conn.expectPing()
 		conn.expect("", "bounce-event", `{"reason":"authentication required"}`)
 
 		conn.send("1", "who", "")
@@ -489,6 +505,7 @@ func testAuthentication(s *serverUnderTest) {
 	Convey("Access granted", func() {
 		conn := s.Connect("private")
 		defer conn.Close()
+		conn.expectPing()
 		conn.expect("", "bounce-event", `{"reason":"authentication required"}`)
 
 		conn.send("1", "auth", `{"type":"passcode","passcode":"hunter2"}`)

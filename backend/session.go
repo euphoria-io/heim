@@ -122,6 +122,10 @@ func (s *session) serve() error {
 	logger := Logger(s.ctx)
 	logger.Printf("client connected")
 
+	if err := s.sendPing(); err != nil {
+		return err
+	}
+
 	// TODO: check room auth
 	key, err := s.room.MasterKey(s.ctx)
 	if err != nil {
