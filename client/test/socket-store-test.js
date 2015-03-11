@@ -11,6 +11,7 @@ describe('socket store', function() {
     fakeWebSocketContructor = sinon.spy(function() {
       fakeWebSocket = this
       this.send = sinon.spy()
+      this.close = sinon.spy()
     })
     window.WebSocket = fakeWebSocketContructor
     support.resetStore(socket.store)
@@ -40,9 +41,9 @@ describe('socket store', function() {
     })
 
     it('should set up event handlers', function() {
-      socket.store.connect()
+      socket.store.connect('ezzie')
       assert.equal(fakeWebSocket.onopen, socket.store._open)
-      assert.equal(fakeWebSocket.onclose, socket.store._close)
+      assert.equal(fakeWebSocket.onclose, socket.store._closeReconnectSlow)
       assert.equal(fakeWebSocket.onmessage, socket.store._message)
     })
   })
@@ -58,32 +59,70 @@ describe('socket store', function() {
     })
   })
 
-  describe('when socket closed', function() {
+  function checkSocketCleanup(action) {
     it('should emit an close event', function(done) {
       support.listenOnce(socket.store, function(ev) {
         assert.deepEqual(ev, {status: 'close'})
         done()
       })
 
-      socket.store._close()
+      action()
     })
 
-    describe('while connected', function() {
-      beforeEach(function() {
-        socket.store.connect('ezzie')
-        sinon.stub(socket.store, 'connect')
-      })
+    it('should clean up timeouts', function() {
+      var pingTimeout = socket.store.pingTimeout = 1
+      var pingReplyTimeout = socket.store.pingReplyTimeout = 2
+      sinon.stub(window, 'clearTimeout')
+      action()
+      sinon.assert.calledTwice(window.clearTimeout)
+      sinon.assert.calledWithExactly(window.clearTimeout, pingTimeout)
+      sinon.assert.calledWithExactly(window.clearTimeout, pingReplyTimeout)
+      window.clearTimeout.restore()
+    })
 
-      afterEach(function() {
-        socket.store.connect.restore()
-      })
+    it('should clear socket event handlers', function() {
+      action()
+      assert.equal(fakeWebSocket.onopen, null)
+      assert.equal(fakeWebSocket.onclose, null)
+      assert.equal(fakeWebSocket.onmessage, null)
+    })
+  }
 
-      it('should attempt to reconnect within 5s', function() {
-        socket.store._close()
-        support.clock.tick(5000)
-        sinon.assert.calledOnce(socket.store.connect)
-        sinon.assert.calledWithExactly(socket.store.connect, 'ezzie')
-      })
+  describe('when socket closed', function() {
+    beforeEach(function() {
+      socket.store.connect('ezzie')
+      sinon.stub(socket.store, '_connect')
+    })
+
+    afterEach(function() {
+      socket.store._connect.restore()
+    })
+
+    checkSocketCleanup(() => socket.store.ws.onclose())
+
+    it('should attempt to reconnect within 5s', function() {
+      socket.store.ws.onclose()
+      support.clock.tick(5000)
+      sinon.assert.calledOnce(socket.store._connect)
+    })
+  })
+
+  describe('a forceful reconnect', function() {
+    beforeEach(function() {
+      socket.store.connect('ezzie')
+      sinon.stub(socket.store, '_connect')
+    })
+
+    afterEach(function() {
+      socket.store._connect.restore()
+    })
+
+    checkSocketCleanup(socket.store._reconnect)
+
+    it('should close the socket and connect again', function() {
+      socket.store._reconnect()
+      sinon.assert.calledOnce(socket.store.ws.close)
+      sinon.assert.calledOnce(socket.store._connect)
     })
   })
 
@@ -103,9 +142,111 @@ describe('socket store', function() {
     })
   })
 
+  describe('when server ping received', function() {
+    beforeEach(function() {
+      socket.store.connect('ezzie')
+      socket.store._message({data: JSON.stringify({
+        type: 'ping-event',
+        data: {
+          time: 0,
+          next: 20,
+        },
+      })})
+    })
+
+    it('should send a ping-reply', function() {
+      sinon.assert.calledWith(fakeWebSocket.send, JSON.stringify({
+        type: 'ping-reply',
+        data: {
+          time: 0
+        },
+        id: '0',
+      }))
+    })
+
+    describe('if another server ping isn\'t received before the next timeout', function() {
+      beforeEach(function() {
+        fakeWebSocket.send.reset()
+        sinon.stub(socket.store, '_reconnect')
+        support.clock.tick(20000)
+      })
+
+      afterEach(function() {
+        socket.store._reconnect.restore()
+        clearTimeout(socket.store.pingTimeout)
+        clearTimeout(socket.store.pingReplyTimeout)
+      })
+
+      it('should send a client ping', function() {
+        sinon.assert.calledWith(fakeWebSocket.send, JSON.stringify({
+          type: 'ping',
+          id: '1',
+          data: {},
+        }))
+      })
+
+      describe('after 2000ms', function() {
+        describe('if there is no response', function() {
+          it('should force a reconnect', function() {
+            support.clock.tick(2000)
+            sinon.assert.calledOnce(socket.store._reconnect)
+          })
+        })
+
+        describe('if any server message received', function() {
+          it('should not reconnect', function() {
+            support.clock.tick(1000)
+            socket.store._message({data: JSON.stringify({
+              type: 'another-message',
+            })})
+            support.clock.tick(1000)
+            sinon.assert.notCalled(socket.store._reconnect)
+          })
+        })
+      })
+    })
+  })
+
+  describe('pingIfIdle action', function() {
+    beforeEach(function() {
+      socket.store.connect('ezzie')
+    })
+
+    it('should send a ping if no messages have ever been received', function() {
+      socket.store.pingIfIdle()
+      sinon.assert.calledWith(fakeWebSocket.send, JSON.stringify({
+        type: 'ping',
+        id: '0',
+        data: {},
+      }))
+    })
+
+    it('should send a ping if no messages have been received in the last 2000ms', function() {
+      socket.store._message({data: JSON.stringify({
+        type: 'hello, ezzie.',
+      })})
+      support.clock.tick(2000)
+      socket.store.pingIfIdle()
+      sinon.assert.calledWith(fakeWebSocket.send, JSON.stringify({
+        type: 'ping',
+        id: '0',
+        data: {},
+      }))
+    })
+
+    it('should not send a ping if a message has been received in the last 2000ms', function() {
+      socket.store._message({data: JSON.stringify({
+        type: 'hello, ezzie.',
+      })})
+      support.clock.tick(1000)
+      socket.store.pingIfIdle()
+      sinon.assert.notCalled(fakeWebSocket.send)
+    })
+  })
+
   describe('send action', function() {
     beforeEach(function() {
-      socket.store.connect()
+      socket.store.connect('ezzie')
     })
 
     it('should send JSON to the websocket', function() {

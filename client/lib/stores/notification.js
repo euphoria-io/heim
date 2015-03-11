@@ -109,9 +109,7 @@ module.exports.store = Reflux.createStore({
 
   resetNotification: function() {
     this.notification = null
-    if (this._closeTimeout) {
-      clearTimeout(this._closeTimeout)
-    }
+    clearTimeout(this._closeTimeout)
     this._closeTimeout = null
   },
 

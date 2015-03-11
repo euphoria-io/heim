@@ -406,6 +406,16 @@ describe('chat store', function() {
     })
   })
 
+  describe('on focus change', function() {
+    it('should trigger a socket idle ping if connected and focused', function() {
+      sinon.stub(socket, 'pingIfIdle')
+      chat.store.state.connected = true
+      chat.store.focusChange({windowFocused: true})
+      sinon.assert.calledOnce(socket.pingIfIdle)
+      socket.pingIfIdle.restore()
+    })
+  })
+
   describe('received messages', function() {
     var sendEvent = {
       'id': '0',
