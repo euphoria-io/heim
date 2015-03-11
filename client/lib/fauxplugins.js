@@ -25,6 +25,10 @@ Heim.hook('page-bottom', function() {
         background: #e8e8e8 !important;
       }
 
+      .message-emote {
+        background: #f3f3f3 !important;
+      }
+
       a {
         color: #444;
         text-decoration: none;
