@@ -95,7 +95,7 @@ type PingCommand struct {
 type PingEvent PingCommand
 
 type PingReply struct {
-	UnixTime int64 `json:"time"`
+	UnixTime int64 `json:"time,omitempty"`
 }
 
 type AuthCommand struct {
