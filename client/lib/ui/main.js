@@ -86,7 +86,6 @@ module.exports = React.createClass({
     var InfoBar = this.state.thin ? ChatTopBar : ChatSidebar
     return (
       <div className="chat" onMouseDownCapture={this.onMouseDown} onClickCapture={this.onClick} onTouchMove={this.onTouchMove}>
-        {this.state.chat.authState && this.state.chat.authState != 'trying-stored' && <div className="hatch-shade fill" />}
         <InfoBar scrollbarWidth={this.state.scrollbarWidth} who={this.state.chat.who} roomName={this.state.chat.roomName} joined={this.state.chat.joined} authType={this.state.chat.authType} updateReady={this.state.update.get('ready')} />
         <Scroller
           ref="scroller"
@@ -102,6 +101,7 @@ module.exports = React.createClass({
           onScroll={this.onScroll}
           onNearTop={actions.loadMoreLogs}
         >
+          {this.state.chat.authState && this.state.chat.authState != 'trying-stored' && <div className="hatch-shade fill" />}
           <div className="messages-content">
             <Messages ref="messages" />
           </div>
