@@ -259,6 +259,8 @@ func (s *session) handleAuth(cmd *proto.Packet) (interface{}, error) {
 			return nil, err
 		}
 		return &proto.AuthReply{Success: true}, nil
+	case *proto.PingCommand, *proto.PingReply:
+		return s.handleCommand(cmd)
 	default:
 		return nil, fmt.Errorf("access denied, please authenticate")
 	}

@@ -492,6 +492,9 @@ func testAuthentication(s *serverUnderTest) {
 		conn.expectPing()
 		conn.expect("", "bounce-event", `{"reason":"authentication required"}`)
 
+		conn.send("1", "ping", "{}")
+		conn.expect("1", "ping-reply", `{}`)
+
 		conn.send("1", "who", "")
 		conn.expectError("1", "who-reply", "access denied, please authenticate")
 
