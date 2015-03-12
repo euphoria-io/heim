@@ -3,7 +3,6 @@ package cluster
 import (
 	"encoding/hex"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"sort"
 	"strings"
@@ -17,9 +16,6 @@ import (
 )
 
 var (
-	etcdAddrs = flag.String("etcd-peers", "", "comma-separated addresses of etcd peers")
-	etcdPath  = flag.String("etcd", "", "etcd path for cluster coordination")
-
 	selfAnnouncements = prometheus.NewCounter(prometheus.CounterOpts{
 		Name:      "self_announcements",
 		Subsystem: "peer",
@@ -50,10 +46,6 @@ func init() {
 	prometheus.MustRegister(peerEvents)
 	prometheus.MustRegister(peerLiveCount)
 	prometheus.MustRegister(peerWatchErrors)
-}
-
-func EtcdClusterFromFlags(desc *PeerDesc) (Cluster, error) {
-	return EtcdCluster(*etcdPath, strings.Split(*etcdAddrs, ","), desc)
 }
 
 func EtcdCluster(root string, peers []string, desc *PeerDesc) (Cluster, error) {

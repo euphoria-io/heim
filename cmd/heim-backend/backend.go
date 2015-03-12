@@ -3,34 +3,18 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 
-	"euphoria.io/heim/aws/kms"
 	"euphoria.io/heim/backend"
-	"euphoria.io/heim/backend/cluster"
 	"euphoria.io/heim/backend/console"
 	"euphoria.io/heim/backend/psql"
 	_ "euphoria.io/heim/cmd" // for -newflags
 	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/security"
 	"euphoria.io/heim/proto/snowflake"
-)
 
-var (
-	addr    = flag.String("http", ":8080", "")
-	id      = flag.String("id", "singleton", "")
-	psqlDSN = flag.String("psql", "psql", "")
-	static  = flag.String("static", "", "")
-
-	ctrlAddr     = flag.String("control", ":2222", "")
-	ctrlHostKey  = flag.String("control-hostkey", "", "")
-	ctrlAuthKeys = flag.String("control-authkeys", "", "")
-
-	kmsAWSRegion    = flag.String("kms-aws-region", "us-west-2", "")
-	kmsAWSKeyID     = flag.String("kms-aws-key-id", "", "")
-	kmsLocalKeyFile = flag.String("kms-local-key-file", "", "")
+	"gopkg.in/yaml.v2"
 )
 
 var version string
@@ -45,9 +29,18 @@ func main() {
 func run() error {
 	flag.Parse()
 
-	id, err := os.Hostname()
+	out, err := yaml.Marshal(backend.Config)
 	if err != nil {
-		return fmt.Errorf("hostname error: %s", err)
+		return err
+	}
+	fmt.Printf("config:\n%s\n", string(out))
+
+	if backend.Config.Cluster.ServerID == "" {
+		id, err := os.Hostname()
+		if err != nil {
+			return fmt.Errorf("hostname error: %s", err)
+		}
+		backend.Config.Cluster.ServerID = id
 	}
 
 	era, err := snowflake.New()
@@ -55,23 +48,21 @@ func run() error {
 		return fmt.Errorf("era error: %s", err)
 	}
 
-	serverDesc := &cluster.PeerDesc{
-		ID:      id,
-		Era:     era.String(),
-		Version: version,
-	}
+	backend.Config.Cluster.Era = era.String()
+	backend.Config.Cluster.Version = version
 
-	c, err := cluster.EtcdClusterFromFlags(serverDesc)
+	c, err := backend.Config.Cluster.EtcdCluster()
 	if err != nil {
 		return fmt.Errorf("cluster error: %s", err)
 	}
 
-	kms, err := getKMS()
+	kms, err := backend.Config.KMS.Get()
 	if err != nil {
 		return fmt.Errorf("kms error: %s", err)
 	}
 
-	b, err := psql.NewBackend(*psqlDSN, c, serverDesc)
+	serverDesc := backend.Config.Cluster.DescribeSelf()
+	b, err := psql.NewBackend(backend.Config.DB.DSN, c, serverDesc)
 	if err != nil {
 		return fmt.Errorf("backend error: %s", err)
 	}
@@ -81,31 +72,31 @@ func run() error {
 		return fmt.Errorf("controller error: %s", err)
 	}
 
-	server, err := backend.NewServer(b, c, kms, serverDesc.ID, serverDesc.Era, *static)
+	server, err := backend.NewServer(b, c, kms, serverDesc.ID, serverDesc.Era, backend.Config.HTTP.Static)
 	if err != nil {
 		return fmt.Errorf("server error: %s", err)
 	}
 
-	fmt.Printf("serving era %s on %s\n", serverDesc.Era, *addr)
-	http.ListenAndServe(*addr, newVersioningHandler(server))
+	fmt.Printf("serving era %s on %s\n", serverDesc.Era, backend.Config.HTTP.Listen)
+	http.ListenAndServe(backend.Config.HTTP.Listen, newVersioningHandler(server))
 	return nil
 }
 
 func controller(b proto.Backend, kms security.KMS) error {
-	if *ctrlAddr != "" {
-		ctrl, err := console.NewController(*ctrlAddr, b, kms)
+	if backend.Config.Console.Listen != "" {
+		ctrl, err := console.NewController(backend.Config.Console.Listen, b, kms)
 		if err != nil {
 			return err
 		}
 
-		if *ctrlHostKey != "" {
-			if err := ctrl.AddHostKey(*ctrlHostKey); err != nil {
+		if backend.Config.Console.HostKey != "" {
+			if err := ctrl.AddHostKey(backend.Config.Console.HostKey); err != nil {
 				return err
 			}
 		}
 
-		if *ctrlAuthKeys != "" {
-			if err := ctrl.AddAuthorizedKeys(*ctrlAuthKeys); err != nil {
+		for _, authKey := range backend.Config.Console.AuthKeys {
+			if err := ctrl.AddAuthorizedKeys(authKey); err != nil {
 				return err
 			}
 		}
@@ -132,52 +123,4 @@ func (vh *versioningHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Heim-Version", vh.version)
 	}
 	vh.handler.ServeHTTP(w, r)
-}
-
-func getKMS() (security.KMS, error) {
-	switch {
-	case *kmsLocalKeyFile != "":
-		kms, err := localKMS(*kmsLocalKeyFile)
-		if err != nil {
-			return nil, fmt.Errorf("kms-local-key-file: %s", err)
-		}
-		return kms, nil
-	case *kmsAWSKeyID != "":
-		if *kmsAWSRegion == "" {
-			return nil, fmt.Errorf("--kms-aws-region required if --kms-aws-key-id is specified")
-		}
-		kms, err := kms.New(*kmsAWSRegion, *kmsAWSKeyID)
-		if err != nil {
-			return nil, fmt.Errorf("kms-aws: %s", err)
-		}
-		return kms, nil
-	default:
-		return nil, fmt.Errorf("--kms-aws-key-id or --kms-local-key-file required")
-	}
-}
-
-func localKMS(keyPath string) (security.KMS, error) {
-	f, err := os.Open(keyPath)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-
-	keySize := security.AES256.KeySize()
-	fi, err := f.Stat()
-	if err != nil {
-		return nil, err
-	}
-	if fi.Size() != int64(keySize) {
-		return nil, fmt.Errorf("key must be exactly %d bytes in size", keySize)
-	}
-
-	masterKey, err := ioutil.ReadAll(f)
-	if err != nil {
-		return nil, err
-	}
-
-	kms := security.LocalKMS()
-	kms.SetMasterKey(masterKey)
-	return kms, nil
 }
