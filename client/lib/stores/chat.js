@@ -6,6 +6,7 @@ var actions = require('../actions')
 var Tree = require('../tree')
 var storage = require('./storage')
 var socket = require('./socket')
+var plugins = require('./plugins')
 
 
 module.exports.store = Reflux.createStore({
@@ -49,8 +50,8 @@ module.exports.store = Reflux.createStore({
     if (ev.status == 'receive') {
       if (ev.body.type == 'send-event' || ev.body.type == 'send-reply') {
         var message = ev.body.data
-        this._handleMessagesData([message])
-        this.state.messages.add(message)
+        var processedMessages = this._handleMessagesData([message])
+        this.state.messages.addAll(processedMessages)
       } else if (ev.body.type == 'snapshot-event') {
         this.state.serverVersion = ev.body.data.version
         this._handleWhoReply(ev.body.data)
@@ -117,6 +118,8 @@ module.exports.store = Reflux.createStore({
         })
       })
     })
+    plugins.hooks.run('incoming-messages', null, messages)
+    return messages
   },
 
   _handleLogReply: function(data) {
@@ -125,11 +128,11 @@ module.exports.store = Reflux.createStore({
     }
     this._loadingLogs = false
     this.state.earliestLog = data.log[0].id
-    this._handleMessagesData(data.log)
+    var log = this._handleMessagesData(data.log)
     if (data.before) {
-      this.state.messages.addAll(data.log)
+      this.state.messages.addAll(log)
     } else {
-      this.state.messages.reset(data.log)
+      this.state.messages.reset(log)
     }
 
     if (this.state.focusedMessage) {

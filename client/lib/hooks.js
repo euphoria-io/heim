@@ -15,7 +15,7 @@ _.extend(module.exports.prototype, {
     this._hooks[name].push(callback)
   },
 
-  run: function(name, context) {
-    return _.map(this._hooks[name], h => h.call(context))
+  run: function(name, context, ...args) {
+    return _.map(this._hooks[name], h => h.apply(context, args))
   },
 })

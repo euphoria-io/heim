@@ -83,4 +83,30 @@ module.exports = function(roomName) {
       )
     })
   }
+
+  if (roomName == 'mantodea') {
+    var _ = require('lodash')
+
+    var serverTime = Number.MAX_VALUE
+    var cutoff = 7200
+    var cutoffReached = false
+
+    Heim.socket.store.listen(function(ev) {
+      if (ev.status == 'receive' && ev.body.type == 'ping-event') {
+        serverTime = ev.body.data.time
+      }
+    })
+
+    Heim.hook('incoming-messages', function(messages) {
+      _.remove(messages, function(msg) {
+        var tooOld = msg.time < serverTime - cutoff
+        cutoffReached = cutoffReached || tooOld
+        return tooOld
+      })
+    })
+
+    Heim.actions.loadMoreLogs.shouldEmit = function() {
+      return !cutoffReached
+    }
+  }
 }
