@@ -1,5 +1,8 @@
+var plugins = require('../stores/plugins')
+
+
 module.exports = {
   templateHook: function(name) {
-    return Heim.plugins.hooks.run(name, this)
+    return plugins.hooks.run(name, this)
   }
 }
