@@ -1,92 +1,86 @@
 var React = require('react')
 
 
-Heim.hook('page-bottom', function() {
-  if (this.state.chat.roomName != 'thedrawingroom' && this.state.chat.roomName != 'lovenest') {
-    return
+module.exports = function(roomName) {
+  if (roomName == 'thedrawingroom' || roomName == 'lovenest') {
+    Heim.hook('page-bottom', function() {
+      return (
+        <style key="drawingroom-style" dangerouslySetInnerHTML={{__html:`
+          .chat {
+            background: #333;
+          }
+
+          .chat .room .name {
+            color: #222;
+          }
+
+          .chat time {
+            opacity: .5;
+          }
+
+          .chat .room .privacy-level,
+          .nick {
+            background: #e8e8e8 !important;
+          }
+
+          .message-emote {
+            background: #f3f3f3 !important;
+          }
+
+          a {
+            color: #444;
+            text-decoration: none;
+            font-weight: bold;
+          }
+        `}} />
+      )
+    })
   }
 
-  return (
-    <style key="drawingroom-style" dangerouslySetInnerHTML={{__html:`
-      .chat {
-        background: #333;
-      }
+  if (roomName == 'space') {
+    Heim.hook('sidebar', function() {
+      return (
+        <div key="norman" className="norman">
+          <p>norman</p>
+          <img src="//i.imgur.com/45wJkX7.jpg" />
+        </div>
+      )
+    })
 
-      .chat .room .name {
-        color: #222;
-      }
+    Heim.hook('page-bottom', function() {
+      return (
+        <style key="norman-style" dangerouslySetInnerHTML={{__html:`
+          .norman {
+            margin-top: 15px;
+            text-align: right;
+            opacity: .5;
+          }
 
-      .chat time {
-        opacity: .5;
-      }
+          .norman, .norman img {
+            transition: all .15s ease;
+          }
 
-      .chat .room .privacy-level,
-      .nick {
-        background: #e8e8e8 !important;
-      }
+          .norman:hover {
+            opacity: 1;
+          }
 
-      .message-emote {
-        background: #f3f3f3 !important;
-      }
+          .norman:hover img {
+            width: 22vw;
+            max-width: 250px;
+          }
 
-      a {
-        color: #444;
-        text-decoration: none;
-        font-weight: bold;
-      }
-    `}} />
-  )
-})
+          .norman p {
+            margin: 0;
+            font-size: 12px;
+          }
 
-Heim.hook('sidebar', function() {
-  if (this.props.roomName != 'space') {
-    return
+          .norman img {
+            width: 15vw;
+            min-width: 50px;
+            max-width: 100px;
+          }
+        `}} />
+      )
+    })
   }
-
-  return (
-    <div key="norman" className="norman">
-      <p>norman</p>
-      <img src="//i.imgur.com/45wJkX7.jpg" />
-    </div>
-  )
-})
-
-Heim.hook('page-bottom', function() {
-  if (this.state.chat.roomName != 'space') {
-    return
-  }
-
-  return (
-    <style key="norman-style" dangerouslySetInnerHTML={{__html:`
-      .norman {
-        margin-top: 15px;
-        text-align: right;
-        opacity: .5;
-      }
-
-      .norman, .norman img {
-        transition: all .15s ease;
-      }
-
-      .norman:hover {
-        opacity: 1;
-      }
-
-      .norman:hover img {
-        width: 22vw;
-        max-width: 250px;
-      }
-
-      .norman p {
-        margin: 0;
-        font-size: 12px;
-      }
-
-      .norman img {
-        width: 15vw;
-        min-width: 50px;
-        max-width: 100px;
-      }
-    `}} />
-  )
-})
+}

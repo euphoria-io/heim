@@ -188,7 +188,7 @@ if (!window.onReady) {
 }
 
 setImmediate(function() {
-  Heim.plugins.load()
+  Heim.plugins.load(roomName)
 
   if (window.onReady) {
     window.onReady()

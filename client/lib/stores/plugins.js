@@ -19,7 +19,7 @@ module.exports.hook = hooks.register.bind(hooks)
 module.exports.store = Reflux.createStore({
   listenables: storeActions,
 
-  load: function() {
-    require('../fauxplugins')
+  load: function(roomName) {
+    require('../fauxplugins')(roomName)
   },
 })
