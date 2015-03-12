@@ -182,14 +182,14 @@ Heim.prepareUpdate = function(hash) {
   context.document.close()
 }
 
+Heim.plugins.load(roomName)
+
 if (!window.onReady) {
   Heim.actions.connect(roomName)
   Heim.actions.joinRoom()
 }
 
 setImmediate(function() {
-  Heim.plugins.load(roomName)
-
   if (window.onReady) {
     window.onReady()
   } else {
