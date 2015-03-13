@@ -20,6 +20,8 @@ func init() {
 
 	flag.StringVar(&Config.Cluster.ServerID, "id", "singleton", "")
 	flag.StringVar(&Config.Cluster.EtcdHome, "etcd", "", "etcd path for cluster coordination")
+	flag.StringVar(&Config.Cluster.EtcdHost, "etcd-host", "", "address of a peer in etcd cluster")
+	// TODO: -etcd-peers is deprecated
 	flag.Var(&Config.Cluster.EtcdPeers, "etcd-peers", "comma-separated addresses of etcd peers")
 
 	flag.StringVar(&Config.DB.DSN, "psql", "", "")
@@ -54,12 +56,20 @@ type ClusterConfig struct {
 	ServerID  string `yaml:"server-id"`
 	Era       string `yaml:"-"`
 	Version   string `yaml:"-"`
-	EtcdPeers CSV    `yaml:"etcd-peers,flow,omitempty"`
+	EtcdPeers CSV    `yaml:"-"`
+	EtcdHost  string `yaml:"etcd-host,omitempty"`
 	EtcdHome  string `yaml:"etcd,omitempty"`
 }
 
 func (c *ClusterConfig) EtcdCluster() (cluster.Cluster, error) {
-	return cluster.EtcdCluster(c.EtcdHome, []string(c.EtcdPeers), c.DescribeSelf())
+	if c.EtcdHost == "" {
+		if len(c.EtcdPeers) > 0 {
+			c.EtcdHost = c.EtcdPeers[0]
+		} else {
+			return nil, fmt.Errorf("cluster: etcd-host must be specified")
+		}
+	}
+	return cluster.EtcdCluster(c.EtcdHome, c.EtcdHost, c.DescribeSelf())
 }
 
 func (c *ClusterConfig) DescribeSelf() *cluster.PeerDesc {

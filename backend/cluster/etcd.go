@@ -48,10 +48,11 @@ func init() {
 	prometheus.MustRegister(peerWatchErrors)
 }
 
-func EtcdCluster(root string, peers []string, desc *PeerDesc) (Cluster, error) {
+func EtcdCluster(root, addr string, desc *PeerDesc) (Cluster, error) {
+	fmt.Printf("connecting to %#v\n", addr)
 	e := &etcdCluster{
 		root:  strings.TrimRight(root, "/") + "/",
-		c:     etcd.NewClient(peers),
+		c:     etcd.NewClient([]string{addr}),
 		ch:    make(chan PeerEvent),
 		stop:  make(chan bool),
 		peers: map[string]PeerDesc{},
@@ -82,6 +83,10 @@ func (e *etcdCluster) key(format string, args ...interface{}) string {
 }
 
 func (e *etcdCluster) init(desc *PeerDesc) error {
+	if !e.c.SyncCluster() {
+		return fmt.Errorf("cluster error: failed to sync with %s", e.c.GetCluster())
+	}
+
 	resp, err := e.c.Get(e.key("/heim"), false, false)
 	if err != nil {
 		if etcdErr, ok := err.(*etcd.EtcdError); ok && etcdErr.ErrorCode == 100 {

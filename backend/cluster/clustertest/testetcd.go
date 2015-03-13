@@ -53,8 +53,9 @@ func StartEtcd() (*EtcdServer, error) {
 		path,
 		"--force-new-cluster",
 		"--data-dir", d,
-		"--listen-peer-urls", "http://localhost:0",
 		"--listen-client-urls", url,
+		"--listen-peer-urls", "http://localhost:0",
+		"--advertise-client-urls", url,
 	)
 
 	stderr, err := cmd.StderrPipe()
@@ -114,6 +115,7 @@ func (s *EtcdServer) consumeStderr(stderr io.ReadCloser, ch chan<- string) {
 		}
 		if atStart {
 			lineStr := string(line)
+			fmt.Printf("%s\n", lineStr)
 			if idx := strings.Index(lineStr, marker); idx >= 0 {
 				idx += len(marker)
 				if space := strings.IndexRune(lineStr[idx:], ' '); space >= 0 {
@@ -148,7 +150,7 @@ func (s *EtcdServer) Join(root, id, era string) cluster.Cluster {
 		ID:  id,
 		Era: era,
 	}
-	c, err := cluster.EtcdCluster(root, []string{s.addr}, desc)
+	c, err := cluster.EtcdCluster(root, s.addr, desc)
 	if err != nil {
 		panic(fmt.Sprintf("error joining cluster: %s", err))
 	}
