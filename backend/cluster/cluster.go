@@ -8,10 +8,18 @@ import (
 	"euphoria.io/heim/proto/security"
 )
 
-var TTL = 30 * time.Second
+var (
+	TTL = 30 * time.Second
+
+	ErrNotFound = fmt.Errorf("not found")
+)
 
 type Cluster interface {
+	GetValue(key string) (string, error)
+	SetValue(key, value string) error
+
 	GetSecret(kms security.KMS, name string, bytes int) ([]byte, error)
+
 	Update(desc *PeerDesc) error
 	Part()
 	Peers() []PeerDesc
@@ -50,10 +58,28 @@ func (ps PeerList) Swap(i, j int)      { ps[i], ps[j] = ps[j], ps[i] }
 
 type TestCluster struct {
 	sync.Mutex
+	data    map[string]string
 	peers   map[string]PeerDesc
 	secrets map[string][]byte
 	c       chan PeerEvent
 	myID    string
+}
+
+func (tc *TestCluster) GetValue(key string) (string, error) {
+	tc.Lock()
+	defer tc.Unlock()
+	data, ok := tc.data[key]
+	if !ok {
+		return "", ErrNotFound
+	}
+	return data, nil
+}
+
+func (tc *TestCluster) SetValue(key, value string) error {
+	tc.Lock()
+	tc.data[key] = value
+	tc.Unlock()
+	return nil
 }
 
 func (tc *TestCluster) GetSecret(kms security.KMS, name string, bytes int) ([]byte, error) {

@@ -43,7 +43,7 @@ frontend:
 
 # The upgradedb container runs the upgradedb command against the psql container.
 upgradedb:
-  build: upgradedb
+  build: backend/psql/migrations
   links:
     - psql
   volumes:

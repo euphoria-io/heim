@@ -108,6 +108,25 @@ func (e *etcdCluster) init(desc *PeerDesc) error {
 	return nil
 }
 
+func (e *etcdCluster) GetValue(key string) (string, error) {
+	resp, err := e.c.Get(e.key("%s", key), false, false)
+	if err != nil {
+		if etcdErr, ok := err.(*etcd.EtcdError); ok && etcdErr.ErrorCode == 100 {
+			return "", ErrNotFound
+		}
+		return "", err
+	}
+	return resp.Node.Value, nil
+}
+
+func (e *etcdCluster) SetValue(key, value string) error {
+	_, err := e.c.Set(e.key(key), value, 0)
+	if err != nil {
+		return fmt.Errorf("set on %s: %s", e.key(key), err)
+	}
+	return nil
+}
+
 func (e *etcdCluster) Peers() []PeerDesc {
 	e.m.RLock()
 	defer e.m.RUnlock()

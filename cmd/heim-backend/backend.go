@@ -13,11 +13,17 @@ import (
 	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/security"
 	"euphoria.io/heim/proto/snowflake"
-
-	"gopkg.in/yaml.v2"
 )
 
-var version string
+var (
+	addr   = flag.String("http", ":8080", "address to serve http on")
+	config = flag.String("config", "", "path to local config (default: use config stored in etcd)")
+	static = flag.String("static", "", "path to static files")
+
+	consoleAddr = flag.String("console", "", "")
+
+	version string
+)
 
 func main() {
 	if err := run(); err != nil {
@@ -28,12 +34,6 @@ func main() {
 
 func run() error {
 	flag.Parse()
-
-	out, err := yaml.Marshal(backend.Config)
-	if err != nil {
-		return err
-	}
-	fmt.Printf("config:\n%s\n", string(out))
 
 	if backend.Config.Cluster.ServerID == "" {
 		id, err := os.Hostname()
@@ -56,6 +56,18 @@ func run() error {
 		return fmt.Errorf("cluster error: %s", err)
 	}
 
+	if *config == "" {
+		if err := backend.Config.LoadFromEtcd(c); err != nil {
+			return fmt.Errorf("config: %s", err)
+		}
+	} else {
+		if err := backend.Config.LoadFromFile(*config); err != nil {
+			return fmt.Errorf("config: %s", err)
+		}
+	}
+
+	fmt.Printf("active config:\n\n%s\n", backend.Config.String())
+
 	kms, err := backend.Config.KMS.Get()
 	if err != nil {
 		return fmt.Errorf("kms error: %s", err)
@@ -72,19 +84,19 @@ func run() error {
 		return fmt.Errorf("controller error: %s", err)
 	}
 
-	server, err := backend.NewServer(b, c, kms, serverDesc.ID, serverDesc.Era, backend.Config.HTTP.Static)
+	server, err := backend.NewServer(b, c, kms, serverDesc.ID, serverDesc.Era, *static)
 	if err != nil {
 		return fmt.Errorf("server error: %s", err)
 	}
 
-	fmt.Printf("serving era %s on %s\n", serverDesc.Era, backend.Config.HTTP.Listen)
-	http.ListenAndServe(backend.Config.HTTP.Listen, newVersioningHandler(server))
+	fmt.Printf("serving era %s on %s\n", serverDesc.Era, *addr)
+	http.ListenAndServe(*addr, newVersioningHandler(server))
 	return nil
 }
 
 func controller(b proto.Backend, kms security.KMS) error {
-	if backend.Config.Console.Listen != "" {
-		ctrl, err := console.NewController(backend.Config.Console.Listen, b, kms)
+	if *consoleAddr != "" {
+		ctrl, err := console.NewController(*consoleAddr, b, kms)
 		if err != nil {
 			return err
 		}

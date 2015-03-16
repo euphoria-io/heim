@@ -7,6 +7,8 @@ import (
 	"os"
 	"strings"
 
+	"gopkg.in/yaml.v2"
+
 	"euphoria.io/heim/aws/kms"
 	"euphoria.io/heim/backend/cluster"
 	"euphoria.io/heim/proto/security"
@@ -15,9 +17,6 @@ import (
 var Config ServerConfig
 
 func init() {
-	flag.StringVar(&Config.HTTP.Listen, "http", ":8080", "")
-	flag.StringVar(&Config.HTTP.Static, "static", "", "")
-
 	flag.StringVar(&Config.Cluster.ServerID, "id", "singleton", "")
 	flag.StringVar(&Config.Cluster.EtcdHome, "etcd", "", "etcd path for cluster coordination")
 	flag.StringVar(&Config.Cluster.EtcdHost, "etcd-host", "", "address of a peer in etcd cluster")
@@ -26,7 +25,6 @@ func init() {
 
 	flag.StringVar(&Config.DB.DSN, "psql", "", "")
 
-	flag.StringVar(&Config.Console.Listen, "control", "", "")
 	flag.StringVar(&Config.Console.HostKey, "control-hostkey", "", "")
 	flag.Var(&Config.Console.AuthKeys, "control-authkeys", "")
 
@@ -45,11 +43,51 @@ func (k *CSV) Set(flags string) error {
 }
 
 type ServerConfig struct {
-	HTTP    HTTPConfig     `yaml:"http"`
 	Cluster ClusterConfig  `yaml:"cluster,omitempty"`
 	Console ConsoleConfig  `yaml:"console,omitempty"`
 	DB      DatabaseConfig `yaml:"database"`
 	KMS     KMSConfig      `yaml:"kms"`
+}
+
+func (cfg *ServerConfig) String() string {
+	data, err := yaml.Marshal(cfg)
+	if err != nil {
+		return fmt.Sprintf("marshal error: %s", err)
+	}
+	return string(data)
+}
+
+func (cfg *ServerConfig) LoadFromEtcd(c cluster.Cluster) error {
+	cfgString, err := c.GetValue("config")
+	if err != nil {
+		return fmt.Errorf("load from etcd: %s", err)
+	}
+
+	if err := yaml.Unmarshal([]byte(cfgString), cfg); err != nil {
+		return fmt.Errorf("load from etcd: %s", err)
+	}
+
+	return nil
+}
+
+func (cfg *ServerConfig) LoadFromFile(path string) error {
+	f, err := os.Open(path)
+	if err != nil {
+		return fmt.Errorf("load from file: %s: %s", path, err)
+	}
+	defer f.Close()
+
+	data, err := ioutil.ReadAll(f)
+	if err != nil {
+		return fmt.Errorf("load from file: %s: %s", path, err)
+	}
+
+	fmt.Printf("parsing config:\n%s\n", string(data))
+	if err := yaml.Unmarshal(data, cfg); err != nil {
+		return fmt.Errorf("load from file: %s: %s", path, err)
+	}
+
+	return nil
 }
 
 type ClusterConfig struct {
@@ -81,18 +119,12 @@ func (c *ClusterConfig) DescribeSelf() *cluster.PeerDesc {
 }
 
 type ConsoleConfig struct {
-	Listen   string `yaml:"listen"`
 	HostKey  string `yaml:"host-key-file"`
 	AuthKeys CSV    `yaml:"auth-key-files,flow"`
 }
 
 type DatabaseConfig struct {
 	DSN string `yaml:"dsn"`
-}
-
-type HTTPConfig struct {
-	Listen string `yaml:"listen"`
-	Static string `yaml:"static"`
 }
 
 type KMSConfig struct {
