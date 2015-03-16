@@ -25,8 +25,8 @@ func init() {
 
 	flag.StringVar(&Config.DB.DSN, "psql", "", "")
 
-	flag.StringVar(&Config.Console.HostKey, "control-hostkey", "", "")
-	flag.Var(&Config.Console.AuthKeys, "control-authkeys", "")
+	flag.StringVar(&Config.Console.HostKey, "console-hostkey", "", "")
+	flag.Var(&Config.Console.AuthKeys, "console-authkeys", "")
 
 	flag.StringVar(&Config.KMS.Amazon.Region, "kms-aws-region", "", "")
 	flag.StringVar(&Config.KMS.Amazon.KeyID, "kms-aws-key-id", "", "")
