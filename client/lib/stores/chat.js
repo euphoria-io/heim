@@ -39,6 +39,7 @@ module.exports.store = Reflux.createStore({
   init: function() {
     this.state = {
       serverVersion: null,
+      sessionId: null,
       connected: null,  // => socket connected
       canJoin: null,
       joined: false,  // => received snapshot; sent nick; ui ready
@@ -67,6 +68,7 @@ module.exports.store = Reflux.createStore({
   },
 
   socketEvent: function(ev) {
+    // jshint camelcase: false
     if (ev.status == 'receive') {
       if (ev.body.type == 'send-event' || ev.body.type == 'send-reply') {
         var message = ev.body.data
@@ -74,6 +76,7 @@ module.exports.store = Reflux.createStore({
         this.state.messages.addAll(processedMessages)
       } else if (ev.body.type == 'snapshot-event') {
         this.state.serverVersion = ev.body.data.version
+        this.state.sessionId = ev.body.data.session_id
         this._handleWhoReply(ev.body.data)
         this._handleLogReply(ev.body.data)
         this._joinReady()
@@ -113,7 +116,6 @@ module.exports.store = Reflux.createStore({
         this.state.nickTrie.remove(ev.body.data.name)
       } else if (ev.body.type == 'network-event') {
         if (ev.body.data.type == 'partition') {
-          // jshint camelcase: false
           var id = ev.body.data.server_id
           var era = ev.body.data.server_era
           this.state.who = this.state.who.filter(v => {
@@ -194,6 +196,11 @@ module.exports.store = Reflux.createStore({
     }
     delete this.state.tentativeNick
     storage.setRoom(this.state.roomName, 'nick', this.state.nick)
+    Raven.setUserContext({
+      'id': this.state.sessionId.split('-')[0],
+      'nick': this.state.nick,
+      'session_id': this.state.sessionId,
+    })
   },
 
   _handleAuthReply: function(error, data) {

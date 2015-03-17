@@ -14,11 +14,13 @@ describe('chat store', function() {
     sinon.stub(socket, 'send')
     sinon.stub(storage, 'setRoom')
     support.resetStore(chat.store)
+    window.Raven = {setUserContext: sinon.stub()}
   })
 
   afterEach(function() {
     socket.send.restore()
     storage.setRoom.restore()
+    window.Raven = null
   })
 
   function handleSocket(ev, callback) {
@@ -132,6 +134,7 @@ describe('chat store', function() {
     'type': 'snapshot-event',
     'data': {
       'version': 'deadbeef',
+      'session_id': 'aabbccddeeff0011-00000abc',
       'listing': whoReply.data.listing,
       'log': logReply.data.log,
     }
@@ -758,6 +761,14 @@ describe('chat store', function() {
       })
     })
 
+    it('should update session id', function(done) {
+      handleSocket({status: 'receive', body: snapshotReply}, function(state) {
+        // jshint camelcase: false
+        assert.equal(state.sessionId, snapshotReply.data.session_id)
+        done()
+      })
+    })
+
     it('should set canJoin state to true', function(done) {
       handleSocket({status: 'receive', body: snapshotReply}, function(state) {
         assert.equal(state.canJoin, true)
@@ -832,6 +843,10 @@ describe('chat store', function() {
       }
     }
 
+    beforeEach(function() {
+      chat.store.socketEvent({status: 'receive', body: snapshotReply})
+    })
+
     it('should update user list name', function(done) {
       handleSocket({status: 'receive', body: whoReply}, function() {
         handleSocket({status: 'receive', body: nickReply}, function(state) {
@@ -885,6 +900,18 @@ describe('chat store', function() {
           assert.equal(state.nick, 'tester')
           sinon.assert.calledOnce(storage.setRoom)
           sinon.assert.calledWithExactly(storage.setRoom, 'ezzie', 'nick', 'tester')
+          done()
+        })
+      })
+
+      it('should update Raven user context', function(done) {
+        handleSocket({status: 'receive', body: nickReply}, function() {
+          sinon.assert.calledOnce(Raven.setUserContext)
+          sinon.assert.calledWithExactly(Raven.setUserContext, {
+            'id': 'aabbccddeeff0011',
+            'nick': 'tester',
+            'session_id': 'aabbccddeeff0011-00000abc',
+          })
           done()
         })
       })
