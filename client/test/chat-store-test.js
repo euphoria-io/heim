@@ -832,16 +832,6 @@ describe('chat store', function() {
       }
     }
 
-    it('should update chat and room state', function(done) {
-      chat.store.state.roomName = 'ezzie'
-      handleSocket({status: 'receive', body: nickReply}, function(state) {
-        assert.equal(state.nick, 'tester')
-        sinon.assert.calledOnce(storage.setRoom)
-        sinon.assert.calledWithExactly(storage.setRoom, 'ezzie', 'nick', 'tester')
-        done()
-      })
-    })
-
     it('should update user list name', function(done) {
       handleSocket({status: 'receive', body: whoReply}, function() {
         handleSocket({status: 'receive', body: nickReply}, function(state) {
