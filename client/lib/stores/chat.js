@@ -144,7 +144,7 @@ module.exports.store = Reflux.createStore({
         var nick = this.state.nick || this.state.tentativeNick
         if (nick) {
           var mention = message.content.match(mentionRe)
-          if (mention && mention[0].substr(1) == hueHash.stripSpaces(nick)) {
+          if (mention && _.any(mention, m => m.substr(1) == hueHash.stripSpaces(nick))) {
             message.mention = true
           }
         }
