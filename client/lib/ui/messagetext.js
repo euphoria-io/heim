@@ -46,7 +46,7 @@ module.exports = React.createClass({
     })
 
     html = html.replace(chat.mentionRe, function(match, name) {
-      var color = 'hsl(' + hueHash(name) + ', 50%, 42%)'
+      var color = 'hsl(' + hueHash.hue(name) + ', 50%, 42%)'
       return React.renderToStaticMarkup(<span style={{color: color}} className="mention-nick">@{name}</span>)
     })
 

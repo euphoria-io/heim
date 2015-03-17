@@ -11,16 +11,12 @@ var plugins = require('./plugins')
 var hueHash = require('../huehash')
 
 
-var normalizeNick = module.exports.normalizeNick = function(nick) {
-  return nick.replace(/[^\w_-]/g, '')
-}
-
 function NickTrie() {
   var trie = new Trie({enableCache: false})
   // normalize nicks going into the trie
   _.each(['add', 'remove', 'contains'], function(n) {
     trie[n] = _.wrap(trie[n], function(f, word) {
-      return f.call(this, normalizeNick(word))
+      return f.call(this, hueHash.normalize(word))
     })
   })
   return trie
@@ -101,13 +97,13 @@ module.exports.store = Reflux.createStore({
             .mergeIn([ev.body.data.id], {
               id: ev.body.data.id,
               name: ev.body.data.to,
-              hue: hueHash(ev.body.data.to),
+              hue: hueHash.hue(ev.body.data.to),
             })
           this.state.nickTrie.remove(ev.body.data.from)
           this.state.nickTrie.add(ev.body.data.to)
         }
       } else if (ev.body.type == 'join-event') {
-        ev.body.data.hue = hueHash(ev.body.data.name)
+        ev.body.data.hue = hueHash.hue(ev.body.data.name)
         this.state.who = this.state.who
           .set(ev.body.data.id, Immutable.fromJS(ev.body.data))
         this.state.nickTrie.add(ev.body.data.name)
@@ -148,11 +144,11 @@ module.exports.store = Reflux.createStore({
         var nick = this.state.nick || this.state.tentativeNick
         if (nick) {
           var mention = message.content.match(mentionRe)
-          if (mention && mention[0].substr(1) == normalizeNick(nick)) {
+          if (mention && mention[0].substr(1) == hueHash.normalize(nick)) {
             message.mention = true
           }
         }
-        message.sender.hue = hueHash(message.sender.name)
+        message.sender.hue = hueHash.hue(message.sender.name)
         who.mergeIn([message.sender.id], {
           lastSent: message.time
         })
@@ -187,7 +183,7 @@ module.exports.store = Reflux.createStore({
       Immutable.Seq(data.listing)
         .map(function(user) {
           this.state.nickTrie.add(user.name)
-          user.hue = hueHash(user.name)
+          user.hue = hueHash.hue(user.name)
           return [user.id, Immutable.Map(user)]
         }, this)
     )

@@ -946,7 +946,7 @@ describe('chat store', function() {
 
     it('should assign a hue', function(done) {
       handleSocket({status: 'receive', body: joinEvent}, function(state) {
-        assert.equal(state.who.getIn([joinEvent.data.id, 'hue']), 145)
+        assert.equal(state.who.getIn([joinEvent.data.id, 'hue']), 234)
         done()
       })
     })

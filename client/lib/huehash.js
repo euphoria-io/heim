@@ -1,21 +1,30 @@
 var Immutable = require('immutable')
 
 
+module.exports.normalize = function(text) {
+  return text.replace(/[^\w_-]/g, '')
+}
+
 var cache = {data: Immutable.Map()}
 
-module.exports = function(text) {
+module.exports.hue = function(text) {
   var cached = cache.data.get(text)
   if (cached) {
     return cached
   }
 
+  var normalized = module.exports.normalize(text)
+  if (!normalized.length) {
+    normalized = text
+  }
+
   // DJBX33A
   var val = 0
-  for (var i = 0; i < text.length; i++) {
-    if (/\s/.test(text[i])) {
+  for (var i = 0; i < normalized.length; i++) {
+    if (/\s/.test(normalized[i])) {
       continue
     }
-    val = val * 33 + text.charCodeAt(i)
+    val = val * 33 + normalized.charCodeAt(i)
   }
   val = (val + 155) % 255
   cache.data = cache.data.set(text, val)
