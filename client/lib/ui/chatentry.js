@@ -208,6 +208,7 @@ module.exports = React.createClass({
     }
     var completed = (text[wordStart - 1] != '@' ? '@' : '') + match[0]
     input.value = input.value.substring(0, wordStart) + completed + input.value.substring(wordEnd)
+    this.saveEntryState()
   },
 
   onNickChange: function(ev) {
