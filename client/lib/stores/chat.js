@@ -145,9 +145,12 @@ module.exports.store = Reflux.createStore({
   _handleMessagesData: function(messages) {
     this.state.who = this.state.who.withMutations(who => {
       _.each(messages, message => {
-        var mention = message.content.match(mentionRe)
-        if (mention && mention[0].substr(1) == normalizeNick(this.state.nick || this.state.tentativeNick)) {
-          message.mention = true
+        var nick = this.state.nick || this.state.tentativeNick
+        if (nick) {
+          var mention = message.content.match(mentionRe)
+          if (mention && mention[0].substr(1) == normalizeNick(nick)) {
+            message.mention = true
+          }
         }
         message.sender.hue = hueHash(message.sender.name)
         who.mergeIn([message.sender.id], {
