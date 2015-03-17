@@ -177,7 +177,7 @@ module.exports = React.createClass({
   complete: function() {
     var input = this.refs.input.getDOMNode()
     var text = input.value
-    var charRe = /\w/
+    var charRe = /[^@\s]/
 
     var wordEnd = input.selectionStart
     if (wordEnd < 1) {
