@@ -1,6 +1,10 @@
 var Immutable = require('immutable')
 
 
+module.exports.stripSpaces = function(text) {
+  return text.replace(/[^\S]/g, '')
+}
+
 module.exports.normalize = function(text) {
   return text.replace(/[^\w_-]/g, '')
 }

@@ -13,10 +13,10 @@ var hueHash = require('../huehash')
 
 function NickTrie() {
   var trie = new Trie({enableCache: false})
-  // normalize nicks going into the trie
+  // strip spaces from nicks going into the trie
   _.each(['add', 'remove', 'contains'], function(n) {
     trie[n] = _.wrap(trie[n], function(f, word) {
-      return f.call(this, hueHash.normalize(word))
+      return f.call(this, hueHash.stripSpaces(word))
     })
   })
   return trie
@@ -144,7 +144,7 @@ module.exports.store = Reflux.createStore({
         var nick = this.state.nick || this.state.tentativeNick
         if (nick) {
           var mention = message.content.match(mentionRe)
-          if (mention && mention[0].substr(1) == hueHash.normalize(nick)) {
+          if (mention && mention[0].substr(1) == hueHash.stripSpaces(nick)) {
             message.mention = true
           }
         }
