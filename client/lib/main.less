@@ -129,9 +129,13 @@ iframe.js {
 
   .nick, .text-rect {
     background: @neutral-color;
-    padding: 2px 4px;
+    padding: 1px 4px;
     font-size: .85em;
     border-radius: 2px;
+  }
+
+  .nick, .text-rect, .messages-container .line {
+    line-height: 18px;
   }
 
   .messages-container {
@@ -157,10 +161,6 @@ iframe.js {
       box-sizing: border-box;
       box-shadow: 0 0 10px fade(black, 50%);
       transition: all .15s ease;
-    }
-
-    .nick, .line {
-      line-height: 1.2em;
     }
 
     .line-emote .message {
@@ -202,11 +202,10 @@ iframe.js {
 
         &.mention {
           .message {
-            padding: 0 3px;
-            border-radius: 3px;
+            padding: 1px 3px;
+            border-radius: 2px;
             background: hsl(50, 85%, 95%);
-            box-shadow: 0 0 1px hsl(50, 62%, 38%) inset;
-            vertical-align: middle;  // line up with nick color box
+            box-shadow: 0 0 1px hsla(50, 51%, 40%, 0.6) inset;
           }
 
           time {
@@ -215,10 +214,13 @@ iframe.js {
         }
 
         time, .nick {
-          display: inline-block;
           flex-shrink: 0;
           margin-right: @nick-spacing;
           font-size: .85em;
+        }
+
+        .content, .message {
+          display: inline-block;
         }
 
         .embeds {
@@ -764,6 +766,14 @@ iframe.js {
         display: block;
         margin-left: .5em;
         text-indent: -.5em;
+
+        .content, .message {
+          display: inline;
+        }
+
+        &.mention .message {
+          line-height: 20px;
+        }
 
         .nick {
           text-indent: 0;
