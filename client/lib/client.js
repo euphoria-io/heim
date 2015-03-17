@@ -101,7 +101,12 @@ if (!window.frameElement) {
 
       var character = String.fromCharCode(ev.which)
       if (character && /\S/.test(character)) {
-        Heim.actions.focusEntry(character)
+        // in Chrome, if we focus synchronously, the input receives the
+        // keypress event -- not so in Firefox. we'll delay the focus event to
+        // avoid double key insertion in Chrome.
+        setImmediate(function() {
+          Heim.actions.focusEntry(character)
+        })
       }
     }, true)
 
