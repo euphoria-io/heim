@@ -491,7 +491,7 @@ describe('chat store', function() {
     })
 
     it('should be tagged as a mention, if it matches', function(done) {
-      chat.store.state.tentativeNick = 'tester'
+      chat.store.state.tentativeNick = 'test er'
       handleSocket({status: 'receive', body: sendMentionEvent}, function(state) {
         assert(state.messages.last().get('mention'))
         done()

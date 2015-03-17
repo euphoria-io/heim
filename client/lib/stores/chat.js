@@ -144,7 +144,7 @@ module.exports.store = Reflux.createStore({
     this.state.who = this.state.who.withMutations(who => {
       _.each(messages, message => {
         var mention = message.content.match(mentionRe)
-        if (mention && mention[0].substr(1) == (this.state.nick || this.state.tentativeNick)) {
+        if (mention && mention[0].substr(1) == normalizeNick(this.state.nick || this.state.tentativeNick)) {
           message.mention = true
         }
         message.sender.hue = hueHash(message.sender.name)
