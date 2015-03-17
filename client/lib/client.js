@@ -90,6 +90,10 @@ if (!window.frameElement) {
     }
 
     Heim.addEventListener(uidocument.body, 'keypress', function(ev) {
+      if (!uiwindow.getSelection().isCollapsed){
+        return
+      }
+
       if (ev.target.nodeName == 'INPUT' &&
            (ev.target.type == 'text' || ev.target.type == 'password')) {
         return
