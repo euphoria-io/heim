@@ -214,6 +214,17 @@ module.exports = React.createClass({
     this.setState({nickText: ev.target.value})
   },
 
+  onNickKeyDown: function(ev) {
+    var input = this.refs.input.getDOMNode()
+    if (ev.key == 'Enter') {
+      input.focus()
+    } else if (ev.key == 'Escape') {
+      this.setState({nickText: this.state.chat.nick}, function() {
+        input.focus()
+      })
+    }
+  },
+
   onNickFocus: function(ev) {
     this.setState({nickText: ev.target.value, nickFocused: true})
   },
@@ -245,7 +256,7 @@ module.exports = React.createClass({
       <form className="entry" onSubmit={ev => ev.preventDefault()}>
         <div className="nick-box">
           <div className="auto-size-container">
-            <input className="nick" ref="nick" value={nick} onFocus={this.onNickFocus} onBlur={this.onNickBlur} onChange={this.onNickChange} />
+            <input className="nick" ref="nick" value={nick} onFocus={this.onNickFocus} onBlur={this.onNickBlur} onChange={this.onNickChange} onKeyDown={this.onNickKeyDown} />
             <span className="nick">{nick}</span>
           </div>
         </div>
