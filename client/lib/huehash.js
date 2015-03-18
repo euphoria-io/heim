@@ -6,7 +6,7 @@ module.exports.stripSpaces = function(text) {
 }
 
 module.exports.normalize = function(text) {
-  return text.replace(/[^\w_-]/g, '')
+  return text.replace(/[^\w_-]/g, '').toLowerCase()
 }
 
 var cache = {data: Immutable.Map()}

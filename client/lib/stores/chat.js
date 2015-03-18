@@ -16,7 +16,7 @@ function NickTrie() {
   // strip spaces from nicks going into the trie
   _.each(['add', 'remove', 'contains'], function(n) {
     trie[n] = _.wrap(trie[n], function(f, word) {
-      return f.call(this, hueHash.stripSpaces(word))
+      return f.call(this, hueHash.stripSpaces(word).toLowerCase())
     })
   })
   return trie
@@ -144,7 +144,7 @@ module.exports.store = Reflux.createStore({
         var nick = this.state.nick || this.state.tentativeNick
         if (nick) {
           var mention = message.content.match(mentionRe)
-          if (mention && _.any(mention, m => m.substr(1) == hueHash.stripSpaces(nick))) {
+          if (mention && _.any(mention, m => m.substr(1).toLowerCase() == hueHash.stripSpaces(nick).toLowerCase())) {
             message.mention = true
           }
         }
