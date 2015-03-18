@@ -17,18 +17,34 @@ import (
 var Config ServerConfig
 
 func init() {
-	flag.StringVar(&Config.Cluster.ServerID, "id", "singleton", "")
-	flag.StringVar(&Config.Cluster.EtcdHome, "etcd", "", "etcd path for cluster coordination")
-	flag.StringVar(&Config.Cluster.EtcdHost, "etcd-host", "", "address of a peer in etcd cluster")
+	env := func(key, defaultValue string) string {
+		val := os.Getenv(key)
+		if val == "" {
+			val = defaultValue
+		}
+		return val
+	}
 
-	flag.StringVar(&Config.DB.DSN, "psql", "", "")
+	flag.StringVar(&Config.Cluster.ServerID, "id", env("HEIM_ID", "singleton"), "")
+	flag.StringVar(&Config.Cluster.EtcdHome, "etcd", env("HEIM_ETCD_HOME", ""),
+		"etcd path for cluster coordination")
+	flag.StringVar(&Config.Cluster.EtcdHost, "etcd-host", env("HEIM_ETCD", ""),
+		"address of a peer in etcd cluster")
 
-	flag.StringVar(&Config.Console.HostKey, "console-hostkey", "", "")
-	flag.Var(&Config.Console.AuthKeys, "console-authkeys", "")
+	flag.StringVar(&Config.DB.DSN, "psql", env("HEIM_DSN", ""), "dsn url of heim postgres database")
 
-	flag.StringVar(&Config.KMS.Amazon.Region, "kms-aws-region", "", "")
-	flag.StringVar(&Config.KMS.Amazon.KeyID, "kms-aws-key-id", "", "")
-	flag.StringVar(&Config.KMS.AES256.KeyFile, "kms-local-key-file", "", "")
+	flag.StringVar(&Config.Console.HostKey, "console-hostkey", env("HEIM_CONSOLE_HOST_KEY", ""),
+		"path to file containing host key for ssh console")
+	flag.Var(&Config.Console.AuthKeys, "console-authkeys",
+		"comma-separated paths to files containing authorized keys for console clients")
+	Config.Console.AuthKeys.Set(env("HEIM_CONSOLE_AUTH_KEYS", ""))
+
+	flag.StringVar(&Config.KMS.Amazon.Region, "kms-aws-region", env("HEIM_KMS_AWS_REGION", ""),
+		"name of the AWS region to use for crypto")
+	flag.StringVar(&Config.KMS.Amazon.KeyID, "kms-aws-key-id", env("HEIM_KMS_AWS_KEY_ID", ""),
+		"id of the AWS key to use for crypto")
+	flag.StringVar(&Config.KMS.AES256.KeyFile, "kms-local-key-file", env("HEIM_KMS_LOCAL_KEY", ""),
+		"path to file containing a 256-bit key for using local key-management instead of AWS")
 }
 
 type CSV []string
