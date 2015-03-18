@@ -115,11 +115,11 @@ module.exports.store = Reflux.createStore({
           var id = ev.body.data.server_id
           var era = ev.body.data.server_era
           this.state.who = this.state.who.filter(v => {
-            if (v.get('server_id') != id || v.get('server_era') != era) {
-              return true
-            } else {
+            if (v.get('server_id') == id && v.get('server_era') == era) {
               this.state.nickTrie.remove(v.get('name'))
               return false
+            } else {
+              return true
             }
           })
         }
