@@ -42,15 +42,15 @@ build_release() {
   cd ${HEIMDIR}/client
   gulp build
 
-  go install -ldflags "-X main.version ${DRONE_COMMIT}" euphoria.io/heim/cmd/heim-backend
-  go install euphoria.io/heim/cmd/heimlich
+  go install -ldflags "-X main.version ${DRONE_COMMIT}" euphoria.io/heim/heimctl
+  go install euphoria.io/heim/heimlich
 
   mv ${HEIMDIR}/client/build /var/cache/drone/bin/static
   cd /var/cache/drone/bin
   generate_manifest static
-  find static -type f | xargs heimlich heim-backend
+  find static -type f | xargs heimlich heimctl
 
-  s3cmd put heim-backend.hzp s3://heim-release/${DRONE_COMMIT}
+  s3cmd put heimctl.hzp s3://heim-release/${DRONE_COMMIT}
   if [ ${DRONE_BRANCH} == master ]; then
     s3cmd cp s3://heim-release/${DRONE_COMMIT} s3://heim-release/latest
   fi
