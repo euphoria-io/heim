@@ -13,7 +13,8 @@ import (
 
 var Version = "dev"
 
-var config = flag.String("config", "", "path to local config (default: use config stored in etcd)")
+var config = flag.String("config", os.Getenv("HEIM_CONFIG"),
+	"path to local config (default: use config stored in etcd)")
 
 func getCluster() (cluster.Cluster, error) {
 	if backend.Config.Cluster.ServerID == "" {
