@@ -16,7 +16,7 @@ function NickTrie() {
   // strip spaces from nicks going into the trie
   _.each(['add', 'remove', 'contains'], function(n) {
     trie[n] = _.wrap(trie[n], function(f, word) {
-      return f.call(this, hueHash.stripSpaces(word).toLowerCase())
+      return f.call(this, hueHash.stripSpaces(word))
     })
   })
   return trie
