@@ -51,6 +51,7 @@ upgradedb:
 
 # The backend container runs the backend server against the psql container.
 backend:
+  build: backend
   links:
     - etcd
     - psql
@@ -62,9 +63,25 @@ backend:
   ports:
     - "8080:80"
     - "2222:2222"
-  build: backend
   environment:
+    HEIM_ID: dev1
     HEIM_ETCD: http://etcd:4001
     HEIM_ETCD_HOME: /dev/euphoria.io
     HEIM_CONFIG: /go/src/euphoria.io/heim/heim.yml
   command: run.sh heimctl serve -http :80 -console :2222 -static /srv/heim/client/src/build
+
+presence:
+  build: backend
+  links:
+    - etcd
+    - psql
+  volumes:
+    - .:/go/src/euphoria.io/heim
+    - deps/godeps:/godeps
+  ports:
+    - "8081:80"
+  environment:
+    HEIM_ETCD: http://etcd:4001
+    HEIM_ETCD_HOME: /dev/euphoria.io
+    HEIM_CONFIG: /go/src/euphoria.io/heim/heim.yml
+  command: run.sh heimctl presence-exporter -http :80 -interval 10s

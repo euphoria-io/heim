@@ -41,7 +41,7 @@ func (helpCmd) run(ctx scope.Context, args []string) error {
 	exe := filepath.Base(os.Args[0])
 	fmt.Fprintf(out, "USAGE:\n\t%s %s\n\n", exe, cmd.usage())
 
-	fmt.Fprintf(out, "DESCRIPTION:\n%s\n\n", cmd.longdesc())
+	fmt.Fprintf(out, "DESCRIPTION:\n%s\n", cmd.longdesc())
 
 	fmt.Fprintln(out, "OPTIONS:")
 	cmd.flags().VisitAll(func(f *flag.Flag) {

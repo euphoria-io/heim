@@ -57,12 +57,15 @@ func EtcdCluster(root, addr string, desc *PeerDesc) (Cluster, error) {
 		stop:  make(chan bool),
 		peers: map[string]PeerDesc{},
 	}
-	if err := e.init(desc); err != nil {
-		return nil, err
-	}
-	idx, err := e.update(desc)
+	idx, err := e.init()
 	if err != nil {
 		return nil, err
+	}
+	if desc != nil {
+		idx, err = e.update(desc)
+		if err != nil {
+			return nil, err
+		}
 	}
 	go e.watch(idx)
 	return e, nil
@@ -82,30 +85,35 @@ func (e *etcdCluster) key(format string, args ...interface{}) string {
 	return e.root + strings.TrimLeft(fmt.Sprintf(format, args...), "/")
 }
 
-func (e *etcdCluster) init(desc *PeerDesc) error {
+func (e *etcdCluster) init() (uint64, error) {
 	if !e.c.SyncCluster() {
-		return fmt.Errorf("cluster error: failed to sync with %s", e.c.GetCluster())
+		return 0, fmt.Errorf("cluster error: failed to sync with %s", e.c.GetCluster())
 	}
 
 	resp, err := e.c.Get(e.key("/peers"), false, false)
 	if err != nil {
 		if etcdErr, ok := err.(*etcd.EtcdError); ok && etcdErr.ErrorCode == 100 {
-			return nil
+			return 0, nil
 		}
-		return fmt.Errorf("cluster error: init: %s", err)
+		return 0, fmt.Errorf("cluster error: init: %s", err)
 	}
 	node := resp.Node
 	if !node.Dir {
-		return fmt.Errorf("cluster error: init: expected directory")
+		return 0, fmt.Errorf("cluster error: init: expected directory")
 	}
+
+	latestIndex := uint64(0)
 	for _, child := range node.Nodes {
 		var desc PeerDesc
 		if err := json.Unmarshal([]byte(child.Value), &desc); err != nil {
-			return fmt.Errorf("cluster error: init: bad node %s: %s\n", child.Key, err)
+			return 0, fmt.Errorf("cluster error: init: bad node %s: %s\n", child.Key, err)
 		}
 		e.peers[desc.ID] = desc
+		if child.ModifiedIndex > latestIndex {
+			latestIndex = child.ModifiedIndex
+		}
 	}
-	return nil
+	return latestIndex + 1, nil
 }
 
 func (e *etcdCluster) GetValue(key string) (string, error) {
@@ -150,6 +158,7 @@ func (e *etcdCluster) update(desc *PeerDesc) (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
+	fmt.Printf("writing %s to %s\n", string(valueBytes), desc.ID)
 	e.me = e.key("/peers/%s", desc.ID)
 	resp, err := e.c.Set(e.me, string(valueBytes), uint64(TTL/time.Second))
 	if err != nil {

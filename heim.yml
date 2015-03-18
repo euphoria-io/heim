@@ -1,5 +1,4 @@
 cluster:
-  server-id: singleton
   etcd: /dev/euphoria.io
 console:
   host-key-file: /keys/devkey

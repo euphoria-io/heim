@@ -48,12 +48,21 @@ type Backend struct {
 	cancel    func()
 	cluster   cluster.Cluster
 	desc      *cluster.PeerDesc
+	version   string
 	peers     map[string]string
 	listeners map[string]ListenerMap
 }
 
 func NewBackend(dsn string, c cluster.Cluster, serverDesc *cluster.PeerDesc) (*Backend, error) {
-	log.Printf("psql backend %s on %s", serverDesc.Version, dsn)
+	var version string
+
+	if serverDesc == nil {
+		version = "dev"
+	} else {
+		version = serverDesc.Version
+	}
+
+	log.Printf("psql backend %s on %s", version, dsn)
 
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
@@ -64,14 +73,17 @@ func NewBackend(dsn string, c cluster.Cluster, serverDesc *cluster.PeerDesc) (*B
 		DB:        db,
 		dsn:       dsn,
 		desc:      serverDesc,
+		version:   version,
 		cluster:   c,
 		peers:     map[string]string{},
 		listeners: map[string]ListenerMap{},
 	}
 
-	b.peers[serverDesc.ID] = serverDesc.Era
-	for _, desc := range c.Peers() {
-		b.peers[desc.ID] = desc.Era
+	if serverDesc != nil {
+		b.peers[serverDesc.ID] = serverDesc.Era
+		for _, desc := range c.Peers() {
+			b.peers[desc.ID] = desc.Era
+		}
 	}
 
 	if err := b.start(); err != nil {
@@ -90,8 +102,10 @@ func (b *Backend) start() error {
 		b.DbMap.AddTableWithName(item.Table, name).SetKeys(false, item.PrimaryKey...)
 	}
 
-	if _, err := b.DbMap.Exec("DELETE FROM presence WHERE server_id = $1", b.desc.ID); err != nil {
-		return fmt.Errorf("presence reset error: %s", err)
+	if b.desc != nil {
+		if _, err := b.DbMap.Exec("DELETE FROM presence WHERE server_id = $1", b.desc.ID); err != nil {
+			return fmt.Errorf("presence reset error: %s", err)
+		}
 	}
 
 	ctx := scope.New()
@@ -100,7 +114,7 @@ func (b *Backend) start() error {
 	return nil
 }
 
-func (b *Backend) Version() string { return b.desc.Version }
+func (b *Backend) Version() string { return b.version }
 
 func (b *Backend) Close() {
 	b.cancel()
@@ -125,8 +139,10 @@ func (b *Backend) background(ctx scope.Context) {
 		case <-ctx.Done():
 			return
 		case <-keepalive.C:
-			if err := b.cluster.Update(b.desc); err != nil {
-				logger.Printf("cluster: keepalive error: %s", err)
+			if b.desc != nil {
+				if err := b.cluster.Update(b.desc); err != nil {
+					logger.Printf("cluster: keepalive error: %s", err)
+				}
 			}
 		case event := <-peerWatcher:
 			b.Lock()

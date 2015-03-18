@@ -25,7 +25,7 @@ func init() {
 		return val
 	}
 
-	flag.StringVar(&Config.Cluster.ServerID, "id", env("HEIM_ID", "singleton"), "")
+	flag.StringVar(&Config.Cluster.ServerID, "id", env("HEIM_ID", ""), "")
 	flag.StringVar(&Config.Cluster.EtcdHome, "etcd", env("HEIM_ETCD_HOME", ""),
 		"etcd path for cluster coordination")
 	flag.StringVar(&Config.Cluster.EtcdHost, "etcd-host", env("HEIM_ETCD", ""),
@@ -120,6 +120,9 @@ func (c *ClusterConfig) EtcdCluster() (cluster.Cluster, error) {
 }
 
 func (c *ClusterConfig) DescribeSelf() *cluster.PeerDesc {
+	if c.ServerID == "" {
+		return nil
+	}
 	return &cluster.PeerDesc{
 		ID:      c.ServerID,
 		Era:     c.Era,

@@ -25,7 +25,7 @@ type serveCmd struct {
 func (serveCmd) desc() string { return "start up a heim backend server" }
 
 func (serveCmd) usage() string {
-	return "serve [-http=IFACE:PORT] [-console=IFACE:PORT] [-static=PATH]"
+	return "serve [--http=IFACE:PORT] [--console=IFACE:PORT] [--static=PATH]"
 }
 
 func (serveCmd) longdesc() string {

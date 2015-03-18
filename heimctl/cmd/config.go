@@ -17,14 +17,6 @@ var config = flag.String("config", os.Getenv("HEIM_CONFIG"),
 	"path to local config (default: use config stored in etcd)")
 
 func getCluster() (cluster.Cluster, error) {
-	if backend.Config.Cluster.ServerID == "" {
-		id, err := os.Hostname()
-		if err != nil {
-			return nil, fmt.Errorf("hostname error: %s", err)
-		}
-		backend.Config.Cluster.ServerID = id
-	}
-
 	era, err := snowflake.New()
 	if err != nil {
 		return nil, fmt.Errorf("era error: %s", err)
