@@ -7,7 +7,6 @@ import (
 
 	"euphoria.io/heim/backend"
 	"euphoria.io/heim/backend/console"
-	_ "euphoria.io/heim/cmd" // for -newflags
 	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/security"
 	"euphoria.io/scope"
