@@ -1,7 +1,6 @@
 var _ = require('lodash')
 var Reflux = require('reflux')
 var Immutable = require('immutable')
-var Trie = require('triejs')
 
 var actions = require('../actions')
 var Tree = require('../tree')
@@ -10,17 +9,6 @@ var socket = require('./socket')
 var plugins = require('./plugins')
 var hueHash = require('../huehash')
 
-
-function NickTrie() {
-  var trie = new Trie({enableCache: false})
-  // strip spaces from nicks going into the trie
-  _.each(['add', 'remove', 'contains'], function(n) {
-    trie[n] = _.wrap(trie[n], function(f, word) {
-      return f.call(this, hueHash.stripSpaces(word))
-    })
-  })
-  return trie
-}
 
 var mentionRe = module.exports.mentionRe = /@([^\s]+?(?=$|[,.!;\s]|&#39;|&quot;|&amp;))/g
 
@@ -49,7 +37,6 @@ module.exports.store = Reflux.createStore({
       earliestLog: null,
       nickHues: {},
       who: Immutable.Map(),
-      nickTrie: NickTrie(),
       focusedMessage: null,
       entryText: '',
       entrySelectionStart: null,
@@ -99,29 +86,18 @@ module.exports.store = Reflux.createStore({
               name: ev.body.data.to,
               hue: hueHash.hue(ev.body.data.to),
             })
-          this.state.nickTrie.remove(ev.body.data.from)
-          this.state.nickTrie.add(ev.body.data.to)
         }
       } else if (ev.body.type == 'join-event') {
         ev.body.data.hue = hueHash.hue(ev.body.data.name)
         this.state.who = this.state.who
           .set(ev.body.data.id, Immutable.fromJS(ev.body.data))
-        this.state.nickTrie.add(ev.body.data.name)
       } else if (ev.body.type == 'part-event') {
         this.state.who = this.state.who.delete(ev.body.data.id)
-        this.state.nickTrie.remove(ev.body.data.name)
       } else if (ev.body.type == 'network-event') {
         if (ev.body.data.type == 'partition') {
           var id = ev.body.data.server_id
           var era = ev.body.data.server_era
-          this.state.who = this.state.who.filter(v => {
-            if (v.get('server_id') == id && v.get('server_era') == era) {
-              this.state.nickTrie.remove(v.get('name'))
-              return false
-            } else {
-              return true
-            }
-          })
+          this.state.who = this.state.who.filterNot(v => v.get('server_id') == id && v.get('server_era') == era)
         }
       }
     } else if (ev.status == 'open') {
@@ -178,11 +154,9 @@ module.exports.store = Reflux.createStore({
 
   _handleWhoReply: function(data) {
     // TODO: merge instead of reset so we don't lose lastSent
-    this.state.nickTrie = NickTrie()
     this.state.who = Immutable.OrderedMap(
       Immutable.Seq(data.listing)
         .map(function(user) {
-          this.state.nickTrie.add(user.name)
           user.hue = hueHash.hue(user.name)
           return [user.id, Immutable.Map(user)]
         }, this)

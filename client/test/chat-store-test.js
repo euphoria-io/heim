@@ -727,15 +727,6 @@ describe('chat store', function() {
       })
     })
 
-    it('users should be added to nick trie', function(done) {
-      handleSocket({status: 'receive', body: msgBody}, function(state) {
-        assert(Immutable.Iterable(whoReply.data.listing).every(function(user) {
-          return state.nickTrie.contains(user.name)
-        }))
-        done()
-      })
-    })
-
     it('users should all be assigned hues', function(done) {
       handleSocket({status: 'receive', body: msgBody}, function(state) {
         assert(state.who.every(function(whoEntry) {
@@ -856,16 +847,6 @@ describe('chat store', function() {
       })
     })
 
-    it('should update nick trie', function(done) {
-      handleSocket({status: 'receive', body: whoReply}, function() {
-        handleSocket({status: 'receive', body: nickReply}, function(state) {
-          assert(!state.nickTrie.contains('guest'))
-          assert(state.nickTrie.contains('tester'))
-          done()
-        })
-      })
-    })
-
     it('should update hue', function(done) {
       handleSocket({status: 'receive', body: whoReply}, function() {
         handleSocket({status: 'receive', body: nickReply}, function(state) {
@@ -937,13 +918,6 @@ describe('chat store', function() {
       })
     })
 
-    it('should add to nick trie', function(done) {
-      handleSocket({status: 'receive', body: joinEvent}, function(state) {
-        assert(state.nickTrie.contains(joinEvent.data.name))
-        done()
-      })
-    })
-
     it('should assign a hue', function(done) {
       handleSocket({status: 'receive', body: joinEvent}, function(state) {
         assert.equal(state.who.getIn([joinEvent.data.id, 'hue']), 234)
@@ -966,15 +940,6 @@ describe('chat store', function() {
       handleSocket({status: 'receive', body: whoReply}, function() {
         handleSocket({status: 'receive', body: partEvent}, function(state) {
           assert(!state.who.has(partEvent.data.id))
-          done()
-        })
-      })
-    })
-
-    it('should remove from nick trie', function(done) {
-      handleSocket({status: 'receive', body: whoReply}, function() {
-        handleSocket({status: 'receive', body: partEvent}, function(state) {
-          assert(!state.nickTrie.contains(partEvent.data.name))
           done()
         })
       })
@@ -1110,17 +1075,6 @@ describe('chat store', function() {
         handleSocket({status: 'receive', body: networkPartitionEvent}, function(state) {
           assert.equal(state.who.size, 1)
           assert.equal(state.who.first().get('id'), whoReply.data.listing[2].id)
-          done()
-        })
-      })
-    })
-
-    it('should remove all associated users from the nick trie', function(done) {
-      handleSocket({status: 'receive', body: whoReply}, function() {
-        handleSocket({status: 'receive', body: networkPartitionEvent}, function(state) {
-          assert(!state.nickTrie.contains(whoReply.data.listing[0].name))
-          assert(!state.nickTrie.contains(whoReply.data.listing[1].name))
-          assert(state.nickTrie.contains(whoReply.data.listing[2].name))
           done()
         })
       })

@@ -4,6 +4,7 @@ var Reflux = require('reflux')
 
 var actions = require('../actions')
 var chat = require('../stores/chat')
+var hueHash = require('../huehash')
 
 module.exports = React.createClass({
   displayName: 'ChatEntry',
@@ -201,12 +202,13 @@ module.exports = React.createClass({
       return
     }
 
-    var word = text.substring(wordStart, wordEnd)
-    var match = this.state.chat.nickTrie.find(word)
-    if (!match) {
+    // FIXME: replace this with a fast Trie implementation
+    var word = hueHash.stripSpaces(text.substring(wordStart, wordEnd)).toLowerCase()
+    var matches = this.state.chat.who.filter(user => hueHash.stripSpaces(user.get('name', '')).toLowerCase().lastIndexOf(word, 0) === 0)
+    if (!matches.size) {
       return
     }
-    var completed = (text[wordStart - 1] != '@' ? '@' : '') + match[0]
+    var completed = (text[wordStart - 1] != '@' ? '@' : '') + matches.first().get('name')
     input.value = input.value.substring(0, wordStart) + completed + input.value.substring(wordEnd)
     this.saveEntryState()
   },
