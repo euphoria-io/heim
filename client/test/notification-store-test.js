@@ -293,9 +293,9 @@ describe('notification store', function() {
         delete window.uiwindow
       })
 
-      it('should not open another notification', function() {
+      it('should replace with another notification', function() {
         notification.store.chatUpdate(mockChatState2)
-        sinon.assert.calledOnce(Notification)
+        sinon.assert.calledTwice(Notification)
       })
 
       it('should ignore extraneous chat events', function() {

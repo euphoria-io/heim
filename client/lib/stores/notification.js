@@ -124,11 +124,11 @@ module.exports.store = Reflux.createStore({
 
     Heim.setFavicon('/static/favicon-active.png')
 
-    if (!this.state.enabled || this.notification) {
+    if (!this.state.enabled) {
       return
     }
 
-    this.resetNotification()
+    this.closeNotification()
 
     this.notification = new Notification(message, options)
     this.notification.onclick = function() {
