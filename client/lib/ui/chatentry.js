@@ -204,11 +204,16 @@ module.exports = React.createClass({
 
     // FIXME: replace this with a fast Trie implementation
     var word = hueHash.stripSpaces(text.substring(wordStart, wordEnd)).toLowerCase()
-    var matches = this.state.chat.who.filter(user => hueHash.stripSpaces(user.get('name', '')).toLowerCase().lastIndexOf(word, 0) === 0)
-    if (!matches.size) {
+    var match = this.state.chat.who
+      .toSeq()
+      .map(user => hueHash.stripSpaces(user.get('name', '')))
+      .filter(name => name && name.toLowerCase().lastIndexOf(word, 0) === 0)
+      .first()
+
+    if (!match) {
       return
     }
-    var completed = (text[wordStart - 1] != '@' ? '@' : '') + matches.first().get('name')
+    var completed = (text[wordStart - 1] != '@' ? '@' : '') + match
     input.value = input.value.substring(0, wordStart) + completed + input.value.substring(wordEnd)
     this.saveEntryState()
   },
