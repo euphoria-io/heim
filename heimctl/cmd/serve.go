@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"euphoria.io/heim/backend"
+	"euphoria.io/heim/backend/cluster"
 	"euphoria.io/heim/backend/console"
 	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/security"
@@ -65,7 +66,7 @@ func (cmd *serveCmd) run(ctx scope.Context, args []string) error {
 	}
 	defer b.Close()
 
-	if err := controller(cmd.consoleAddr, b, kms); err != nil {
+	if err := controller(cmd.consoleAddr, b, kms, c); err != nil {
 		return fmt.Errorf("controller error: %s", err)
 	}
 
@@ -80,7 +81,7 @@ func (cmd *serveCmd) run(ctx scope.Context, args []string) error {
 	return nil
 }
 
-func controller(addr string, b proto.Backend, kms security.KMS) error {
+func controller(addr string, b proto.Backend, kms security.KMS, c cluster.Cluster) error {
 	if addr != "" {
 		ctrl, err := console.NewController(addr, b, kms)
 		if err != nil {
@@ -89,6 +90,10 @@ func controller(addr string, b proto.Backend, kms security.KMS) error {
 
 		if backend.Config.Console.HostKey != "" {
 			if err := ctrl.AddHostKey(backend.Config.Console.HostKey); err != nil {
+				return err
+			}
+		} else {
+			if err := ctrl.AddHostKeyFromCluster(c, backend.Config.Cluster.ServerID); err != nil {
 				return err
 			}
 		}

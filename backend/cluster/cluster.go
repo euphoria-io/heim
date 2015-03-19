@@ -17,6 +17,7 @@ var (
 type Cluster interface {
 	GetValue(key string) (string, error)
 	SetValue(key, value string) error
+	GetValueWithDefault(key string, setter func() (string, error)) (string, error)
 
 	GetSecret(kms security.KMS, name string, bytes int) ([]byte, error)
 
@@ -80,6 +81,20 @@ func (tc *TestCluster) SetValue(key, value string) error {
 	tc.data[key] = value
 	tc.Unlock()
 	return nil
+}
+
+func (tc *TestCluster) GetValueWithDefault(key string, setter func() (string, error)) (string, error) {
+	tc.Lock()
+	defer tc.Unlock()
+	if val, ok := tc.data[key]; ok {
+		return val, nil
+	}
+	val, err := setter()
+	if err != nil {
+		return "", err
+	}
+	tc.data[key] = val
+	return val, nil
 }
 
 func (tc *TestCluster) GetSecret(kms security.KMS, name string, bytes int) ([]byte, error) {

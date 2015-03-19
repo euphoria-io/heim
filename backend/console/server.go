@@ -3,6 +3,10 @@ package console
 import (
 	"bufio"
 	"bytes"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/x509"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -10,6 +14,9 @@ import (
 	"os"
 	"strings"
 
+	"encoding/pem"
+
+	"euphoria.io/heim/backend/cluster"
 	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/security"
 
@@ -56,6 +63,38 @@ func (ctrl *Controller) authorizeKey(conn ssh.ConnMetadata, key ssh.PublicKey) (
 		}
 	}
 	return nil, fmt.Errorf("unauthorized")
+}
+
+func (ctrl *Controller) AddHostKeyFromCluster(c cluster.Cluster, host string) error {
+	pemString, err := c.GetValueWithDefault(fmt.Sprintf("console/%s", host), func() (string, error) {
+		// Generate an ECDSA key.
+		key, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+		if err != nil {
+			return "", err
+		}
+		derBytes, err := x509.MarshalECPrivateKey(key)
+		if err != nil {
+			return "", err
+		}
+		w := &bytes.Buffer{}
+		if err := pem.Encode(w, &pem.Block{Type: "EC PRIVATE KEY", Bytes: derBytes}); err != nil {
+			return "", err
+		}
+		return w.String(), nil
+	})
+	if err != nil {
+		return fmt.Errorf("failed to get/generate host key: %s", err)
+	}
+
+	fmt.Printf("PEM: %s\n", pemString)
+
+	signer, err := ssh.ParsePrivateKey([]byte(pemString))
+	if err != nil {
+		return fmt.Errorf("failed to parse host key: %s", err)
+	}
+
+	ctrl.config.AddHostKey(signer)
+	return nil
 }
 
 func (ctrl *Controller) AddHostKey(path string) error {

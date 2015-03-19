@@ -269,3 +269,24 @@ func (e *etcdCluster) setSecret(kms security.KMS, name string, bytes int) ([]byt
 
 	return secret, nil
 }
+
+func (e *etcdCluster) GetValueWithDefault(key string, setter func() (string, error)) (string, error) {
+	for {
+		resp, err := e.c.Get(e.key("%s", key), false, false)
+		if err != nil {
+			if etcdErr, ok := err.(*etcd.EtcdError); ok && etcdErr.ErrorCode == 100 {
+				value, err := setter()
+				if err != nil {
+					return "", err
+				}
+				if _, err := e.c.Create(e.key("%s", key), value, 0); err != nil {
+					// Lost the race, repeat.
+					continue
+				}
+				return value, nil
+			}
+			return "", err
+		}
+		return resp.Node.Value, nil
+	}
+}
