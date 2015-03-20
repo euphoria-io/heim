@@ -1,5 +1,5 @@
-var _ = require('lodash')
 var support = require('./support/setup')
+var _ = require('lodash')
 var assert = require('assert')
 var sinon = require('sinon')
 var Immutable = require('immutable')
@@ -13,12 +13,14 @@ describe('notification store', function() {
 
   beforeEach(function() {
     sinon.stub(storage, 'set')
+    sinon.stub(storage, 'setRoom')
     sinon.stub(Heim, 'setFavicon')
   })
 
   afterEach(function() {
     window.Notification = _Notification
     storage.set.restore()
+    storage.setRoom.restore()
     Heim.setFavicon.restore()
   })
 
@@ -29,39 +31,39 @@ describe('notification store', function() {
     })
 
     it('should set unsupported', function() {
-      assert.equal(notification.store.getInitialState().supported, false)
+      assert.equal(notification.store.getInitialState().popupsSupported, false)
     })
   })
 
   describe('when supported but not permitted', function() {
     beforeEach(function() {
-      window.Notification = {permission: 'default'}
+      window.Notification = {popupsPermission: 'default'}
       support.resetStore(notification.store)
     })
 
     it('should set supported', function() {
-      assert.equal(notification.store.getInitialState().supported, true)
+      assert.equal(notification.store.getInitialState().popupsSupported, true)
     })
 
     it('should set no permission', function() {
-      assert.equal(notification.store.getInitialState().permission, false)
+      assert.equal(notification.store.getInitialState().popupsPermission, false)
     })
 
-    describe('enabling', function() {
+    describe('enabling popups', function() {
       beforeEach(function() {
         Notification.requestPermission = sinon.spy()
       })
 
       it('should request permission', function() {
-        notification.store.enable()
+        notification.store.enablePopups()
         sinon.assert.calledWithExactly(Notification.requestPermission, notification.store.onPermission)
       })
     })
 
     describe('receiving permission', function() {
-      it('should set permission', function(done) {
+      it('should set popupsPermission', function(done) {
         support.listenOnce(notification.store, function(state) {
-          assert.equal(state.permission, true)
+          assert.equal(state.popupsPermission, true)
           done()
         })
         notification.store.onPermission('granted')
@@ -74,9 +76,9 @@ describe('notification store', function() {
     })
 
     describe('receiving denial', function() {
-      it('should set no permission', function(done) {
+      it('should set no popupsPermission', function(done) {
         support.listenOnce(notification.store, function(state) {
-          assert.equal(state.permission, false)
+          assert.equal(state.popupsPermission, false)
           done()
         })
         notification.store.onPermission('denied')
@@ -105,9 +107,26 @@ describe('notification store', function() {
       'content': 'woof!',
     }
 
-    var mockChatStateEmpty = {
-      joined: true,
-      messages: Immutable.fromJS([])
+    var messageMention = {
+      'id': 'id3',
+      'time': 123457,
+      'sender': {
+        'id': '32.64.96.128:12345',
+        'name': 'tester',
+      },
+      'content': 'hello @ezzie!',
+      'mention': true,
+    }
+
+    var messageMentionOld = {
+      'id': 'id3',
+      'time': Date.now() - notification.store.mentionTTL,
+      'sender': {
+        'id': '32.64.96.128:12345',
+        'name': 'tester',
+      },
+      'content': 'ancient message!',
+      'mention': true,
     }
 
     var mockChatState = {
@@ -118,18 +137,31 @@ describe('notification store', function() {
       ])
     }
 
-    var mockChatStateDupe = {
-      joined: true,
-      messages: new Tree('time').reset([
-        message1,
-      ])
-    }
-
     var mockChatState2 = {
       joined: true,
       messages: new Tree('time').reset([
         message1,
         message2,
+      ])
+    }
+
+    var mockChatStateMention = {
+      joined: true,
+      roomName: 'ezzie',
+      messages: new Tree('time').reset([
+        message1,
+        message2,
+        messageMention,
+      ])
+    }
+
+    var mockChatStateMentionOld = {
+      joined: true,
+      roomName: 'ezzie',
+      messages: new Tree('time').reset([
+        message1,
+        message2,
+        messageMentionOld,
       ])
     }
 
@@ -149,62 +181,41 @@ describe('notification store', function() {
     })
 
     it('should set supported', function() {
-      assert.equal(notification.store.getInitialState().supported, true)
+      assert.equal(notification.store.getInitialState().popupsSupported, true)
     })
 
-    it('should set permission', function() {
-      assert.equal(notification.store.getInitialState().permission, true)
+    it('should set popupsPermission', function() {
+      assert.equal(notification.store.getInitialState().popupsPermission, true)
     })
 
-    describe('enabling', function() {
+    describe('enabling popups', function() {
       it('should store enabled', function() {
-        notification.store.enable()
+        notification.store.enablePopups()
         sinon.assert.calledWithExactly(storage.set, 'notify', true)
       })
     })
 
-    describe('disabling', function() {
+    describe('disabling popups', function() {
       it('should store disabled', function() {
-        notification.store.disable()
+        notification.store.disablePopups()
         sinon.assert.calledWithExactly(storage.set, 'notify', false)
       })
     })
 
-    describe('when enabled', function() {
+    describe('when popups enabled', function() {
       beforeEach(function() {
         notification.store.focusChange({windowFocused: false})
-        notification.store.storageChange({notify: true})
-      })
-
-      describe('first message state loaded', function() {
-        it('should not display a notification', function() {
-          notification.store.chatUpdate(mockChatState)
-          sinon.assert.notCalled(Notification)
-        })
-      })
-
-      describe('receiving a message before joined', function() {
-        it('should not display a notification', function() {
-          notification.store.chatUpdate(_.extend({}, mockChatStateEmpty, {joined: false}))
-          notification.store.chatUpdate(_.extend({}, mockChatState, {joined: false}))
-          sinon.assert.notCalled(Notification)
-        })
+        notification.store.storageChange({notify: true, room: {}})
       })
 
       describe('receiving a message', function() {
-        it('should display a notification', function() {
-          notification.store.chatUpdate(mockChatStateEmpty)
-          notification.store.chatUpdate(mockChatState)
+        it('should display a notification and set favicon', function() {
+          notification.store.messageReceived(Immutable.Map(message1), mockChatState)
           sinon.assert.calledOnce(Notification)
           sinon.assert.calledWithExactly(Notification, 'ezzie', {
             icon: '/static/icon.png',
             body: 'logan: hello, ezzie!',
           })
-        })
-
-        it('should change to active favicon', function() {
-          notification.store.chatUpdate(mockChatStateEmpty)
-          notification.store.chatUpdate(mockChatState)
           sinon.assert.calledOnce(Heim.setFavicon)
           sinon.assert.calledWithExactly(Heim.setFavicon, '/static/favicon-active.png')
         })
@@ -212,21 +223,66 @@ describe('notification store', function() {
 
       describe('receiving the same message again', function() {
         it('should not display a notification', function() {
-          notification.store.chatUpdate(mockChatStateEmpty)
-          notification.store.chatUpdate(mockChatState)
+          notification.store.messageReceived(Immutable.Map(message1), mockChatState)
           fakeNotification.close()
-          notification.store.chatUpdate(mockChatStateDupe)
+          notification.store.messageReceived(Immutable.Map(message1), mockChatState)
           sinon.assert.calledOnce(Notification)
         })
       })
 
       describe('closing and receiving a new message', function() {
         it('should display a second notification', function() {
-          notification.store.chatUpdate(mockChatStateEmpty)
-          notification.store.chatUpdate(mockChatState)
+          notification.store.messageReceived(Immutable.Map(message1), mockChatState)
           fakeNotification.close()
-          notification.store.chatUpdate(mockChatState2)
+          notification.store.messageReceived(Immutable.Map(message2), mockChatState2)
           sinon.assert.calledTwice(Notification)
+        })
+      })
+
+      describe('receiving a mention', function() {
+        describe('when joined', function() {
+          it('should display a notification, set favicon, and store seen', function() {
+            notification.store.messagesChanged([messageMention.id], mockChatStateMention)
+            sinon.assert.calledOnce(Notification)
+            sinon.assert.calledWithExactly(Notification, 'ezzie', {
+              icon: '/static/icon-highlight.png',
+              body: 'tester: hello @ezzie!',
+            })
+            sinon.assert.calledOnce(Heim.setFavicon)
+            sinon.assert.calledWithExactly(Heim.setFavicon, '/static/favicon-highlight.png')
+            sinon.assert.calledOnce(storage.setRoom)
+            sinon.assert.calledWithExactly(storage.setRoom, 'ezzie', 'seenMentions', {id3: 43200000})
+          })
+
+          it('if seen before should not display a notification', function() {
+            notification.store.storageChange({notify: true, room: {ezzie: {seenMentions: {id3: Date.now() + 1000}}}})
+            notification.store.messagesChanged([messageMention.id], mockChatStateMention)
+            sinon.assert.notCalled(Notification)
+            sinon.assert.notCalled(Heim.setFavicon)
+          })
+
+          it('if seen before, but expired, should display a notification, set favicon, and store seen', function() {
+            notification.store.storageChange({notify: true, room: {ezzie: {seenMentions: {id3: Date.now() - 1000, other: Date.now() - 1000}}}})
+            notification.store.messagesChanged([messageMention.id], mockChatStateMention)
+            sinon.assert.calledOnce(Heim.setFavicon)
+            sinon.assert.calledWithExactly(Heim.setFavicon, '/static/favicon-highlight.png')
+            sinon.assert.calledOnce(storage.setRoom)
+            sinon.assert.calledWithExactly(storage.setRoom, 'ezzie', 'seenMentions', {id3: 43200000})
+          })
+
+          it('if message is older than TTL, should not display a notification', function() {
+            notification.store.messagesChanged([messageMention.id], mockChatStateMentionOld)
+            sinon.assert.notCalled(Notification)
+            sinon.assert.notCalled(Heim.setFavicon)
+          })
+        })
+
+        describe('when not joined', function() {
+          it('should not display a notification', function() {
+            notification.store.messagesChanged([messageMention.id], _.assign({}, mockChatStateMention, {joined: false}))
+            sinon.assert.notCalled(Notification)
+            sinon.assert.notCalled(Heim.setFavicon)
+          })
         })
       })
     })
@@ -248,17 +304,15 @@ describe('notification store', function() {
 
       it('should not open notifications when focused', function() {
         notification.store.focusChange({windowFocused: true})
-        notification.store.storageChange({notify: true})
-        notification.store.chatUpdate(mockChatStateEmpty)
-        notification.store.chatUpdate(mockChatState)
+        notification.store.storageChange({notify: true, room: {}})
+        notification.store.messageReceived(Immutable.Map(message1), mockChatState)
         sinon.assert.notCalled(Notification)
       })
 
       it('should close notification when window focused', function() {
         notification.store.focusChange({windowFocused: false})
-        notification.store.storageChange({notify: true})
-        notification.store.chatUpdate(mockChatStateEmpty)
-        notification.store.chatUpdate(mockChatState)
+        notification.store.storageChange({notify: true, room: {}})
+        notification.store.messageReceived(Immutable.Map(message1), mockChatState)
         sinon.assert.calledOnce(Notification)
         notification.store.focusChange({windowFocused: true})
         sinon.assert.calledOnce(fakeNotification.close)
@@ -266,9 +320,8 @@ describe('notification store', function() {
 
       it('should reset favicon when window focused', function() {
         notification.store.focusChange({windowFocused: false})
-        notification.store.storageChange({notify: true})
-        notification.store.chatUpdate(mockChatStateEmpty)
-        notification.store.chatUpdate(mockChatState)
+        notification.store.storageChange({notify: true, room: {}})
+        notification.store.messageReceived(Immutable.Map(message1), mockChatState)
         sinon.assert.calledOnce(Heim.setFavicon)
         Heim.setFavicon.reset()
 
@@ -281,9 +334,8 @@ describe('notification store', function() {
     describe('with a notification showing', function() {
       beforeEach(function() {
         notification.store.focusChange({windowFocused: false})
-        notification.store.storageChange({notify: true})
-        notification.store.chatUpdate(mockChatStateEmpty)
-        notification.store.chatUpdate(mockChatState)
+        notification.store.storageChange({notify: true, room: {}})
+        notification.store.messageReceived(Immutable.Map(message1), mockChatState)
         sinon.stub(actions, 'focusMessage')
         window.uiwindow = {focus: sinon.stub()}
       })
@@ -294,13 +346,8 @@ describe('notification store', function() {
       })
 
       it('should replace with another notification', function() {
-        notification.store.chatUpdate(mockChatState2)
+        notification.store.messageReceived(Immutable.Map(message2), mockChatState2)
         sinon.assert.calledTwice(Notification)
-      })
-
-      it('should ignore extraneous chat events', function() {
-        notification.store.chatUpdate(mockChatStateEmpty)
-        sinon.assert.calledOnce(Notification)
       })
 
       it('should focus window and notification when clicked', function() {

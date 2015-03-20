@@ -13,15 +13,15 @@ module.exports = React.createClass({
 
   onChange: function(ev) {
     if (ev.target.checked) {
-      notification.enable()
+      notification.enablePopups()
     } else {
-      notification.disable()
+      notification.disablePopups()
     }
   },
 
   render: function() {
     return (
-      <label><input type="checkbox" checked={this.state.enabled} onChange={this.onChange} />notify new messages?</label>
+      <label><input type="checkbox" checked={this.state.popupsEnabled} onChange={this.onChange} />notify new messages?</label>
     )
   },
 })

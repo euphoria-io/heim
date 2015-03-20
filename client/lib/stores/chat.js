@@ -12,9 +12,16 @@ var hueHash = require('../huehash')
 
 var mentionRe = module.exports.mentionRe = /\B@([^\s]+?(?=$|[,.!;&\s]|&#39;|&quot;|&amp;))/g
 
+var storeActions = module.exports.actions = Reflux.createActions([
+  'messageReceived',
+  'messagesChanged',
+])
+_.extend(module.exports, storeActions)
+
 module.exports.store = Reflux.createStore({
   listenables: [
     actions,
+    storeActions,
     {socketEvent: socket.store},
     {storageChange: storage.store},
     {focusChange: require('./focus').store},
@@ -44,6 +51,10 @@ module.exports.store = Reflux.createStore({
     }
 
     this._joinWhenReady = false
+
+    this.state.messages.changes.on('__all', ids => {
+      storeActions.messagesChanged(ids, this.state)
+    })
   },
 
   getInitialState: function() {
@@ -57,6 +68,9 @@ module.exports.store = Reflux.createStore({
         var message = ev.body.data
         var processedMessages = this._handleMessagesData([message])
         this.state.messages.add(processedMessages)
+        _.each(processedMessages, message =>
+          storeActions.messageReceived(this.state.messages.get(message.id), this.state)
+        )
       } else if (ev.body.type == 'snapshot-event') {
         this.state.serverVersion = ev.body.data.version
         this.state.sessionId = ev.body.data.session_id

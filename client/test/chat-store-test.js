@@ -1,4 +1,5 @@
 var support = require('./support/setup')
+var _ = require('lodash')
 var assert = require('assert')
 var sinon = require('sinon')
 var Immutable = require('immutable')
@@ -11,6 +12,8 @@ describe('chat store', function() {
   var storage = require('../lib/stores/storage')
 
   beforeEach(function() {
+    sinon.stub(chat.actions, 'messageReceived')
+    sinon.stub(chat.actions, 'messagesChanged')
     sinon.stub(socket, 'send')
     sinon.stub(storage, 'setRoom')
     support.resetStore(chat.store)
@@ -18,6 +21,8 @@ describe('chat store', function() {
   })
 
   afterEach(function() {
+    chat.actions.messageReceived.restore()
+    chat.actions.messagesChanged.restore()
     socket.send.restore()
     storage.setRoom.restore()
     window.Raven = null
@@ -491,6 +496,22 @@ describe('chat store', function() {
       })
     })
 
+    it('should trigger messageReceived action', function(done) {
+      handleSocket({status: 'receive', body: sendEvent}, function(state) {
+        sinon.assert.calledOnce(chat.actions.messageReceived)
+        sinon.assert.calledWithExactly(chat.actions.messageReceived, state.messages.last(), state)
+        done()
+      })
+    })
+
+    it('should trigger messagesChanged action', function(done) {
+      handleSocket({status: 'receive', body: sendEvent}, function(state) {
+        sinon.assert.calledOnce(chat.actions.messagesChanged)
+        sinon.assert.calledWithExactly(chat.actions.messagesChanged, ['id2', '__root'], state)
+        done()
+      })
+    })
+
     it('should be tagged as a mention, if it matches', function(done) {
       chat.store.state.tentativeNick = 'test er'
       handleSocket({status: 'receive', body: sendMentionEvent}, function(state) {
@@ -542,8 +563,22 @@ describe('chat store', function() {
     })
   }
 
+  function checkMessagesChangedEvent(msgBody) {
+    it('should trigger messagesChanged action', function(done) {
+      chat.actions.messagesChanged.reset()
+      handleSocket({status: 'receive', body: msgBody}, function(state) {
+        var ids = Immutable.Seq(msgBody.data.log).map(msg => msg.id).toArray()
+        ids.push('__root')
+        sinon.assert.calledOnce(chat.actions.messagesChanged)
+        sinon.assert.calledWithExactly(chat.actions.messagesChanged, ids, state)
+        done()
+      })
+    })
+  }
+
   describe('received logs', function() {
     checkLogs(logReply)
+    checkMessagesChangedEvent(logReply)
 
     it('should ignore empty logs', function(done) {
       var emptyLogReply = {
@@ -622,6 +657,15 @@ describe('chat store', function() {
         })
 
         chat.store.focusMessage('id1')
+      })
+
+      it('should not trigger messagesChanged action', function(done) {
+        var logReplyWithBefore = _.merge(_.clone(logReply), {data: {before: 'id0'}})
+        chat.actions.messagesChanged.reset()
+        handleSocket({status: 'receive', body: logReplyWithBefore}, function() {
+          sinon.assert.notCalled(chat.actions.messagesChanged)
+          done()
+        })
       })
     })
 
@@ -741,6 +785,7 @@ describe('chat store', function() {
 
   describe('received snapshots', function() {
     checkLogs(snapshotReply)
+    checkMessagesChangedEvent(snapshotReply)
     checkUsers(snapshotReply)
 
     it('should update server version', function(done) {
