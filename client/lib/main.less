@@ -834,3 +834,26 @@ iframe.js {
     background: none;
   }
 }
+
+@media (min-width: 920px) {
+  @sidebar-width: 150px;
+
+  .chat {
+    .sidebar {
+      right: 0;
+      top: 0;
+      bottom: 0;
+      width: @sidebar-width;
+      padding: 8px;
+      box-sizing: border-box;
+
+      .top-line {
+        width: 500px;
+      }
+    }
+
+    .messages-container .messages .line {
+      margin-right: @sidebar-width;
+    }
+  }
+}

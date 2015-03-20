@@ -56,7 +56,7 @@ module.exports = React.createClass({
           <RoomTitle name={this.props.roomName} authType={this.props.authType} rightOffset={this.props.scrollbarWidth} joined={this.props.joined} />
           <button type="button" className="settings" onClick={this.toggleSettings} tabIndex="-1" />
         </div>
-        <UserList users={this.props.who} collapsed={this.state.userListCollapsed} onMouseEnter={this.expandUserList} onMouseLeave={this.collapseUserList} />
+        <UserList users={this.props.who} collapsed={!this.props.wide && this.state.userListCollapsed} onMouseEnter={this.expandUserList} onMouseLeave={this.collapseUserList} />
         {this.props.updateReady && <FastButton className="update-button" onClick={update.perform}><p>update ready<em>{Heim.isTouch ? 'tap' : 'click'} to reload</em></p></FastButton>}
         {this.templateHook('sidebar')}
       </div>
