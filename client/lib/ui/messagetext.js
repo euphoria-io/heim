@@ -41,8 +41,8 @@ module.exports = React.createClass({
   render: function() {
     var html = _.escape(this.props.content)
 
-    html = html.replace(/(^|\s)&amp;(\w+)(?=$|[^\w;])/g, function(match, before, name) {
-      return before + React.renderToStaticMarkup(<a href={'/room/' + name} target="_blank">&amp;{name}</a>)
+    html = html.replace(/\B&amp;(\w+)(?=$|[^\w;])/g, function(match, name) {
+      return React.renderToStaticMarkup(<a href={'/room/' + name} target="_blank">&amp;{name}</a>)
     })
 
     html = html.replace(chat.mentionRe, function(match, name) {
