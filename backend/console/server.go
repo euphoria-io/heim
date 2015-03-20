@@ -29,12 +29,15 @@ type Controller struct {
 	config   *ssh.ServerConfig
 	backend  proto.Backend
 	kms      security.KMS
+	cluster  cluster.Cluster
 
 	// TODO: key ssh.PublicKey
 	authorizedKeys []ssh.PublicKey
 }
 
-func NewController(addr string, backend proto.Backend, kms security.KMS) (*Controller, error) {
+func NewController(
+	addr string, backend proto.Backend, kms security.KMS, c cluster.Cluster) (*Controller, error) {
+
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
 		return nil, fmt.Errorf("listen %s: %s", addr, err)
@@ -44,6 +47,7 @@ func NewController(addr string, backend proto.Backend, kms security.KMS) (*Contr
 		listener: listener,
 		backend:  backend,
 		kms:      kms,
+		cluster:  c,
 	}
 
 	ctrl.config = &ssh.ServerConfig{
@@ -62,11 +66,30 @@ func (ctrl *Controller) authorizeKey(conn ssh.ConnMetadata, key ssh.PublicKey) (
 			return &ssh.Permissions{}, nil
 		}
 	}
+
+	nodes, err := ctrl.cluster.GetDir("console/authorized_keys")
+	if err != nil {
+		if err == cluster.ErrNotFound {
+			return nil, fmt.Errorf("unauthorized")
+		}
+		return nil, err
+	}
+
+	for path, value := range nodes {
+		key, _, _, _, err := ssh.ParseAuthorizedKey([]byte(value))
+		if err != nil {
+			fmt.Printf("bad authorized key from etcd: %s: %s\n", path, err)
+		}
+		if bytes.Compare(key.Marshal(), marshaledKey) == 0 {
+			return &ssh.Permissions{}, nil
+		}
+	}
+
 	return nil, fmt.Errorf("unauthorized")
 }
 
-func (ctrl *Controller) AddHostKeyFromCluster(c cluster.Cluster, host string) error {
-	pemString, err := c.GetValueWithDefault(fmt.Sprintf("console/%s", host), func() (string, error) {
+func (ctrl *Controller) AddHostKeyFromCluster(host string) error {
+	generate := func() (string, error) {
 		// Generate an ECDSA key.
 		key, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 		if err != nil {
@@ -81,12 +104,11 @@ func (ctrl *Controller) AddHostKeyFromCluster(c cluster.Cluster, host string) er
 			return "", err
 		}
 		return w.String(), nil
-	})
+	}
+	pemString, err := ctrl.cluster.GetValueWithDefault(fmt.Sprintf("console/%s", host), generate)
 	if err != nil {
 		return fmt.Errorf("failed to get/generate host key: %s", err)
 	}
-
-	fmt.Printf("PEM: %s\n", pemString)
 
 	signer, err := ssh.ParsePrivateKey([]byte(pemString))
 	if err != nil {

@@ -2,6 +2,7 @@ package cluster
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -15,6 +16,7 @@ var (
 )
 
 type Cluster interface {
+	GetDir(key string) (map[string]string, error)
 	GetValue(key string) (string, error)
 	SetValue(key, value string) error
 	GetValueWithDefault(key string, setter func() (string, error)) (string, error)
@@ -64,6 +66,19 @@ type TestCluster struct {
 	secrets map[string][]byte
 	c       chan PeerEvent
 	myID    string
+}
+
+func (tc *TestCluster) GetDir(key string) (map[string]string, error) {
+	tc.Lock()
+	defer tc.Unlock()
+	key = strings.TrimRight(key, "/") + "/"
+	result := map[string]string{}
+	for k, v := range tc.data {
+		if strings.HasPrefix(k, key) {
+			result[k[len(key):]] = v
+		}
+	}
+	return result, nil
 }
 
 func (tc *TestCluster) GetValue(key string) (string, error) {

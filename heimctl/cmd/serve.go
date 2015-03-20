@@ -83,7 +83,7 @@ func (cmd *serveCmd) run(ctx scope.Context, args []string) error {
 
 func controller(addr string, b proto.Backend, kms security.KMS, c cluster.Cluster) error {
 	if addr != "" {
-		ctrl, err := console.NewController(addr, b, kms)
+		ctrl, err := console.NewController(addr, b, kms, c)
 		if err != nil {
 			return err
 		}
@@ -93,12 +93,15 @@ func controller(addr string, b proto.Backend, kms security.KMS, c cluster.Cluste
 				return err
 			}
 		} else {
-			if err := ctrl.AddHostKeyFromCluster(c, backend.Config.Cluster.ServerID); err != nil {
+			if err := ctrl.AddHostKeyFromCluster(backend.Config.Cluster.ServerID); err != nil {
 				return err
 			}
 		}
 
 		for _, authKey := range backend.Config.Console.AuthKeys {
+			if authKey == "" {
+				continue
+			}
 			if err := ctrl.AddAuthorizedKeys(authKey); err != nil {
 				return err
 			}

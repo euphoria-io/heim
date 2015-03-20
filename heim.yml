@@ -1,7 +1,5 @@
 cluster:
   etcd: /dev/euphoria.io
-console:
-  auth-key-files: [/keys/authorized_hosts]
 database:
   dsn: postgres://postgres:heimlich@psql/heim?sslmode=disable
 kms:

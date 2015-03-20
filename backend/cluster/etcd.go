@@ -116,6 +116,32 @@ func (e *etcdCluster) init() (uint64, error) {
 	return latestIndex + 1, nil
 }
 
+type tree map[string]string
+
+func (t tree) visit(n *etcd.Node, prefix string) {
+	if len(n.Key) > len(prefix) {
+		t[n.Key[len(prefix):]] = n.Value
+	}
+	for _, child := range n.Nodes {
+		t.visit(child, prefix)
+	}
+}
+
+func (e *etcdCluster) GetDir(key string) (map[string]string, error) {
+	prefix := e.key("%s", key) + "/"
+	resp, err := e.c.Get(prefix, false, false)
+	if err != nil {
+		if etcdErr, ok := err.(*etcd.EtcdError); ok && etcdErr.ErrorCode == 100 {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+
+	result := tree{}
+	result.visit(resp.Node, prefix)
+	return map[string]string(result), nil
+}
+
 func (e *etcdCluster) GetValue(key string) (string, error) {
 	resp, err := e.c.Get(e.key("%s", key), false, false)
 	if err != nil {
