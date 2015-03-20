@@ -102,6 +102,10 @@ module.exports.store = Reflux.createStore({
 
   closeNotification: function() {
     if (this.notification) {
+      // when we close a notification, its onclose callback will get called
+      // async. displaying a new notification can race with this, causing the
+      // new notification to be invalidly forgotten.
+      this.notification.onclose = null
       this.notification.close()
       this.resetNotification()
     }

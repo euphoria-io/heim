@@ -138,7 +138,9 @@ describe('notification store', function() {
     beforeEach(function() {
       window.Notification = sinon.spy(function() {
         this.close = sinon.spy(function() {
-          this.onclose()
+          if (this.onclose) {
+            this.onclose()
+          }
         })
         fakeNotification = this
       })
