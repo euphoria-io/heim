@@ -7,13 +7,13 @@ body {
     transition: opacity .1s ease-out;
   }
 
-  &, input {
+  &, input, textarea {
     font-family: Droid Sans, sans-serif;
     font-size: 12pt;
   }
 }
 
-input:focus, button:focus {
+input:focus, textarea:focus, button:focus {
   outline: none;
 }
 
@@ -223,6 +223,10 @@ iframe.js {
           display: inline-block;
         }
 
+        .message {
+          white-space: pre;
+        }
+
         .embeds {
           display: block;
           margin: 0 -4px;
@@ -308,12 +312,16 @@ iframe.js {
         box-sizing: border-box;
       }
 
-      input {
+      input, textarea {
         flex: 1;
         border: none;
       }
 
-      & > input, & > button {
+      textarea {
+        overflow-y: hidden;
+      }
+
+      & > input, & > textarea, & > button {
         background: none;
         padding-left: 0;
         padding-right: 10px;

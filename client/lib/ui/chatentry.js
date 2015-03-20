@@ -22,6 +22,7 @@ module.exports = React.createClass({
 
   componentDidMount: function() {
     this.refs.input.getDOMNode().setSelectionRange(this.state.chat.entrySelectionStart, this.state.chat.entrySelectionEnd)
+    this.autoSize()
   },
 
   getInitialState: function() {
@@ -156,17 +157,22 @@ module.exports = React.createClass({
       }
     }
 
+    if (!/\n/.test(input.value)) {
+      switch (ev.key) {
+        case 'ArrowUp':
+          this.chatMove('up')
+          ev.preventDefault()
+          return
+        case 'ArrowDown':
+          this.chatMove('down')
+          ev.preventDefault()
+          return
+      }
+    }
+
     switch (ev.key) {
       case 'Escape':
         this.chatMove('right')
-        break
-      case 'ArrowUp':
-        this.chatMove('up')
-        ev.preventDefault()
-        break
-      case 'ArrowDown':
-        this.chatMove('down')
-        ev.preventDefault()
         break
       case 'Tab':
         this.complete()
@@ -268,8 +274,24 @@ module.exports = React.createClass({
             <span className="nick">{nick}</span>
           </div>
         </div>
-        <input key="msg" ref="input" type="text" autoFocus defaultValue={this.state.chat.entryText} onChange={this.saveEntryState} onKeyDown={this.onKeyDown} onClick={this.saveEntryState} onFocus={actions.scrollToEntry} onKeyPress={actions.scrollToEntry} />
+        <textarea key="msg" ref="input" autoFocus defaultValue={this.state.chat.entryText} onChange={this.saveEntryState} onKeyDown={this.onKeyDown} onClick={this.saveEntryState} onFocus={actions.scrollToEntry} onKeyPress={actions.scrollToEntry} />
       </form>
     )
+  },
+
+  autoSize: function() {
+    var input = this.refs.input.getDOMNode()
+    var parentEl = input.parentNode
+    // if we don't retain the height of the parent, reducing the height of the
+    // textarea (to measure scrollHeight) will cause the browser to scroll
+    // automatically.
+    parentEl.style.height = parentEl.clientHeight + 'px'
+    input.style.height = null
+    input.style.height = input.scrollHeight + 'px'
+    parentEl.style.height = null
+  },
+
+  componentDidUpdate: function() {
+    this.autoSize()
   },
 })

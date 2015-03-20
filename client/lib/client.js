@@ -17,6 +17,7 @@ if (!window.frameElement) {
   require('setimmediate')
 
   var EventListeners = require('./eventlisteners')
+  var isTextInput = require('./istextinput')
 
 
   var evs = new EventListeners()
@@ -94,8 +95,7 @@ if (!window.frameElement) {
         return
       }
 
-      if (ev.target.nodeName == 'INPUT' &&
-           (ev.target.type == 'text' || ev.target.type == 'password')) {
+      if (isTextInput(ev.target)) {
         return
       }
 
@@ -115,7 +115,7 @@ if (!window.frameElement) {
     }, true)
 
     Heim.addEventListener(uidocument.body, 'keydown', function(ev) {
-      if (ev.target.nodeName == 'INPUT') {
+      if (isTextInput(ev.target)) {
         return
       }
 

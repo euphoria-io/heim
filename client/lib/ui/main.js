@@ -2,6 +2,7 @@ var React = require('react/addons')
 var cx = React.addons.classSet
 var Reflux = require('reflux')
 
+var isTextInput = require('../istextinput')
 var actions = require('../actions')
 var Scroller = require('./scroller')
 var Messages = require('./messages')
@@ -46,7 +47,7 @@ module.exports = React.createClass({
     }
 
     var activeEl = uidocument.activeElement
-    if (Heim.isTouch && this.getDOMNode().contains(activeEl) && activeEl.nodeName == 'INPUT') {
+    if (Heim.isTouch && this.getDOMNode().contains(activeEl) && isTextInput(activeEl)) {
       activeEl.blur()
     }
   },

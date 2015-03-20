@@ -15,6 +15,21 @@ function clamp(min, v, max) {
   return Math.min(Math.max(min, v), max)
 }
 
+function dimensions(el, prop) {
+  var rect = el.getBoundingClientRect()
+  if (prop) {
+    return Math.round(rect[prop])
+  } else {
+    var dims = {}
+    // would like to use _.mapValues here, but doesn't work in Firefox (not
+    // "own" properties?)
+    _.forIn(rect, function(v, k) {
+      dims[k] = Math.round(v)
+    })
+    return dims
+  }
+}
+
 module.exports = React.createClass({
   displayName: 'Scroller',
 
@@ -88,26 +103,26 @@ module.exports = React.createClass({
     // Record the position of our point of reference. Either the target (if
     // it's in view), or the centermost child element.
     var node = this.refs.scroller.getDOMNode()
-    var nodeBox = node.getBoundingClientRect()
+    var nodeBox = dimensions(node)
     var viewTop = nodeBox.top
     var viewHeight = nodeBox.height
 
     var target = node.querySelector(this.props.target)
-    var targetPos = target.getBoundingClientRect().top
-    this._targetInView = targetPos >= viewTop + target.offsetHeight && targetPos < viewTop + viewHeight
+    var targetPos = dimensions(target, 'bottom')
+    this._targetInView = targetPos >= viewTop + target.offsetHeight && targetPos <= viewTop + viewHeight
 
     var anchor
     if (this._targetInView) {
       this._anchor = target
       this._anchorPos = targetPos
     } else {
-      var box = this.getDOMNode().getBoundingClientRect()
+      var box = dimensions(this.getDOMNode())
       anchor = uidocument.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2)
       if (!anchor) {
         console.warn('scroller: unable to find anchor')  // jshint ignore:line
       }
       this._anchor = anchor
-      this._anchorPos = anchor && anchor.getBoundingClientRect().top
+      this._anchorPos = anchor && dimensions(anchor, 'bottom')
     }
     this._lastScrollTop = node.scrollTop
     this._lastScrollHeight = node.scrollHeight
@@ -157,7 +172,7 @@ module.exports = React.createClass({
     // anchor element.
     //
     var node = this.refs.scroller.getDOMNode()
-    var nodeBox = node.getBoundingClientRect()
+    var nodeBox = dimensions(node)
     var viewTop = nodeBox.top
     var viewHeight = nodeBox.height
     var scrollHeight = node.scrollHeight
@@ -172,8 +187,8 @@ module.exports = React.createClass({
       var fromBottom = scrollHeight - (node.scrollTop + viewHeight)
       var canScrollBottom = canScroll && fromBottom <= edgeSpace
 
-      var targetBox = target.getBoundingClientRect()
-      var targetPos = targetBox.top
+      var targetBox = dimensions(target)
+      var targetPos = targetBox.bottom
       var clampedPos = clamp(viewTop + edgeSpace - targetBox.height, targetPos, viewTop + viewHeight - edgeSpace)
 
       var movingTowardsEdge = Math.sign(targetPos - this._anchorPos) != Math.sign(clampedPos - targetPos)
@@ -199,7 +214,7 @@ module.exports = React.createClass({
       oldPos = this._anchorPos
     }
 
-    var delta = posRef.getBoundingClientRect().top - oldPos
+    var delta = dimensions(posRef, 'bottom') - oldPos
     var scrollDelta = node.scrollTop - this._lastScrollTop
     if (delta && canScroll) {
       if (Heim.isChrome) {
@@ -209,7 +224,7 @@ module.exports = React.createClass({
         // circumvents this issue.
         uiwindow.requestAnimationFrame(function() {
           // Time passes before the frame, so we need to update the deltas.
-          delta = posRef.getBoundingClientRect().top - oldPos
+          delta = dimensions(posRef, 'bottom') - oldPos
           scrollDelta = node.scrollTop - this._lastScrollTop
           node.scrollTop += delta + scrollDelta
           this._lastScrollTop = node.scrollTop

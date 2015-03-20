@@ -44,7 +44,7 @@ var Message = module.exports = React.createClass({
       'mention': message.get('mention'),
     }
 
-    var content = message.get('content')
+    var content = message.get('content').trim()
 
     var messageEmbeds
     var embeds = []
