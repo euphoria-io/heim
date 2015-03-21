@@ -285,7 +285,7 @@ module.exports = React.createClass({
     // if we don't retain the height of the parent, reducing the height of the
     // textarea (to measure scrollHeight) will cause the browser to scroll
     // automatically.
-    parentEl.style.height = parentEl.clientHeight + 'px'
+    parentEl.style.height = parentEl.getBoundingClientRect().height + 'px'
     input.style.height = null
     input.style.height = input.scrollHeight + 'px'
     parentEl.style.height = null
