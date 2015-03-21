@@ -149,7 +149,15 @@ module.exports = React.createClass({
     var node = this.refs.scroller.getDOMNode()
 
     if (this.props.onNearTop && node.scrollTop < node.scrollHeight / 8) {
-      this.props.onNearTop()
+      if (Heim.isChrome) {
+        // since RAF doesn't execute while the page is hidden, scrolling in
+        // infinite scroll won't occur in Chrome if users are on another tab.
+        // this was causing an infinite loop: the log would continuously be
+        // fetched since the scrollTop remained at 0.
+        uiwindow.requestAnimationFrame(this.props.onNearTop)
+      } else {
+        this.props.onNearTop()
+      }
       this._waitingForUpdate = true
     }
   },
