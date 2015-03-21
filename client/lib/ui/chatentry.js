@@ -274,7 +274,7 @@ module.exports = React.createClass({
             <span className="nick">{nick}</span>
           </div>
         </div>
-        <textarea key="msg" ref="input" autoFocus defaultValue={this.state.chat.entryText} onChange={this.saveEntryState} onKeyDown={this.onKeyDown} onClick={this.saveEntryState} onFocus={actions.scrollToEntry} onKeyPress={actions.scrollToEntry} />
+        <textarea key="msg" ref="input" autoFocus defaultValue={this.state.chat.entryText} onChange={this.saveEntryState} onKeyDown={this.onKeyDown} onClick={this.saveEntryState} onFocus={actions.scrollToEntry} />
       </form>
     )
   },
