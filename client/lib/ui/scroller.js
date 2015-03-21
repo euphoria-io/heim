@@ -109,7 +109,7 @@ module.exports = React.createClass({
 
     var target = node.querySelector(this.props.target)
     var targetPos = dimensions(target, 'bottom')
-    this._targetInView = targetPos >= viewTop + target.offsetHeight && targetPos <= viewTop + viewHeight
+    this._targetInView = targetPos >= viewTop - 5 + target.offsetHeight && targetPos <= viewTop + viewHeight + 5
 
     var anchor
     if (this._targetInView) {
