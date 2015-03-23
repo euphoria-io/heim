@@ -25,7 +25,20 @@ module.exports.store = Reflux.createStore({
       return
     }
 
-    this.state = JSON.parse(localStorage.getItem('data') || '{}')
+    var data
+
+    try {
+      data = localStorage.getItem('data')
+    } catch (e) {
+      // localStorage is probably disabled / private browsing mode in Safari
+      console.warn('unable to read localStorage')
+    }
+
+    if (data) {
+      this.state = JSON.parse(data)
+    } else {
+      this.state = {}
+    }
 
     if (!this.state.room) {
       this.state.room = {}
@@ -77,7 +90,13 @@ module.exports.store = Reflux.createStore({
   },
 
   _save: _.debounce(function() {
-    localStorage.setItem('data', JSON.stringify(this.state))
+    var data = JSON.stringify(this.state)
+    try {
+      localStorage.setItem('data', data)
+    } catch (e) {
+      // localStorage is probably disabled / private browsing mode in Safari
+      console.warn('unable to write localStorage')
+    }
     this._dirtyChanges = {}
   }, 1000),
 })

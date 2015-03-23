@@ -185,4 +185,45 @@ describe('storage store', function() {
       storage.store.storageChange({key: 'data', newValue: JSON.stringify({'hello': 'max'})})
     })
   })
+
+  describe('when storage unavailable or disabled', function() {
+    beforeEach(function() {
+      localStorage.getItem = sinon.stub.throws()
+      localStorage.setItem = sinon.stub.throws()
+      sinon.stub(console, 'warn')
+    })
+
+    afterEach(function() {
+      console.warn.restore()
+    })
+
+    describe('load action', function() {
+      it('should initialize with empty store data and room index', function(done) {
+        support.listenOnce(storage.store, function(state) {
+          assert.deepEqual(state, {room: {}})
+          done()
+        })
+
+        storage.store.load()
+      })
+
+      it('should log a warning', function() {
+        storage.store.load()
+        sinon.assert.calledOnce(console.warn)
+      })
+    })
+
+    describe('set action', function() {
+      beforeEach(function() {
+        storage.store.load()
+        console.warn.reset()
+      })
+
+      it('should log a warning', function() {
+        storage.store.set('key', 'value')
+        support.clock.tick(1000)
+        sinon.assert.calledOnce(console.warn)
+      })
+    })
+  })
 })
