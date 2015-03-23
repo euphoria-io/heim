@@ -17,6 +17,14 @@ describe('Tree', function() {
     sinon.assert.calledWithExactly(spy, tree.index.__root, Immutable.OrderedSet(), 0)
   }
 
+  function expectEmit(tree, ids) {
+    sinon.assert.callCount(tree.changes.emit, 2 * ids.length)
+    Immutable.Seq(ids).forEach(function(id) {
+      sinon.assert.calledWithExactly(tree.changes.emit, id, tree.get(id))
+      sinon.assert.calledWithExactly(tree.changes.emit, '__all', id, tree.get(id))
+    })
+  }
+
   describe('a new empty tree', function() {
     var tree = new Tree()
 
@@ -77,8 +85,8 @@ describe('Tree', function() {
         assert.equal(tree.size, 3)
       })
 
-      it('should trigger a change event on the parent', function() {
-        sinon.assert.calledWithExactly(tree.changes.emit, '1', tree.get('1'))
+      it('should trigger a change event on the new node and parent', function() {
+        expectEmit(tree, ['1', '3'])
       })
 
       it('the new node should be last', function() {
@@ -133,12 +141,7 @@ describe('Tree', function() {
       check()
 
       it('should only trigger a change event for new nodes and the parents of new nodes', function() {
-        sinon.assert.callCount(tree.changes.emit, 5)
-        sinon.assert.calledWithExactly(tree.changes.emit, '__root', tree.get('__root'))
-        sinon.assert.calledWithExactly(tree.changes.emit, '1', tree.get('1'))
-        sinon.assert.calledWithExactly(tree.changes.emit, '0', tree.get('0'))
-        sinon.assert.calledWithExactly(tree.changes.emit, '3', tree.get('3'))
-        sinon.assert.calledWithExactly(tree.changes.emit, '9', tree.get('9'))
+        expectEmit(tree, ['__root', '1', '0', '3', '9'])
       })
 
       describe('after re-adding the same nodes', function() {
@@ -187,9 +190,7 @@ describe('Tree', function() {
         })
 
         it('should trigger a change event on the child and parent', function() {
-          sinon.assert.calledTwice(tree.changes.emit)
-          sinon.assert.calledWithExactly(tree.changes.emit, '1', tree.get('1'))
-          sinon.assert.calledWithExactly(tree.changes.emit, 'wtf', tree.get('wtf'))
+          expectEmit(tree, ['1', 'wtf'])
         })
 
         it('should visit all nodes in a map traversal', function() {
@@ -216,8 +217,7 @@ describe('Tree', function() {
 
       it('should trigger a change event', function() {
         tree.mergeNode('2', {value: 'dawg'})
-        sinon.assert.calledOnce(tree.changes.emit)
-        sinon.assert.calledWithExactly(tree.changes.emit, '2', tree.get('2'))
+        expectEmit(tree, ['2'])
       })
 
       it('should not trigger a change event if unchanged', function() {
@@ -240,7 +240,7 @@ describe('Tree', function() {
       })
 
       it('should trigger a change event', function() {
-        sinon.assert.calledWithExactly(tree.changes.emit, '__root', tree.get('__root'))
+        expectEmit(tree, ['__root'])
       })
     })
   })

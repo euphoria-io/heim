@@ -10,6 +10,11 @@ function Tree(sortProp) {
 }
 
 _.extend(Tree.prototype, {
+  _emitChange: function(id) {
+    this.changes.emit(id, this.index[id])
+    this.changes.emit('__all', id, this.index[id])
+  },
+
   _node: function(entry) {
     return Immutable.fromJS(entry || {})
       .merge({
@@ -89,7 +94,7 @@ _.extend(Tree.prototype, {
       }, this)
 
       _.each(changed, function(item, id) {
-        this.changes.emit(id, this.index[id])
+        this._emitChange(id)
       }, this)
     }
   },
@@ -98,7 +103,7 @@ _.extend(Tree.prototype, {
     var old = this.index[id]
     this.index[id] = this.index[id].merge(data)
     if (old != this.index[id]) {
-      this.changes.emit(id, this.index[id])
+      this._emitChange(id)
     }
   },
 
@@ -112,7 +117,7 @@ _.extend(Tree.prototype, {
     if (entries) {
       this.add(entries, true)
     }
-    this.changes.emit('__root', this.index.__root)
+    this._emitChange('__root')
     return this
   },
 
