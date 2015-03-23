@@ -108,8 +108,13 @@ module.exports = React.createClass({
     var viewHeight = nodeBox.height
 
     var target = node.querySelector(this.props.target)
-    var targetPos = dimensions(target, 'bottom')
-    this._targetInView = targetPos >= viewTop - 5 + target.offsetHeight && targetPos <= viewTop + viewHeight + 5
+    var targetPos
+    if (target) {
+      targetPos = dimensions(target, 'bottom')
+      this._targetInView = targetPos >= viewTop - 5 + target.offsetHeight && targetPos <= viewTop + viewHeight + 5
+    } else {
+      this._targetInView = false
+    }
 
     var anchor
     if (this._targetInView) {
@@ -189,7 +194,7 @@ module.exports = React.createClass({
     var edgeSpace = Math.min(this.props.edgeSpace, viewHeight / 2)
 
     var posRef, oldPos
-    if (forceTargetInView || this._targetInView) {
+    if (target && (forceTargetInView || this._targetInView)) {
       var viewShrunk = viewHeight < this._lastViewHeight
       var hasGrown = scrollHeight > this._lastScrollHeight
       var fromBottom = scrollHeight - (node.scrollTop + viewHeight)
