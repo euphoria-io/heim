@@ -100,6 +100,7 @@ describe('Tree', function() {
 
     describe('after adding multiple nodes', function() {
       var entries = [
+        {id: '2', parent: '1', value: 'world', time: 5},
         {id: '0', value: 'first!', time: 0},
         {id: '3', parent: '1', value: 'local first!', time: 1},
         {id: '9', value: 'last', time: 9},
@@ -112,12 +113,6 @@ describe('Tree', function() {
       function check() {
         it('the node with highest time should be last', function() {
           assert.equal(tree.last(), tree.get('9'))
-        })
-
-        it('should only trigger a change event for the parents of new nodes', function() {
-          sinon.assert.calledTwice(tree.changes.emit)
-          sinon.assert.calledWithExactly(tree.changes.emit, '__root', tree.get('__root'))
-          sinon.assert.calledWithExactly(tree.changes.emit, '1', tree.get('1'))
         })
 
         it('should visit all nodes in a map traversal (in the right order)', function() {
@@ -137,6 +132,15 @@ describe('Tree', function() {
 
       check()
 
+      it('should only trigger a change event for new nodes and the parents of new nodes', function() {
+        sinon.assert.callCount(tree.changes.emit, 5)
+        sinon.assert.calledWithExactly(tree.changes.emit, '__root', tree.get('__root'))
+        sinon.assert.calledWithExactly(tree.changes.emit, '1', tree.get('1'))
+        sinon.assert.calledWithExactly(tree.changes.emit, '0', tree.get('0'))
+        sinon.assert.calledWithExactly(tree.changes.emit, '3', tree.get('3'))
+        sinon.assert.calledWithExactly(tree.changes.emit, '9', tree.get('9'))
+      })
+
       describe('after re-adding the same nodes', function() {
         beforeEach(function() {
           tree.changes.emit.reset()
@@ -145,6 +149,10 @@ describe('Tree', function() {
 
         describe('should not change', function() {
           check()
+        })
+
+        it('should not trigger a change event', function() {
+          sinon.assert.notCalled(tree.changes.emit)
         })
       })
     })
