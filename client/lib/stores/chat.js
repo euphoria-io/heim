@@ -148,7 +148,11 @@ module.exports.store = Reflux.createStore({
     }
 
     if (this.state.focusedMessage) {
-      this.state.messages.mergeNode(this.state.focusedMessage, {entry: true})
+      if (this.state.messages.get(this.state.focusedMessage)) {
+        this.state.messages.mergeNode(this.state.focusedMessage, {entry: true})
+      } else {
+        this.state.focusedMessage = null
+      }
     }
   },
 
