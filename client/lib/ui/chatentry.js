@@ -231,7 +231,10 @@ module.exports = React.createClass({
   onNickKeyDown: function(ev) {
     var input = this.refs.input.getDOMNode()
     if (ev.key == 'Enter') {
-      input.focus()
+      // Delay focus event to avoid double key insertion in Chrome.
+      setImmediate(function() {
+        input.focus()
+      })
     } else if (ev.key == 'Escape') {
       this.setState({nickText: this.state.chat.nick}, function() {
         input.focus()
