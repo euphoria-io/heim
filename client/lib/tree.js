@@ -10,11 +10,6 @@ function Tree(sortProp) {
 }
 
 _.extend(Tree.prototype, {
-  _emitChange: function(id) {
-    this.changes.emit(id, this.index[id])
-    this.changes.emit('__all', id, this.index[id])
-  },
-
   _node: function(entry) {
     return Immutable.fromJS(entry || {})
       .merge({
@@ -60,7 +55,7 @@ _.extend(Tree.prototype, {
     return changed
   },
 
-  add: function(entries, _silent) {
+  add: function(entries, _sorted) {
     if (!_.isArray(entries)) {
       entries = [entries]
     }
@@ -80,9 +75,7 @@ _.extend(Tree.prototype, {
       }
     }, this)
 
-    // NOTE: we do not re-sort children if _silent. currently, _silent
-    // is only intended to be used internally, specifically by reset().
-    if (!_silent) {
+    if (!_sorted) {
       _.each(parents, function(oldNode, id) {
         var resorted = this.index[id].get('children').sortBy(function(childId) {
           return this.index[childId].get(this.sortProp)
@@ -92,10 +85,14 @@ _.extend(Tree.prototype, {
           changed[id] = true
         }
       }, this)
+    }
 
+    if (!_.isEmpty(changed)){
       _.each(changed, function(item, id) {
-        this._emitChange(id)
+        this.changes.emit(id, this.index[id])
       }, this)
+
+      this.changes.emit('__all', _.keys(changed))
     }
   },
 
@@ -103,7 +100,8 @@ _.extend(Tree.prototype, {
     var old = this.index[id]
     this.index[id] = this.index[id].merge(data)
     if (old != this.index[id]) {
-      this._emitChange(id)
+      this.changes.emit(id, this.index[id])
+      this.changes.emit('__all', [id])
     }
   },
 
@@ -117,7 +115,8 @@ _.extend(Tree.prototype, {
     if (entries) {
       this.add(entries, true)
     }
-    this._emitChange('__root')
+    this.changes.emit('__root', this.index.__root)
+    this.changes.emit('__all', ['__root'])
     return this
   },
 

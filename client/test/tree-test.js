@@ -18,11 +18,11 @@ describe('Tree', function() {
   }
 
   function expectEmit(tree, ids) {
-    sinon.assert.callCount(tree.changes.emit, 2 * ids.length)
+    sinon.assert.callCount(tree.changes.emit, ids.length + 1)
     Immutable.Seq(ids).forEach(function(id) {
       sinon.assert.calledWithExactly(tree.changes.emit, id, tree.get(id))
-      sinon.assert.calledWithExactly(tree.changes.emit, '__all', id, tree.get(id))
     })
+    sinon.assert.calledWithExactly(tree.changes.emit, '__all', ids)
   }
 
   describe('a new empty tree', function() {
@@ -86,7 +86,7 @@ describe('Tree', function() {
       })
 
       it('should trigger a change event on the new node and parent', function() {
-        expectEmit(tree, ['1', '3'])
+        expectEmit(tree, ['3', '1'])
       })
 
       it('the new node should be last', function() {
@@ -141,7 +141,7 @@ describe('Tree', function() {
       check()
 
       it('should only trigger a change event for new nodes and the parents of new nodes', function() {
-        expectEmit(tree, ['__root', '1', '0', '3', '9'])
+        expectEmit(tree, ['0', '3', '9', '1', '__root'])
       })
 
       describe('after re-adding the same nodes', function() {
@@ -190,7 +190,7 @@ describe('Tree', function() {
         })
 
         it('should trigger a change event on the child and parent', function() {
-          expectEmit(tree, ['1', 'wtf'])
+          expectEmit(tree, ['wtf', '1'])
         })
 
         it('should visit all nodes in a map traversal', function() {
