@@ -361,6 +361,13 @@ describe('notification store', function() {
         support.clock.tick(3000)
         sinon.assert.calledOnce(fakeNotification.close)
       })
+
+      describe('when window unloading', function() {
+        it('should close the notification', function() {
+          notification.store.closeAllNotifications()
+          sinon.assert.calledOnce(fakeNotification.close)
+        })
+      })
     })
   })
 })

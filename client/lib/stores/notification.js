@@ -41,6 +41,8 @@ module.exports.store = Reflux.createStore({
     if (this.state.popupsSupported) {
       this.state.popupsPermission = Notification.permission == 'granted'
     }
+
+    window.addEventListener('unload', this.closeAllNotifications)
   },
 
   focusChange: function(state) {
@@ -153,6 +155,12 @@ module.exports.store = Reflux.createStore({
       }
       this.resetNotification(name)
     }
+  },
+
+  closeAllNotifications: function() {
+    _.each(this.notifications, (notification, name) => {
+      this.closeNotification(name)
+    })
   },
 
   resetNotification: function(name) {
