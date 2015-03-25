@@ -46,11 +46,13 @@ _.extend(Tree.prototype, {
       this.size++
     }
 
-    this.index[newId] = newNode
+    if (changed) {
+      this.index[newId] = newNode
 
-    if (entry[this.sortProp] > this._lastValue) {
-      this._lastId = newId
-      this._lastValue = entry[this.sortProp]
+      if (entry[this.sortProp] > this._lastValue) {
+        this._lastId = newId
+        this._lastValue = entry[this.sortProp]
+      }
     }
 
     return changed
