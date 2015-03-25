@@ -29,6 +29,8 @@ describe('chat store', function() {
   })
 
   function handleSocket(ev, callback) {
+    // FIXME: ev data needs to be cloned when used by chat unit tests,
+    // since socket events are mutated by the processing code.
     support.listenOnce(chat.store, callback)
     chat.store.socketEvent(ev)
   }
