@@ -33,6 +33,7 @@ _.extend(Tree.prototype, {
     } else {
       // create unreachable orphan parent
       parentNode = this.index[parentId] = this._node().mergeIn(['children'], [newId])
+      this.size++
     }
 
     if (_.has(this.index, newId)) {
@@ -42,10 +43,10 @@ _.extend(Tree.prototype, {
       changed = !Immutable.is(oldNode, newNode)
     } else {
       changed = true
+      this.size++
     }
 
     this.index[newId] = newNode
-    this.size++
 
     if (entry[this.sortProp] > this._lastValue) {
       this._lastId = newId

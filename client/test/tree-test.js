@@ -126,6 +126,10 @@ describe('Tree', function() {
       })
 
       function check() {
+        it('the size should be correct', function() {
+          assert.equal(tree.size, 5)
+        })
+
         it('the node with highest time should be last', function() {
           assert.equal(tree.last(), tree.get('9'))
         })
@@ -184,7 +188,7 @@ describe('Tree', function() {
       })
 
       it('should update the size', function() {
-        assert.equal(tree.size, 3)
+        assert.equal(tree.size, 4)
       })
 
       describe('after adding the missing parent', function() {
@@ -221,6 +225,11 @@ describe('Tree', function() {
       it('should update the node', function() {
         tree.mergeNode('2', {value: 'dawg'})
         assert.equal(tree.get('2').get('value'), 'dawg')
+      })
+
+      it('should retain the same size', function() {
+        tree.mergeNode('2', {value: 'dawg'})
+        assert.equal(tree.size, 2)
       })
 
       it('should trigger a change event', function() {
