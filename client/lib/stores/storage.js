@@ -79,12 +79,19 @@ module.exports.store = Reflux.createStore({
       return
     }
 
-    var change = {room: {}}
-    change.room[room] = {}
-    change.room[room][key] = value
+    if (!this._dirtyChanges.room) {
+      this._dirtyChanges.room = {}
+    }
+    if (!this._dirtyChanges.room[room]) {
+      this._dirtyChanges.room[room] = {}
+    }
+    this._dirtyChanges.room[room][key] = value
 
-    _.merge(this._dirtyChanges, change)
-    _.merge(this.state, change)
+    if (!this.state.room[room]) {
+      this.state.room[room] = {}
+    }
+    this.state.room[room][key] = value
+
     this.trigger(this.state)
     this._save()
   },

@@ -54,7 +54,7 @@ describe('storage store', function() {
     var testValue = {test: true}
 
     beforeEach(function() {
-      fakeStorage.data = JSON.stringify({})
+      fakeStorage.data = JSON.stringify({testKey: {foo: 'bar'}})
       storage.store.load()
     })
 
@@ -62,8 +62,8 @@ describe('storage store', function() {
       storage.store.set(testKey, testValue)
       support.clock.tick(1000)
       sinon.assert.calledWithExactly(localStorage.setItem, 'data', JSON.stringify({
-        'room': {},
         'testKey': testValue,
+        'room': {},
       }))
     })
 
@@ -91,12 +91,10 @@ describe('storage store', function() {
     var testKey = 'testKey'
     var testValue = {test: true}
 
-    beforeEach(function() {
-      fakeStorage.data = JSON.stringify({})
-      storage.store.load()
-    })
-
     it('should save JSON to localStorage', function() {
+      fakeStorage.data = JSON.stringify({room: {ezzie: {testKey: {foo: 'bar'}}}})
+      storage.store.load()
+
       storage.store.setRoom(testRoom, testKey, testValue)
       support.clock.tick(1000)
       sinon.assert.calledWithExactly(localStorage.setItem, 'data', JSON.stringify({
@@ -109,6 +107,9 @@ describe('storage store', function() {
     })
 
     it('should not save unchanged values', function() {
+      fakeStorage.data = JSON.stringify({})
+      storage.store.load()
+
       storage.store.setRoom(testRoom, testKey, testValue)
       support.clock.tick(1000)
       localStorage.setItem.reset()
@@ -118,6 +119,9 @@ describe('storage store', function() {
     })
 
     it('should create room config object and trigger an update event', function(done) {
+      fakeStorage.data = JSON.stringify({})
+      storage.store.load()
+
       support.listenOnce(storage.store, function(state) {
         assert.deepEqual(state.room.ezzie[testKey], testValue)
         done()
