@@ -11,8 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"heim/objstore"
-	"heim/proto/security"
+	"euphoria.io/heim/proto/media"
+	"euphoria.io/heim/proto/security"
 )
 
 func verifyPath(path string) error {
@@ -114,7 +114,7 @@ type Store struct {
 	baseURL string
 }
 
-func (s *Store) Create(key *security.ManagedKey) (*objstore.UploadHandle, error) {
+func (s *Store) Create(key *security.ManagedKey) (*media.UploadHandle, error) {
 	header, err := keyHeaders(key)
 	if err != nil {
 		return nil, fmt.Errorf("filestore create: %s", err)
@@ -125,7 +125,7 @@ func (s *Store) Create(key *security.ManagedKey) (*objstore.UploadHandle, error)
 		return nil, fmt.Errorf("filestore create: %s", err)
 	}
 
-	handle := &objstore.UploadHandle{
+	handle := &media.UploadHandle{
 		ID:     id,
 		Header: header,
 		Method: "PUT",
@@ -134,13 +134,13 @@ func (s *Store) Create(key *security.ManagedKey) (*objstore.UploadHandle, error)
 	return handle, nil
 }
 
-func (s *Store) Get(id string, key *security.ManagedKey) (*objstore.DownloadHandle, error) {
+func (s *Store) Get(id string, key *security.ManagedKey) (*media.DownloadHandle, error) {
 	header, err := keyHeaders(key)
 	if err != nil {
 		return nil, fmt.Errorf("filestore get: %s", err)
 	}
 
-	handle := &objstore.DownloadHandle{
+	handle := &media.DownloadHandle{
 		Header: header,
 		URL:    s.baseURL + "/" + id,
 	}

@@ -2,13 +2,14 @@ package filestore
 
 import (
 	"crypto/rand"
-	"heim/proto/security"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
+
+	"euphoria.io/heim/proto/security"
 
 	. "github.com/smartystreets/goconvey/convey"
 )

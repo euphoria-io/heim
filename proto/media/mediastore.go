@@ -1,4 +1,4 @@
-package objstore
+package media
 
 import (
 	"io"

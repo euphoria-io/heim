@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"os"
 
-	"heim/objstore/filestore"
+	"euphoria.io/heim/backend/filestore"
 )
 
 var (
