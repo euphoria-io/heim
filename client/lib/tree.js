@@ -102,7 +102,7 @@ _.extend(Tree.prototype, {
 
   mergeNode: function(id, data) {
     var old = this.index[id]
-    this.index[id] = this.index[id].merge(data)
+    this.index[id] = this.index[id].mergeDeep(data)
     if (old != this.index[id]) {
       this.changes.emit(id, this.index[id])
       this.changes.emit('__all', [id])
