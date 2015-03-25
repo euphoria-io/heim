@@ -9,7 +9,9 @@ import (
 	"strings"
 	"testing"
 
+	"euphoria.io/heim/proto/media"
 	"euphoria.io/heim/proto/security"
+	"euphoria.io/scope"
 
 	. "github.com/smartystreets/goconvey/convey"
 )
@@ -33,8 +35,13 @@ func TestStore(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Compile-time assertion that FileStore implements media.Store
+	_ = media.Store(fs)
+
 	Convey("Unencrypted file store", t, func() {
-		uh, err := fs.Create(nil)
+		ctx := scope.New()
+
+		uh, err := fs.Create(ctx, nil)
 		So(err, ShouldBeNil)
 
 		_, err = os.Stat(fs.path(uh.ID))
@@ -42,7 +49,7 @@ func TestStore(t *testing.T) {
 		So(os.IsNotExist(err), ShouldBeTrue)
 
 		content := "content"
-		resp, err := uh.Upload(strings.NewReader(content))
+		resp, err := uh.Upload(ctx, strings.NewReader(content))
 		So(err, ShouldBeNil)
 		So(resp.StatusCode, ShouldEqual, http.StatusCreated)
 
@@ -53,9 +60,9 @@ func TestStore(t *testing.T) {
 		So(err, ShouldBeNil)
 		So(string(data), ShouldEqual, content)
 
-		dh, err := fs.Get(uh.ID, nil)
+		dh, err := fs.Get(ctx, uh.ID, nil)
 		So(err, ShouldBeNil)
-		resp, err = dh.Download()
+		resp, err = dh.Download(ctx)
 		So(err, ShouldBeNil)
 		data, err = ioutil.ReadAll(resp.Body)
 		So(err, ShouldBeNil)
@@ -63,16 +70,18 @@ func TestStore(t *testing.T) {
 	})
 
 	Convey("Encrypted file store", t, func() {
+		ctx := scope.New()
+
 		keyBytes := make([]byte, security.AES256.KeySize())
 		_, err := rand.Read(keyBytes)
 		So(err, ShouldBeNil)
 		key := &security.ManagedKey{KeyType: security.AES256, Plaintext: keyBytes}
 
-		uh, err := fs.Create(key)
+		uh, err := fs.Create(ctx, key)
 		So(err, ShouldBeNil)
 
 		content := "secret content"
-		resp, err := uh.Upload(strings.NewReader(content))
+		resp, err := uh.Upload(ctx, strings.NewReader(content))
 		So(err, ShouldBeNil)
 		So(resp.StatusCode, ShouldEqual, http.StatusCreated)
 
@@ -83,9 +92,9 @@ func TestStore(t *testing.T) {
 		So(err, ShouldBeNil)
 		So(string(data), ShouldNotEqual, content)
 
-		dh, err := fs.Get(uh.ID, key)
+		dh, err := fs.Get(ctx, uh.ID, key)
 		So(err, ShouldBeNil)
-		resp, err = dh.Download()
+		resp, err = dh.Download(ctx)
 		So(err, ShouldBeNil)
 		data, err = ioutil.ReadAll(resp.Body)
 		So(err, ShouldBeNil)

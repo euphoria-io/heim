@@ -13,6 +13,7 @@ import (
 
 	"euphoria.io/heim/proto/media"
 	"euphoria.io/heim/proto/security"
+	"euphoria.io/scope"
 )
 
 func verifyPath(path string) error {
@@ -114,7 +115,7 @@ type Store struct {
 	baseURL string
 }
 
-func (s *Store) Create(key *security.ManagedKey) (*media.UploadHandle, error) {
+func (s *Store) Create(ctx scope.Context, key *security.ManagedKey) (*media.UploadHandle, error) {
 	header, err := keyHeaders(key)
 	if err != nil {
 		return nil, fmt.Errorf("filestore create: %s", err)
@@ -134,7 +135,9 @@ func (s *Store) Create(key *security.ManagedKey) (*media.UploadHandle, error) {
 	return handle, nil
 }
 
-func (s *Store) Get(id string, key *security.ManagedKey) (*media.DownloadHandle, error) {
+func (s *Store) Get(ctx scope.Context, id string, key *security.ManagedKey) (
+	*media.DownloadHandle, error) {
+
 	header, err := keyHeaders(key)
 	if err != nil {
 		return nil, fmt.Errorf("filestore get: %s", err)
