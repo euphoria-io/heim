@@ -81,11 +81,14 @@ _.extend(Tree.prototype, {
           return this.index[childId].get(this.sortProp)
         }.bind(this))
         this.index[id] = this.index[id].set('children', resorted)
-        if (!Immutable.is(oldNode, this.index[id])) {
-          changed[id] = true
-        }
       }, this)
     }
+
+    _.each(parents, function(oldNode, id) {
+      if (!Immutable.is(oldNode, this.index[id])) {
+        changed[id] = true
+      }
+    }, this)
 
     if (!_.isEmpty(changed)){
       _.each(changed, function(item, id) {
@@ -114,9 +117,10 @@ _.extend(Tree.prototype, {
 
     if (entries) {
       this.add(entries, true)
+    } else {
+      this.changes.emit('__root', this.index.__root)
+      this.changes.emit('__all', ['__root'])
     }
-    this.changes.emit('__root', this.index.__root)
-    this.changes.emit('__all', ['__root'])
     return this
   },
 

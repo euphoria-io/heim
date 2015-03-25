@@ -45,8 +45,9 @@ describe('Tree', function() {
     var tree
 
     beforeEach(function() {
-      tree = new Tree('time').reset(entries)
+      tree = new Tree('time')
       sinon.stub(tree.changes, 'emit')
+      tree.reset(entries)
     })
 
     afterEach(function() {
@@ -59,6 +60,10 @@ describe('Tree', function() {
 
     it('should nest nodes with parents', function() {
       assert(tree.get('1').get('children').contains('2'))
+    })
+
+    it('should trigger a change event on the new nodes and root', function() {
+      expectEmit(tree, ['1', '2', '__root'])
     })
 
     it('should visit all nodes in a map traversal', function() {
@@ -74,6 +79,7 @@ describe('Tree', function() {
 
     describe('after adding a node', function() {
       beforeEach(function() {
+        tree.changes.emit.reset()
         tree.add({id: '3', parent: '1', value: 'yo', time: 7})
       })
 
@@ -115,6 +121,7 @@ describe('Tree', function() {
       ]
 
       beforeEach(function() {
+        tree.changes.emit.reset()
         tree.add(entries)
       })
 
@@ -162,6 +169,7 @@ describe('Tree', function() {
 
     describe('after adding a node with a missing parent', function() {
       beforeEach(function() {
+        tree.changes.emit.reset()
         tree.add({id: '3', parent: 'wtf', value: 'yo', time: 7})
       })
 
@@ -216,18 +224,21 @@ describe('Tree', function() {
       })
 
       it('should trigger a change event', function() {
+        tree.changes.emit.reset()
         tree.mergeNode('2', {value: 'dawg'})
         expectEmit(tree, ['2'])
       })
 
       it('should not trigger a change event if unchanged', function() {
+        tree.changes.emit.reset()
         tree.mergeNode('2', {value: 'world'})
         sinon.assert.notCalled(tree.changes.emit)
       })
     })
 
-    describe('after resetting', function() {
+    describe('after resetting to empty', function() {
       beforeEach(function() {
+        tree.changes.emit.reset()
         tree.reset()
       })
 
