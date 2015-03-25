@@ -171,12 +171,12 @@ describe('storage store', function() {
     })
 
     it('should not change dirty values pending save', function(done) {
-      storage.store.set('hello', 'ezzie')
+      storage.store.set('hello', {to: 'ezzie'})
       support.listenOnce(storage.store, function(state) {
-        assert.equal(state.hello, 'ezzie')
+        assert.deepEqual(state.hello, {to: 'ezzie', from: 'max'})
         done()
       })
-      storage.store.storageChange({key: 'data', newValue: JSON.stringify({'hello': 'max', 'test': 'abcdef'})})
+      storage.store.storageChange({key: 'data', newValue: JSON.stringify({'hello': {from: 'max'}, 'test': 'abcdef'})})
     })
 
     it('should change previously dirty values after a save', function(done) {

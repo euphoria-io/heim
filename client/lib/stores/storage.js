@@ -57,7 +57,7 @@ module.exports.store = Reflux.createStore({
     }
 
     var newData = JSON.parse(ev.newValue)
-    var newState = _.assign({}, this.state, newData, this._dirtyChanges)
+    var newState = _.merge(_.assign({}, this.state, newData), this._dirtyChanges)
     if (!_.isEqual(this.state, newState)) {
       this.state = newState
       this.trigger(this.state)
