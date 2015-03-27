@@ -589,9 +589,11 @@ describe('chat store', function() {
         }
       }
 
-      handleSocket({status: 'receive', body: emptyLogReply}, function(state) {
-        assert.equal(state.messages.size, 0)
-        done()
+      handleSocket({status: 'receive', body: logReply}, function() {
+        handleSocket({status: 'receive', body: emptyLogReply}, function(state) {
+          assert.equal(state.messages.size, 3)
+          done()
+        })
       })
     })
 
