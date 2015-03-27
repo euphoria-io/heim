@@ -97,6 +97,24 @@ describe('chat store', function() {
     }
   }
 
+  var laterLogReply = {
+    'id': '0',
+    'type': 'log-reply',
+    'data': {
+      'log': [
+        {
+          'id': 'id9',
+          'time': 223460,
+          'sender': {
+            'id': '32.64.96.128:12345',
+            'name': 'tester',
+          },
+          'content': 'hello?',
+        }
+      ],
+    }
+  }
+
   var whoReply = {
     'id': '0',
     'type': 'who-reply',
@@ -668,6 +686,24 @@ describe('chat store', function() {
           sinon.assert.notCalled(chat.actions.messagesChanged)
           done()
         })
+      })
+    })
+
+    describe('receiving logs more after a long absence', function() {
+      it('should reset focusedMessage state if old message unavailable', function(done) {
+        chat.store.socketEvent({status: 'receive', body: logReply})
+
+        chat.store.state.nick = 'test'
+        support.listenOnce(chat.store, function(state) {
+          assert.equal(state.messages.get('id1').get('entry'), true)
+
+          handleSocket({status: 'receive', body: laterLogReply}, function(state) {
+            assert.equal(state.focusedMessage, null)
+            done()
+          })
+        })
+
+        chat.store.focusMessage('id1')
       })
     })
 
