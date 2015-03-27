@@ -668,12 +668,10 @@ describe('chat store', function() {
         support.listenOnce(chat.store, function(state) {
           assert.equal(state.messages.get('id1').get('entry'), true)
 
-          support.listenOnce(chat.store, function(state) {
+          handleSocket({status: 'receive', body: logReply}, function(state) {
             assert.equal(state.messages.get('id1').get('entry'), true)
             done()
           })
-
-          chat.store.socketEvent({status: 'receive', body: logReply})
         })
 
         chat.store.focusMessage('id1')
