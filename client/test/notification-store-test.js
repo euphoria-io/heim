@@ -208,6 +208,13 @@ describe('notification store', function() {
         notification.store.storageChange({notify: true, room: {}})
       })
 
+      describe('receiving a message before joined', function() {
+        it('should not display a notification', function() {
+          notification.store.messageReceived(Immutable.Map(message1), _.extend({}, mockChatState, {joined: false}))
+          sinon.assert.notCalled(Notification)
+        })
+      })
+
       describe('receiving a message', function() {
         it('should display a notification and set favicon', function() {
           notification.store.messageReceived(Immutable.Map(message1), mockChatState)
