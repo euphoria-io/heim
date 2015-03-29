@@ -184,7 +184,7 @@ module.exports = React.createClass({
   complete: function() {
     var input = this.refs.input.getDOMNode()
     var text = input.value
-    var charRe = /[^@\s]/
+    var charRe = /\S/
 
     var wordEnd = input.selectionStart
     if (wordEnd < 1) {
@@ -197,6 +197,9 @@ module.exports = React.createClass({
       }
     }
     wordStart++
+    if (text[wordStart] == '@') {
+      wordStart++
+    }
 
     for (; wordEnd < text.length; wordEnd++) {
       if (!charRe.test(text[wordEnd])) {
