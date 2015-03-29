@@ -18,13 +18,8 @@ module.exports = React.createClass({
     Reflux.connect(require('../stores/chat').store, 'chat'),
     Reflux.connect(require('../stores/focus').store, 'focus'),
     Reflux.connect(require('../stores/update').store, 'update'),
-    Reflux.listenTo(actions.focusMessage, 'focusMessage'),
     Reflux.listenTo(actions.scrollToEntry, 'scrollToEntry'),
   ],
-
-  componentWillMount: function() {
-    this._lastFocusMessage = 0
-  },
 
   onScrollbarSize: function(width) {
     this.setState({scrollbarWidth: width})
@@ -37,17 +32,13 @@ module.exports = React.createClass({
     })
   },
 
-  focusMessage: function() {
-    this._lastFocusMessage = Date.now()
-  },
-
-  onScroll: function() {
-    if (Date.now() - this._lastFocusMessage < 250) {
+  onScroll: function(userScrolled) {
+    if (!Heim.isTouch || !userScrolled) {
       return
     }
 
     var activeEl = uidocument.activeElement
-    if (Heim.isTouch && this.getDOMNode().contains(activeEl) && isTextInput(activeEl)) {
+    if (this.getDOMNode().contains(activeEl) && isTextInput(activeEl)) {
       activeEl.blur()
     }
   },

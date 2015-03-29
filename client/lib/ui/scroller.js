@@ -46,6 +46,7 @@ module.exports = React.createClass({
     this._anchorPos = null
     this._scrollQueued = false
     this._waitingForUpdate = false
+    this._lastTouch = 0
   },
 
   componentDidMount: function() {
@@ -77,7 +78,7 @@ module.exports = React.createClass({
     this._checkScroll()
     this.updateAnchorPos()
     if (!this._scrollQueued) {
-      this.props.onScroll()
+      this.props.onScroll(new Date() - this._lastTouch < 100)
     }
   },
 
@@ -269,9 +270,13 @@ module.exports = React.createClass({
     }
   },
 
+  onTouchEnd: function() {
+    this._lastTouch = new Date()
+  },
+
   render: function() {
     return (
-      <div ref="scroller" onScroll={this._onScroll} onLoad={this.onUpdate} onTouchStart={this.onTouchStart} className={this.props.className}>
+      <div ref="scroller" onScroll={this._onScroll} onLoad={this.onUpdate} onTouchStart={this.onTouchStart} onTouchEnd={this.onTouchEnd} className={this.props.className}>
         {this.props.children}
       </div>
     )
