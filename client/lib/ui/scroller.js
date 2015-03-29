@@ -78,7 +78,7 @@ module.exports = React.createClass({
     this._checkScroll()
     this.updateAnchorPos()
     if (!this._scrollQueued) {
-      this.props.onScroll(new Date() - this._lastTouch < 100)
+      this.props.onScroll(this._lastTouch === true || new Date() - this._lastTouch < 100)
     }
   },
 
@@ -256,6 +256,8 @@ module.exports = React.createClass({
   },
 
   onTouchStart: function() {
+    this._lastTouch = true
+
     // prevent overscroll from bleeding out in Mobile Safari
     if (!Heim.isiOS) {
       return
