@@ -232,6 +232,7 @@ module.exports = React.createClass({
     var delta = dimensions(posRef, 'bottom') - oldPos
     var scrollDelta = node.scrollTop - this._lastScrollTop
     if (delta && canScroll) {
+      this._scrollQueued = true
       if (Heim.isChrome) {
         // Note: mobile Webkit does this funny thing where getting/setting
         // scrollTop doesn't happen promptly during inertial scrolling. It turns
@@ -244,12 +245,12 @@ module.exports = React.createClass({
           scrollDelta = node.scrollTop - this._lastScrollTop
           node.scrollTop += delta + scrollDelta
           this._lastScrollTop = node.scrollTop
+          this._finishScroll()
         }.bind(this))
       } else {
         node.scrollTop += delta + scrollDelta
+        this._finishScroll()
       }
-      this._scrollQueued = true
-      this._finishScroll()
     }
   },
 
