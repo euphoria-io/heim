@@ -213,13 +213,16 @@ module.exports = React.createClass({
     var match = this.state.chat.who
       .toSeq()
       .map(user => hueHash.stripSpaces(user.get('name', '')))
-      .filter(name => name && name.toLowerCase().lastIndexOf(word, 0) === 0)
+      .filter(Boolean)
+      .map(name => [name.toLowerCase().lastIndexOf(word), name])
+      .filter(entry => entry[0] > -1)
+      .sort()
       .first()
 
     if (!match) {
       return
     }
-    var completed = (text[wordStart - 1] != '@' ? '@' : '') + match
+    var completed = (text[wordStart - 1] != '@' ? '@' : '') + match[1]
     input.value = input.value.substring(0, wordStart) + completed + input.value.substring(wordEnd)
     this.saveEntryState()
   },
