@@ -47,7 +47,7 @@ module.exports = React.createClass({
     this._scrollQueued = false
     this._waitingForUpdate = false
     this._lastTouch = 0
-    this._animationFrame = null
+    this._animationFrames = {}
   },
 
   componentDidMount: function() {
@@ -57,6 +57,15 @@ module.exports = React.createClass({
 
   componentWillUnmount: function() {
     Heim.removeEventListener(uiwindow, 'resize', this.onResize)
+  },
+
+  _chromeRAFHack: function(id, callback) {
+    if (Heim.isChrome) {
+      uiwindow.cancelAnimationFrame(this._animationFrames[id])
+      this._animationFrames[id] = uiwindow.requestAnimationFrame(callback)
+    } else {
+      callback()
+    }
   },
 
   onResize: function() {
@@ -156,15 +165,11 @@ module.exports = React.createClass({
     var node = this.refs.scroller.getDOMNode()
 
     if (this.props.onNearTop && node.scrollTop < node.scrollHeight / 8) {
-      if (Heim.isChrome) {
-        // since RAF doesn't execute while the page is hidden, scrolling in
-        // infinite scroll won't occur in Chrome if users are on another tab.
-        // this was causing an infinite loop: the log would continuously be
-        // fetched since the scrollTop remained at 0.
-        uiwindow.requestAnimationFrame(this.props.onNearTop)
-      } else {
-        this.props.onNearTop()
-      }
+      // since RAF doesn't execute while the page is hidden, scrolling in
+      // infinite scroll won't occur in Chrome if users are on another tab.
+      // this was causing an infinite loop: the log would continuously be
+      // fetched since the scrollTop remained at 0.
+      this._chromeRAFHack('checkScroll', this.props.onNearTop)
       this._waitingForUpdate = true
     }
   },
@@ -230,27 +235,19 @@ module.exports = React.createClass({
     }
 
     var delta = dimensions(posRef, 'bottom') - oldPos
-    var scrollDelta = node.scrollTop - this._lastScrollTop
     if (delta && canScroll) {
       this._scrollQueued = true
-      if (Heim.isChrome) {
-        // Note: mobile Webkit does this funny thing where getting/setting
-        // scrollTop doesn't happen promptly during inertial scrolling. It turns
-        // out that setting scrollTop inside a requestAnimationFrame callback
-        // circumvents this issue.
-        uiwindow.cancelAnimationFrame(this._animationFrame)
-        this._animationFrame = uiwindow.requestAnimationFrame(function() {
-          // Time passes before the frame, so we need to update the deltas.
-          delta = dimensions(posRef, 'bottom') - oldPos
-          scrollDelta = node.scrollTop - this._lastScrollTop
-          node.scrollTop += delta + scrollDelta
-          this._lastScrollTop = node.scrollTop
-          this._finishScroll()
-        }.bind(this))
-      } else {
+      // Note: mobile Webkit does this funny thing where getting/setting
+      // scrollTop doesn't happen promptly during inertial scrolling. It turns
+      // out that setting scrollTop inside a requestAnimationFrame callback
+      // circumvents this issue.
+      this._chromeRAFHack('scroll', () => {
+        var delta = dimensions(posRef, 'bottom') - oldPos
+        var scrollDelta = node.scrollTop - this._lastScrollTop
         node.scrollTop += delta + scrollDelta
+        this._lastScrollTop = node.scrollTop
         this._finishScroll()
-      }
+      })
     }
   },
 
