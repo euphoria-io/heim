@@ -47,6 +47,7 @@ module.exports = React.createClass({
     this._scrollQueued = false
     this._waitingForUpdate = false
     this._lastTouch = 0
+    this._animationFrame = null
   },
 
   componentDidMount: function() {
@@ -236,7 +237,8 @@ module.exports = React.createClass({
         // scrollTop doesn't happen promptly during inertial scrolling. It turns
         // out that setting scrollTop inside a requestAnimationFrame callback
         // circumvents this issue.
-        uiwindow.requestAnimationFrame(function() {
+        uiwindow.cancelAnimationFrame(this._animationFrame)
+        this._animationFrame = uiwindow.requestAnimationFrame(function() {
           // Time passes before the frame, so we need to update the deltas.
           delta = dimensions(posRef, 'bottom') - oldPos
           scrollDelta = node.scrollTop - this._lastScrollTop
