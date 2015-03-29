@@ -48,7 +48,7 @@ var Message = module.exports = React.createClass({
 
     var messageEmbeds
     var embeds = []
-    content = content.replace(/(?:https?:\/\/)?(?:www\.|i\.)?imgur.com\/(\w+)(\.\w+)?(\S*)/g, (match, id, ext, rest, offset, string) => {
+    content = content.replace(/(?:https?:\/\/)?(?:www\.|i\.|m\.)?imgur.com\/(\w+)(\.\w+)?(\S*)/g, (match, id, ext, rest, offset, string) => {
       if (rest) {
         return string
       }
