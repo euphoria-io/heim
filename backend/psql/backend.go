@@ -154,6 +154,12 @@ func (b *Backend) background() {
 					logger.Printf("cluster: keepalive error: %s", err)
 				}
 			}
+			// Ping to make sure the database connection is still live.
+			if err := listener.Ping(); err != nil {
+				logger.Printf("pq ping: %s\n", err)
+				b.ctx.Terminate(fmt.Errorf("pq ping: %s", err))
+				return
+			}
 		case event := <-peerWatcher:
 			b.Lock()
 			switch e := event.(type) {
@@ -179,7 +185,7 @@ func (b *Backend) background() {
 				// A nil notice indicates a loss of connection. We could
 				// re-snapshot for all connected clients, but for now it's
 				// easier to just shut down and force everyone to reconnect.
-				ctx.Terminate(ErrPsqlConnectionLost)
+				b.ctx.Terminate(ErrPsqlConnectionLost)
 				return
 			}
 
