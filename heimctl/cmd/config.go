@@ -17,7 +17,7 @@ var Version = "dev"
 var config = flag.String("config", os.Getenv("HEIM_CONFIG"),
 	"path to local config (default: use config stored in etcd)")
 
-func getCluster() (cluster.Cluster, error) {
+func getCluster(ctx scope.Context) (cluster.Cluster, error) {
 	era, err := snowflake.New()
 	if err != nil {
 		return nil, fmt.Errorf("era error: %s", err)
@@ -26,7 +26,7 @@ func getCluster() (cluster.Cluster, error) {
 	backend.Config.Cluster.Era = era.String()
 	backend.Config.Cluster.Version = Version
 
-	c, err := backend.Config.Cluster.EtcdCluster()
+	c, err := backend.Config.Cluster.EtcdCluster(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("cluster error: %s", err)
 	}

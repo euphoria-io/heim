@@ -70,7 +70,7 @@ func (cmd *serveCmd) run(ctx scope.Context, args []string) error {
 	}
 	defer closeListener()
 
-	c, err := getCluster()
+	c, err := getCluster(ctx)
 	if err != nil {
 		return err
 	}

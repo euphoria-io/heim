@@ -12,6 +12,7 @@ import (
 	"euphoria.io/heim/aws/kms"
 	"euphoria.io/heim/backend/cluster"
 	"euphoria.io/heim/proto/security"
+	"euphoria.io/scope"
 )
 
 var Config ServerConfig
@@ -112,11 +113,11 @@ type ClusterConfig struct {
 	EtcdHome string `yaml:"etcd,omitempty"`
 }
 
-func (c *ClusterConfig) EtcdCluster() (cluster.Cluster, error) {
+func (c *ClusterConfig) EtcdCluster(ctx scope.Context) (cluster.Cluster, error) {
 	if c.EtcdHost == "" {
 		return nil, fmt.Errorf("cluster: etcd-host must be specified")
 	}
-	return cluster.EtcdCluster(c.EtcdHome, c.EtcdHost, c.DescribeSelf())
+	return cluster.EtcdCluster(ctx, c.EtcdHome, c.EtcdHost, c.DescribeSelf())
 }
 
 func (c *ClusterConfig) DescribeSelf() *cluster.PeerDesc {

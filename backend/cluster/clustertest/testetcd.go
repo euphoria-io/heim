@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"euphoria.io/heim/backend/cluster"
+	"euphoria.io/scope"
 )
 
 func pickPort() (int, error) {
@@ -150,7 +151,7 @@ func (s *EtcdServer) Join(root, id, era string) cluster.Cluster {
 		ID:  id,
 		Era: era,
 	}
-	c, err := cluster.EtcdCluster(root, s.addr, desc)
+	c, err := cluster.EtcdCluster(scope.New(), root, s.addr, desc)
 	if err != nil {
 		panic(fmt.Sprintf("error joining cluster: %s", err))
 	}

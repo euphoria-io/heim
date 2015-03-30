@@ -44,7 +44,7 @@ func (cmd *presenceCmd) flags() *flag.FlagSet {
 }
 
 func (cmd *presenceCmd) run(ctx scope.Context, args []string) error {
-	c, err := getCluster()
+	c, err := getCluster(ctx)
 	if err != nil {
 		return err
 	}

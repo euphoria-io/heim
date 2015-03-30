@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"euphoria.io/heim/proto/security"
+	"euphoria.io/scope"
 
 	"github.com/coreos/go-etcd/etcd"
 	"github.com/prometheus/client_golang/prometheus"
@@ -48,7 +49,7 @@ func init() {
 	prometheus.MustRegister(peerWatchErrors)
 }
 
-func EtcdCluster(root, addr string, desc *PeerDesc) (Cluster, error) {
+func EtcdCluster(ctx scope.Context, root, addr string, desc *PeerDesc) (Cluster, error) {
 	fmt.Printf("connecting to %#v\n", addr)
 	e := &etcdCluster{
 		root:  strings.TrimRight(root, "/") + "/",
@@ -56,6 +57,7 @@ func EtcdCluster(root, addr string, desc *PeerDesc) (Cluster, error) {
 		ch:    make(chan PeerEvent),
 		stop:  make(chan bool),
 		peers: map[string]PeerDesc{},
+		ctx:   ctx,
 	}
 	idx, err := e.init()
 	if err != nil {
@@ -79,6 +81,7 @@ type etcdCluster struct {
 	ch    chan PeerEvent
 	stop  chan bool
 	peers map[string]PeerDesc
+	ctx   scope.Context
 }
 
 func (e *etcdCluster) key(format string, args ...interface{}) string {
@@ -213,9 +216,11 @@ func (e *etcdCluster) watch(waitIndex uint64) {
 	for {
 		resp := <-recv
 		if resp == nil {
+			// If this happens the etcd cluster is unhealthy. For now we'll
+			// just shut down and hope some other backend instance is happy.
 			fmt.Printf("cluster error: watch: nil response\n")
-			peerWatchErrors.Inc()
-			break
+			e.ctx.Terminate(fmt.Errorf("cluster error: watch: nil response"))
+			return
 		}
 
 		peerID := strings.TrimLeft(strings.TrimPrefix(resp.Node.Key, e.key("/peers")), "/")
