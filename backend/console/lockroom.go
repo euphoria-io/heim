@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"euphoria.io/heim/proto/security"
+	"euphoria.io/scope"
 )
 
 func init() {
@@ -15,7 +16,7 @@ type setRoomPasscode struct{}
 
 func (setRoomPasscode) usage() string { return "usage: set-room-passcode ROOM" }
 
-func (setRoomPasscode) run(c *console, args []string) error {
+func (setRoomPasscode) run(ctx scope.Context, c *console, args []string) error {
 	if len(args) != 1 {
 		return usageError("invalid command")
 	}
@@ -30,7 +31,7 @@ func (setRoomPasscode) run(c *console, args []string) error {
 		return err
 	}
 
-	mkey, err := room.MasterKey(c.ctx)
+	mkey, err := room.MasterKey(ctx)
 	if err != nil {
 		return err
 	}
@@ -40,12 +41,12 @@ func (setRoomPasscode) run(c *console, args []string) error {
 
 	roomKey := mkey.ManagedKey()
 	capability, err := security.GrantCapabilityOnSubjectWithPasscode(
-		c.ctx, c.kms, mkey.Nonce(), &roomKey, []byte(passcode))
+		ctx, c.kms, mkey.Nonce(), &roomKey, []byte(passcode))
 	if err != nil {
 		return err
 	}
 
-	if err := room.SaveCapability(c.ctx, capability); err != nil {
+	if err := room.SaveCapability(ctx, capability); err != nil {
 		return err
 	}
 
@@ -57,7 +58,7 @@ type lockRoom struct{}
 
 func (lockRoom) usage() string { return "usage: lock-room [OPTIONS] ROOM" }
 
-func (lockRoom) run(c *console, args []string) error {
+func (lockRoom) run(ctx scope.Context, c *console, args []string) error {
 	// TODO: --retroactive: encrypt all existing cleartext messages
 	// TODO: --upgrade: re-encrypt all messages encrypted with previous key
 	force := c.Bool("force", false, "relock room if already locked, invalidating all previous grants")
@@ -78,7 +79,7 @@ func (lockRoom) run(c *console, args []string) error {
 	}
 
 	// Check for existing key.
-	mkey, err := room.MasterKey(c.ctx)
+	mkey, err := room.MasterKey(ctx)
 	if err != nil {
 		return err
 	}
@@ -90,7 +91,7 @@ func (lockRoom) run(c *console, args []string) error {
 		c.Printf("Overwriting existing key.\n")
 	}
 
-	_, err = room.GenerateMasterKey(c.ctx, c.kms)
+	_, err = room.GenerateMasterKey(ctx, c.kms)
 	if err != nil {
 		return err
 	}

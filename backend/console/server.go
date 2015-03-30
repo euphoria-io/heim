@@ -13,30 +13,36 @@ import (
 	"net"
 	"os"
 	"strings"
+	"sync"
 
 	"encoding/pem"
 
 	"euphoria.io/heim/backend/cluster"
 	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/security"
+	"euphoria.io/scope"
 
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/terminal"
 )
 
 type Controller struct {
+	m        sync.Mutex
+	closed   bool
 	listener net.Listener
 	config   *ssh.ServerConfig
 	backend  proto.Backend
 	kms      security.KMS
 	cluster  cluster.Cluster
+	ctx      scope.Context
 
 	// TODO: key ssh.PublicKey
 	authorizedKeys []ssh.PublicKey
 }
 
 func NewController(
-	addr string, backend proto.Backend, kms security.KMS, c cluster.Cluster) (*Controller, error) {
+	ctx scope.Context, addr string, backend proto.Backend, kms security.KMS, c cluster.Cluster) (
+	*Controller, error) {
 
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
@@ -48,6 +54,7 @@ func NewController(
 		backend:  backend,
 		kms:      kms,
 		cluster:  c,
+		ctx:      ctx,
 	}
 
 	ctrl.config = &ssh.ServerConfig{
@@ -55,6 +62,16 @@ func NewController(
 	}
 
 	return ctrl, nil
+}
+
+func (ctrl *Controller) Close() error {
+	ctrl.m.Lock()
+	defer ctrl.m.Unlock()
+	if ctrl.closed {
+		return nil
+	}
+	ctrl.closed = true
+	return ctrl.listener.Close()
 }
 
 func (ctrl *Controller) authorizeKey(conn ssh.ConnMetadata, key ssh.PublicKey) (
@@ -181,17 +198,38 @@ func (ctrl *Controller) AddAuthorizedKeys(path string) error {
 }
 
 func (ctrl *Controller) Serve() {
-	for {
-		conn, err := ctrl.listener.Accept()
-		if err != nil {
-			panic(fmt.Sprintf("controller accept: %s", err))
-		}
+	defer ctrl.ctx.WaitGroup().Done()
 
-		go ctrl.interact(conn)
+	conns := make(chan net.Conn)
+	go func() {
+		for ctrl.ctx.Err() == nil {
+			conn, err := ctrl.listener.Accept()
+			if err != nil {
+				ctrl.m.Lock()
+				if !ctrl.closed {
+					ctrl.ctx.Terminate(fmt.Errorf("console accept: %s", err))
+				}
+				ctrl.m.Unlock()
+				return
+			}
+			conns <- conn
+		}
+	}()
+
+	for {
+		select {
+		case <-ctrl.ctx.Done():
+			return
+		case conn := <-conns:
+			ctrl.ctx.WaitGroup().Add(1)
+			go ctrl.interact(ctrl.ctx.Fork(), conn)
+		}
 	}
 }
 
-func (ctrl *Controller) interact(conn net.Conn) {
+func (ctrl *Controller) interact(ctx scope.Context, conn net.Conn) {
+	defer ctx.WaitGroup().Done()
+
 	_, nchs, reqs, err := ssh.NewServerConn(conn, ctrl.config)
 	if err != nil {
 		return
@@ -209,7 +247,7 @@ func (ctrl *Controller) interact(conn net.Conn) {
 			return
 		}
 		go ctrl.filterClientRequests(reqs)
-		go ctrl.terminal(ch)
+		go ctrl.terminal(ctx, ch)
 	}
 }
 
@@ -226,15 +264,29 @@ func (ctrl *Controller) filterClientRequests(reqs <-chan *ssh.Request) {
 	}
 }
 
-func (ctrl *Controller) terminal(ch ssh.Channel) {
+func (ctrl *Controller) terminal(ctx scope.Context, ch ssh.Channel) {
 	defer ch.Close()
 
+	lines := make(chan string)
 	term := terminal.NewTerminal(ch, "> ")
+
+	go func() {
+		for ctx.Err() == nil {
+			line, err := term.ReadLine()
+			if err != nil {
+				ctx.Terminate(err)
+				return
+			}
+			lines <- line
+		}
+	}()
+
 	for {
-		line, err := term.ReadLine()
-		if err != nil {
-			fmt.Printf("terminal ReadLine: %s\n", err)
-			break
+		var line string
+		select {
+		case <-ctx.Done():
+			return
+		case line = <-lines:
 		}
 
 		cmd := parse(line)
@@ -245,10 +297,9 @@ func (ctrl *Controller) terminal(ch ssh.Channel) {
 		case "quit":
 			return
 		case "shutdown":
-			// TODO: graceful shutdown
-			os.Exit(0)
+			ctrl.ctx.Terminate(fmt.Errorf("shutdown initiated from console"))
 		default:
-			runCommand(ctrl, cmd[0], term, cmd[1:])
+			runCommand(ctx.Fork(), ctrl, cmd[0], term, cmd[1:])
 		}
 	}
 }

@@ -11,6 +11,7 @@ import (
 	"euphoria.io/heim/backend/cluster"
 	"euphoria.io/heim/backend/cluster/clustertest"
 	"euphoria.io/heim/proto"
+	"euphoria.io/scope"
 
 	"github.com/rubenv/sql-migrate"
 
@@ -66,7 +67,7 @@ func TestBackend(t *testing.T) {
 			Era:     fmt.Sprintf("iter%d", iter),
 			Version: "testver",
 		}
-		b, err := NewBackend(dsn, c, desc)
+		b, err := NewBackend(scope.New(), dsn, c, desc)
 		if err != nil {
 			t.Fatal(err)
 		}

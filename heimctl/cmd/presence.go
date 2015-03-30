@@ -49,7 +49,7 @@ func (cmd *presenceCmd) run(ctx scope.Context, args []string) error {
 		return err
 	}
 
-	b, err := getBackend(c)
+	b, err := getBackend(ctx, c)
 	if err != nil {
 		return fmt.Errorf("backend error: %s", err)
 	}
@@ -65,9 +65,7 @@ func (cmd *presenceCmd) run(ctx scope.Context, args []string) error {
 	go presence.Serve(ctx, cmd.addr)
 
 	// Start scanner.
-	ctx.WaitGroup().Add(1)
-	go presence.ScanLoop(ctx, c, b, cmd.interval)
+	presence.ScanLoop(ctx, c, b, cmd.interval)
 
-	ctx.WaitGroup().Wait()
 	return nil
 }

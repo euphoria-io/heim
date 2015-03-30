@@ -19,7 +19,6 @@ type ioterm interface {
 
 func cmdConsole(ctrl *Controller, cmd string, term ioterm) *console {
 	c := &console{
-		ctx:     scope.New(),
 		backend: ctrl.backend,
 		kms:     ctrl.kms,
 		ioterm:  term,
@@ -33,7 +32,6 @@ type console struct {
 	ioterm
 	*flag.FlagSet
 
-	ctx     scope.Context
 	backend proto.Backend
 	kms     security.KMS
 }
@@ -48,7 +46,7 @@ func (c *console) Write(data []byte) (int, error) {
 }
 
 type handler interface {
-	run(c *console, args []string) error
+	run(ctx scope.Context, c *console, args []string) error
 }
 
 var handlers = map[string]handler{}
@@ -65,8 +63,8 @@ type uerror string
 
 func (e uerror) Error() string { return string(e) }
 
-func runHandler(h handler, c *console, args []string) {
-	if err := h.run(c, args); err != nil {
+func runHandler(ctx scope.Context, h handler, c *console, args []string) {
+	if err := h.run(ctx, c, args); err != nil {
 		u, uok := h.(usager)
 		if err != flag.ErrHelp {
 			c.Printf("error: %s\n", err.Error())
@@ -82,9 +80,9 @@ func runHandler(h handler, c *console, args []string) {
 	}
 }
 
-func runCommand(ctrl *Controller, cmd string, term ioterm, args []string) {
+func runCommand(ctx scope.Context, ctrl *Controller, cmd string, term ioterm, args []string) {
 	if handler, ok := handlers[cmd]; ok {
-		runHandler(handler, cmdConsole(ctrl, cmd, term), args)
+		runHandler(ctx, handler, cmdConsole(ctrl, cmd, term), args)
 	} else {
 		fmt.Fprintf(term, "invalid command: %s\r\n", cmd)
 	}

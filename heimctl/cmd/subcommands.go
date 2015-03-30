@@ -9,6 +9,7 @@ import (
 	"sort"
 	"text/tabwriter"
 	"text/template"
+	"time"
 
 	"euphoria.io/scope"
 )
@@ -56,6 +57,23 @@ func Run(args []string) {
 	if err := cmd.run(ctx, flags.Args()); err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
+	}
+
+	timeout := time.After(10 * time.Second)
+	completed := make(chan struct{})
+	go func() {
+		ctx.WaitGroup().Wait()
+		close(completed)
+	}()
+
+	fmt.Println("waiting for graceful shutdown...")
+	select {
+	case <-timeout:
+		fmt.Println("timed out")
+		os.Exit(1)
+	case <-completed:
+		fmt.Println("ok")
+		os.Exit(0)
 	}
 }
 

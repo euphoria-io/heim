@@ -41,6 +41,7 @@ type Server struct {
 	kms        security.KMS
 	staticPath string
 	sc         *securecookie.SecureCookie
+	rootCtx    scope.Context
 
 	m sync.Mutex
 
@@ -48,8 +49,8 @@ type Server struct {
 }
 
 func NewServer(
-	backend proto.Backend, cluster cluster.Cluster, kms security.KMS, id, era, staticPath string) (
-	*Server, error) {
+	ctx scope.Context, backend proto.Backend, cluster cluster.Cluster, kms security.KMS,
+	id, era, staticPath string) (*Server, error) {
 
 	cookieSecret, err := cluster.GetSecret(kms, "cookie", cookieKeySize)
 	if err != nil {
@@ -63,6 +64,7 @@ func NewServer(
 		kms:        kms,
 		staticPath: staticPath,
 		sc:         securecookie.New(cookieSecret, nil),
+		rootCtx:    ctx,
 	}
 	s.route()
 	return s, nil
@@ -155,7 +157,7 @@ func (s *Server) getAgentID(w http.ResponseWriter, r *http.Request) ([]byte, *ht
 }
 
 func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
-	ctx := scope.New()
+	ctx := s.rootCtx.Fork()
 	logger := Logger(ctx)
 
 	// Resolve the room.

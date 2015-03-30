@@ -3,7 +3,10 @@ package cmd
 import (
 	"flag"
 	"fmt"
+	"net"
 	"net/http"
+	"strings"
+	"sync"
 
 	"euphoria.io/heim/backend"
 	"euphoria.io/heim/backend/cluster"
@@ -50,6 +53,23 @@ func (cmd *serveCmd) flags() *flag.FlagSet {
 }
 
 func (cmd *serveCmd) run(ctx scope.Context, args []string) error {
+	listener, err := net.Listen("tcp", cmd.addr)
+	if err != nil {
+		return err
+	}
+
+	m := sync.Mutex{}
+	closed := false
+	closeListener := func() {
+		m.Lock()
+		if !closed {
+			closed = true
+			listener.Close()
+		}
+		m.Unlock()
+	}
+	defer closeListener()
+
 	c, err := getCluster()
 	if err != nil {
 		return err
@@ -60,30 +80,44 @@ func (cmd *serveCmd) run(ctx scope.Context, args []string) error {
 		return fmt.Errorf("kms error: %s", err)
 	}
 
-	b, err := getBackend(c)
+	b, err := getBackend(ctx, c)
 	if err != nil {
 		return fmt.Errorf("backend error: %s", err)
 	}
 	defer b.Close()
 
-	if err := controller(cmd.consoleAddr, b, kms, c); err != nil {
+	if err := controller(ctx, cmd.consoleAddr, b, kms, c); err != nil {
 		return fmt.Errorf("controller error: %s", err)
 	}
 
 	serverDesc := backend.Config.Cluster.DescribeSelf()
-	server, err := backend.NewServer(b, c, kms, serverDesc.ID, serverDesc.Era, cmd.static)
+	server, err := backend.NewServer(ctx, b, c, kms, serverDesc.ID, serverDesc.Era, cmd.static)
 	if err != nil {
 		return fmt.Errorf("server error: %s", err)
 	}
 
+	// Spin off goroutine to watch ctx and close listener if shutdown requested.
+	go func() {
+		<-ctx.Done()
+		closeListener()
+	}()
+
 	fmt.Printf("serving era %s on %s\n", serverDesc.Era, cmd.addr)
-	http.ListenAndServe(cmd.addr, newVersioningHandler(server))
+	if err := http.Serve(listener, newVersioningHandler(server)); err != nil {
+		if strings.HasSuffix(err.Error(), "use of closed network connection") {
+			return nil
+		}
+		return err
+	}
+
 	return nil
 }
 
-func controller(addr string, b proto.Backend, kms security.KMS, c cluster.Cluster) error {
+func controller(
+	ctx scope.Context, addr string, b proto.Backend, kms security.KMS, c cluster.Cluster) error {
+
 	if addr != "" {
-		ctrl, err := console.NewController(addr, b, kms, c)
+		ctrl, err := console.NewController(ctx, addr, b, kms, c)
 		if err != nil {
 			return err
 		}
@@ -107,6 +141,7 @@ func controller(addr string, b proto.Backend, kms security.KMS, c cluster.Cluste
 			}
 		}
 
+		ctx.WaitGroup().Add(1)
 		go ctrl.Serve()
 	}
 	return nil

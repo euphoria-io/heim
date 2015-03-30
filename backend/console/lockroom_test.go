@@ -17,7 +17,7 @@ func TestSetRoomPasscode(t *testing.T) {
 
 	Convey("Room not given", t, func() {
 		term := &testTerm{}
-		runCommand(&Controller{}, "set-room-passcode", term, nil)
+		runCommand(ctx, &Controller{}, "set-room-passcode", term, nil)
 		So(term.String(), ShouldStartWith, "error: invalid command")
 	})
 
@@ -27,7 +27,7 @@ func TestSetRoomPasscode(t *testing.T) {
 			kms:     kms,
 		}
 		term := &testTerm{}
-		runCommand(ctrl, "set-room-passcode", term, []string{"test"})
+		runCommand(ctx, ctrl, "set-room-passcode", term, []string{"test"})
 		So(term.String(), ShouldEqual, "error: room doesn't exist or isn't locked\r\n")
 	})
 
@@ -38,7 +38,7 @@ func TestSetRoomPasscode(t *testing.T) {
 		}
 
 		term := &testTerm{}
-		runCommand(ctrl, "lock-room", term, []string{"test"})
+		runCommand(ctx, ctrl, "lock-room", term, []string{"test"})
 		So(term.String(), ShouldStartWith, "Room test locked with new key")
 
 		room, err := ctrl.backend.GetRoom("test")
@@ -47,7 +47,7 @@ func TestSetRoomPasscode(t *testing.T) {
 		So(err, ShouldBeNil)
 
 		term = &testTerm{password: "hunter2"}
-		runCommand(ctrl, "set-room-passcode", term, []string{"test"})
+		runCommand(ctx, ctrl, "set-room-passcode", term, []string{"test"})
 		So(term.String(), ShouldStartWith, "Passcode added to test: ")
 
 		capabilityID, err := security.GetCapabilityIDForPasscode(mkey.Nonce(), []byte("hunter2"))
@@ -66,13 +66,13 @@ func TestLockRoom(t *testing.T) {
 
 	Convey("Usage and flags", t, func() {
 		term := &testTerm{}
-		runCommand(&Controller{}, "lock-room", term, []string{"-h"})
+		runCommand(ctx, &Controller{}, "lock-room", term, []string{"-h"})
 		So(term.String(), ShouldStartWith, "Usage of lock-room:")
 	})
 
 	Convey("Room not given", t, func() {
 		term := &testTerm{}
-		runCommand(&Controller{}, "lock-room", term, nil)
+		runCommand(ctx, &Controller{}, "lock-room", term, nil)
 		So(term.String(), ShouldStartWith, "error: room name must be given\r\n")
 	})
 
@@ -83,7 +83,7 @@ func TestLockRoom(t *testing.T) {
 			kms:     kms,
 		}
 		term := &testTerm{}
-		runCommand(ctrl, "lock-room", term, []string{"!!!!"})
+		runCommand(ctx, ctrl, "lock-room", term, []string{"!!!!"})
 		So(term.String(), ShouldStartWith, "error: room name must be given\r\n")
 	})
 
@@ -100,7 +100,7 @@ func TestLockRoom(t *testing.T) {
 
 		Convey("Requires --force", func() {
 			term := &testTerm{}
-			runCommand(ctrl, "lock-room", term, []string{"test"})
+			runCommand(ctx, ctrl, "lock-room", term, []string{"test"})
 			So(term.String(), ShouldEqual,
 				"error: room already locked; use --force to relock and invalidate all previous grants\r\n")
 		})
@@ -108,7 +108,7 @@ func TestLockRoom(t *testing.T) {
 		Convey("Proceeds with --force", func() {
 			_ = orig
 			term := &testTerm{}
-			runCommand(ctrl, "lock-room", term, []string{"--force", "test"})
+			runCommand(ctx, ctrl, "lock-room", term, []string{"--force", "test"})
 			So(term.String(), ShouldStartWith,
 				"Overwriting existing key.\r\nRoom test locked with new key")
 			rk, err := room.MasterKey(ctx)

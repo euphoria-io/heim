@@ -3,6 +3,7 @@ package psql
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -20,6 +21,8 @@ import (
 	"github.com/go-gorp/gorp"
 	"github.com/lib/pq"
 )
+
+var ErrPsqlConnectionLost = errors.New("postgres connection lost")
 
 var schema = map[string]struct {
 	Table      interface{}
@@ -51,9 +54,12 @@ type Backend struct {
 	version   string
 	peers     map[string]string
 	listeners map[string]ListenerMap
+	ctx       scope.Context
 }
 
-func NewBackend(dsn string, c cluster.Cluster, serverDesc *cluster.PeerDesc) (*Backend, error) {
+func NewBackend(
+	ctx scope.Context, dsn string, c cluster.Cluster, serverDesc *cluster.PeerDesc) (*Backend, error) {
+
 	var version string
 
 	if serverDesc == nil {
@@ -77,6 +83,7 @@ func NewBackend(dsn string, c cluster.Cluster, serverDesc *cluster.PeerDesc) (*B
 		cluster:   c,
 		peers:     map[string]string{},
 		listeners: map[string]ListenerMap{},
+		ctx:       ctx,
 	}
 
 	if serverDesc != nil {
@@ -108,9 +115,9 @@ func (b *Backend) start() error {
 		}
 	}
 
-	ctx := scope.New()
-	b.cancel = ctx.Cancel
-	go b.background(ctx)
+	b.cancel = b.ctx.Cancel
+	b.ctx.WaitGroup().Add(1)
+	go b.background()
 	return nil
 }
 
@@ -121,8 +128,11 @@ func (b *Backend) Close() {
 	b.cluster.Part()
 }
 
-func (b *Backend) background(ctx scope.Context) {
+func (b *Backend) background() {
+	ctx := b.ctx.Fork()
 	logger := backend.Logger(ctx)
+
+	defer ctx.WaitGroup().Done()
 
 	listener := pq.NewListener(b.dsn, 200*time.Millisecond, 5*time.Second, nil)
 	if err := listener.Listen("broadcast"); err != nil {
@@ -166,8 +176,11 @@ func (b *Backend) background(ctx scope.Context) {
 			b.Unlock()
 		case notice := <-listener.Notify:
 			if notice == nil {
-				// TODO: notify clients of potential hiccup
-				continue
+				// A nil notice indicates a loss of connection. We could
+				// re-snapshot for all connected clients, but for now it's
+				// easier to just shut down and force everyone to reconnect.
+				ctx.Terminate(ErrPsqlConnectionLost)
+				return
 			}
 
 			var msg BroadcastMessage

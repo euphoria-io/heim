@@ -9,6 +9,7 @@ import (
 	"euphoria.io/heim/backend/cluster"
 	"euphoria.io/heim/backend/psql"
 	"euphoria.io/heim/proto/snowflake"
+	"euphoria.io/scope"
 )
 
 var Version = "dev"
@@ -43,6 +44,6 @@ func getCluster() (cluster.Cluster, error) {
 	return c, nil
 }
 
-func getBackend(cs cluster.Cluster) (*psql.Backend, error) {
-	return psql.NewBackend(backend.Config.DB.DSN, cs, backend.Config.Cluster.DescribeSelf())
+func getBackend(ctx scope.Context, cs cluster.Cluster) (*psql.Backend, error) {
+	return psql.NewBackend(ctx, backend.Config.DB.DSN, cs, backend.Config.Cluster.DescribeSelf())
 }

@@ -199,7 +199,7 @@ func IntegrationTest(factory func() proto.Backend) {
 		defer backend.Close()
 		kms := security.LocalKMS()
 		kms.SetMasterKey(make([]byte, security.AES256.KeySize()))
-		app, err := NewServer(backend, &cluster.TestCluster{}, kms, "test1", "era1", "")
+		app, err := NewServer(scope.New(), backend, &cluster.TestCluster{}, kms, "test1", "era1", "")
 		So(err, ShouldBeNil)
 		app.agentIDGenerator = func() ([]byte, error) {
 			agentIDCounter++
@@ -363,7 +363,7 @@ func testPresence(factory func() proto.Backend) {
 	backend := factory()
 	kms := security.LocalKMS()
 	kms.SetMasterKey(make([]byte, security.AES256.KeySize()))
-	app, err := NewServer(backend, &cluster.TestCluster{}, kms, "test1", "era1", "")
+	app, err := NewServer(scope.New(), backend, &cluster.TestCluster{}, kms, "test1", "era1", "")
 	So(err, ShouldBeNil)
 	agentIDCounter := 0
 	app.agentIDGenerator = func() ([]byte, error) {
@@ -444,7 +444,9 @@ func testPresence(factory func() proto.Backend) {
 		}
 
 		backend2 := factory()
-		app2 := NewServer(backend2, "tes2", "")
+		kms := security.LocalKMS()
+		app2, err := NewServer(scope.New(), backend2, &cluster.TestCluster{}, kms, "test2", "", "")
+		So(err, ShouldBeNil)
 		server2 := httptest.NewServer(app2)
 		defer server2.Close()
 		s2 := &serverUnderTest{backend2, app2, server2}
