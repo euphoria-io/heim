@@ -47,7 +47,7 @@ module.exports = function(roomName) {
       return (
         <div key="norman" className="norman">
           <p>norman</p>
-          <img src="//i.imgur.com/45wJkX7.jpg" />
+          <img src="//i.imgur.com/UKbitCO.jpg" />
         </div>
       )
     })
