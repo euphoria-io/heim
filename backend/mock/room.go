@@ -336,10 +336,3 @@ func (r *memRoom) AddMediaTranscoding(ctx scope.Context, t *proto.Transcoding) e
 	tm[t.Name] = *t
 	return nil
 }
-
-type roomKey struct {
-	id        string
-	timestamp time.Time
-	nonce     []byte
-	key       security.ManagedKey
-}

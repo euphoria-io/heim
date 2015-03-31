@@ -38,10 +38,10 @@ type MediaStore interface {
 }
 
 type UploadHandle struct {
-	ID     string
-	Header http.Header
-	Method string
-	URL    string
+	ID      string      `json:"id"`
+	Headers http.Header `json:"headers"`
+	Method  string      `json:"method"`
+	URL     string      `json:"url"`
 }
 
 func (uh *UploadHandle) Upload(ctx scope.Context, r io.Reader) (*http.Response, error) {
@@ -49,7 +49,7 @@ func (uh *UploadHandle) Upload(ctx scope.Context, r io.Reader) (*http.Response, 
 	if err != nil {
 		return nil, err
 	}
-	for k, vs := range uh.Header {
+	for k, vs := range uh.Headers {
 		for _, v := range vs {
 			req.Header.Add(k, v)
 		}
@@ -58,8 +58,8 @@ func (uh *UploadHandle) Upload(ctx scope.Context, r io.Reader) (*http.Response, 
 }
 
 type DownloadHandle struct {
-	Header http.Header
-	URL    string
+	Headers http.Header `json:"headers"`
+	URL     string      `json:"url"`
 }
 
 func (dh *DownloadHandle) Download(ctx scope.Context) (*http.Response, error) {
@@ -67,7 +67,7 @@ func (dh *DownloadHandle) Download(ctx scope.Context) (*http.Response, error) {
 	if err != nil {
 		return nil, err
 	}
-	for k, vs := range dh.Header {
+	for k, vs := range dh.Headers {
 		for _, v := range vs {
 			req.Header.Add(k, v)
 		}

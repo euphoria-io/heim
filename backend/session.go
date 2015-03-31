@@ -404,6 +404,18 @@ func (s *session) handleCommand(cmd *proto.Packet) *response {
 			err:    err,
 			cost:   1,
 		}
+	case *proto.MediaUploadCommand:
+		var auth *proto.Authentication
+		if s.keyID != "" {
+			auth = s.auth[s.keyID]
+		}
+		obj, err := s.room.NewMedia(s.ctx, s, auth)
+		if err != nil {
+			return &response{err: err}
+		}
+		// TODO: pick mediastore and generate uploadhandle
+		_ = obj
+		return &response{err: fmt.Errorf("not implemented")}
 	case *proto.NickCommand:
 		nick, err := proto.NormalizeNick(msg.Name)
 		if err != nil {

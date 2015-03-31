@@ -127,10 +127,10 @@ func (s *Store) Create(ctx scope.Context, key *security.ManagedKey) (*proto.Uplo
 	}
 
 	handle := &proto.UploadHandle{
-		ID:     id,
-		Header: header,
-		Method: "PUT",
-		URL:    s.baseURL + "/" + id,
+		ID:      id,
+		Headers: header,
+		Method:  "PUT",
+		URL:     s.baseURL + "/" + id,
 	}
 	return handle, nil
 }
@@ -144,8 +144,8 @@ func (s *Store) Get(ctx scope.Context, id string, key *security.ManagedKey) (
 	}
 
 	handle := &proto.DownloadHandle{
-		Header: header,
-		URL:    s.baseURL + "/" + id,
+		Headers: header,
+		URL:     s.baseURL + "/" + id,
 	}
 	return handle, nil
 }

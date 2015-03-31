@@ -35,6 +35,10 @@ var (
 	LogEventType = LogType.Event()
 	LogReplyType = LogType.Reply()
 
+	MediaUploadType      = PacketType("media-upload")
+	MediaUploadEventType = MediaUploadType.Event()
+	MediaUploadReplyType = MediaUploadType.Reply()
+
 	NickType      = PacketType("nick")
 	NickEventType = NickType.Event()
 	NickReplyType = NickType.Reply()
@@ -88,6 +92,10 @@ var (
 		WhoType:      reflect.TypeOf(WhoCommand{}),
 		WhoEventType: reflect.TypeOf(WhoEvent{}),
 		WhoReplyType: reflect.TypeOf(WhoReply{}),
+
+		MediaUploadType:      reflect.TypeOf(MediaUploadCommand{}),
+		MediaUploadReplyType: reflect.TypeOf(MediaUploadReply{}),
+		MediaUploadEventType: reflect.TypeOf(MediaUploadEvent{}),
 	}
 )
 
@@ -185,6 +193,15 @@ type SnapshotEvent struct {
 	Version   string    `json:"version"`
 	Listing   Listing   `json:"listing"`
 	Log       []Message `json:"log"`
+}
+
+type MediaUploadCommand struct{}
+
+type MediaUploadReply UploadHandle
+
+type MediaUploadEvent struct {
+	Transcoding
+	DownloadHandle
 }
 
 type NetworkEvent struct {
