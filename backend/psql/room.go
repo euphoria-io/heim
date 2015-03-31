@@ -3,7 +3,10 @@ package psql
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
+
+	"github.com/go-gorp/gorp"
 
 	"euphoria.io/heim/backend"
 	"euphoria.io/heim/proto"
@@ -39,6 +42,24 @@ func (rb *RoomBinding) Latest(ctx scope.Context, n int, before snowflake.Snowfla
 }
 
 func (rb *RoomBinding) Join(ctx scope.Context, session proto.Session) error {
+	// Check for bans.
+	parts := strings.Split(session.ID(), "-")
+	agentID := parts[0]
+	bans, err := rb.DbMap.Select(
+		BannedAgent{},
+		"SELECT agent_id, room, created, expires, room_reason, agent_reason, private_reason"+
+			" FROM banned_agent"+
+			" WHERE agent_id = $1 AND (room IS NULL OR room = $2)"+
+			" AND (expires IS NULL OR expires > NOW())",
+		agentID, rb.Name)
+	if err != nil {
+		return err
+	}
+	if len(bans) > 0 {
+		backend.Logger(ctx).Printf("access denied to %s: %#v", agentID, bans)
+		return proto.ErrAccessDenied
+	}
+
 	return rb.Backend.join(ctx, rb.Room, session)
 }
 
@@ -49,7 +70,7 @@ func (rb *RoomBinding) Part(ctx scope.Context, session proto.Session) error {
 func (rb *RoomBinding) Send(ctx scope.Context, session proto.Session, msg proto.Message) (
 	proto.Message, error) {
 
-	return rb.Backend.sendMessageToRoom(ctx, rb.Room, session, msg, session)
+	return rb.Backend.sendMessageToRoom(ctx, rb.Room, msg, session)
 }
 
 func (rb *RoomBinding) Listing(ctx scope.Context) (proto.Listing, error) {
@@ -82,7 +103,7 @@ func (rb *RoomBinding) RenameUser(ctx scope.Context, session proto.Session, form
 		From: formerName,
 		To:   session.Identity().Name(),
 	}
-	return event, rb.Backend.broadcast(ctx, rb.Room, session, proto.NickEventType, event, session)
+	return event, rb.Backend.broadcast(ctx, rb.Room, proto.NickEventType, event, session)
 }
 
 func (rb *RoomBinding) GenerateMasterKey(ctx scope.Context, kms security.KMS) (proto.RoomKey, error) {
@@ -217,4 +238,32 @@ func (rb *RoomBinding) GetCapability(ctx scope.Context, id string) (security.Cap
 	}
 
 	return rcb, nil
+}
+
+func (rb *RoomBinding) BanAgent(ctx scope.Context, agentID string, until time.Time) error {
+	ban := &BannedAgent{
+		AgentID: agentID,
+		Room: sql.NullString{
+			String: rb.Name,
+			Valid:  true,
+		},
+		Created: time.Now(),
+		Expires: gorp.NullTime{
+			Time:  until,
+			Valid: !until.IsZero(),
+		},
+	}
+
+	if err := rb.DbMap.Insert(ban); err != nil {
+		return err
+	}
+
+	bounceEvent := &proto.BounceEvent{Reason: "banned", AgentID: agentID}
+	return rb.broadcast(ctx, rb.Room, proto.BounceEventType, bounceEvent)
+}
+
+func (rb *RoomBinding) UnbanAgent(ctx scope.Context, agentID string) error {
+	_, err := rb.DbMap.Exec(
+		"DELETE FROM banned_agent WHERE agent_id = $1 AND room = $2", agentID, rb.Name)
+	return err
 }

@@ -1,7 +1,6 @@
 package proto
 
 import (
-	"fmt"
 	"strings"
 	"unicode/utf8"
 )
@@ -33,11 +32,11 @@ type IdentityView struct {
 func NormalizeNick(name string) (string, error) {
 	name = strings.TrimSpace(name)
 	if len(name) == 0 {
-		return "", fmt.Errorf("invalid nick")
+		return "", ErrInvalidNick
 	}
 	normalized := strings.Join(strings.Fields(name), " ")
 	if utf8.RuneCountInString(normalized) > MaxNickLength {
-		return "", fmt.Errorf("invalid nick")
+		return "", ErrInvalidNick
 	}
 	return normalized, nil
 }

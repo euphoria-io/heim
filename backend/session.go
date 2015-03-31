@@ -46,6 +46,7 @@ type session struct {
 	outgoing chan *proto.Packet
 
 	m                   sync.Mutex
+	banned              bool
 	maybeAbandoned      bool
 	outstandingPings    int
 	expectedPingReply   int64
@@ -256,6 +257,8 @@ func (s *session) handleAuth(cmd *proto.Packet) (interface{}, error) {
 		s.keyID = auth.KeyID
 		s.state = s.handleCommand
 		if err := s.join(); err != nil {
+			s.keyID = ""
+			s.state = s.handleAuth
 			return nil, err
 		}
 		return &proto.AuthReply{Success: true}, nil
@@ -314,12 +317,7 @@ func (s *session) handleCommand(cmd *proto.Packet) (interface{}, error) {
 	}
 }
 
-func (s *session) sendSnapshot() error {
-	msgs, err := s.room.Latest(s.ctx, 100, 0)
-	if err != nil {
-		return err
-	}
-
+func (s *session) sendSnapshot(msgs []proto.Message, listing proto.Listing) error {
 	for i, msg := range msgs {
 		if msg.EncryptionKeyID != "" {
 			dmsg, err := proto.DecryptMessage(msg, s.auth)
@@ -328,11 +326,6 @@ func (s *session) sendSnapshot() error {
 			}
 			msgs[i] = dmsg
 		}
-	}
-
-	listing, err := s.room.Listing(s.ctx)
-	if err != nil {
-		return err
 	}
 
 	snapshot := &proto.SnapshotEvent{
@@ -364,20 +357,33 @@ func (s *session) sendBounce() error {
 }
 
 func (s *session) join() error {
-	if err := s.sendSnapshot(); err != nil {
-		Logger(s.ctx).Printf("snapshot failed: %s", err)
+	msgs, err := s.room.Latest(s.ctx, 100, 0)
+	if err != nil {
 		return err
 	}
+
+	listing, err := s.room.Listing(s.ctx)
+	if err != nil {
+		return err
+	}
+
 	if err := s.room.Join(s.ctx, s); err != nil {
 		Logger(s.ctx).Printf("join failed: %s", err)
 		return err
 	}
+
 	s.onClose = func() {
 		if err := s.room.Part(s.ctx, s); err != nil {
 			// TODO: error handling
 			return
 		}
 	}
+
+	if err := s.sendSnapshot(msgs, listing); err != nil {
+		Logger(s.ctx).Printf("snapshot failed: %s", err)
+		return err
+	}
+
 	return nil
 }
 

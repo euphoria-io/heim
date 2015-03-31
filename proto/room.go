@@ -26,6 +26,13 @@ func (l Listing) Less(i, j int) bool {
 type Room interface {
 	Log
 
+	// BanAgent bans an agent from the room. A zero value for until
+	// indicates a permanent ban.
+	BanAgent(ctc scope.Context, agentID string, until time.Time) error
+
+	// UnbanAgent removes an agent ban from the room.
+	UnbanAgent(ctc scope.Context, agentID string) error
+
 	// Join inserts a Session into the Room's global presence.
 	Join(scope.Context, Session) error
 

@@ -111,8 +111,9 @@ type AuthReply struct {
 type AuthEvent AuthReply
 
 type BounceEvent struct {
-	Reason      string       `json:"reason"`
-	AuthOptions []AuthOption `json:"auth_options"`
+	Reason      string       `json:"reason,omitempty"`
+	AuthOptions []AuthOption `json:"auth_options,omitempty"`
+	AgentID     string       `json:"agent_id,omitempty"`
 }
 
 type SnapshotEvent struct {

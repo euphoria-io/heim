@@ -40,6 +40,9 @@ var schema = map[string]struct {
 
 	// Presence.
 	"presence": {Presence{}, []string{"Room", "Topic", "ServerID", "ServerEra", "SessionID"}},
+
+	// Bans.
+	"banned_agent": {BannedAgent{}, []string{"AgentID", "Room"}},
 }
 
 type Backend struct {
@@ -197,6 +200,16 @@ func (b *Backend) background() {
 				continue
 			}
 
+			// Check for global ban, which is a special-case broadcast.
+			if msg.Room == "" && msg.Event.Type == proto.BounceEventType {
+				for _, lm := range b.listeners {
+					if err := lm.Broadcast(ctx, msg.Event, msg.Exclude...); err != nil {
+						logger.Printf("error: pq listen: bounce broadcast error on %s: %s", msg.Room, err)
+					}
+				}
+				continue
+			}
+
 			if lm, ok := b.listeners[msg.Room]; ok {
 				if err := lm.Broadcast(ctx, msg.Event, msg.Exclude...); err != nil {
 					logger.Printf("error: pq listen: broadcast error on %s: %s", msg.Room, err)
@@ -230,9 +243,31 @@ func (b *Backend) GetRoom(name string) (proto.Room, error) {
 	return room.Bind(b), nil
 }
 
+func (b *Backend) BanAgent(ctx scope.Context, agentID string, until time.Time) error {
+	ban := &BannedAgent{
+		AgentID: agentID,
+		Created: time.Now(),
+		Expires: gorp.NullTime{
+			Time:  until,
+			Valid: !until.IsZero(),
+		},
+	}
+
+	if err := b.DbMap.Insert(ban); err != nil {
+		return err
+	}
+
+	bounceEvent := &proto.BounceEvent{Reason: "banned", AgentID: agentID}
+	return b.broadcast(ctx, nil, proto.BounceEventType, bounceEvent)
+}
+
+func (b *Backend) UnbanAgent(ctx scope.Context, agentID string) error {
+	_, err := b.DbMap.Exec("DELETE FROM banned_agent WHERE agent_id = $1 AND room IS NULL", agentID)
+	return err
+}
+
 func (b *Backend) sendMessageToRoom(
-	ctx scope.Context, room *Room, session proto.Session, msg proto.Message, exclude ...proto.Session) (
-	proto.Message, error) {
+	ctx scope.Context, room *Room, msg proto.Message, exclude ...proto.Session) (proto.Message, error) {
 
 	stored, err := NewMessage(room, msg.Sender, msg.ID, msg.Parent, msg.EncryptionKeyID, msg.Content)
 	if err != nil {
@@ -245,12 +280,12 @@ func (b *Backend) sendMessageToRoom(
 
 	result := stored.ToBackend()
 	event := proto.SendEvent(result)
-	return result, b.broadcast(ctx, room, session, proto.SendEventType, &event, exclude...)
+	return result, b.broadcast(ctx, room, proto.SendEventType, &event, exclude...)
 }
 
 func (b *Backend) broadcast(
-	ctx scope.Context, room *Room, session proto.Session, packetType proto.PacketType,
-	payload interface{}, exclude ...proto.Session) error {
+	ctx scope.Context, room *Room, packetType proto.PacketType, payload interface{},
+	exclude ...proto.Session) error {
 
 	encodedPayload, err := json.Marshal(payload)
 	if err != nil {
@@ -259,9 +294,11 @@ func (b *Backend) broadcast(
 
 	packet := &proto.Packet{Type: packetType, Data: json.RawMessage(encodedPayload)}
 	broadcastMsg := BroadcastMessage{
-		Room:    room.Name,
 		Event:   packet,
 		Exclude: make([]string, len(exclude)),
+	}
+	if room != nil {
+		broadcastMsg.Room = room.Name
 	}
 	for i, s := range exclude {
 		broadcastMsg.Exclude[i] = s.ID()
@@ -311,7 +348,7 @@ func (b *Backend) join(ctx scope.Context, room *Room, session proto.Session) err
 	}
 	fmt.Printf("joining session: %#v\n", session)
 	fmt.Printf(" -> %#v\n", session.Identity().View())
-	return b.broadcast(ctx, room, session,
+	return b.broadcast(ctx, room,
 		proto.JoinEventType, proto.PresenceEvent(*session.Identity().View()), session)
 }
 
@@ -333,7 +370,7 @@ func (b *Backend) part(ctx scope.Context, room *Room, session proto.Session) err
 
 	// Broadcast a presence event.
 	// TODO: make this an explicit action via the Room protocol, to support encryption
-	return b.broadcast(ctx, room, session,
+	return b.broadcast(ctx, room,
 		proto.PartEventType, proto.PresenceEvent(*session.Identity().View()), session)
 }
 

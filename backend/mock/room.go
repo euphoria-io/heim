@@ -19,6 +19,7 @@ type memRoom struct {
 	name         string
 	version      string
 	log          *memLog
+	bans         map[string]time.Time
 	identities   map[string]proto.Identity
 	live         map[string][]proto.Session
 	capabilities map[string]security.Capability
@@ -31,6 +32,7 @@ func newMemRoom(name, version string) *memRoom {
 		name:         name,
 		version:      version,
 		log:          newMemLog(),
+		bans:         map[string]time.Time{},
 		capabilities: map[string]security.Capability{},
 	}
 }
@@ -54,6 +56,10 @@ func (r *memRoom) Join(ctx scope.Context, session proto.Session) error {
 
 	ident := session.Identity()
 	id := ident.ID()
+
+	if banned, ok := r.bans[id]; ok && banned.After(time.Now()) {
+		return proto.ErrAccessDenied
+	}
 
 	if _, ok := r.identities[id]; !ok {
 		r.identities[id] = ident
@@ -184,6 +190,22 @@ func (r *memRoom) SaveCapability(ctx scope.Context, capability security.Capabili
 
 func (r *memRoom) GetCapability(ctx scope.Context, id string) (security.Capability, error) {
 	return r.capabilities[id], nil
+}
+
+func (r *memRoom) BanAgent(ctx scope.Context, agentID string, until time.Time) error {
+	r.Lock()
+	r.bans[agentID] = until
+	r.Unlock()
+	return nil
+}
+
+func (r *memRoom) UnbanAgent(ctx scope.Context, agentID string) error {
+	r.Lock()
+	if _, ok := r.bans[agentID]; ok {
+		delete(r.bans, agentID)
+	}
+	r.Unlock()
+	return nil
 }
 
 type roomKey struct {
