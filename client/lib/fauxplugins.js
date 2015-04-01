@@ -125,4 +125,16 @@ module.exports = function(roomName) {
       }
     }, true)
   }
+
+  if (roomName == 'xkcd') {
+    Heim.hook('page-bottom', function() {
+      return (
+        <style key="xkcd-style" dangerouslySetInnerHTML={{__html:`
+          .embeds {
+            display: none !important;
+          }
+        `}} />
+      )
+    })
+  }
 }
