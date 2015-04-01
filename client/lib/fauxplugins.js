@@ -115,12 +115,14 @@ module.exports = function(roomName) {
     }
   }
 
-  Heim.addEventListener(uidocument.body, 'keydown', function(ev) {
-    var SyntheticKeyboardEvent = require('react/lib/SyntheticKeyboardEvent')
-    var reactEvent = new SyntheticKeyboardEvent(null, null, ev)
-    if (reactEvent.key == 'Backspace' || reactEvent.key == 'Delete') {
-      reactEvent.preventDefault()
-      reactEvent.stopPropagation()
-    }
-  }, true)
+  if (roomName != 'xkcd') {
+    Heim.addEventListener(uidocument.body, 'keydown', function(ev) {
+      var SyntheticKeyboardEvent = require('react/lib/SyntheticKeyboardEvent')
+      var reactEvent = new SyntheticKeyboardEvent(null, null, ev)
+      if (reactEvent.key == 'Backspace' || reactEvent.key == 'Delete') {
+        reactEvent.preventDefault()
+        reactEvent.stopPropagation()
+      }
+    }, true)
+  }
 }
