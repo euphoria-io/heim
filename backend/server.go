@@ -46,11 +46,9 @@ type Server struct {
 	staticPath string
 	sc         *securecookie.SecureCookie
 	rootCtx    scope.Context
+	media      *MediaDispatcher
 
 	allowRoomCreation bool
-
-	media        map[string]proto.MediaResolver
-	defaultMedia string
 
 	m sync.Mutex
 
@@ -82,6 +80,9 @@ func NewServer(
 }
 
 func (s *Server) AllowRoomCreation(allow bool) { s.allowRoomCreation = allow }
+
+func (s *Server) SetMediaDispatcher(dispatcher *MediaDispatcher) { s.media = dispatcher }
+func (s *Server) MediaDispatcher() *MediaDispatcher              { return s.media }
 
 func (s *Server) route() {
 	s.r = mux.NewRouter().StrictSlash(true)
@@ -280,29 +281,11 @@ func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
 	defer conn.Close()
 
 	// Serve the session.
-	session := newSession(ctx, conn, s.ID, s.Era, roomName, room, proto.MediaResolverSet(s), agentID)
+	session := newSession(ctx, conn, s.ID, s.Era, s.media, roomName, room, agentID)
 	if err = session.serve(); err != nil {
 		// TODO: error handling
 		return
 	}
-}
-
-func (s *Server) AddMediaResolver(name string, resolver proto.MediaResolver) { s.media[name] = resolver }
-func (s *Server) SetDefaultMediaResolver(name string)                        { s.defaultMedia = name }
-
-func (s *Server) GetDefaultMediaResolver() (string, proto.MediaResolver, error) {
-	if s.media == nil || s.defaultMedia == "" {
-		return "", nil, fmt.Errorf("media uploads/downloads not configured")
-	}
-	return s.defaultMedia, s.media[s.defaultMedia], nil
-}
-
-func (s *Server) GetMediaResolver(name string) (proto.MediaResolver, error) {
-	resolver, ok := s.media[name]
-	if !ok {
-		return nil, fmt.Errorf("no such media resolver: %s", name)
-	}
-	return resolver, nil
 }
 
 func (s *Server) handleMedia(w http.ResponseWriter, r *http.Request) {

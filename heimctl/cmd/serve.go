@@ -101,6 +101,12 @@ func (cmd *serveCmd) run(ctx scope.Context, args []string) error {
 
 	server.AllowRoomCreation(backend.Config.AllowRoomCreation)
 
+	dispatcher, err := backend.Config.Media.MediaDispatcher()
+	if err != nil {
+		return fmt.Errorf("media error: %s", err)
+	}
+	server.SetMediaDispatcher(dispatcher)
+
 	// Spin off goroutine to watch ctx and close listener if shutdown requested.
 	go func() {
 		<-ctx.Done()

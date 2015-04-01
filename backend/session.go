@@ -75,15 +75,15 @@ type response struct {
 type cmdState func(*proto.Packet) *response
 
 type session struct {
-	id             string
-	ctx            scope.Context
-	conn           *websocket.Conn
-	identity       *memIdentity
-	serverID       string
-	serverEra      string
-	roomName       string
-	room           proto.Room
-	mediaResolvers proto.MediaResolverSet
+	id        string
+	ctx       scope.Context
+	conn      *websocket.Conn
+	identity  *memIdentity
+	serverID  string
+	serverEra string
+	roomName  string
+	room      proto.Room
+	media     *MediaDispatcher
 
 	state   cmdState
 	auth    map[string]*proto.Authentication
@@ -105,8 +105,8 @@ type session struct {
 }
 
 func newSession(
-	ctx scope.Context, conn *websocket.Conn, serverID, serverEra string, roomName string, room proto.Room,
-	mediaResolvers proto.MediaResolverSet, agentID []byte) *session {
+	ctx scope.Context, conn *websocket.Conn, serverID, serverEra string, dispatcher *MediaDispatcher,
+	roomName string, room proto.Room, agentID []byte) *session {
 
 	nextID := atomic.AddUint64(&sessionIDCounter, 1)
 	sessionCount.WithLabelValues(roomName).Set(float64(nextID))
@@ -114,15 +114,15 @@ func newSession(
 	ctx = LoggingContext(ctx, fmt.Sprintf("[%s] ", sessionID))
 
 	session := &session{
-		id:             sessionID,
-		ctx:            ctx,
-		conn:           conn,
-		identity:       newMemIdentity(fmt.Sprintf("agent:%08x", agentID), serverID, serverEra),
-		serverID:       serverID,
-		serverEra:      serverEra,
-		roomName:       roomName,
-		room:           room,
-		mediaResolvers: mediaResolvers,
+		id:        sessionID,
+		ctx:       ctx,
+		conn:      conn,
+		identity:  newMemIdentity(fmt.Sprintf("agent:%08x", agentID), serverID, serverEra),
+		serverID:  serverID,
+		serverEra: serverEra,
+		roomName:  roomName,
+		room:      room,
+		media:     dispatcher,
 
 		incoming:     make(chan *proto.Packet),
 		outgoing:     make(chan *proto.Packet, 100),
@@ -407,7 +407,7 @@ func (s *session) handleCommand(cmd *proto.Packet) *response {
 			cost:   1,
 		}
 	case *proto.MediaUploadCommand:
-		resolverName, resolver, err := s.mediaResolvers.GetDefaultMediaResolver()
+		resolverName, resolver, err := s.media.Default()
 		if err != nil {
 			return &response{err: err}
 		}

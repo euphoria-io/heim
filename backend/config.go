@@ -11,6 +11,7 @@ import (
 
 	"euphoria.io/heim/aws/kms"
 	"euphoria.io/heim/backend/cluster"
+	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/security"
 	"euphoria.io/scope"
 )
@@ -66,6 +67,7 @@ type ServerConfig struct {
 	Console ConsoleConfig  `yaml:"console,omitempty"`
 	DB      DatabaseConfig `yaml:"database"`
 	KMS     KMSConfig      `yaml:"kms"`
+	Media   MediaConfig    `yaml:"media,omitempty"`
 }
 
 func (cfg *ServerConfig) String() string {
@@ -208,4 +210,52 @@ func (kc *KMSConfig) amazon() (security.KMS, error) {
 		return nil, fmt.Errorf("key-id must be specified")
 	}
 	return kms.New(kc.Amazon.Region, kc.Amazon.KeyID)
+}
+
+type MediaConfig struct {
+	Default string                        `yaml:"default"`
+	Storage map[string]MediaStorageConfig `yaml:"storage"`
+}
+
+func (mc *MediaConfig) MediaDispatcher() (*MediaDispatcher, error) {
+	d := &MediaDispatcher{}
+	for name, cfg := range mc.Storage {
+		resolver, err := cfg.Resolver()
+		if err != nil {
+			return nil, fmt.Errorf("%s: %s", name, err)
+		}
+		d.Add(name, resolver, cfg.Key, cfg.Secret)
+	}
+	if mc.Default != "" {
+		if err := d.SetDefault(mc.Default); err != nil {
+			return nil, err
+		}
+	}
+	return d, nil
+}
+
+type MediaStorageConfig struct {
+	Key    string `yaml:"key"`
+	Secret string `yaml:"secret"`
+
+	Simple struct {
+		URL string `yaml:"url"`
+	} `yaml:"simple,omitempty"`
+
+	S3 struct {
+		AccessKey string `yaml:"access_key"`
+		SecretKey string `yaml:"secret_key"`
+		Bucket    string `yaml:"bucket"`
+	} `yaml:"s3,omitempty"`
+}
+
+func (msc *MediaStorageConfig) Resolver() (proto.MediaResolver, error) {
+	switch {
+	case msc.Simple.URL != "":
+		return simpleMediaResolver(msc.Simple.URL), nil
+	case msc.S3.Bucket != "":
+		return nil, fmt.Errorf("s3 not implemented")
+	default:
+		return nil, fmt.Errorf("storage configuration missing")
+	}
 }
