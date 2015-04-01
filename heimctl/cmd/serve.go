@@ -96,6 +96,8 @@ func (cmd *serveCmd) run(ctx scope.Context, args []string) error {
 		return fmt.Errorf("server error: %s", err)
 	}
 
+	server.AllowRoomCreation(backend.Config.AllowRoomCreation)
+
 	// Spin off goroutine to watch ctx and close listener if shutdown requested.
 	go func() {
 		<-ctx.Done()

@@ -23,7 +23,7 @@ func TestGrants(t *testing.T) {
 		kms.SetMasterKey(make([]byte, security.AES256.KeySize()))
 		ctx := scope.New()
 		backend := &mock.TestBackend{}
-		room, err := backend.GetRoom("test")
+		room, err := backend.GetRoom("test", true)
 		So(err, ShouldBeNil)
 		roomMasterKey, err := room.GenerateMasterKey(ctx, kms)
 		So(err, ShouldBeNil)

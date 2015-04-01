@@ -18,9 +18,9 @@ type Backend interface {
 
 	Close()
 
-	// Gets a Room by name. If the Room doesn't already exist, it should
-	// be created.
-	GetRoom(name string) (Room, error)
+	// Gets a Room by name. If the Room doesn't already exist and create is
+	// true, a new room will be created and returned.
+	GetRoom(name string, create bool) (Room, error)
 
 	// Peers returns a snapshot of known peers in this backend's cluster.
 	Peers() []cluster.PeerDesc

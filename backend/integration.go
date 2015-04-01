@@ -201,6 +201,7 @@ func IntegrationTest(factory func() proto.Backend) {
 		kms.SetMasterKey(make([]byte, security.AES256.KeySize()))
 		app, err := NewServer(scope.New(), backend, &cluster.TestCluster{}, kms, "test1", "era1", "")
 		So(err, ShouldBeNil)
+		app.AllowRoomCreation(true)
 		app.agentIDGenerator = func() ([]byte, error) {
 			agentIDCounter++
 			return []byte(fmt.Sprintf("%d", agentIDCounter)), nil
@@ -365,6 +366,7 @@ func testPresence(factory func() proto.Backend) {
 	kms.SetMasterKey(make([]byte, security.AES256.KeySize()))
 	app, err := NewServer(scope.New(), backend, &cluster.TestCluster{}, kms, "test1", "era1", "")
 	So(err, ShouldBeNil)
+	app.AllowRoomCreation(true)
 	agentIDCounter := 0
 	app.agentIDGenerator = func() ([]byte, error) {
 		agentIDCounter++
@@ -447,6 +449,7 @@ func testPresence(factory func() proto.Backend) {
 		kms := security.LocalKMS()
 		app2, err := NewServer(scope.New(), backend2, &cluster.TestCluster{}, kms, "test2", "", "")
 		So(err, ShouldBeNil)
+		app2.AllowRoomCreation(true)
 		server2 := httptest.NewServer(app2)
 		defer server2.Close()
 		s2 := &serverUnderTest{backend2, app2, server2}
@@ -473,7 +476,7 @@ func testPresence(factory func() proto.Backend) {
 }
 
 func testAuthentication(s *serverUnderTest) {
-	room, err := s.backend.GetRoom("private")
+	room, err := s.backend.GetRoom("private", true)
 	So(err, ShouldBeNil)
 
 	ctx := scope.New()

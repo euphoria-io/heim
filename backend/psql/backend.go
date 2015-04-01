@@ -222,7 +222,7 @@ func (b *Backend) background() {
 	}
 }
 
-func (b *Backend) GetRoom(name string) (proto.Room, error) {
+func (b *Backend) GetRoom(name string, create bool) (proto.Room, error) {
 	obj, err := b.DbMap.Get(Room{}, name)
 	if err != nil {
 		return nil, err
@@ -230,6 +230,9 @@ func (b *Backend) GetRoom(name string) (proto.Room, error) {
 
 	var room *Room
 	if obj == nil {
+		if !create {
+			return nil, fmt.Errorf("no such room")
+		}
 		room = &Room{
 			Name: name,
 		}

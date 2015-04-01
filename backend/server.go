@@ -43,6 +43,8 @@ type Server struct {
 	sc         *securecookie.SecureCookie
 	rootCtx    scope.Context
 
+	allowRoomCreation bool
+
 	m sync.Mutex
 
 	agentIDGenerator func() ([]byte, error)
@@ -69,6 +71,8 @@ func NewServer(
 	s.route()
 	return s, nil
 }
+
+func (s *Server) AllowRoomCreation(allow bool) { s.allowRoomCreation = allow }
 
 func (s *Server) route() {
 	s.r = mux.NewRouter().StrictSlash(true)
@@ -104,6 +108,16 @@ func (s *Server) handleStatic(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleRoomStatic(w http.ResponseWriter, r *http.Request) {
+	if !s.allowRoomCreation {
+		roomName := mux.Vars(r)["room"]
+		_, err := s.b.GetRoom(roomName, false)
+		if err != nil {
+			if err.Error() == "no such room" {
+				http.Error(w, "404 page not found", http.StatusNotFound)
+				return
+			}
+		}
+	}
 	http.ServeFile(w, r, path.Join(s.staticPath, "index.html"))
 }
 
@@ -162,8 +176,12 @@ func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
 
 	// Resolve the room.
 	roomName := mux.Vars(r)["room"]
-	room, err := s.b.GetRoom(roomName)
+	room, err := s.b.GetRoom(roomName, s.allowRoomCreation)
 	if err != nil {
+		if err.Error() == "no such room" {
+			http.Error(w, "404 page not found", http.StatusNotFound)
+			return
+		}
 		logger.Printf("get room %s: %s", roomName, err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

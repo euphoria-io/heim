@@ -1,6 +1,7 @@
 package mock
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -20,12 +21,16 @@ func (b *TestBackend) Close() {}
 
 func (b *TestBackend) Version() string { return b.version }
 
-func (b *TestBackend) GetRoom(name string) (proto.Room, error) {
+func (b *TestBackend) GetRoom(name string, create bool) (proto.Room, error) {
 	b.Lock()
 	defer b.Unlock()
 
 	if room, ok := b.rooms[name]; ok {
 		return room, nil
+	}
+
+	if !create {
+		return nil, fmt.Errorf("no such room")
 	}
 
 	if b.rooms == nil {

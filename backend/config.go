@@ -46,6 +46,8 @@ func init() {
 		"id of the AWS key to use for crypto")
 	flag.StringVar(&Config.KMS.AES256.KeyFile, "kms-local-key-file", env("HEIM_KMS_LOCAL_KEY", ""),
 		"path to file containing a 256-bit key for using local key-management instead of AWS")
+
+	flag.BoolVar(&Config.AllowRoomCreation, "allow-room-creation", true, "allow rooms to be created")
 }
 
 type CSV []string
@@ -58,6 +60,8 @@ func (k *CSV) Set(flags string) error {
 }
 
 type ServerConfig struct {
+	AllowRoomCreation bool `yaml:"allow_room_creation"`
+
 	Cluster ClusterConfig  `yaml:"cluster,omitempty"`
 	Console ConsoleConfig  `yaml:"console,omitempty"`
 	DB      DatabaseConfig `yaml:"database"`
