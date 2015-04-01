@@ -86,7 +86,9 @@ type Room interface {
 
 	// NewMedia registers and returns a media object. A non-nil Authentication
 	// value produces an encrypted upload.
-	NewMedia(scope.Context, Session, *Authentication) (*MediaObject, error)
+	NewMedia(
+		ctx scope.Context, session Session, auth *Authentication, resolverName string) (
+		*MediaObject, error)
 
 	// GetMedia returns a media object with download handles for all its transcodings.
 	GetMedia(ctx scope.Context, mediaID string) (*MediaSet, error)

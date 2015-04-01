@@ -288,7 +288,8 @@ func (r *memRoom) IsValidParent(id snowflake.Snowflake) (bool, error) {
 	return true, nil
 }
 
-func (r *memRoom) NewMedia(ctx scope.Context, session proto.Session, auth *proto.Authentication) (
+func (r *memRoom) NewMedia(
+	ctx scope.Context, session proto.Session, auth *proto.Authentication, resolverName string) (
 	*proto.MediaObject, error) {
 
 	id, err := snowflake.New()
@@ -299,6 +300,7 @@ func (r *memRoom) NewMedia(ctx scope.Context, session proto.Session, auth *proto
 	obj := &proto.MediaObject{
 		ID:       id.String(),
 		Room:     r.name,
+		Storage:  resolverName,
 		Uploader: session.Identity().View(),
 		Created:  proto.Time(time.Now()),
 	}

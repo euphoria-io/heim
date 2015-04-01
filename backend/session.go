@@ -75,14 +75,15 @@ type response struct {
 type cmdState func(*proto.Packet) *response
 
 type session struct {
-	id        string
-	ctx       scope.Context
-	conn      *websocket.Conn
-	identity  *memIdentity
-	serverID  string
-	serverEra string
-	roomName  string
-	room      proto.Room
+	id             string
+	ctx            scope.Context
+	conn           *websocket.Conn
+	identity       *memIdentity
+	serverID       string
+	serverEra      string
+	roomName       string
+	room           proto.Room
+	mediaResolvers proto.MediaResolverSet
 
 	state   cmdState
 	auth    map[string]*proto.Authentication
@@ -104,8 +105,8 @@ type session struct {
 }
 
 func newSession(
-	ctx scope.Context, conn *websocket.Conn, serverID, serverEra, roomName string, room proto.Room,
-	agentID []byte) *session {
+	ctx scope.Context, conn *websocket.Conn, serverID, serverEra string, roomName string, room proto.Room,
+	mediaResolvers proto.MediaResolverSet, agentID []byte) *session {
 
 	nextID := atomic.AddUint64(&sessionIDCounter, 1)
 	sessionCount.WithLabelValues(roomName).Set(float64(nextID))
@@ -113,14 +114,15 @@ func newSession(
 	ctx = LoggingContext(ctx, fmt.Sprintf("[%s] ", sessionID))
 
 	session := &session{
-		id:        sessionID,
-		ctx:       ctx,
-		conn:      conn,
-		identity:  newMemIdentity(fmt.Sprintf("agent:%08x", agentID), serverID, serverEra),
-		serverID:  serverID,
-		serverEra: serverEra,
-		roomName:  roomName,
-		room:      room,
+		id:             sessionID,
+		ctx:            ctx,
+		conn:           conn,
+		identity:       newMemIdentity(fmt.Sprintf("agent:%08x", agentID), serverID, serverEra),
+		serverID:       serverID,
+		serverEra:      serverEra,
+		roomName:       roomName,
+		room:           room,
+		mediaResolvers: mediaResolvers,
 
 		incoming:     make(chan *proto.Packet),
 		outgoing:     make(chan *proto.Packet, 100),
@@ -405,17 +407,23 @@ func (s *session) handleCommand(cmd *proto.Packet) *response {
 			cost:   1,
 		}
 	case *proto.MediaUploadCommand:
+		resolverName, resolver, err := s.mediaResolvers.GetDefaultMediaResolver()
+		if err != nil {
+			return &response{err: err}
+		}
 		var auth *proto.Authentication
 		if s.keyID != "" {
 			auth = s.auth[s.keyID]
 		}
-		obj, err := s.room.NewMedia(s.ctx, s, auth)
+		obj, err := s.room.NewMedia(s.ctx, s, auth, resolverName)
 		if err != nil {
 			return &response{err: err}
 		}
-		// TODO: pick mediastore and generate uploadhandle
-		_ = obj
-		return &response{err: fmt.Errorf("not implemented")}
+		uploadHandle, err := resolver.Create(s.ctx, obj.ID, auth.Key)
+		if err != nil {
+			return &response{err: err}
+		}
+		return &response{packet: proto.MediaUploadReply(*uploadHandle)}
 	case *proto.NickCommand:
 		nick, err := proto.NormalizeNick(msg.Name)
 		if err != nil {

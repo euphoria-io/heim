@@ -17,6 +17,7 @@ type MediaSet struct {
 type MediaObject struct {
 	ID       string        `json:"id"`
 	Room     string        `json:"room"`
+	Storage  string        `json:"-"`
 	Uploader *IdentityView `json:"uploader"`
 	Created  Time          `json:"created"`
 	Uploaded Time          `json:"uploaded,omitempty"`
@@ -32,9 +33,16 @@ type Transcoding struct {
 	Height      int    `json:"height,omitempty"`
 }
 
-type MediaStore interface {
-	Create(scope.Context, *security.ManagedKey) (*UploadHandle, error)
-	Get(ctx scope.Context, uri string, key *security.ManagedKey) (*DownloadHandle, error)
+type MediaResolverSet interface {
+	AddMediaResolver(name string, resolver MediaResolver)
+	GetMediaResolver(name string) (MediaResolver, error)
+	GetDefaultMediaResolver() (string, MediaResolver, error)
+	SetDefaultMediaResolver(name string)
+}
+
+type MediaResolver interface {
+	Create(ctx scope.Context, mediaID string, key *security.ManagedKey) (*UploadHandle, error)
+	Get(ctx scope.Context, mediaID string, key *security.ManagedKey) (*DownloadHandle, error)
 }
 
 type UploadHandle struct {

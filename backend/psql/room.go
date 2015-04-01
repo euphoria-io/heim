@@ -438,7 +438,8 @@ func (rb *RoomBinding) UnbanIP(ctx scope.Context, ip string) error {
 	return err
 }
 
-func (rb *RoomBinding) NewMedia(ctx scope.Context, session proto.Session, auth *proto.Authentication) (
+func (rb *RoomBinding) NewMedia(
+	ctx scope.Context, session proto.Session, auth *proto.Authentication, resolverName string) (
 	*proto.MediaObject, error) {
 
 	return nil, notImpl

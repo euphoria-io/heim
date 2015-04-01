@@ -5,6 +5,7 @@ import "time"
 type MediaObject struct {
 	ID              string
 	Room            string
+	Storage         string
 	AgentID         string `db:"agent_id"`
 	Created         time.Time
 	Updated         time.Time

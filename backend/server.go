@@ -49,6 +49,9 @@ type Server struct {
 
 	allowRoomCreation bool
 
+	media        map[string]proto.MediaResolver
+	defaultMedia string
+
 	m sync.Mutex
 
 	agentIDGenerator func() ([]byte, error)
@@ -277,11 +280,29 @@ func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
 	defer conn.Close()
 
 	// Serve the session.
-	session := newSession(ctx, conn, s.ID, s.Era, roomName, room, agentID)
+	session := newSession(ctx, conn, s.ID, s.Era, roomName, room, proto.MediaResolverSet(s), agentID)
 	if err = session.serve(); err != nil {
 		// TODO: error handling
 		return
 	}
+}
+
+func (s *Server) AddMediaResolver(name string, resolver proto.MediaResolver) { s.media[name] = resolver }
+func (s *Server) SetDefaultMediaResolver(name string)                        { s.defaultMedia = name }
+
+func (s *Server) GetDefaultMediaResolver() (string, proto.MediaResolver, error) {
+	if s.media == nil || s.defaultMedia == "" {
+		return "", nil, fmt.Errorf("media uploads/downloads not configured")
+	}
+	return s.defaultMedia, s.media[s.defaultMedia], nil
+}
+
+func (s *Server) GetMediaResolver(name string) (proto.MediaResolver, error) {
+	resolver, ok := s.media[name]
+	if !ok {
+		return nil, fmt.Errorf("no such media resolver: %s", name)
+	}
+	return resolver, nil
 }
 
 func (s *Server) handleMedia(w http.ResponseWriter, r *http.Request) {

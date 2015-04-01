@@ -1,9 +1,7 @@
 package filestore
 
 import (
-	"crypto/rand"
 	"encoding/base64"
-	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -33,15 +31,6 @@ func verifyPath(path string) error {
 	return nil
 }
 
-func newID() (string, error) {
-	// Make ID lengths equal to AES256 block size so we can use as IV.
-	buf := make([]byte, security.AES256.BlockSize())
-	if _, err := rand.Read(buf); err != nil {
-		return "", fmt.Errorf("rand: %s", err)
-	}
-	return hex.EncodeToString(buf), nil
-}
-
 func keyHeaders(key *security.ManagedKey) (http.Header, error) {
 	header := http.Header{}
 
@@ -61,19 +50,9 @@ func keyHeaders(key *security.ManagedKey) (http.Header, error) {
 	return header, nil
 }
 
-func parseID(uri string) ([]byte, error) {
-	if len(uri) != security.AES256.BlockSize()*2+1 || !strings.HasPrefix(uri, "/") {
-		return nil, fmt.Errorf("invalid id")
-	}
-	return hex.DecodeString(uri[1:])
-}
-
 func parseRequest(r *http.Request) (string, *security.ManagedKey, error) {
-	idBytes, err := parseID(r.URL.Path)
-	if err != nil {
-		return "", nil, err
-	}
-	id := r.URL.Path[1:]
+	id := strings.Trim(r.URL.Path, "/")
+	idBytes := []byte(id)
 
 	switch keyType := r.Header.Get("x-heim-dev-key-type"); keyType {
 	case "":
@@ -89,7 +68,7 @@ func parseRequest(r *http.Request) (string, *security.ManagedKey, error) {
 		key := &security.ManagedKey{
 			KeyType:   security.AES256,
 			Plaintext: data,
-			IV:        idBytes,
+			IV:        security.AES256.Pad(idBytes)[:security.AES256.BlockSize()],
 		}
 		return id, key, nil
 	default:
@@ -115,22 +94,19 @@ type Store struct {
 	baseURL string
 }
 
-func (s *Store) Create(ctx scope.Context, key *security.ManagedKey) (*proto.UploadHandle, error) {
+func (s *Store) Create(ctx scope.Context, mediaID string, key *security.ManagedKey) (
+	*proto.UploadHandle, error) {
+
 	header, err := keyHeaders(key)
 	if err != nil {
 		return nil, fmt.Errorf("filestore create: %s", err)
 	}
 
-	id, err := newID()
-	if err != nil {
-		return nil, fmt.Errorf("filestore create: %s", err)
-	}
-
 	handle := &proto.UploadHandle{
-		ID:      id,
+		ID:      mediaID,
 		Headers: header,
 		Method:  "PUT",
-		URL:     s.baseURL + "/" + id,
+		URL:     s.baseURL + "/" + mediaID,
 	}
 	return handle, nil
 }

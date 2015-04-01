@@ -11,6 +11,7 @@ import (
 
 	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/security"
+	"euphoria.io/heim/proto/snowflake"
 	"euphoria.io/scope"
 
 	. "github.com/smartystreets/goconvey/convey"
@@ -35,13 +36,21 @@ func TestStore(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Compile-time assertion that FileStore implements proto.MediaStore
-	_ = proto.MediaStore(fs)
+	newID := func() string {
+		sf, err := snowflake.New()
+		if err != nil {
+			t.Fatal(err)
+		}
+		return sf.String()
+	}
+
+	// Compile-time assertion that FileStore implements proto.MediaResolver
+	_ = proto.MediaResolver(fs)
 
 	Convey("Unencrypted file store", t, func() {
 		ctx := scope.New()
 
-		uh, err := fs.Create(ctx, nil)
+		uh, err := fs.Create(ctx, newID(), nil)
 		So(err, ShouldBeNil)
 
 		_, err = os.Stat(fs.path(uh.ID))
@@ -77,7 +86,7 @@ func TestStore(t *testing.T) {
 		So(err, ShouldBeNil)
 		key := &security.ManagedKey{KeyType: security.AES256, Plaintext: keyBytes}
 
-		uh, err := fs.Create(ctx, key)
+		uh, err := fs.Create(ctx, newID(), key)
 		So(err, ShouldBeNil)
 
 		content := "secret content"
