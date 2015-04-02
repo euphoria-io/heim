@@ -1,4 +1,4 @@
-package media
+package proto
 
 import (
 	"io"
@@ -8,9 +8,33 @@ import (
 	"euphoria.io/scope"
 )
 
-type Store interface {
+type MediaSet struct {
+	Object       MediaObject
+	Transcodings map[string]Transcoding
+	Handles      map[string]DownloadHandle
+}
+
+type MediaObject struct {
+	ID       string        `json:"id"`
+	Room     string        `json:"room"`
+	Uploader *IdentityView `json:"uploader"`
+	Created  Time          `json:"created"`
+	Uploaded Time          `json:"uploaded,omitempty"`
+}
+
+type Transcoding struct {
+	MediaID     string `json:"media_id"`
+	Name        string `json:"name"`
+	URI         string `json:"-"`
+	ContentType string `json:"content_type"`
+	Size        uint64 `json:"size"`
+	Width       int    `json:"width,omitempty"`
+	Height      int    `json:"height,omitempty"`
+}
+
+type MediaStore interface {
 	Create(scope.Context, *security.ManagedKey) (*UploadHandle, error)
-	Get(ctx scope.Context, id string, key *security.ManagedKey) (*DownloadHandle, error)
+	Get(ctx scope.Context, uri string, key *security.ManagedKey) (*DownloadHandle, error)
 }
 
 type UploadHandle struct {

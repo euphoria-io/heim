@@ -99,3 +99,8 @@ type MessageEditLog struct {
 	PreviousContent string         `db:"previous_content"`
 	PreviousParent  sql.NullString `db:"previous_parent"`
 }
+
+type MessageAttachment struct {
+	MessageID string `db:"message_id"`
+	MediaID   string `db:"media_id"`
+}

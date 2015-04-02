@@ -13,19 +13,34 @@ import (
 	"euphoria.io/scope"
 )
 
+type roomKey struct {
+	id        string
+	timestamp time.Time
+	nonce     []byte
+	key       security.ManagedKey
+}
+
+func (k *roomKey) KeyID() string                   { return k.id }
+func (k *roomKey) Timestamp() time.Time            { return k.timestamp }
+func (k *roomKey) Nonce() []byte                   { return k.nonce }
+func (k *roomKey) ManagedKey() security.ManagedKey { return k.key.Clone() }
+
 type memRoom struct {
 	sync.Mutex
 
-	name         string
-	version      string
-	log          *memLog
-	agentBans    map[string]time.Time
-	ipBans       map[string]time.Time
-	identities   map[string]proto.Identity
-	live         map[string][]proto.Session
+	name       string
+	version    string
+	log        *memLog
+	agentBans  map[string]time.Time
+	ipBans     map[string]time.Time
+	identities map[string]proto.Identity
+	live       map[string][]proto.Session
+
+	key          *roomKey
 	capabilities map[string]security.Capability
 
-	key *roomKey
+	media        map[string]proto.MediaObject
+	transcodings map[string]map[string]proto.Transcoding
 }
 
 func newMemRoom(name, version string) *memRoom {
@@ -36,6 +51,8 @@ func newMemRoom(name, version string) *memRoom {
 		agentBans:    map[string]time.Time{},
 		ipBans:       map[string]time.Time{},
 		capabilities: map[string]security.Capability{},
+		media:        map[string]proto.MediaObject{},
+		transcodings: map[string]map[string]proto.Transcoding{},
 	}
 }
 
@@ -271,14 +288,58 @@ func (r *memRoom) IsValidParent(id snowflake.Snowflake) (bool, error) {
 	return true, nil
 }
 
+func (r *memRoom) NewMedia(ctx scope.Context, session proto.Session, auth *proto.Authentication) (
+	*proto.MediaObject, error) {
+
+	id, err := snowflake.New()
+	if err != nil {
+		return nil, err
+	}
+
+	obj := &proto.MediaObject{
+		ID:       id.String(),
+		Room:     r.name,
+		Uploader: session.Identity().View(),
+		Created:  proto.Time(time.Now()),
+	}
+
+	r.Lock()
+	r.media[obj.ID] = *obj
+	r.transcodings[obj.ID] = map[string]proto.Transcoding{}
+	r.Unlock()
+	return obj, nil
+}
+
+func (r *memRoom) GetMedia(ctx scope.Context, mediaID string) (*proto.MediaSet, error) {
+	r.Lock()
+	defer r.Unlock()
+
+	obj, ok := r.media[mediaID]
+	if !ok {
+		return nil, proto.ErrMediaNotFound
+	}
+
+	result := &proto.MediaSet{
+		Object:       obj,
+		Transcodings: r.transcodings[mediaID],
+	}
+	return result, nil
+}
+
+func (r *memRoom) AddMediaTranscoding(ctx scope.Context, t *proto.Transcoding) error {
+	r.Lock()
+	defer r.Unlock()
+	tm, ok := r.transcodings[t.MediaID]
+	if !ok {
+		return proto.ErrMediaNotFound
+	}
+	tm[t.Name] = *t
+	return nil
+}
+
 type roomKey struct {
 	id        string
 	timestamp time.Time
 	nonce     []byte
 	key       security.ManagedKey
 }
-
-func (k *roomKey) KeyID() string                   { return k.id }
-func (k *roomKey) Timestamp() time.Time            { return k.timestamp }
-func (k *roomKey) Nonce() []byte                   { return k.nonce }
-func (k *roomKey) ManagedKey() security.ManagedKey { return k.key.Clone() }

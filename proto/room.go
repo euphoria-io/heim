@@ -83,6 +83,16 @@ type Room interface {
 
 	// IsValidParent checks whether the message with the given ID is able to be replied to.
 	IsValidParent(id snowflake.Snowflake) (bool, error)
+
+	// NewMedia registers and returns a media object. A non-nil Authentication
+	// value produces an encrypted upload.
+	NewMedia(scope.Context, Session, *Authentication) (*MediaObject, error)
+
+	// GetMedia returns a media object with download handles for all its transcodings.
+	GetMedia(ctx scope.Context, mediaID string) (*MediaSet, error)
+
+	// AddMediaTranscoding associates a transcoding with its media object.
+	AddMediaTranscoding(scope.Context, *Transcoding) error
 }
 
 type RoomKey interface {

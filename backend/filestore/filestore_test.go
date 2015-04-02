@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"euphoria.io/heim/proto/media"
+	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/security"
 	"euphoria.io/scope"
 
@@ -35,8 +35,8 @@ func TestStore(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Compile-time assertion that FileStore implements media.Store
-	_ = media.Store(fs)
+	// Compile-time assertion that FileStore implements proto.MediaStore
+	_ = proto.MediaStore(fs)
 
 	Convey("Unencrypted file store", t, func() {
 		ctx := scope.New()

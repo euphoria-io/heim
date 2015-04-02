@@ -437,3 +437,17 @@ func (rb *RoomBinding) UnbanIP(ctx scope.Context, ip string) error {
 		"DELETE FROM banned_ip WHERE ip = $1 AND room = $2", ip, rb.Name)
 	return err
 }
+
+func (rb *RoomBinding) NewMedia(ctx scope.Context, session proto.Session, auth *proto.Authentication) (
+	*proto.MediaObject, error) {
+
+	return nil, notImpl
+}
+
+func (rb *RoomBinding) GetMedia(ctx scope.Context, mediaID string) (*proto.MediaSet, error) {
+	return nil, notImpl
+}
+
+func (rb *RoomBinding) AddMediaTranscoding(ctx scope.Context, t *proto.Transcoding) error {
+	return notImpl
+}

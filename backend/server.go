@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"encoding/json"
+
 	"euphoria.io/heim/backend/cluster"
 	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/security"
@@ -91,8 +93,12 @@ func (s *Server) route() {
 	s.r.Handle("/", prometheus.InstrumentHandlerFunc("home", s.handleHomeStatic))
 
 	s.r.HandleFunc("/room/{room:[a-z0-9]+}/ws", instrumentSocketHandlerFunc("ws", s.handleRoom))
+	s.r.HandleFunc(
+		"/room/{room:[a-z0-9]+}/media", prometheus.InstrumentHandlerFunc("media", s.handleMedia)).
+		Methods("POST")
 	s.r.Handle(
 		"/room/{room:[a-z0-9]+}/", prometheus.InstrumentHandlerFunc("room_static", s.handleRoomStatic))
+
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -275,6 +281,36 @@ func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
 	if err = session.serve(); err != nil {
 		// TODO: error handling
 		return
+	}
+}
+
+func (s *Server) handleMedia(w http.ResponseWriter, r *http.Request) {
+	ctx := scope.New()
+	logger := Logger(ctx)
+
+	// Parse the request.
+	if r.Header.Get("Content-type") != "application/json" {
+		http.Error(w, "content-type must be application/json", http.StatusBadRequest)
+		return
+	}
+	t := proto.Transcoding{}
+	if err := json.NewDecoder(r.Body).Decode(&t); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Resolve the room.
+	roomName := mux.Vars(r)["room"]
+	room, err := s.b.GetRoom(roomName, false)
+	if err != nil {
+		logger.Printf("get room %s: %s", roomName, err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Save the transcoding metadata.
+	if err := room.AddMediaTranscoding(ctx, &t); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 

@@ -51,6 +51,11 @@ var schema = map[string]struct {
 
 	// Sessions.
 	"session_log": {SessionLog{}, []string{"SessionID"}},
+
+	// Media.
+	"media_object":       {MediaObject{}, []string{"ID"}},
+	"media_transcoding":  {MediaTranscoding{}, []string{"MediaID", "Name"}},
+	"message_attachment": {MessageAttachment{}, []string{"MessageID", "MediaID"}},
 }
 
 type Backend struct {

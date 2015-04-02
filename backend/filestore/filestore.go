@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"euphoria.io/heim/proto/media"
+	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/security"
 	"euphoria.io/scope"
 )
@@ -115,7 +115,7 @@ type Store struct {
 	baseURL string
 }
 
-func (s *Store) Create(ctx scope.Context, key *security.ManagedKey) (*media.UploadHandle, error) {
+func (s *Store) Create(ctx scope.Context, key *security.ManagedKey) (*proto.UploadHandle, error) {
 	header, err := keyHeaders(key)
 	if err != nil {
 		return nil, fmt.Errorf("filestore create: %s", err)
@@ -126,7 +126,7 @@ func (s *Store) Create(ctx scope.Context, key *security.ManagedKey) (*media.Uplo
 		return nil, fmt.Errorf("filestore create: %s", err)
 	}
 
-	handle := &media.UploadHandle{
+	handle := &proto.UploadHandle{
 		ID:     id,
 		Header: header,
 		Method: "PUT",
@@ -136,14 +136,14 @@ func (s *Store) Create(ctx scope.Context, key *security.ManagedKey) (*media.Uplo
 }
 
 func (s *Store) Get(ctx scope.Context, id string, key *security.ManagedKey) (
-	*media.DownloadHandle, error) {
+	*proto.DownloadHandle, error) {
 
 	header, err := keyHeaders(key)
 	if err != nil {
 		return nil, fmt.Errorf("filestore get: %s", err)
 	}
 
-	handle := &media.DownloadHandle{
+	handle := &proto.DownloadHandle{
 		Header: header,
 		URL:    s.baseURL + "/" + id,
 	}
