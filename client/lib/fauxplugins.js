@@ -119,9 +119,9 @@ module.exports = function(roomName) {
     Heim.addEventListener(uidocument.body, 'keydown', function(ev) {
       var SyntheticKeyboardEvent = require('react/lib/SyntheticKeyboardEvent')
       var reactEvent = new SyntheticKeyboardEvent(null, null, ev)
-      if (reactEvent.key == 'Backspace' || reactEvent.key == 'Delete') {
-        reactEvent.preventDefault()
-        reactEvent.stopPropagation()
+      if (reactEvent.key == 'Backspace') {
+        reactEvent.target = null
+        Heim.actions.keydownOnEntry(reactEvent)
       }
     }, true)
   }
