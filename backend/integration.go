@@ -107,6 +107,7 @@ func (tc *testConn) readPacket() (proto.PacketType, interface{}) {
 	So(err, ShouldBeNil)
 	So(msgType, ShouldEqual, websocket.TextMessage)
 
+	fmt.Printf("packet: %s\n", string(data))
 	var packet proto.Packet
 	So(json.Unmarshal(data, &packet), ShouldBeNil)
 

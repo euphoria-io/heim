@@ -11,10 +11,12 @@ import (
 type Message struct {
 	ID              snowflake.Snowflake `json:"id"`
 	Parent          snowflake.Snowflake `json:"parent"`
-	UnixTime        int64               `json:"time"`
+	UnixTime        Time                `json:"time"`
 	Sender          *IdentityView       `json:"sender"`
 	Content         string              `json:"content"`
 	EncryptionKeyID string              `json:"encryption_key_id,omitempty"`
+	Edited          Time                `json:"edited,omitempty"`
+	Deleted         Time                `json:"deleted,omitempty"`
 }
 
 func (msg *Message) Encode() ([]byte, error) { return json.Marshal(msg) }

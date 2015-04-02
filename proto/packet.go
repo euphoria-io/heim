@@ -21,6 +21,10 @@ var (
 	SendEventType = SendType.Event()
 	SendReplyType = SendType.Reply()
 
+	EditMessageType      = PacketType("edit-message")
+	EditMessageEventType = EditMessageType.Event()
+	EditMessageReplyType = EditMessageType.Reply()
+
 	JoinType      = PacketType("join")
 	JoinEventType = JoinType.Event()
 	PartType      = PacketType("part")
@@ -60,6 +64,24 @@ type SendCommand struct {
 
 type SendEvent Message
 type SendReply SendEvent
+
+type EditMessageCommand struct {
+	ID       snowflake.Snowflake `json:"id"`
+	Parent   snowflake.Snowflake `json:"parent"`
+	Content  string              `json:"content"`
+	Delete   bool                `json:"delete"`
+	Announce bool                `json:"announce"`
+}
+
+type EditMessageReply struct {
+	EditID  snowflake.Snowflake `json:"edit_id"`
+	Deleted bool                `json:"deleted,omitempty"`
+}
+
+type EditMessageEvent struct {
+	Message
+	EditID snowflake.Snowflake `json:"edit_id"`
+}
 
 type PresenceEvent IdentityView
 
@@ -159,6 +181,12 @@ func (cmd *Packet) Payload() (interface{}, error) {
 		payload = &SendReply{}
 	case SendEventType:
 		payload = &SendEvent{}
+	case EditMessageType:
+		payload = &EditMessageCommand{}
+	case EditMessageEventType:
+		payload = &EditMessageEvent{}
+	case EditMessageReplyType:
+		payload = &EditMessageReply{}
 	case LogType:
 		payload = &LogCommand{}
 	case LogEventType:

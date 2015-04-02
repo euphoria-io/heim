@@ -73,6 +73,12 @@ func (rb *RoomBinding) Send(ctx scope.Context, session proto.Session, msg proto.
 	return rb.Backend.sendMessageToRoom(ctx, rb.Room, msg, session)
 }
 
+func (rb *RoomBinding) EditMessage(
+	ctx scope.Context, session proto.Session, edit proto.EditMessageCommand) error {
+
+	return notImpl
+}
+
 func (rb *RoomBinding) Listing(ctx scope.Context) (proto.Listing, error) {
 	return rb.Backend.listing(ctx, rb.Room)
 }

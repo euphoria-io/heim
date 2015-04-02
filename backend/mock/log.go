@@ -49,3 +49,27 @@ func (log *memLog) Latest(ctx scope.Context, n int, before snowflake.Snowflake) 
 	}
 	return messages, nil
 }
+
+func (log *memLog) edit(e proto.EditMessageCommand) (*proto.Message, error) {
+	log.Lock()
+	defer log.Unlock()
+
+	for _, msg := range log.msgs {
+		if msg.ID == e.ID {
+			if e.Parent != 0 {
+				msg.Parent = e.Parent
+			}
+			if e.Content != "" {
+				msg.Content = e.Content
+			}
+			if e.Delete {
+				msg.Deleted = proto.Now()
+			} else {
+				msg.Deleted = proto.Time{}
+			}
+			msg.Edited = proto.Now()
+			return msg, nil
+		}
+	}
+	return nil, proto.ErrMessageNotFound
+}

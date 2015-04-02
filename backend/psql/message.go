@@ -49,7 +49,7 @@ func NewMessage(
 
 func (m *Message) ToBackend() proto.Message {
 	msg := proto.Message{
-		UnixTime: m.Posted.Unix(),
+		UnixTime: proto.Time(m.Posted),
 		Sender: &proto.IdentityView{
 			ID:        m.SenderID,
 			Name:      m.SenderName,

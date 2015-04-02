@@ -99,13 +99,36 @@ func (r *memRoom) Send(ctx scope.Context, session proto.Session, message proto.M
 
 	msg := proto.Message{
 		ID:       message.ID,
-		UnixTime: message.ID.Time().Unix(),
+		UnixTime: proto.Time(message.ID.Time()),
 		Parent:   message.Parent,
 		Sender:   message.Sender,
 		Content:  message.Content,
 	}
 	r.log.post(&msg)
 	return msg, r.broadcast(ctx, proto.SendType, msg, session)
+}
+
+func (r *memRoom) EditMessage(
+	ctx scope.Context, session proto.Session, edit proto.EditMessageCommand) error {
+
+	msg, err := r.log.edit(edit)
+	if err != nil {
+		return err
+	}
+
+	if edit.Announce {
+		editID, err := snowflake.New()
+		if err != nil {
+			return err
+		}
+		event := &proto.EditMessageEvent{
+			EditID:  editID,
+			Message: *msg,
+		}
+		return r.broadcast(ctx, proto.EditMessageType, event, session)
+	}
+
+	return nil
 }
 
 func (r *memRoom) broadcast(

@@ -47,7 +47,7 @@ func TestGrants(t *testing.T) {
 
 		msg := proto.Message{
 			ID:       snowflake.NewFromTime(aliceSendTime),
-			UnixTime: aliceSendTime.Unix(),
+			UnixTime: proto.Time(aliceSendTime),
 			Content:  "hello",
 		}
 
