@@ -115,17 +115,6 @@ module.exports = function(roomName) {
     }
   }
 
-  if (roomName != 'xkcd') {
-    Heim.addEventListener(uidocument.body, 'keydown', function(ev) {
-      var SyntheticKeyboardEvent = require('react/lib/SyntheticKeyboardEvent')
-      var reactEvent = new SyntheticKeyboardEvent(null, null, ev)
-      if (reactEvent.key == 'Backspace') {
-        reactEvent.target = null
-        Heim.actions.keydownOnEntry(reactEvent)
-      }
-    }, true)
-  }
-
   if (roomName == 'xkcd') {
     Heim.hook('page-bottom', function() {
       return (
