@@ -35,6 +35,24 @@ type RoomBinding struct {
 	*Room
 }
 
+func (rb *RoomBinding) GetMessage(ctx scope.Context, id snowflake.Snowflake) (*proto.Message, error) {
+	var msg Message
+	err := rb.DbMap.SelectOne(
+		&msg,
+		"SELECT room, id, previous_edit_id, parent, posted, edited, deleted,"+
+			" sender_id, sender_name, server_id, server_era, content, encryption_key_id"+
+			" FROM message WHERE room = $1 AND id = $2",
+		rb.Name, id.String())
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, proto.ErrMessageNotFound
+		}
+		return nil, err
+	}
+	m := msg.ToBackend()
+	return &m, nil
+}
+
 func (rb *RoomBinding) Latest(ctx scope.Context, n int, before snowflake.Snowflake) (
 	[]proto.Message, error) {
 
@@ -93,20 +111,23 @@ func (rb *RoomBinding) EditMessage(
 	}
 
 	var msg Message
-	err = rb.DbMap.SelectOne(
+	err = t.SelectOne(
 		&msg,
-		"SELECT parent, content, edit_id FROM message WHERE room = $1 AND id = $2", rb.Name, edit.ID)
+		"SELECT room, id, previous_edit_id, parent, posted, edited, deleted,"+
+			" sender_id, sender_name, server_id, server_era, content, encryption_key_id"+
+			" FROM message WHERE room = $1 AND id = $2",
+		rb.Name, edit.ID.String())
 	if err != nil {
 		rollback()
 		return err
 	}
 
-	if msg.PreviousEditID != edit.PreviousEditID.String() {
+	if msg.PreviousEditID.Valid && msg.PreviousEditID.String != edit.PreviousEditID.String() {
 		rollback()
 		return proto.ErrEditInconsistent
 	}
 
-	entry := MessageEditLog{
+	entry := &MessageEditLog{
 		EditID:    editID.String(),
 		Room:      rb.Name,
 		MessageID: edit.ID.String(),
@@ -114,10 +135,7 @@ func (rb *RoomBinding) EditMessage(
 			String: session.Identity().ID(),
 			Valid:  true,
 		},
-		PreviousEditID: sql.NullString{
-			String: msg.PreviousEditID,
-			Valid:  true,
-		},
+		PreviousEditID:  msg.PreviousEditID,
 		PreviousContent: msg.Content,
 		PreviousParent: sql.NullString{
 			String: msg.Parent,
@@ -129,15 +147,31 @@ func (rb *RoomBinding) EditMessage(
 		return err
 	}
 
-	sets := []string{"previous_edit_id = $1"}
-	args := []interface{}{editID.String()}
+	now := time.Now()
+	sets := []string{"edited = $3", "previous_edit_id = $4"}
+	args := []interface{}{rb.Name, edit.ID.String(), now, editID.String()}
+	msg.Edited = gorp.NullTime{Valid: true, Time: now}
+	msg.PreviousEditID = sql.NullString{Valid: true, String: editID.String()}
 	if edit.Content != "" {
 		args = append(args, edit.Content)
 		sets = append(sets, fmt.Sprintf("content = $%d", len(args)))
+		msg.Content = edit.Content
 	}
 	if edit.Parent != 0 {
 		args = append(args, edit.Parent.String())
 		sets = append(sets, fmt.Sprintf("parent = $%d", len(args)))
+		msg.Parent = edit.Parent.String()
+	}
+	if edit.Delete != msg.Deleted.Valid {
+		if edit.Delete {
+			now := time.Now()
+			args = append(args, now)
+			sets = append(sets, fmt.Sprintf("deleted = $%d", len(args)))
+			msg.Deleted = gorp.NullTime{Valid: true, Time: now}
+		} else {
+			sets = append(sets, "deleted = NULL")
+			msg.Deleted.Valid = false
+		}
 	}
 	query := fmt.Sprintf("UPDATE message SET %s WHERE room = $1 AND id = $2", strings.Join(sets, ", "))
 	if _, err := t.Exec(query, args...); err != nil {
@@ -145,7 +179,19 @@ func (rb *RoomBinding) EditMessage(
 		return err
 	}
 
-	return t.Commit()
+	if err := t.Commit(); err != nil {
+		return err
+	}
+
+	if edit.Announce {
+		event := &proto.EditMessageEvent{
+			EditID:  editID,
+			Message: msg.ToBackend(),
+		}
+		return rb.Backend.broadcast(ctx, rb.Room, proto.EditMessageEventType, event, session)
+	}
+
+	return nil
 }
 
 func (rb *RoomBinding) Listing(ctx scope.Context) (proto.Listing, error) {

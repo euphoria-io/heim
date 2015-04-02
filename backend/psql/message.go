@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"time"
 
+	"github.com/go-gorp/gorp"
+
 	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/snowflake"
 )
@@ -11,11 +13,11 @@ import (
 type Message struct {
 	Room            string
 	ID              string
-	PreviousEditID  string `db:"previous_edit_id"`
+	PreviousEditID  sql.NullString `db:"previous_edit_id"`
 	Parent          string
 	Posted          time.Time
-	Edited          time.Time
-	Deleted         time.Time
+	Edited          gorp.NullTime
+	Deleted         gorp.NullTime
 	SenderID        string `db:"sender_id"`
 	SenderName      string `db:"sender_name"`
 	ServerID        string `db:"server_id"`
@@ -65,8 +67,19 @@ func (m *Message) ToBackend() proto.Message {
 	// ignore id parsing errors
 	_ = msg.ID.FromString(m.ID)
 	_ = msg.Parent.FromString(m.Parent)
+	if m.PreviousEditID.Valid {
+		_ = msg.PreviousEditID.FromString(m.PreviousEditID.String)
+	}
+
+	// other optionals
 	if m.EncryptionKeyID.Valid {
 		msg.EncryptionKeyID = m.EncryptionKeyID.String
+	}
+	if m.Deleted.Valid {
+		msg.Deleted = proto.Time(m.Deleted.Time)
+	}
+	if m.Edited.Valid {
+		msg.Edited = proto.Time(m.Edited.Time)
 	}
 
 	return msg

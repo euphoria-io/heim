@@ -11,6 +11,7 @@ import (
 type Message struct {
 	ID              snowflake.Snowflake `json:"id"`
 	Parent          snowflake.Snowflake `json:"parent"`
+	PreviousEditID  snowflake.Snowflake `json:"previous_edit_id,omitempty"`
 	UnixTime        Time                `json:"time"`
 	Sender          *IdentityView       `json:"sender"`
 	Content         string              `json:"content"`

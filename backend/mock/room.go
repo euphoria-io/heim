@@ -39,6 +39,10 @@ func newMemRoom(name, version string) *memRoom {
 
 func (r *memRoom) Version() string { return r.version }
 
+func (r *memRoom) GetMessage(ctx scope.Context, id snowflake.Snowflake) (*proto.Message, error) {
+	return r.log.GetMessage(ctx, id)
+}
+
 func (r *memRoom) Latest(ctx scope.Context, n int, before snowflake.Snowflake) ([]proto.Message, error) {
 	return r.log.Latest(ctx, n, before)
 }

@@ -36,6 +36,24 @@ type console struct {
 	kms     security.KMS
 }
 
+// Implement Session and Identity.
+// TODO: log details about the client
+func (c *console) Identity() proto.Identity { return c }
+func (c *console) ID() string               { return "console" }
+func (c *console) Name() string             { return "console" }
+func (c *console) ServerID() string         { return "" }
+func (c *console) SetName(name string)      {}
+func (c *console) Close()                   {}
+func (c *console) CheckAbandoned() error    { return nil }
+
+func (c *console) View() *proto.IdentityView {
+	return &proto.IdentityView{ID: "console", Name: "console"}
+}
+
+func (c *console) Send(scope.Context, proto.PacketType, interface{}) error {
+	return fmt.Errorf("not implemented")
+}
+
 func (c *console) Print(args ...interface{})                 { fmt.Fprint(c, args...) }
 func (c *console) Println(args ...interface{})               { fmt.Fprintln(c, args...) }
 func (c *console) Printf(format string, args ...interface{}) { fmt.Fprintf(c, format, args...) }

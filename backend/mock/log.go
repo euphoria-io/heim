@@ -22,6 +22,18 @@ func (log *memLog) post(msg *proto.Message) {
 	log.msgs = append(log.msgs, msg)
 }
 
+func (log *memLog) GetMessage(ctx scope.Context, id snowflake.Snowflake) (*proto.Message, error) {
+	log.Lock()
+	defer log.Unlock()
+
+	for _, msg := range log.msgs {
+		if msg.ID == id {
+			return msg, nil
+		}
+	}
+	return nil, proto.ErrMessageNotFound
+}
+
 func (log *memLog) Latest(ctx scope.Context, n int, before snowflake.Snowflake) ([]proto.Message, error) {
 	log.Lock()
 	defer log.Unlock()
