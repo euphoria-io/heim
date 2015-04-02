@@ -34,7 +34,6 @@ var schema = map[string]struct {
 
 	// Rooms.
 	"room":            {Room{}, []string{"Name"}},
-	"message":         {Message{}, []string{"Room", "ID"}},
 	"room_master_key": {RoomMasterKey{}, []string{"Room", "KeyID"}},
 	"room_capability": {RoomCapability{}, []string{"Room", "CapabilityID"}},
 
@@ -43,6 +42,10 @@ var schema = map[string]struct {
 
 	// Bans.
 	"banned_agent": {BannedAgent{}, []string{"AgentID", "Room"}},
+
+	// Messages.
+	"message":          {Message{}, []string{"Room", "ID"}},
+	"message_edit_log": {MessageEditLog{}, []string{"EditID"}},
 }
 
 type Backend struct {

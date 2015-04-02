@@ -76,7 +76,76 @@ func (rb *RoomBinding) Send(ctx scope.Context, session proto.Session, msg proto.
 func (rb *RoomBinding) EditMessage(
 	ctx scope.Context, session proto.Session, edit proto.EditMessageCommand) error {
 
-	return notImpl
+	editID, err := snowflake.New()
+	if err != nil {
+		return err
+	}
+
+	t, err := rb.DbMap.Begin()
+	if err != nil {
+		return err
+	}
+
+	rollback := func() {
+		if err := t.Rollback(); err != nil {
+			backend.Logger(ctx).Printf("rollback error: %s", err)
+		}
+	}
+
+	var msg Message
+	err = rb.DbMap.SelectOne(
+		&msg,
+		"SELECT parent, content, edit_id FROM message WHERE room = $1 AND id = $2", rb.Name, edit.ID)
+	if err != nil {
+		rollback()
+		return err
+	}
+
+	if msg.PreviousEditID != edit.PreviousEditID.String() {
+		rollback()
+		return proto.ErrEditInconsistent
+	}
+
+	entry := MessageEditLog{
+		EditID:    editID.String(),
+		Room:      rb.Name,
+		MessageID: edit.ID.String(),
+		EditorID: sql.NullString{
+			String: session.Identity().ID(),
+			Valid:  true,
+		},
+		PreviousEditID: sql.NullString{
+			String: msg.PreviousEditID,
+			Valid:  true,
+		},
+		PreviousContent: msg.Content,
+		PreviousParent: sql.NullString{
+			String: msg.Parent,
+			Valid:  true,
+		},
+	}
+	if err := t.Insert(entry); err != nil {
+		rollback()
+		return err
+	}
+
+	sets := []string{"previous_edit_id = $1"}
+	args := []interface{}{editID.String()}
+	if edit.Content != "" {
+		args = append(args, edit.Content)
+		sets = append(sets, fmt.Sprintf("content = $%d", len(args)))
+	}
+	if edit.Parent != 0 {
+		args = append(args, edit.Parent.String())
+		sets = append(sets, fmt.Sprintf("parent = $%d", len(args)))
+	}
+	query := fmt.Sprintf("UPDATE message SET %s WHERE room = $1 AND id = $2", strings.Join(sets, ", "))
+	if _, err := t.Exec(query, args...); err != nil {
+		rollback()
+		return err
+	}
+
+	return t.Commit()
 }
 
 func (rb *RoomBinding) Listing(ctx scope.Context) (proto.Listing, error) {

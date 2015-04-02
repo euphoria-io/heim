@@ -66,11 +66,12 @@ type SendEvent Message
 type SendReply SendEvent
 
 type EditMessageCommand struct {
-	ID       snowflake.Snowflake `json:"id"`
-	Parent   snowflake.Snowflake `json:"parent"`
-	Content  string              `json:"content"`
-	Delete   bool                `json:"delete"`
-	Announce bool                `json:"announce"`
+	ID             snowflake.Snowflake `json:"id"`
+	PreviousEditID snowflake.Snowflake `json:"previous_edit_id"`
+	Parent         snowflake.Snowflake `json:"parent"`
+	Content        string              `json:"content"`
+	Delete         bool                `json:"delete"`
+	Announce       bool                `json:"announce"`
 }
 
 type EditMessageReply struct {

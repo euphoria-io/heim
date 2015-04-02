@@ -11,8 +11,11 @@ import (
 type Message struct {
 	Room            string
 	ID              string
+	PreviousEditID  string `db:"previous_edit_id"`
 	Parent          string
 	Posted          time.Time
+	Edited          time.Time
+	Deleted         time.Time
 	SenderID        string `db:"sender_id"`
 	SenderName      string `db:"sender_name"`
 	ServerID        string `db:"server_id"`
@@ -67,4 +70,14 @@ func (m *Message) ToBackend() proto.Message {
 	}
 
 	return msg
+}
+
+type MessageEditLog struct {
+	EditID          string `db:"edit_id"`
+	Room            string
+	MessageID       string         `db:"message_id"`
+	EditorID        sql.NullString `db:"editor_id"`
+	PreviousEditID  sql.NullString `db:"previous_edit_id"`
+	PreviousContent string         `db:"previous_content"`
+	PreviousParent  sql.NullString `db:"previous_parent"`
 }
