@@ -26,6 +26,11 @@ var Message = module.exports = React.createClass({
 
   render: function() {
     var message = this.state.node
+
+    if (message.get('deleted')) {
+      return <div data-message-id={message.get('id')} className="message-node deleted" />
+    }
+
     var children = message.get('children')
     var entry = message.get('entry')
     var time = moment.unix(message.get('time'))

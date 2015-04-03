@@ -64,13 +64,15 @@ module.exports.store = Reflux.createStore({
   socketEvent: function(ev) {
     // jshint camelcase: false
     if (ev.status == 'receive') {
-      if (ev.body.type == 'send-event' || ev.body.type == 'send-reply') {
+      if (ev.body.type == 'send-event' || ev.body.type == 'send-reply' || ev.body.type == 'edit-message-event') {
         var message = ev.body.data
         var processedMessages = this._handleMessagesData([message])
         this.state.messages.add(processedMessages)
-        _.each(processedMessages, message =>
-          storeActions.messageReceived(this.state.messages.get(message.id), this.state)
-        )
+        if (ev.body.type != 'edit-message-event') {
+          _.each(processedMessages, message =>
+            storeActions.messageReceived(this.state.messages.get(message.id), this.state)
+          )
+        }
       } else if (ev.body.type == 'snapshot-event') {
         this.state.serverVersion = ev.body.data.version
         this.state.sessionId = ev.body.data.session_id

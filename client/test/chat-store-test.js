@@ -583,6 +583,22 @@ describe('chat store', function() {
     })
   }
 
+  describe('received message deletions', function() {
+    var deleteEvent = {
+      'id': '0',
+      'type': 'edit-message-event',
+      'data': _.merge({}, message1, {deleted: 12345}),
+    }
+
+    it('should update the message data in the tree', function(done) {
+      chat.store.socketEvent({status: 'receive', body: logReply})
+      handleSocket({status: 'receive', body: deleteEvent}, function(state) {
+        assert(state.messages.get(message1.id).get('deleted') == 12345)
+        done()
+      })
+    })
+  })
+
   function checkMessagesChangedEvent(msgBody) {
     it('should trigger messagesChanged action', function(done) {
       chat.actions.messagesChanged.reset()
