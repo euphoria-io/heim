@@ -14,7 +14,8 @@ var jshint = require('gulp-jshint')
 var exec = require('child_process').exec
 
 
-var dest = './build'
+var heimDest = './build/heim'
+var embedDest = './build/embed'
 
 // via https://github.com/tblobaum/git-rev
 function shell(cmd, cb) {
@@ -26,12 +27,16 @@ function shell(cmd, cb) {
   })
 }
 
-function bundler(args) {
+function heimBundler(args) {
   return browserify('./lib/client.js', args)
 }
 
-gulp.task('js', function() {
-  return bundler({debug: true})
+function embedBundler(args) {
+  return browserify('./lib/embed.js', args)
+}
+
+gulp.task('heim-js', function() {
+  return heimBundler({debug: true})
     // share some libraries with the global namespace
     // doing this here because these exposes trip up watchify atm
     .require('lodash', {expose: 'lodash'})
@@ -46,10 +51,22 @@ gulp.task('js', function() {
       .pipe(process.env.NODE_ENV == 'production' ? uglify() : gutil.noop())
     .pipe(sourcemaps.write('./', {includeContent: true}))
     .on('error', gutil.log.bind(gutil, 'browserify error'))
-    .pipe(gulp.dest(dest))
+    .pipe(gulp.dest(heimDest))
 })
 
-gulp.task('raven-js', ['js'], function() {
+gulp.task('embed-js', function() {
+  return embedBundler({debug: true})
+    .bundle()
+    .pipe(source('embed.js'))
+    .pipe(buffer())
+    .pipe(sourcemaps.init({loadMaps: true}))
+      .pipe(process.env.NODE_ENV == 'production' ? uglify() : gutil.noop())
+    .pipe(sourcemaps.write('./', {includeContent: true}))
+    .on('error', gutil.log.bind(gutil, 'browserify error'))
+    .pipe(gulp.dest(embedDest))
+})
+
+gulp.task('raven-js', ['heim-js'], function() {
   shell('git rev-parse HEAD', function(gitRev) {
     shell('md5sum build/main.js | cut -d " " -f 1', function(releaseHash) {
       return browserify('./lib/raven.js')
@@ -63,12 +80,12 @@ gulp.task('raven-js', ['js'], function() {
         .pipe(buffer())
         .pipe(process.env.NODE_ENV == 'production' ? uglify() : gutil.noop())
         .on('error', gutil.log.bind(gutil, 'browserify error'))
-        .pipe(gulp.dest(dest))
+        .pipe(gulp.dest(heimDest))
     })
   })
 })
 
-gulp.task('less', function() {
+gulp.task('heim-less', function() {
   return gulp.src(['./lib/main.less', './lib/od.less'])
     .pipe(less({compress: true}))
     .on('error', function(err) {
@@ -80,17 +97,22 @@ gulp.task('less', function() {
       gutil.log(gutil.colors.red('autoprefixer error:'), err.message)
       this.emit('end')
     })
-    .pipe(gulp.dest(dest))
+    .pipe(gulp.dest(heimDest))
 })
 
-gulp.task('static', function() {
+gulp.task('heim-static', function() {
   return gulp.src('./static/**/*')
-    .pipe(gulp.dest(dest))
+    .pipe(gulp.dest(heimDest))
 })
 
-gulp.task('html', function() {
-  return gulp.src('./lib/index.html')
-    .pipe(gulp.dest(dest))
+gulp.task('heim-html', function() {
+  return gulp.src(['./lib/index.html'])
+    .pipe(gulp.dest(heimDest))
+})
+
+gulp.task('embed-html', function() {
+  return gulp.src(['./lib/embed.html'])
+    .pipe(gulp.dest(embedDest))
 })
 
 gulp.task('lint', function() {
@@ -101,30 +123,35 @@ gulp.task('lint', function() {
     .pipe(jshint.reporter('fail'))
 })
 
-gulp.task('watchify', function() {
-  // via https://github.com/gulpjs/gulp/blob/master/docs/recipes/fast-browserify-builds-with-watchify.md
-  bundler = watchify(bundler(watchify.args))
-  bundler.on('log', gutil.log.bind(gutil, gutil.colors.green('Watchify')))
-  bundler.on('update', rebundle)
+function watchifyTask(name, bundler, outFile, dest) {
+  gulp.task(name, function() {
+    // via https://github.com/gulpjs/gulp/blob/master/docs/recipes/fast-browserify-builds-with-watchify.md
+    bundler = watchify(bundler(watchify.args))
+    bundler.on('log', gutil.log.bind(gutil, gutil.colors.green('Watchify')))
+    bundler.on('update', rebundle)
 
-  function rebundle() {
-    return bundler.bundle()
-      .on('error', function(err) {
-        gutil.log(gutil.colors.red('Watchify error:'), err.message)
-      })
-      .pipe(source('main.js'))
-      .pipe(gulp.dest(dest))
-  }
+    function rebundle() {
+      return bundler.bundle()
+        .on('error', function(err) {
+          gutil.log(gutil.colors.red('Watchify error:'), err.message)
+        })
+        .pipe(source(outFile))
+        .pipe(gulp.dest(dest))
+    }
 
-  return rebundle()
-})
+    return rebundle()
+  })
+}
+
+watchifyTask('heim-watchify', heimBundler, 'main.js', heimDest)
+watchifyTask('embed-watchify', embedBundler, 'embed.js', embedDest)
 
 gulp.task('watch', function () {
-  gulp.watch('./lib/**/*.less', ['less'])
-  gulp.watch('./res/**/*', ['less'])
-  gulp.watch('./lib/**/*.html', ['html'])
-  gulp.watch('./static/**/*', ['static'])
+  gulp.watch('./lib/**/*.less', ['heim-less'])
+  gulp.watch('./res/**/*', ['heim-less'])
+  gulp.watch('./lib/**/*.html', ['heim-html', 'embed-html'])
+  gulp.watch('./static/**/*', ['heim-static'])
 })
 
-gulp.task('build', ['js', 'raven-js', 'less', 'static', 'html'])
-gulp.task('default', ['raven-js', 'less', 'static', 'html', 'watch', 'watchify'])
+gulp.task('build', ['heim-js', 'raven-js', 'embed-js', 'heim-less', 'heim-static', 'heim-html', 'embed-html'])
+gulp.task('default', ['raven-js', 'heim-less', 'heim-static', 'heim-html', 'embed-html', 'watch', 'heim-watchify', 'embed-watchify'])

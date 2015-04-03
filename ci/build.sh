@@ -45,10 +45,12 @@ build_release() {
   go install -ldflags "-X main.version ${DRONE_COMMIT}" euphoria.io/heim/heimctl
   go install euphoria.io/heim/heimlich
 
-  mv ${HEIMDIR}/client/build /var/cache/drone/bin/static
+  mv ${HEIMDIR}/client/build/heim /var/cache/drone/bin/static
+  mv ${HEIMDIR}/client/build/embed /var/cache/drone/bin/embed
   cd /var/cache/drone/bin
   generate_manifest static
-  find static -type f | xargs heimlich heimctl
+  generate_manifest embed
+  find static embed -type f | xargs heimlich heimctl
 
   s3cmd put heimctl.hzp s3://heim-release/${DRONE_COMMIT}
   if [ ${DRONE_BRANCH} == master ]; then
