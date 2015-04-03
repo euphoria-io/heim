@@ -172,6 +172,7 @@ func (vh *versioningHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 type serveEmbedCmd struct {
 	addr   string
 	static string
+	domain string
 }
 
 func (serveEmbedCmd) desc() string  { return "start up the embed.space static server" }
@@ -189,6 +190,7 @@ func (cmd *serveEmbedCmd) flags() *flag.FlagSet {
 	flags := flag.NewFlagSet("serve-embed", flag.ExitOnError)
 	flags.StringVar(&cmd.addr, "http", ":8080", "address to serve http on")
 	flags.StringVar(&cmd.static, "static", "", "path to static files")
+	flags.StringVar(&cmd.domain, "domain", "", "require a Host header matching this domain, if given")
 	return flags
 }
 
@@ -226,6 +228,10 @@ func (cmd *serveEmbedCmd) run(ctx scope.Context, args []string) error {
 }
 
 func (cmd *serveEmbedCmd) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if cmd.domain != "" && r.Host != cmd.domain {
+		http.Error(w, "404 page not found", http.StatusNotFound)
+		return
+	}
 	w.Header().Set("Cache-Control", "public, max-age=300")
 	http.FileServer(http.Dir(cmd.static)).ServeHTTP(w, r)
 }
