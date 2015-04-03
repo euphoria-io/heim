@@ -1,4 +1,4 @@
-image: eu.phoria/drone-runner:17
+image: eu.phoria/drone-runner:18
 env:
   - GOPATH=/var/cache/drone
 script:
