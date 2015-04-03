@@ -11,6 +11,7 @@ import (
 	"text/template"
 	"time"
 
+	"euphoria.io/heim/backend"
 	"euphoria.io/scope"
 )
 
@@ -53,7 +54,8 @@ func Run(args []string) {
 		os.Exit(2)
 	}
 
-	ctx := scope.New()
+	ctx := backend.LoggingContext(scope.New(), fmt.Sprintf("[%s] ", args[0]))
+	backend.Logger(ctx).Printf("starting up")
 	if err := cmd.run(ctx, flags.Args()); err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
