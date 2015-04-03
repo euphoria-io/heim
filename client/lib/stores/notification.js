@@ -78,6 +78,9 @@ module.exports.store = Reflux.createStore({
   },
 
   storageChange: function(data) {
+    if (!data) {
+      return
+    }
     this.state.popupsEnabled = this.state.popupsPermission && data.notify
     this._roomStorage = data.room
     this.trigger(this.state)

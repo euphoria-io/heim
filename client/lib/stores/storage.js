@@ -20,6 +20,10 @@ module.exports.store = Reflux.createStore({
     this._dirtyChanges = {}
   },
 
+  getInitialState: function() {
+    return this.state
+  },
+
   load: function() {
     if (this.state) {
       return

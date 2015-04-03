@@ -69,7 +69,7 @@ gulp.task('raven-js', ['js'], function() {
 })
 
 gulp.task('less', function() {
-  return gulp.src('./lib/main.less')
+  return gulp.src(['./lib/main.less', './lib/od.less'])
     .pipe(less({compress: true}))
     .on('error', function(err) {
       gutil.log(gutil.colors.red('LESS error:'), err.message)

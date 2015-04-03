@@ -233,6 +233,9 @@ module.exports.store = Reflux.createStore({
   },
 
   storageChange: function(data) {
+    if (!data) {
+      return
+    }
     var roomStorage = data.room[this.state.roomName] || {}
     if (!this.state.nick) {
       this.state.tentativeNick = roomStorage.nick

@@ -18,6 +18,7 @@ module.exports = React.createClass({
     Reflux.connect(require('../stores/chat').store, 'chat'),
     Reflux.connect(require('../stores/focus').store, 'focus'),
     Reflux.connect(require('../stores/update').store, 'update'),
+    Reflux.connect(require('../stores/storage').store, 'storage'),
     Reflux.listenTo(actions.scrollToEntry, 'scrollToEntry'),
   ],
 
@@ -100,6 +101,7 @@ module.exports = React.createClass({
           </div>
         </Scroller>
         {this.templateHook('page-bottom')}
+        {this.state.storage && this.state.storage.useOpenDyslexic && <link rel="stylesheet" type="text/css" id="css" href="/static/od.css" />}
       </div>
     )
   },

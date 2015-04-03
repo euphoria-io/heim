@@ -5,7 +5,7 @@ var Reflux = require('reflux')
 var actions = require('../actions')
 var update = require('../stores/update')
 var UserList = require('./userlist')
-var NotifyToggle = require('./notifytoggle')
+var Settings = require('./settings')
 var FastButton = require('./fastbutton')
 var RoomTitle = require('./roomtitle')
 
@@ -47,11 +47,7 @@ module.exports = React.createClass({
       <div className="sidebar" style={{marginRight: this.props.scrollbarWidth}}>
         <div className="top-line">
           <ReactCSSTransitionGroup transitionName="settings">
-            {this.state.settingsOpen &&
-              <span key="content" className="settings-content">
-                <NotifyToggle />
-              </span>
-            }
+            {this.state.settingsOpen && <Settings />}
           </ReactCSSTransitionGroup>
           <RoomTitle name={this.props.roomName} authType={this.props.authType} rightOffset={this.props.scrollbarWidth} joined={this.props.joined} />
           <button type="button" className="settings" onClick={this.toggleSettings} tabIndex="-1" />
