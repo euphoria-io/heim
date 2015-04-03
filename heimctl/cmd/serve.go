@@ -233,5 +233,8 @@ func (cmd *serveEmbedCmd) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Cache-Control", "public, max-age=300")
+	if r.URL.Path == "/" {
+		r.URL.Path = "/embed.html"
+	}
 	http.FileServer(http.Dir(cmd.static)).ServeHTTP(w, r)
 }
