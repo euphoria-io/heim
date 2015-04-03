@@ -70,6 +70,17 @@ backend:
     HEIM_CONFIG: /go/src/euphoria.io/heim/heim.yml
   command: run.sh heimctl serve -http :80 -console :2222 -static /srv/heim/client/src/build/heim
 
+# The embed container serves static files for the embed domain.
+embed:
+  build: backend
+  volumes:
+    - .:/go/src/euphoria.io/heim
+    - deps/godeps:/godeps
+    - client/build:/srv/heim/client/src/build
+  ports:
+    - "8081:80"
+  command: run.sh heimctl serve-embed -http :80 -static /srv/heim/client/src/build/embed
+
 presence:
   build: backend
   links:
@@ -79,7 +90,7 @@ presence:
     - .:/go/src/euphoria.io/heim
     - deps/godeps:/godeps
   ports:
-    - "8081:80"
+    - "8082:80"
   environment:
     HEIM_ETCD: http://etcd:4001
     HEIM_ETCD_HOME: /dev/euphoria.io

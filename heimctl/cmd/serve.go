@@ -18,6 +18,7 @@ import (
 
 func init() {
 	register("serve", &serveCmd{})
+	register("serve-embed", &serveEmbedCmd{})
 }
 
 type serveCmd struct {
@@ -29,7 +30,7 @@ type serveCmd struct {
 func (serveCmd) desc() string { return "start up a heim backend server" }
 
 func (serveCmd) usage() string {
-	return "serve [--http=IFACE:PORT] [--console=IFACE:PORT] [--static=PATH]"
+	return "serve [--http=<interface:port>] [--console=<interface:port>] [--static=<path>]"
 }
 
 func (serveCmd) longdesc() string {
@@ -166,4 +167,65 @@ func (vh *versioningHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Heim-Version", vh.version)
 	}
 	vh.handler.ServeHTTP(w, r)
+}
+
+type serveEmbedCmd struct {
+	addr   string
+	static string
+}
+
+func (serveEmbedCmd) desc() string  { return "start up the embed.space static server" }
+func (serveEmbedCmd) usage() string { return "serve [--http=<interface:port>] [--static=<path>]" }
+
+func (serveEmbedCmd) longdesc() string {
+	return `
+	Start the embed.space static server. The server will listen for HTTP
+	requests at the address given by -http (defaults to port 8081 on any
+	interface).
+`[1:]
+}
+
+func (cmd *serveEmbedCmd) flags() *flag.FlagSet {
+	flags := flag.NewFlagSet("serve-embed", flag.ExitOnError)
+	flags.StringVar(&cmd.addr, "http", ":8080", "address to serve http on")
+	flags.StringVar(&cmd.static, "static", "", "path to static files")
+	return flags
+}
+
+func (cmd *serveEmbedCmd) run(ctx scope.Context, args []string) error {
+	listener, err := net.Listen("tcp", cmd.addr)
+	if err != nil {
+		return err
+	}
+
+	closed := false
+	m := sync.Mutex{}
+	closeListener := func() {
+		m.Lock()
+		if !closed {
+			listener.Close()
+			closed = true
+		}
+		m.Unlock()
+	}
+
+	// Spin off goroutine to watch ctx and close listener if shutdown requested.
+	go func() {
+		<-ctx.Done()
+		closeListener()
+	}()
+
+	if err := http.Serve(listener, cmd); err != nil {
+		fmt.Printf("http[%s]: %s\n", cmd.addr, err)
+		return err
+	}
+
+	closeListener()
+	ctx.WaitGroup().Done()
+	return ctx.Err()
+}
+
+func (cmd *serveEmbedCmd) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "public, max-age=300")
+	http.FileServer(http.Dir(cmd.static)).ServeHTTP(w, r)
 }
