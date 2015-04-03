@@ -521,3 +521,51 @@ func testAuthentication(s *serverUnderTest) {
 		conn.expect("1", "auth-reply", `{"success":true}`)
 	})
 }
+
+func testDeletion(s *serverUnderTest) {
+	Convey("Send with parent", func() {
+		tc := NewTestClock()
+		defer tc.Close()
+
+		conn := s.Connect("deletion")
+		defer conn.Close()
+
+		conn.expectPing()
+		conn.expectSnapshot(s.backend.Version(), nil, nil)
+
+		id := &proto.IdentityView{ID: conn.id(), Name: "user"}
+		id.Name = id.ID
+		sf := snowflakes(1)[0]
+		server := `"server_id":"test1","server_era":"era1"`
+
+		conn.send("1", "send", `{"content":"root"}`)
+		conn.expect("1", "send-reply",
+			`{"id":"%s","time":1,"sender":{"id":"%s",%s},"content":"@#$!"}`,
+			sf, id.ID, server)
+
+		conn.send("3", "log", `{"n":10}`)
+		conn.expect("3", "log-reply",
+			`{"log":[{"id":"%s","time":1,"sender":{"id":"%s",%s},"content":"@#$!"}]},`,
+			sf, id.ID, server, server)
+
+		room, err := s.backend.GetRoom("deletion", false)
+		So(err, ShouldBeNil)
+
+		cmd := proto.EditMessageCommand{
+			ID:       sf,
+			Delete:   true,
+			Announce: true,
+		}
+		So(room.EditMessage(scope.New(), nil, cmd), ShouldBeNil)
+
+		conn.expect("", "edit-message-event",
+			`{"id":"%s","time":1,"sender":{"id":"%s",%s},"deleted":2,"content":"@#$!"}`,
+			sf, id.ID, server, server)
+
+		conn2 := s.Connect("deletion")
+		defer conn2.Close()
+
+		conn2.expectPing()
+		conn2.expectSnapshot(s.backend.Version(), nil, nil)
+	})
+}

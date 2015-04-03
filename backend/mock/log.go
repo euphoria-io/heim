@@ -2,6 +2,7 @@ package mock
 
 import (
 	"sync"
+	"time"
 
 	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/snowflake"
@@ -50,7 +51,15 @@ func (log *memLog) Latest(ctx scope.Context, n int, before snowflake.Snowflake) 
 		start = 0
 	}
 
-	slice := log.msgs[start:end]
+	slice := make([]*proto.Message, 0, n)
+	for _, msg := range log.msgs[start:] {
+		if time.Time(msg.Deleted).IsZero() {
+			slice = append(slice, msg)
+			if len(slice) >= n {
+				break
+			}
+		}
+	}
 	if len(slice) == 0 {
 		return []proto.Message{}, nil
 	}

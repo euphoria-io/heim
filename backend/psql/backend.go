@@ -428,13 +428,13 @@ func (b *Backend) latest(ctx scope.Context, room *Room, n int, before snowflake.
 	args := []interface{}{room.Name, n}
 
 	if before.IsZero() {
-		query = ("SELECT room, id, parent, posted, sender_id, sender_name, server_id, server_era," +
-			" content, encryption_key_id" +
-			" FROM message WHERE room = $1 ORDER BY id DESC LIMIT $2")
+		query = ("SELECT room, id, previous_edit_id, parent, posted, edited, deleted," +
+			" sender_id, sender_name, server_id, server_era, content, encryption_key_id" +
+			" FROM message WHERE room = $1 AND deleted IS NULL ORDER BY id DESC LIMIT $2")
 	} else {
-		query = ("SELECT room, id, parent, posted, sender_id, sender_name, server_id, server_era," +
-			" content, encryption_key_id" +
-			" FROM message WHERE room = $1 AND id < $3 ORDER BY id DESC LIMIT $2")
+		query = ("SELECT room, id, previous_edit_id, parent, posted, edited, deleted," +
+			" sender_id, sender_name, server_id, server_era, content, encryption_key_id" +
+			" FROM message WHERE room = $1 AND id < $3 AND deleted IS NULL ORDER BY id DESC LIMIT $2")
 		args = append(args, before.String())
 	}
 
