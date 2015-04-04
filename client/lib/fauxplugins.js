@@ -167,23 +167,26 @@ module.exports = function(roomName) {
       return <YouTubeTV key="youtube-tv" />
     })
 
+    var latestVideoTime = 0
     Heim.chat.messagesChanged.listen(function(ids, state) {
       var playRe = /!play [^?]*\?v=([-\w]+)/
 
-      var playId = Immutable.Seq(ids)
+      var video = Immutable.Seq(ids)
         .map(id => state.messages.get(id))
         .map(msg => {
           if (msg.get('id') == '__root') {
             return
           }
           var match = msg.get('content').match(playRe)
-          return match && match[1]
+          return match && {time: msg.get('time'), youtubeId: match[1]}
         })
         .filter(Boolean)
+        .sortBy(msg => msg.time)
         .last()
 
-      if (playId) {
-        TVActions.changeVideo(playId)
+      if (video && video.time > latestVideoTime) {
+        TVActions.changeVideo(video.youtubeId)
+        latestVideoTime = video.time
       }
     })
 
