@@ -203,7 +203,7 @@ module.exports = function(roomName) {
           @media (min-width: 920px) {
             .youtube-tv {
               width: 360px;
-              height: 240px;
+              height: 270px;
             }
           }
         `}} />
