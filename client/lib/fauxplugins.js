@@ -1,4 +1,6 @@
 var React = require('react')
+var Reflux = require('reflux')
+var Immutable = require('immutable')
 
 
 module.exports = function(roomName) {
@@ -121,6 +123,78 @@ module.exports = function(roomName) {
         <style key="xkcd-style" dangerouslySetInnerHTML={{__html:`
           .embeds {
             display: none !important;
+          }
+        `}} />
+      )
+    })
+  }
+
+  if (roomName == 'music' || roomName == 'youtube') {
+    var TVActions = Reflux.createActions([
+      'changeVideo',
+    ])
+
+    var TVStore = Reflux.createStore({
+      listenables: [TVActions],
+
+      init: function() {
+        this.state = {youtubeId: null}
+      },
+
+      getInitialState: function() {
+        return this.state
+      },
+
+      changeVideo: function(youtubeId) {
+        this.state.youtubeId = youtubeId
+        this.trigger(this.state)
+      }
+    })
+
+    var YouTubeTV = React.createClass({
+      displayName: 'YouTubeTV',
+
+      mixins: [
+        Reflux.connect(TVStore),
+      ],
+
+      render: function() {
+        return <iframe className="youtube-tv" src={this.state.youtubeId && ('https://embed.space/?kind=youtube&autoplay=1&youtube_id=' + this.state.youtubeId)} />
+      }
+    })
+
+    Heim.hook('sidebar', function() {
+      return <YouTubeTV key="youtube-tv" />
+    })
+
+    Heim.chat.messagesChanged.listen(function(ids, state) {
+      var playRe = /!play [^?]*\?v=(\w+)/
+
+      var playId = Immutable.Seq(ids)
+        .map(id => state.messages.get(id))
+        .map(msg => {
+          if (msg.get('id') == '__root') {
+            return
+          }
+          var match = msg.get('content').match(playRe)
+          return match && match[1]
+        })
+        .filter(Boolean)
+        .last()
+
+      if (playId) {
+        TVActions.changeVideo(playId)
+      }
+    })
+
+    Heim.hook('page-bottom', function() {
+      return (
+        <style key="youtubetv-style" dangerouslySetInnerHTML={{__html:`
+          .youtube-tv {
+            width: 240px;
+            height: 180px;
+            margin-top: 15px;
+            border: none;
           }
         `}} />
       )
