@@ -168,7 +168,7 @@ module.exports = function(roomName) {
     })
 
     Heim.chat.messagesChanged.listen(function(ids, state) {
-      var playRe = /!play [^?]*\?v=(\w+)/
+      var playRe = /!play [^?]*\?v=([-\w]+)/
 
       var playId = Immutable.Seq(ids)
         .map(id => state.messages.get(id))
