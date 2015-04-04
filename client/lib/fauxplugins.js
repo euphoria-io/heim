@@ -196,6 +196,13 @@ module.exports = function(roomName) {
             margin-top: 15px;
             border: none;
           }
+
+          @media (min-width: 920px) {
+            .youtube-tv {
+              width: 360px;
+              height: 240px;
+            }
+          }
         `}} />
       )
     })
