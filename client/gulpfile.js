@@ -44,6 +44,7 @@ gulp.task('heim-js', function() {
     .require('reflux', {expose: 'reflux'})
     .require('immutable', {expose: 'immutable'})
     .require('moment', {expose: 'moment'})
+    .require('querystring', {expose: 'querystring'})
     .bundle()
     .pipe(source('main.js'))
     .pipe(buffer())

@@ -1,6 +1,7 @@
-var React = require('react')
+var React = require('react/addons')
 var Reflux = require('reflux')
 var Immutable = require('immutable')
+var queryString = require('querystring')
 
 
 module.exports = function(roomName) {
@@ -138,15 +139,18 @@ module.exports = function(roomName) {
       listenables: [TVActions],
 
       init: function() {
-        this.state = {youtubeId: null}
+        this.state = {
+          youtubeId: null,
+          time: 0,
+        }
       },
 
       getInitialState: function() {
         return this.state
       },
 
-      changeVideo: function(youtubeId) {
-        this.state.youtubeId = youtubeId
+      changeVideo: function(video) {
+        this.state = video
         this.trigger(this.state)
       }
     })
@@ -155,11 +159,18 @@ module.exports = function(roomName) {
       displayName: 'YouTubeTV',
 
       mixins: [
-        Reflux.connect(TVStore),
+        Reflux.connect(TVStore, 'tv'),
+        React.addons.PureRenderMixin,
       ],
 
       render: function() {
-        return <iframe className="youtube-tv" src={this.state.youtubeId && ('https://embed.space/?kind=youtube&autoplay=1&youtube_id=' + this.state.youtubeId)} />
+        // jshint camelcase: false
+        return <iframe className="youtube-tv" src={this.state.tv.youtubeId && 'https://embed.space/?' + queryString.stringify({
+          kind: 'youtube',
+          autoplay: 1,
+          youtube_id: this.state.tv.youtubeId,
+          start: Math.floor(Date.now() / 1000 - this.state.tv.time),
+        })} />
       }
     })
 
@@ -167,7 +178,6 @@ module.exports = function(roomName) {
       return <YouTubeTV key="youtube-tv" />
     })
 
-    var latestVideoTime = 0
     Heim.chat.messagesChanged.listen(function(ids, state) {
       var playRe = /!play [^?]*\?v=([-\w]+)/
 
@@ -184,9 +194,8 @@ module.exports = function(roomName) {
         .sortBy(msg => msg.time)
         .last()
 
-      if (video && video.time > latestVideoTime) {
-        TVActions.changeVideo(video.youtubeId)
-        latestVideoTime = video.time
+      if (video && video.time > TVStore.state.time) {
+        TVActions.changeVideo(video)
       }
     })
 
