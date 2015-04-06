@@ -48,6 +48,7 @@ body {
     right: 0;
     top: 0;
     bottom: 0;
+    transition: transform .1s ease-out;
   }
 
   @animation-duration: .45s;
@@ -90,6 +91,8 @@ body {
   &:hover {
     .logo {
       background-image: data-uri('../res/home-outline.svg');
+      transform: scale(1.05);
+      transition-duration: .5s;
     }
 
     .colors {
@@ -144,6 +147,13 @@ body {
       .e {
         animation-delay: (-5 / 5) * @animation-duration;
       }
+    }
+  }
+
+  &:active {
+    .logo {
+      transition-duration: .025s;
+      transform: scale(1);
     }
   }
 }
