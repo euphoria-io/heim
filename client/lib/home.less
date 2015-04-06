@@ -18,9 +18,21 @@ body {
   background: data-uri('../res/home.svg') no-repeat center center;
   background-size: contain;
   text-indent: -9999px;
-  opacity: 0;
-  transform: scale(.95);
-  transition: all 1s ease;
+
+  animation-name: grow;
+  animation-iteration-count: 1;
+  animation-timing-function: ease;
+  animation-duration: 1s;
+  @keyframes grow {
+    0% {
+      transform: scale(.95);
+      opacity: 0;
+    }
+    100% {
+      transform: none;
+      opacity: 1;
+    }
+  }
 }
 
 footer {
@@ -30,9 +42,21 @@ footer {
   right: 0;
   height: 40px;
   text-align: right;
-  opacity: 0;
-  transform: translateY(10px);
-  transition: all 1s ease;
+
+  animation-name: rise;
+  animation-iteration-count: 1;
+  animation-timing-function: ease;
+  animation-duration: 1s;
+  @keyframes rise {
+    0% {
+      transform: translateY(10px);
+      opacity: 0;
+    }
+    100% {
+      transform: none;
+      opacity: 1;
+    }
+  }
 
   a {
     padding-left: 26px;
@@ -42,17 +66,5 @@ footer {
     &:last-child {
       padding-right: 30px;
     }
-  }
-}
-
-body.ready {
-  .welcome {
-    transform: none;
-    opacity: 1;
-  }
-
-  footer {
-    transform: none;
-    opacity: .5;
   }
 }
