@@ -1,0 +1,58 @@
+body {
+  margin: 0;
+  font-family: sans-serif;
+  font-size: 13px;
+  overflow: hidden;
+}
+
+.welcome {
+  @size: 300px;
+  position: absolute;
+  display: block;
+  width: @size;
+  height: @size;
+  margin-left: -@size / 2;
+  margin-top: -@size / 2;
+  left: 50%;
+  top: 50%;
+  background: data-uri('../res/home.svg') no-repeat center center;
+  background-size: contain;
+  text-indent: -9999px;
+  opacity: 0;
+  transform: scale(.95);
+  transition: all 1s ease;
+}
+
+footer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 40px;
+  text-align: right;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: all 1s ease;
+
+  a {
+    padding-left: 26px;
+    text-decoration: none;
+    color: darkgreen;
+
+    &:last-child {
+      padding-right: 30px;
+    }
+  }
+}
+
+body.ready {
+  .welcome {
+    transform: none;
+    opacity: 1;
+  }
+
+  footer {
+    transform: none;
+    opacity: .5;
+  }
+}

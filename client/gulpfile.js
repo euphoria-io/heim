@@ -86,7 +86,7 @@ gulp.task('raven-js', ['heim-js'], function() {
 })
 
 gulp.task('heim-less', function() {
-  return gulp.src(['./lib/main.less', './lib/od.less'])
+  return gulp.src(['./lib/main.less', './lib/od.less', './lib/home.less'])
     .pipe(less({compress: true}))
     .on('error', function(err) {
       gutil.log(gutil.colors.red('LESS error:'), err.message)
@@ -106,7 +106,7 @@ gulp.task('heim-static', function() {
 })
 
 gulp.task('heim-html', function() {
-  return gulp.src(['./lib/index.html'])
+  return gulp.src(['./lib/index.html', './lib/home.html'])
     .pipe(gulp.dest(heimDest))
 })
 

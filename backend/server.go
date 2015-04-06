@@ -83,6 +83,8 @@ func (s *Server) route() {
 
 	s.r.PathPrefix("/static/").Handler(prometheus.InstrumentHandlerFunc("static", s.handleStatic))
 
+	s.r.Handle("/", prometheus.InstrumentHandlerFunc("home", s.handleHomeStatic))
+
 	s.r.HandleFunc("/room/{room:[a-z0-9]+}/ws", instrumentSocketHandlerFunc("ws", s.handleRoom))
 	s.r.Handle(
 		"/room/{room:[a-z0-9]+}/", prometheus.InstrumentHandlerFunc("room_static", s.handleRoomStatic))
@@ -119,6 +121,10 @@ func (s *Server) handleRoomStatic(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	http.ServeFile(w, r, path.Join(s.staticPath, "index.html"))
+}
+
+func (s *Server) handleHomeStatic(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, path.Join(s.staticPath, "home.html"))
 }
 
 func (s *Server) handleRobotsTxt(w http.ResponseWriter, r *http.Request) {
