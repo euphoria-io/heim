@@ -21,8 +21,8 @@
        color-interpolation-filters="sRGB"
        id="filter4180">
       <feGaussianBlur
-         id="feGaussianBlur4182"
-         stdDeviation="39.17537" />
+         stdDeviation="39.17537"
+         id="feGaussianBlur4182" />
     </filter>
     <clipPath
        id="clipPath5579">
@@ -39,8 +39,8 @@
        color-interpolation-filters="sRGB"
        id="filter4180-1">
       <feGaussianBlur
-         id="feGaussianBlur4182-6"
-         stdDeviation="39.17537" />
+         stdDeviation="39.17537"
+         id="feGaussianBlur4182-6" />
     </filter>
   </defs>
   <metadata
@@ -76,7 +76,7 @@
         <g
            transform="matrix(0.48568345,0,0,0.48568345,939.13336,261.57464)"
            id="g5910-9"
-           style="opacity:0.27873565;fill:#151515;fill-opacity:1;filter:url(#filter4180)">
+           style="opacity:0.55;fill:#151515;fill-opacity:1;filter:url(#filter4180)">
           <path
              d="m 1546,577.48657 c -120.5151,0 -218.8779,98.3627 -218.8779,218.87791 0,120.51521 98.3628,218.90462 218.8779,218.90462 120.5152,0 218.878,-98.38941 218.878,-218.90462 0,-120.51521 -98.3628,-218.87791 -218.878,-218.87791 z m -178.4503,218.87596 356.9007,0 c 0,98.99175 -79.4585,178.4809 -178.4504,178.4809 -98.9918,0 -178.4502,-79.48915 -178.4503,-178.4809 z"
              id="path3004-90-9-9"
@@ -84,5 +84,9 @@
         </g>
       </g>
     </g>
+    <path
+       d="m 256.01562,611.98717 c -101.50958,0 -184.374995,82.8655 -184.374995,184.375 0,101.50952 82.865415,184.37502 184.374995,184.37502 101.50942,0 184.34375,-82.8655 184.34375,-184.37502 0,-101.5095 -82.83433,-184.375 -184.34375,-184.375 z m -131.18749,184.375 262.34374,0 c 0,72.77003 -58.38613,131.18752 -131.15625,131.18752 -72.77009,0 -131.18749,-58.41749 -131.18749,-131.18752 z"
+       id="path6356"
+       style="color:#000000;fill:none;stroke:#000000;stroke-width:5;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate" />
   </g>
 </svg>

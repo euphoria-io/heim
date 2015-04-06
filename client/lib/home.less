@@ -15,9 +15,6 @@ body {
   margin-top: -@size / 2;
   left: 50%;
   top: 50%;
-  background: data-uri('../res/home.svg') no-repeat center center;
-  background-size: contain;
-  text-indent: -9999px;
 
   animation-name: grow;
   animation-iteration-count: 1;
@@ -31,6 +28,122 @@ body {
     100% {
       transform: none;
       opacity: 1;
+    }
+  }
+
+  .logo, .colors {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+  }
+
+  .logo {
+    background: data-uri('../res/home.svg') no-repeat center center;
+    background-size: contain;
+    text-indent: -9999px;
+    z-index: 100;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+  }
+
+  @animation-duration: .45s;
+
+  .colors {
+    padding: 35px;
+    font-size: 0;
+    opacity: 0;
+
+    & > div {
+      display: inline-block;
+      width: 100% / 5;
+      height: 100%;
+      animation-iteration-count: infinite;
+      animation-timing-function: steps(1);
+      animation-duration: @animation-duration;
+    }
+
+    .a {
+      background: #d95d3f;
+    }
+
+    .b {
+      background: #f29526;
+    }
+
+    .c {
+      background: #5abe6b;
+    }
+
+    .d {
+      background: #4d97cb;
+    }
+
+    .e {
+      background: #7f62b6;
+    }
+  }
+
+  &:hover {
+    .logo {
+      background-image: data-uri('../res/home-outline.svg');
+    }
+
+    .colors {
+      opacity: 1;
+
+      @keyframes scramble {
+        0% {
+          background: #d95d3f;
+        }
+
+        20% {
+          background: #f29526;
+        }
+
+        40% {
+          background: #5abe6b;
+        }
+
+        60% {
+          background: #4d97cb;
+        }
+
+        80% {
+          background: #7f62b6;
+        }
+
+        100% {
+          background: #d95d3f;
+        }
+      }
+
+      & > div {
+        animation-name: scramble;
+      }
+
+      .a {
+        animation-delay: (-1 / 5) * @animation-duration;
+      }
+
+      .b {
+        animation-delay: (-2 / 5) * @animation-duration;
+      }
+
+      .c {
+        animation-delay: (-3 / 5) * @animation-duration;
+      }
+
+      .d {
+        animation-delay: (-4 / 5) * @animation-duration;
+      }
+
+      .e {
+        animation-delay: (-5 / 5) * @animation-duration;
+      }
     }
   }
 }
