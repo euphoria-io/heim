@@ -19,7 +19,8 @@ type memRoom struct {
 	name         string
 	version      string
 	log          *memLog
-	bans         map[string]time.Time
+	agentBans    map[string]time.Time
+	ipBans       map[string]time.Time
 	identities   map[string]proto.Identity
 	live         map[string][]proto.Session
 	capabilities map[string]security.Capability
@@ -32,7 +33,8 @@ func newMemRoom(name, version string) *memRoom {
 		name:         name,
 		version:      version,
 		log:          newMemLog(),
-		bans:         map[string]time.Time{},
+		agentBans:    map[string]time.Time{},
+		ipBans:       map[string]time.Time{},
 		capabilities: map[string]security.Capability{},
 	}
 }
@@ -48,6 +50,11 @@ func (r *memRoom) Latest(ctx scope.Context, n int, before snowflake.Snowflake) (
 }
 
 func (r *memRoom) Join(ctx scope.Context, session proto.Session) error {
+	client := &proto.Client{}
+	if !client.FromContext(ctx) {
+		return fmt.Errorf("client data not found in scope")
+	}
+
 	r.Lock()
 	defer r.Unlock()
 
@@ -61,7 +68,11 @@ func (r *memRoom) Join(ctx scope.Context, session proto.Session) error {
 	ident := session.Identity()
 	id := ident.ID()
 
-	if banned, ok := r.bans[id]; ok && banned.After(time.Now()) {
+	if banned, ok := r.agentBans[client.AgentID]; ok && banned.After(time.Now()) {
+		return proto.ErrAccessDenied
+	}
+
+	if banned, ok := r.ipBans[client.IP]; ok && banned.After(time.Now()) {
 		return proto.ErrAccessDenied
 	}
 
@@ -221,15 +232,31 @@ func (r *memRoom) GetCapability(ctx scope.Context, id string) (security.Capabili
 
 func (r *memRoom) BanAgent(ctx scope.Context, agentID string, until time.Time) error {
 	r.Lock()
-	r.bans[agentID] = until
+	r.agentBans[agentID] = until
 	r.Unlock()
 	return nil
 }
 
 func (r *memRoom) UnbanAgent(ctx scope.Context, agentID string) error {
 	r.Lock()
-	if _, ok := r.bans[agentID]; ok {
-		delete(r.bans, agentID)
+	if _, ok := r.agentBans[agentID]; ok {
+		delete(r.agentBans, agentID)
+	}
+	r.Unlock()
+	return nil
+}
+
+func (r *memRoom) BanIP(ctx scope.Context, ip string, until time.Time) error {
+	r.Lock()
+	r.ipBans[ip] = until
+	r.Unlock()
+	return nil
+}
+
+func (r *memRoom) UnbanIP(ctx scope.Context, ip string) error {
+	r.Lock()
+	if _, ok := r.ipBans[ip]; ok {
+		delete(r.ipBans, ip)
 	}
 	r.Unlock()
 	return nil

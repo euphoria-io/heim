@@ -16,6 +16,13 @@ type Backend interface {
 	// UnbanAgent removes a global ban.
 	UnbanAgent(ctx scope.Context, agentID string) error
 
+	// BanIP globally bans an IP. A zero value for until indicates a
+	// permanent ban.
+	BanIP(ctx scope.Context, ip string, until time.Time) error
+
+	// UnbanIP removes a global ban.
+	UnbanIP(ctx scope.Context, ip string) error
+
 	Close()
 
 	// Gets a Room by name. If the Room doesn't already exist and create is

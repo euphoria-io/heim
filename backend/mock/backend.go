@@ -12,9 +12,10 @@ import (
 
 type TestBackend struct {
 	sync.Mutex
-	bans    map[string]time.Time
-	rooms   map[string]proto.Room
-	version string
+	agentBans map[string]time.Time
+	ipBans    map[string]time.Time
+	rooms     map[string]proto.Room
+	version   string
 }
 
 func (b *TestBackend) Close() {}
@@ -48,10 +49,10 @@ func (b *TestBackend) BanAgent(ctx scope.Context, agentID string, until time.Tim
 	b.Lock()
 	defer b.Unlock()
 
-	if b.bans == nil {
-		b.bans = map[string]time.Time{agentID: until}
+	if b.agentBans == nil {
+		b.agentBans = map[string]time.Time{agentID: until}
 	} else {
-		b.bans[agentID] = until
+		b.agentBans[agentID] = until
 	}
 	return nil
 }
@@ -60,8 +61,30 @@ func (b *TestBackend) UnbanAgent(ctx scope.Context, agentID string) error {
 	b.Lock()
 	defer b.Unlock()
 
-	if _, ok := b.bans[agentID]; ok {
-		delete(b.bans, agentID)
+	if _, ok := b.agentBans[agentID]; ok {
+		delete(b.agentBans, agentID)
+	}
+	return nil
+}
+
+func (b *TestBackend) BanIP(ctx scope.Context, ip string, until time.Time) error {
+	b.Lock()
+	defer b.Unlock()
+
+	if b.ipBans == nil {
+		b.ipBans = map[string]time.Time{ip: until}
+	} else {
+		b.ipBans[ip] = until
+	}
+	return nil
+}
+
+func (b *TestBackend) UnbanIP(ctx scope.Context, ip string) error {
+	b.Lock()
+	defer b.Unlock()
+
+	if _, ok := b.ipBans[ip]; ok {
+		delete(b.ipBans, ip)
 	}
 	return nil
 }

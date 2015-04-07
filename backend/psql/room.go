@@ -6,13 +6,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-gorp/gorp"
-
 	"euphoria.io/heim/backend"
 	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/security"
 	"euphoria.io/heim/proto/snowflake"
 	"euphoria.io/scope"
+
+	"github.com/go-gorp/gorp"
 )
 
 var notImpl = fmt.Errorf("not implemented")
@@ -60,24 +60,6 @@ func (rb *RoomBinding) Latest(ctx scope.Context, n int, before snowflake.Snowfla
 }
 
 func (rb *RoomBinding) Join(ctx scope.Context, session proto.Session) error {
-	// Check for bans.
-	parts := strings.Split(session.ID(), "-")
-	agentID := parts[0]
-	bans, err := rb.DbMap.Select(
-		BannedAgent{},
-		"SELECT agent_id, room, created, expires, room_reason, agent_reason, private_reason"+
-			" FROM banned_agent"+
-			" WHERE agent_id = $1 AND (room IS NULL OR room = $2)"+
-			" AND (expires IS NULL OR expires > NOW())",
-		agentID, rb.Name)
-	if err != nil {
-		return err
-	}
-	if len(bans) > 0 {
-		backend.Logger(ctx).Printf("access denied to %s: %#v", agentID, bans)
-		return proto.ErrAccessDenied
-	}
-
 	return rb.Backend.join(ctx, rb.Room, session)
 }
 
@@ -386,5 +368,33 @@ func (rb *RoomBinding) BanAgent(ctx scope.Context, agentID string, until time.Ti
 func (rb *RoomBinding) UnbanAgent(ctx scope.Context, agentID string) error {
 	_, err := rb.DbMap.Exec(
 		"DELETE FROM banned_agent WHERE agent_id = $1 AND room = $2", agentID, rb.Name)
+	return err
+}
+
+func (rb *RoomBinding) BanIP(ctx scope.Context, ip string, until time.Time) error {
+	ban := &BannedIP{
+		IP: ip,
+		Room: sql.NullString{
+			String: rb.Name,
+			Valid:  true,
+		},
+		Created: time.Now(),
+		Expires: gorp.NullTime{
+			Time:  until,
+			Valid: !until.IsZero(),
+		},
+	}
+
+	if err := rb.DbMap.Insert(ban); err != nil {
+		return err
+	}
+
+	bounceEvent := &proto.BounceEvent{Reason: "banned", IP: ip}
+	return rb.broadcast(ctx, rb.Room, proto.BounceEventType, bounceEvent)
+}
+
+func (rb *RoomBinding) UnbanIP(ctx scope.Context, ip string) error {
+	_, err := rb.DbMap.Exec(
+		"DELETE FROM banned_ip WHERE ip = $1 AND room = $2", ip, rb.Name)
 	return err
 }

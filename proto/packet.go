@@ -137,6 +137,7 @@ type BounceEvent struct {
 	Reason      string       `json:"reason,omitempty"`
 	AuthOptions []AuthOption `json:"auth_options,omitempty"`
 	AgentID     string       `json:"agent_id,omitempty"`
+	IP          string       `json:"ip,omitempty"`
 }
 
 type SnapshotEvent struct {

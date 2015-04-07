@@ -201,6 +201,9 @@ func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	client := &proto.Client{AgentID: fmt.Sprintf("%x", agentID)}
+	client.FromRequest(ctx, r)
+
 	// Upgrade to a websocket.
 	headers := http.Header{}
 	if cookie != nil {

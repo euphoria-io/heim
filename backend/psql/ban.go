@@ -16,3 +16,11 @@ type BannedAgent struct {
 	AgentReason   string `db:"agent_reason"`
 	PrivateReason string `db:"private_reason"`
 }
+
+type BannedIP struct {
+	IP      string `db:"ip"`
+	Room    sql.NullString
+	Created time.Time
+	Expires gorp.NullTime
+	Reason  string
+}

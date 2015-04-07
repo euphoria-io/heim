@@ -1,6 +1,7 @@
 package mock
 
 import (
+	"net/http"
 	"testing"
 
 	"euphoria.io/heim/proto"
@@ -15,6 +16,8 @@ func TestRoomPresence(t *testing.T) {
 	userB := newSession("B")
 
 	ctx := scope.New()
+	client := &proto.Client{}
+	client.FromRequest(ctx, &http.Request{})
 	room := newMemRoom("test", "testver")
 
 	Convey("First join", t, func() {
@@ -58,6 +61,9 @@ func TestRoomBroadcast(t *testing.T) {
 	userC := newSession("C")
 
 	ctx := scope.New()
+	client := &proto.Client{}
+	client.FromRequest(ctx, &http.Request{})
+
 	room := newMemRoom("test", "testver")
 
 	Convey("Setup", t, func() {

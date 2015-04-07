@@ -112,3 +112,12 @@ activity:
     HEIM_ETCD_HOME: /dev/euphoria.io
     HEIM_CONFIG: /go/src/euphoria.io/heim/heim.yml
   command: run.sh heimctl activity-exporter -http :80
+
+haproxy:
+  build: containers/haproxy
+  links:
+    - backend
+  volumes:
+    - containers/haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg
+  ports:
+    - "8888:80"

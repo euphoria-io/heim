@@ -42,10 +42,14 @@ var schema = map[string]struct {
 
 	// Bans.
 	"banned_agent": {BannedAgent{}, []string{"AgentID", "Room"}},
+	"banned_ip":    {BannedIP{}, []string{"IP", "Room"}},
 
 	// Messages.
 	"message":          {Message{}, []string{"Room", "ID"}},
 	"message_edit_log": {MessageEditLog{}, []string{"EditID"}},
+
+	// Sessions.
+	"session_log": {SessionLog{}, []string{"SessionID"}},
 }
 
 type Backend struct {
@@ -272,6 +276,29 @@ func (b *Backend) UnbanAgent(ctx scope.Context, agentID string) error {
 	return err
 }
 
+func (b *Backend) BanIP(ctx scope.Context, ip string, until time.Time) error {
+	ban := &BannedIP{
+		IP:      ip,
+		Created: time.Now(),
+		Expires: gorp.NullTime{
+			Time:  until,
+			Valid: !until.IsZero(),
+		},
+	}
+
+	if err := b.DbMap.Insert(ban); err != nil {
+		return err
+	}
+
+	bounceEvent := &proto.BounceEvent{Reason: "banned", IP: ip}
+	return b.broadcast(ctx, nil, proto.BounceEventType, bounceEvent)
+}
+
+func (b *Backend) UnbanIP(ctx scope.Context, ip string) error {
+	_, err := b.DbMap.Exec("DELETE FROM banned_ip WHERE ip = $1 AND room IS NULL", ip)
+	return err
+}
+
 func (b *Backend) sendMessageToRoom(
 	ctx scope.Context, room *Room, msg proto.Message, exclude ...proto.Session) (proto.Message, error) {
 
@@ -321,6 +348,54 @@ func (b *Backend) broadcast(
 }
 
 func (b *Backend) join(ctx scope.Context, room *Room, session proto.Session) error {
+	client := &proto.Client{}
+	if !client.FromContext(ctx) {
+		return fmt.Errorf("client data not found in scope")
+	}
+
+	// Check for agent ID bans.
+	agentBans, err := b.DbMap.Select(
+		BannedAgent{},
+		"SELECT agent_id, room, created, expires, room_reason, agent_reason, private_reason"+
+			" FROM banned_agent"+
+			" WHERE agent_id = $1 AND (room IS NULL OR room = $2)"+
+			" AND (expires IS NULL OR expires > NOW())",
+		client.AgentID, room.Name)
+	if err != nil {
+		return err
+	}
+	if len(agentBans) > 0 {
+		backend.Logger(ctx).Printf("access denied to %s: %#v", client.AgentID, agentBans)
+		return proto.ErrAccessDenied
+	}
+
+	// Check for IP bans.
+	ipBans, err := b.DbMap.Select(
+		BannedIP{},
+		"SELECT ip, room, created, expires, reason FROM banned_ip"+
+			" WHERE ip = $1 AND (room IS NULL OR room = $2)"+
+			" AND (expires IS NULL OR expires > NOW())",
+		client.IP, room.Name)
+	if err != nil {
+		return err
+	}
+	if len(ipBans) > 0 {
+		backend.Logger(ctx).Printf("access denied to %s: %#v", client.IP, ipBans)
+		return proto.ErrAccessDenied
+	}
+
+	// Write to session log.
+	entry := &SessionLog{
+		SessionID: session.ID(),
+		IP:        client.IP,
+		Room:      room.Name,
+		UserAgent: client.UserAgent,
+		Connected: client.Connected,
+	}
+	if err := b.DbMap.Insert(entry); err != nil {
+		return err
+	}
+
 	b.Lock()
 	defer b.Unlock()
 
@@ -330,7 +405,7 @@ func (b *Backend) join(ctx scope.Context, room *Room, session proto.Session) err
 		lm = ListenerMap{}
 		b.listeners[room.Name] = lm
 	}
-	lm[session.ID()] = session
+	lm[session.ID()] = Listener{Session: session, Client: client}
 
 	// Broadcast a presence event.
 	// TODO: make this an explicit action via the Room protocol, to support encryption
@@ -342,7 +417,7 @@ func (b *Backend) join(ctx scope.Context, room *Room, session proto.Session) err
 		SessionID: session.ID(),
 		Updated:   time.Now(),
 	}
-	err := presence.SetFact(&proto.Presence{
+	err = presence.SetFact(&proto.Presence{
 		IdentityView:   *session.Identity().View(),
 		LastInteracted: presence.Updated,
 	})

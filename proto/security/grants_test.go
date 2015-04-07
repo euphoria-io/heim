@@ -4,6 +4,7 @@ package security_test
 import (
 	"encoding/base64"
 	"encoding/json"
+	"net/http"
 	"strings"
 	"testing"
 	"time"
@@ -22,6 +23,8 @@ func TestGrants(t *testing.T) {
 		kms := security.LocalKMS()
 		kms.SetMasterKey(make([]byte, security.AES256.KeySize()))
 		ctx := scope.New()
+		client := &proto.Client{}
+		client.FromRequest(ctx, &http.Request{})
 		backend := &mock.TestBackend{}
 		room, err := backend.GetRoom("test", true)
 		So(err, ShouldBeNil)
