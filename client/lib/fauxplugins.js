@@ -131,6 +131,13 @@ module.exports = function(roomName) {
   }
 
   if (roomName == 'music' || roomName == 'youtube') {
+    var clientTimeOffset = 0
+    Heim.socket.store.listen(function(ev) {
+      if (ev.status == 'receive' && ev.body.type == 'ping-event') {
+        clientTimeOffset = Date.now() / 1000 - ev.body.data.time
+      }
+    })
+
     var TVActions = Reflux.createActions([
       'changeVideo',
     ])
@@ -169,7 +176,7 @@ module.exports = function(roomName) {
           kind: 'youtube',
           autoplay: 1,
           youtube_id: this.state.tv.youtubeId,
-          start: Math.max(0, Math.floor(Date.now() / 1000 - this.state.tv.time)),
+          start: Math.max(0, Math.floor(Date.now() / 1000 - this.state.tv.time - clientTimeOffset)),
         })} />
       }
     })
