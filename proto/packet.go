@@ -162,7 +162,7 @@ type WhoReply struct {
 type WhoEvent WhoReply
 
 type Packet struct {
-	ID    string          `json:"id"`
+	ID    string          `json:"id,omitempty"`
 	Type  PacketType      `json:"type"`
 	Data  json.RawMessage `json:"data,omitempty"`
 	Error string          `json:"error,omitempty"`
