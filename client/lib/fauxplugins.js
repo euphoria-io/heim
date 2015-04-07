@@ -169,7 +169,7 @@ module.exports = function(roomName) {
           kind: 'youtube',
           autoplay: 1,
           youtube_id: this.state.tv.youtubeId,
-          start: Math.floor(Date.now() / 1000 - this.state.tv.time),
+          start: Math.max(0, Math.floor(Date.now() / 1000 - this.state.tv.time)),
         })} />
       }
     })
