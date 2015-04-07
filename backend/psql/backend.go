@@ -392,7 +392,23 @@ func (b *Backend) join(ctx scope.Context, room *Room, session proto.Session) err
 		UserAgent: client.UserAgent,
 		Connected: client.Connected,
 	}
-	if err := b.DbMap.Insert(entry); err != nil {
+	t, err := b.DbMap.Begin()
+	if err != nil {
+		return err
+	}
+	if _, err := t.Delete(entry); err != nil {
+		if rerr := t.Rollback(); err != nil {
+			backend.Logger(ctx).Printf("rollback error: %s", rerr)
+		}
+		return err
+	}
+	if err := t.Insert(entry); err != nil {
+		if rerr := t.Rollback(); err != nil {
+			backend.Logger(ctx).Printf("rollback error: %s", rerr)
+		}
+		return err
+	}
+	if err := t.Commit(); err != nil {
 		return err
 	}
 
