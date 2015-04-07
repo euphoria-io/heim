@@ -141,6 +141,7 @@ type BounceEvent struct {
 }
 
 type SnapshotEvent struct {
+	Identity  string    `json:"identity"`
 	SessionID string    `json:"session_id"`
 	Version   string    `json:"version"`
 	Listing   Listing   `json:"listing"`

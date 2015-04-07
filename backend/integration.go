@@ -85,9 +85,10 @@ func (s *serverUnderTest) Connect(roomName string) *testConn {
 type testConn struct {
 	*websocket.Conn
 	sessionID string
+	userID    string
 }
 
-func (tc *testConn) id() string { return tc.sessionID }
+func (tc *testConn) id() string { return tc.userID }
 
 func (tc *testConn) send(id, cmdType, data string, args ...interface{}) {
 	if len(args) > 0 {
@@ -139,7 +140,9 @@ func (tc *testConn) expect(id, cmdType, data string, args ...interface{}) {
 	if packetType == proto.SnapshotEventType {
 		snapshot := payload.(*proto.SnapshotEvent)
 		tc.sessionID = snapshot.SessionID
+		tc.userID = snapshot.Identity
 		snapshot.SessionID = "???"
+		snapshot.Identity = "???"
 	}
 
 	So(payload, ShouldResemble, expectedPayload)
@@ -169,7 +172,7 @@ func (tc *testConn) expectPing() {
 
 func (tc *testConn) expectSnapshot(version string, listingParts []string, logParts []string) {
 	tc.expect("", "snapshot-event",
-		`{"session_id":"???","version":"%s","listing":[%s],"log":[%s]}`,
+		`{"identity":"???","session_id":"???","version":"%s","listing":[%s],"log":[%s]}`,
 		version, strings.Join(listingParts, ","), strings.Join(logParts, ","))
 }
 

@@ -30,6 +30,7 @@ var (
 type cmdState func(*proto.Packet) (interface{}, error)
 
 type session struct {
+	id        string
 	ctx       scope.Context
 	conn      *websocket.Conn
 	identity  *memIdentity
@@ -62,9 +63,10 @@ func newSession(
 	ctx = LoggingContext(ctx, fmt.Sprintf("[%s] ", sessionID))
 
 	session := &session{
+		id:        sessionID,
 		ctx:       ctx,
 		conn:      conn,
-		identity:  newMemIdentity(sessionID, serverID, serverEra),
+		identity:  newMemIdentity(fmt.Sprintf("agent:%08x", agentID), serverID, serverEra),
 		serverID:  serverID,
 		serverEra: serverEra,
 		room:      room,
@@ -82,7 +84,7 @@ func (s *session) Close() {
 	s.ctx.Cancel()
 }
 
-func (s *session) ID() string               { return s.identity.ID() }
+func (s *session) ID() string               { return s.id }
 func (s *session) ServerID() string         { return s.serverID }
 func (s *session) ServerEra() string        { return s.serverEra }
 func (s *session) Identity() proto.Identity { return s.identity }
@@ -329,6 +331,7 @@ func (s *session) sendSnapshot(msgs []proto.Message, listing proto.Listing) erro
 	}
 
 	snapshot := &proto.SnapshotEvent{
+		Identity:  s.Identity().ID(),
 		SessionID: s.ID(),
 		Version:   s.room.Version(),
 		Listing:   listing,
