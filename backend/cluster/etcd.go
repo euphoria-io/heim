@@ -42,6 +42,11 @@ var (
 	})
 )
 
+const (
+	maxConsecutiveWatchFailures = 5
+	initialWatchBackoff         = 2 * time.Second
+)
+
 func init() {
 	prometheus.MustRegister(selfAnnouncements)
 	prometheus.MustRegister(peerEvents)
@@ -210,20 +215,38 @@ func (e *etcdCluster) Watch() <-chan PeerEvent { return e.ch }
 func (e *etcdCluster) watch(waitIndex uint64) {
 	defer close(e.ch)
 
+	backoff := initialWatchBackoff
+	numFailures := 0
+
 	recv := make(chan *etcd.Response)
 	go e.c.Watch(e.key("/peers"), waitIndex, true, recv, e.stop)
 
 	for {
 		resp := <-recv
 		if resp == nil {
-			// If this happens the etcd cluster is unhealthy. For now we'll
-			// just shut down and hope some other backend instance is happy.
+			// If this happens the etcd cluster is unhealthy. Retry (with
+			// backoff), and terminate the server if we fail too many times.
 			fmt.Printf("cluster error: watch: nil response\n")
-			e.ctx.Terminate(fmt.Errorf("cluster error: watch: nil response"))
-			return
+
+			numFailures++
+			if numFailures >= maxConsecutiveWatchFailures {
+				e.ctx.Terminate(fmt.Errorf("cluster error: %d consecutive watch errors", numFailures))
+				return
+			}
+			time.Sleep(backoff)
+			backoff *= 2
+
+			recv = make(chan *etcd.Response)
+			go e.c.Watch(e.key("/peers"), waitIndex, true, recv, e.stop)
+			continue
 		}
 
+		backoff = initialWatchBackoff
+		numFailures = 0
+		waitIndex = resp.Node.ModifiedIndex + 1
+
 		peerID := strings.TrimLeft(strings.TrimPrefix(resp.Node.Key, e.key("/peers")), "/")
+
 		switch resp.Action {
 		case "set":
 			var desc PeerDesc
