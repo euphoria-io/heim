@@ -14,6 +14,8 @@ import (
 	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/security"
 	"euphoria.io/scope"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 func init() {
@@ -235,6 +237,10 @@ func (cmd *serveEmbedCmd) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "public, max-age=300")
 	if r.URL.Path == "/" {
 		r.URL.Path = "/embed.html"
+	}
+	if r.URL.Path == "/metrics" {
+		prometheus.Handler().ServeHTTP(w, r)
+		return
 	}
 	http.FileServer(http.Dir(cmd.static)).ServeHTTP(w, r)
 }
