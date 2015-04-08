@@ -6,6 +6,7 @@ var actions = require('../actions')
 var update = require('../stores/update')
 var UserList = require('./userlist')
 var Settings = require('./settings')
+var NotificationSettings = require('./notificationsettings')
 var FastButton = require('./fastbutton')
 var RoomTitle = require('./roomtitle')
 
@@ -46,6 +47,7 @@ module.exports = React.createClass({
     return (
       <div className="sidebar" style={{marginRight: this.props.scrollbarWidth}}>
         <div className="top-line">
+          <NotificationSettings />
           <ReactCSSTransitionGroup transitionName="settings">
             {this.state.settingsOpen && <Settings />}
           </ReactCSSTransitionGroup>

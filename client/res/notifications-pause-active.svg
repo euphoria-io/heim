@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   version="1.1"
+   width="20"
+   height="20"
+   id="svg7254">
+  <defs
+     id="defs7256" />
+  <metadata
+     id="metadata7259">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     transform="translate(0,-1032.3622)"
+     id="layer1">
+    <g
+       transform="matrix(0.73883633,0,0,0.73883633,-1007.9091,880.74138)"
+       id="g6407">
+      <g
+         transform="matrix(1.0397467,0,0,1.0397467,1000.792,-1014.0332)"
+         id="g4816-58-2-4-7">
+        <g
+           transform="translate(0.2272689,65.609451)"
+           id="g4640-3-3-8-3-9">
+          <path
+             d="M 10,0 C 7.3686832,0 4.7978785,1.0766343 2.9375,2.9375 1.0771215,4.7983657 -6.9059903e-4,7.3686826 0,10 -6.9059903e-4,12.631317 1.0771215,15.201634 2.9375,17.0625 4.7978785,18.923366 7.3686832,20 10,20 12.631317,20 15.202122,18.923366 17.0625,17.0625 18.922878,15.201634 20.000691,12.631317 20,10 20.000691,7.3686826 18.922878,4.7983657 17.0625,2.9375 15.202122,1.0766343 12.631317,0 10,0 z m -3.625,5.09375 2.125,0 c 0.4152985,0 0.75,0.3347015 0.75,0.75 l 0,8.125 c 0,0.415298 -0.3347015,0.75 -0.75,0.75 l -2.125,0 c -0.4152985,0 -0.75,-0.334702 -0.75,-0.75 l 0,-8.125 c 0,-0.4152985 0.3347015,-0.75 0.75,-0.75 z m 5.125,0 2.125,0 c 0.415299,0 0.75,0.3347015 0.75,0.75 l 0,8.125 c 0,0.415298 -0.334701,0.75 -0.75,0.75 l -2.125,0 c -0.415299,0 -0.75,-0.334702 -0.75,-0.75 l 0,-8.125 c 0,-0.4152985 0.334701,-0.75 0.75,-0.75 z"
+             transform="matrix(1.3017399,0,0,1.3017399,349.27376,1107.0309)"
+             id="path3797-2-9-4-9-7-1-6-0-1-4"
+             style="color:#000000;fill:#930000;fill-opacity:1;stroke:none;stroke-width:2;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate" />
+          <g
+             transform="matrix(0.88854739,0,0,1,39.914527,0)"
+             id="g4636-8-12-8-6-6"
+             style="fill:#d7d7d7;fill-opacity:1" />
+        </g>
+        <g
+           id="g4812-1-2-6-24" />
+      </g>
+      <g
+         transform="matrix(0.93152463,0,0,1,805.41944,-340)"
+         id="g5571-6-6-1" />
+    </g>
+  </g>
+</svg>

@@ -189,28 +189,48 @@ describe('notification store', function() {
     })
 
     describe('enabling popups', function() {
-      it('should store enabled', function() {
+      it('should store enabled and reset pause time', function() {
         notification.store.enablePopups()
         sinon.assert.calledWithExactly(storage.set, 'notify', true)
+        sinon.assert.calledWithExactly(storage.set, 'notifyPausedUntil', null)
       })
     })
 
     describe('disabling popups', function() {
-      it('should store disabled', function() {
+      it('should store disabled and reset pause time', function() {
         notification.store.disablePopups()
         sinon.assert.calledWithExactly(storage.set, 'notify', false)
+        sinon.assert.calledWithExactly(storage.set, 'notifyPausedUntil', null)
+      })
+    })
+
+    describe('disabling popups for a time', function() {
+      it('should store pause time', function() {
+        var time = Date.now() + 1000
+        notification.store.pausePopupsUntil(time)
+        sinon.assert.calledWithExactly(storage.set, 'notifyPausedUntil', time)
       })
     })
 
     describe('when popups enabled', function() {
+      var storageMock = {notify: true, room: {}}
+
       beforeEach(function() {
         notification.store.focusChange({windowFocused: false})
-        notification.store.storageChange({notify: true, room: {}})
+        notification.store.storageChange(storageMock)
       })
 
       describe('receiving a message before joined', function() {
         it('should not display a notification', function() {
           notification.store.messageReceived(Immutable.Map(message1), _.extend({}, mockChatState, {joined: false}))
+          sinon.assert.notCalled(Notification)
+        })
+      })
+
+      describe('receiving a message while notifications paused', function() {
+        it('should not display a notification', function() {
+          notification.store.storageChange(_.extend({}, storageMock, {notifyPausedUntil: Date.now() + 1000}))
+          notification.store.messageReceived(Immutable.Map(message1), mockChatState)
           sinon.assert.notCalled(Notification)
         })
       })

@@ -577,6 +577,39 @@ iframe.js {
       }
     }
 
+    .notification-settings {
+      font-size: .8em;
+        margin-right: 10px;
+
+      .notifications {
+        padding: 2px 4px;
+        border-radius: 2px;
+
+        &.enable {
+          background: @welcome-color;
+          .touchable-bg(@welcome-color);
+          .button-icon('../res/notifications-disabled.svg', 14px, @spacing: 4px);
+        }
+
+        &.normal {
+          .touchable-bg(#fff);
+          .button-icon('../res/notifications-pause.svg', 14px, @spacing: 4px);
+        }
+
+        &.snoozed {
+          color: #a76d2f;
+          .touchable-bg(#fff);
+          .button-icon('../res/notifications-pause-snoozed.svg', 14px, @spacing: 4px);
+        }
+
+        &.paused {
+          color: #930000;
+          .touchable-bg(#fff);
+          .button-icon('../res/notifications-pause-active.svg', 14px, @spacing: 4px);
+        }
+      }
+    }
+
     .update-button {
       margin-top: 15px;
     }

@@ -13,12 +13,34 @@ if (!window.frameElement) {
   window.uiwindow = window.top
   window.uidocument = window.top.document
 
+
+  var moment = require('moment')
+  moment.locale('en', {
+    relativeTime: {
+      future: 'in %s',
+      past: '%s ago',
+      s: '%ds',
+      m: '1 min',
+      mm: '%d min',
+      h: '1 hour',
+      hh: '%d hours',
+      d: 'a day',
+      dd: '%d days',
+      M: 'a month',
+      MM: '%d months',
+      y: 'a year',
+      yy: '%d years',
+    }
+  })
+  moment.relativeTimeThreshold('s', 0)
+  moment.relativeTimeThreshold('m', 60)
+
+
   var _ = require('lodash')
   require('setimmediate')
 
   var EventListeners = require('./eventlisteners')
   var isTextInput = require('./istextinput')
-
 
   var evs = new EventListeners()
 

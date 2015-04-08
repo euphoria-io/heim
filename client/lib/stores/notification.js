@@ -10,6 +10,7 @@ var chat = require('./chat')
 var storeActions = Reflux.createActions([
   'enablePopups',
   'disablePopups',
+  'pausePopupsUntil',
 ])
 _.extend(module.exports, storeActions)
 
@@ -30,7 +31,8 @@ module.exports.store = Reflux.createStore({
   init: function() {
     this.state = {
       popupsEnabled: null,
-      popupsSupported: 'Notification' in window
+      popupsSupported: 'Notification' in window,
+      popupsPausedUntil: null,
     }
 
     this.focus = true
@@ -60,6 +62,7 @@ module.exports.store = Reflux.createStore({
   enablePopups: function() {
     if (this.state.popupsPermission) {
       storage.set('notify', true)
+      storage.set('notifyPausedUntil', null)
     } else {
       Notification.requestPermission(this.onPermission)
     }
@@ -67,6 +70,11 @@ module.exports.store = Reflux.createStore({
 
   disablePopups: function() {
     storage.set('notify', false)
+    storage.set('notifyPausedUntil', null)
+  },
+
+  pausePopupsUntil: function(time) {
+    storage.set('notifyPausedUntil', Math.floor(time))
   },
 
   onPermission: function(permission) {
@@ -82,6 +90,7 @@ module.exports.store = Reflux.createStore({
       return
     }
     this.state.popupsEnabled = this.state.popupsPermission && data.notify
+    this.state.popupsPausedUntil = data.notifyPausedUntil
     this._roomStorage = data.room
     this.trigger(this.state)
   },
@@ -156,7 +165,7 @@ module.exports.store = Reflux.createStore({
       // when we close a notification, its onclose callback will get called
       // async. displaying a new notification can race with this, causing the
       // new notification to be invalidly forgotten.
-      if (this.state.popupsEnabled) {
+      if (notification.popup) {
         notification.popup.onclose = null
         notification.popup.close()
       }
@@ -187,7 +196,8 @@ module.exports.store = Reflux.createStore({
     delete options.favicon
     this.updateFavicon()
 
-    if (this.state.popupsEnabled) {
+    var popupsPaused = this.state.popupsPausedUntil && Date.now() < this.state.popupsPausedUntil
+    if (this.state.popupsEnabled && !popupsPaused) {
       var timeoutDuration = options.timeout
       delete options.timeout
 
