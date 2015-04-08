@@ -55,14 +55,14 @@ module.exports = React.createClass({
 
     var notificationsButton
     if (!this.state.notification.popupsPermission) {
-      notificationsButton = <FastButton className="notifications " onClick={this.enableNotify}>enable notifications</FastButton>
+      notificationsButton = <FastButton className="notification-toggle " onClick={this.enableNotify}>enable notifications</FastButton>
     } else {
       if (this.state.notification.popupsPausedUntil && Date.now() < this.state.notification.popupsPausedUntil) {
-        notificationsButton = <FastButton className="notifications snoozed" onClick={this.disableNotify}>{'for ' + this.state.pauseTimeRemaining}</FastButton>
+        notificationsButton = <FastButton className="notification-toggle snoozed" onClick={this.disableNotify}>{'for ' + this.state.pauseTimeRemaining}</FastButton>
       } else if (!this.state.notification.popupsEnabled) {
-        notificationsButton = <FastButton className="notifications paused" onClick={this.enableNotify}>for now</FastButton>
+        notificationsButton = <FastButton className="notification-toggle paused" onClick={this.enableNotify}>for now</FastButton>
       } else {
-        notificationsButton = <FastButton className="notifications normal" onClick={this.snoozeNotify}>notifications</FastButton>
+        notificationsButton = <FastButton className="notification-toggle normal" onClick={this.snoozeNotify}>notifications</FastButton>
       }
     }
 
