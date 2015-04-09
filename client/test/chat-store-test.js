@@ -39,6 +39,7 @@ describe('chat store', function() {
     'id': 'id1',
     'time': 123456,
     'sender': {
+      'session_id': '32.64.96.128:12345',
       'id': '32.64.96.128:12345',
       'name': 'tester',
     },
@@ -49,6 +50,7 @@ describe('chat store', function() {
     'id': 'id2',
     'time': 123457,
     'sender': {
+      'session_id': '32.64.96.128:12345',
       'id': '32.64.96.128:12345',
       'name': 'tester',
     },
@@ -60,6 +62,7 @@ describe('chat store', function() {
     'parent': 'id2',
     'time': 123458,
     'sender': {
+      'session_id': '32.64.96.128:12346',
       'id': '32.64.96.128:12346',
       'name': 'tester2',
     },
@@ -82,6 +85,7 @@ describe('chat store', function() {
     'id': 'id0',
     'time': 123460,
     'sender': {
+      'session_id': '32.64.96.128:12345',
       'id': '32.64.96.128:12345',
       'name': 'tester',
     },
@@ -108,6 +112,7 @@ describe('chat store', function() {
           'id': 'id9',
           'time': 223460,
           'sender': {
+            'session_id': '32.64.96.128:12345',
             'id': '32.64.96.128:12345',
             'name': 'tester',
           },
@@ -123,18 +128,21 @@ describe('chat store', function() {
     'data': {
       'listing': [
         {
+          'session_id': '32.64.96.128:12344',
           'id': '32.64.96.128:12344',
           'name': '000tester',
           'server_id': '1a2a3a4a5a6a',
           'server_era': '1b2b3b4b5b6b',
         },
         {
+          'session_id': '32.64.96.128:12345',
           'id': '32.64.96.128:12345',
           'name': 'guest',
           'server_id': '1a2a3a4a5a6a',
           'server_era': '1b2b3b4b5b6b',
         },
         {
+          'session_id': '32.64.96.128:12346',
           'id': '32.64.96.128:12346',
           'name': 'tester2',
           'server_id': '1x2x3x4x5x6x',
@@ -148,6 +156,7 @@ describe('chat store', function() {
     'id': '1',
     'type': 'nick-reply',
     'data': {
+      'session_id': '32.64.96.128:12345',
       'id': '32.64.96.128:12345',
       'from': 'guest',
       'to': 'tester',
@@ -464,6 +473,7 @@ describe('chat store', function() {
         'id': 'id3',
         'time': 123456,
         'sender': {
+          'session_id': '32.64.96.128:12346',
           'id': '32.64.96.128:12346',
           'name': 'tester2',
         },
@@ -493,7 +503,8 @@ describe('chat store', function() {
 
     it('should update sender lastSent', function(done) {
       handleSocket({status: 'receive', body: sendEvent}, function(state) {
-        assert.equal(state.who.get(sendEvent.data.sender.id).get('lastSent'), sendEvent.data.time)
+        // jshint camelcase: false
+        assert.equal(state.who.get(sendEvent.data.sender.session_id).get('lastSent'), sendEvent.data.time)
         done()
       })
     })
@@ -569,8 +580,9 @@ describe('chat store', function() {
 
     it('messages should update sender lastSent', function(done) {
       handleSocket({status: 'receive', body: msgBody}, function(state) {
-        assert.equal(state.who.get(message2.sender.id).get('lastSent'), message2.time)
-        assert.equal(state.who.get(message3.sender.id).get('lastSent'), message3.time)
+        // jshint camelcase: false
+        assert.equal(state.who.get(message2.sender.session_id).get('lastSent'), message2.time)
+        assert.equal(state.who.get(message3.sender.session_id).get('lastSent'), message3.time)
         done()
       })
     })
@@ -656,7 +668,8 @@ describe('chat store', function() {
       it('messages should update sender lastSent', function(done) {
         handleSocket({status: 'receive', body: logReply}, function() {
           handleSocket({status: 'receive', body: moreLogReply}, function(state) {
-            assert.equal(state.who.get(message0.sender.id).get('lastSent'), message0.time)
+            // jshint camelcase: false
+            assert.equal(state.who.get(message0.sender.session_id).get('lastSent'), message0.time)
             done()
           })
         })
@@ -816,7 +829,8 @@ describe('chat store', function() {
       handleSocket({status: 'receive', body: msgBody}, function(state) {
         assert.equal(state.who.size, whoReply.data.listing.length)
         assert(Immutable.Iterable(whoReply.data.listing).every(function(user) {
-          var whoEntry = state.who.get(user.id)
+          // jshint camelcase: false
+          var whoEntry = state.who.get(user.session_id)
           return !!whoEntry && whoEntry.isSuperset(Immutable.fromJS(user))
         }))
         done()
@@ -925,6 +939,7 @@ describe('chat store', function() {
       'id': '2',
       'type': 'nick-event',
       'data': {
+        'session_id': '32.64.96.128:54321',
         'id': '32.64.96.128:54321',
         'from': 'nonexistence',
         'to': 'absence',
@@ -938,7 +953,8 @@ describe('chat store', function() {
     it('should update user list name', function(done) {
       handleSocket({status: 'receive', body: whoReply}, function() {
         handleSocket({status: 'receive', body: nickReply}, function(state) {
-          assert.equal(state.who.getIn([nickReply.data.id, 'name']), nickReply.data.to)
+          // jshint camelcase: false
+          assert.equal(state.who.getIn([nickReply.data.session_id, 'name']), nickReply.data.to)
           done()
         })
       })
@@ -947,7 +963,8 @@ describe('chat store', function() {
     it('should update hue', function(done) {
       handleSocket({status: 'receive', body: whoReply}, function() {
         handleSocket({status: 'receive', body: nickReply}, function(state) {
-          assert.equal(state.who.getIn([nickReply.data.id, 'hue']), 35)
+          // jshint camelcase: false
+          assert.equal(state.who.getIn([nickReply.data.session_id, 'hue']), 35)
           done()
         })
       })
@@ -956,7 +973,8 @@ describe('chat store', function() {
     it('should add nonexistent users', function(done) {
       handleSocket({status: 'receive', body: whoReply}, function() {
         handleSocket({status: 'receive', body: nonexistentNickEvent}, function(state) {
-          assert(state.who.has(nonexistentNickEvent.data.id))
+          // jshint camelcase: false
+          assert(state.who.has(nonexistentNickEvent.data.session_id))
           done()
         })
       })
@@ -1010,14 +1028,16 @@ describe('chat store', function() {
 
     it('should add to user list', function(done) {
       handleSocket({status: 'receive', body: joinEvent}, function(state) {
-        assert(state.who.get(joinEvent.data.id).isSuperset(Immutable.fromJS(joinEvent.data)))
+        // jshint camelcase: false
+        assert(state.who.get(joinEvent.data.session_id).isSuperset(Immutable.fromJS(joinEvent.data)))
         done()
       })
     })
 
     it('should assign a hue', function(done) {
       handleSocket({status: 'receive', body: joinEvent}, function(state) {
-        assert.equal(state.who.getIn([joinEvent.data.id, 'hue']), 234)
+        // jshint camelcase: false
+        assert.equal(state.who.getIn([joinEvent.data.session_id, 'hue']), 234)
         done()
       })
     })
@@ -1036,7 +1056,8 @@ describe('chat store', function() {
     it('should remove from user list', function(done) {
       handleSocket({status: 'receive', body: whoReply}, function() {
         handleSocket({status: 'receive', body: partEvent}, function(state) {
-          assert(!state.who.has(partEvent.data.id))
+          // jshint camelcase: false
+          assert(!state.who.has(partEvent.data.session_id))
           done()
         })
       })

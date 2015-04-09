@@ -133,6 +133,7 @@ module.exports.store = Reflux.createStore({
   _handleMessagesData: function(messages) {
     this.state.who = this.state.who.withMutations(who => {
       _.each(messages, message => {
+        // jshint camelcase: false
         var nick = this.state.nick || this.state.tentativeNick
         if (nick) {
           var mention = message.content.match(mentionRe)
@@ -141,7 +142,7 @@ module.exports.store = Reflux.createStore({
           }
         }
         message.sender.hue = hueHash.hue(message.sender.name)
-        who.mergeIn([message.session_id], {
+        who.mergeIn([message.sender.session_id], {
           lastSent: message.time
         })
       })
@@ -177,6 +178,7 @@ module.exports.store = Reflux.createStore({
     this.state.who = Immutable.OrderedMap(
       Immutable.Seq(data.listing)
         .map(function(user) {
+          // jshint camelcase: false
           user.hue = hueHash.hue(user.name)
           return [user.session_id, Immutable.Map(user)]
         }, this)
