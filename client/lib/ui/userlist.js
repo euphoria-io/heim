@@ -28,7 +28,7 @@ module.exports = React.createClass({
     return (
       <div className="user-list" {...this.props}>
         {list.map(function(user) {
-          return <div key={user.get('id')} className="nick" style={{background: 'hsl(' + user.get('hue') + ', 65%, 85%)'}}>{user.get('name')}</div>
+          return <div key={user.get('session_id')} className="nick" style={{background: 'hsl(' + user.get('hue') + ', 65%, 85%)'}}>{user.get('name')}</div>
         }, this).toArray()}
         {remaining > 0 && <div className="more nick">+{remaining} more</div>}
       </div>
