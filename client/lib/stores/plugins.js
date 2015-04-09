@@ -11,7 +11,8 @@ _.extend(module.exports, storeActions)
 
 var hooks = module.exports.hooks = new Hooks(
   'page-bottom',
-  'sidebar',
+  'sidebar-top',
+  'sidebar-bottom',
   'incoming-messages'
 )
 

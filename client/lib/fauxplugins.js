@@ -46,7 +46,7 @@ module.exports = function(roomName) {
   }
 
   if (roomName == 'space') {
-    Heim.hook('sidebar', function() {
+    Heim.hook('sidebar-bottom', function() {
       return (
         <div key="norman" className="norman">
           <p>norman</p>
@@ -181,7 +181,7 @@ module.exports = function(roomName) {
       }
     })
 
-    Heim.hook('sidebar', function() {
+    Heim.hook('sidebar-top', function() {
       return <YouTubeTV key="youtube-tv" />
     })
 
@@ -212,14 +212,38 @@ module.exports = function(roomName) {
           .youtube-tv {
             width: 240px;
             height: 180px;
-            margin-top: 15px;
+            margin-bottom: 15px;
             border: none;
+          }
+
+          .chat .user-list {
+            max-height: calc(80vh - 195px);
+          }
+
+          .chat .sidebar {
+            width: 240px;
+          }
+
+          .chat .messages-container .messages .line {
+            margin-right: 245px;
           }
 
           @media (min-width: 920px) {
             .youtube-tv {
               width: 360px;
               height: 270px;
+            }
+
+            .chat .user-list {
+              max-height: calc(80vh - 285px);
+            }
+
+            .chat .sidebar {
+              width: 360px;
+            }
+
+            .chat .messages-container .messages .line {
+              margin-right: 365px;
             }
           }
         `}} />
