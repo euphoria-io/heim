@@ -60,6 +60,10 @@ var Message = module.exports = React.createClass({
       embeds.push(<a key={offset} href={'//imgur.com/' + id} target="_blank"><img src={'//i.imgur.com/' + id + (ext == '.gif' ? '' : 't') + (ext || '.jpg')} /></a>)
       return ''
     })
+    content = content.replace(/(?:https?:\/\/)?(imgs\.xkcd\.com\/comics\/.*\.png)/g, (match, imgUrl, offset) => {
+      embeds.push(<a key={offset} href={'//' + imgUrl} target="_blank"><img src={'//' + imgUrl} /></a>)
+      return ''
+    })
     if (embeds.length) {
       messageEmbeds = <div className="embeds">{embeds}</div>
     }
