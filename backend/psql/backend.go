@@ -434,7 +434,7 @@ func (b *Backend) join(ctx scope.Context, room *Room, session proto.Session) err
 		Updated:   time.Now(),
 	}
 	err = presence.SetFact(&proto.Presence{
-		IdentityView:   *session.Identity().View(),
+		SessionView:    *session.View(),
 		LastInteracted: presence.Updated,
 	})
 	if err != nil {
@@ -444,9 +444,9 @@ func (b *Backend) join(ctx scope.Context, room *Room, session proto.Session) err
 		return fmt.Errorf("presence insert error: %s", err)
 	}
 	fmt.Printf("joining session: %#v\n", session)
-	fmt.Printf(" -> %#v\n", session.Identity().View())
+	fmt.Printf(" -> %#v\n", session.View())
 	return b.broadcast(ctx, room,
-		proto.JoinEventType, proto.PresenceEvent(*session.Identity().View()), session)
+		proto.JoinEventType, proto.PresenceEvent(*session.View()), session)
 }
 
 func (b *Backend) part(ctx scope.Context, room *Room, session proto.Session) error {
@@ -468,7 +468,7 @@ func (b *Backend) part(ctx scope.Context, room *Room, session proto.Session) err
 	// Broadcast a presence event.
 	// TODO: make this an explicit action via the Room protocol, to support encryption
 	return b.broadcast(ctx, room,
-		proto.PartEventType, proto.PresenceEvent(*session.Identity().View()), session)
+		proto.PartEventType, proto.PresenceEvent(*session.View()), session)
 }
 
 func (b *Backend) listing(ctx scope.Context, room *Room) (proto.Listing, error) {
@@ -489,7 +489,7 @@ func (b *Backend) listing(ctx scope.Context, room *Room) (proto.Listing, error) 
 		p := row.(*Presence)
 		fmt.Printf("presence row: %#v\n", p)
 		if b.peers[p.ServerID] == p.ServerEra {
-			if view, err := p.IdentityView(); err == nil {
+			if view, err := p.SessionView(); err == nil {
 				result = append(result, view)
 			} else {
 				fmt.Printf("ignoring presence row because error: %s\n", err)
@@ -520,11 +520,11 @@ func (b *Backend) latest(ctx scope.Context, room *Room, n int, before snowflake.
 
 	if before.IsZero() {
 		query = ("SELECT room, id, previous_edit_id, parent, posted, edited, deleted," +
-			" sender_id, sender_name, server_id, server_era, content, encryption_key_id" +
+			" session_id, sender_id, sender_name, server_id, server_era, content, encryption_key_id" +
 			" FROM message WHERE room = $1 AND deleted IS NULL ORDER BY id DESC LIMIT $2")
 	} else {
 		query = ("SELECT room, id, previous_edit_id, parent, posted, edited, deleted," +
-			" sender_id, sender_name, server_id, server_era, content, encryption_key_id" +
+			" session_id, sender_id, sender_name, server_id, server_era, content, encryption_key_id" +
 			" FROM message WHERE room = $1 AND id < $3 AND deleted IS NULL ORDER BY id DESC LIMIT $2")
 		args = append(args, before.String())
 	}

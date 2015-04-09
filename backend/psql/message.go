@@ -18,6 +18,7 @@ type Message struct {
 	Posted          time.Time
 	Edited          gorp.NullTime
 	Deleted         gorp.NullTime
+	SessionID       string `db:"session_id"`
 	SenderID        string `db:"sender_id"`
 	SenderName      string `db:"sender_name"`
 	ServerID        string `db:"server_id"`
@@ -27,7 +28,7 @@ type Message struct {
 }
 
 func NewMessage(
-	room *Room, idView *proto.IdentityView, id, parent snowflake.Snowflake, keyID, content string) (
+	room *Room, sessionView *proto.SessionView, id, parent snowflake.Snowflake, keyID, content string) (
 	*Message, error) {
 
 	msg := &Message{
@@ -37,11 +38,12 @@ func NewMessage(
 		Posted:  id.Time(),
 		Content: content,
 	}
-	if idView != nil {
-		msg.SenderID = idView.ID
-		msg.SenderName = idView.Name
-		msg.ServerID = idView.ServerID
-		msg.ServerEra = idView.ServerEra
+	if sessionView != nil {
+		msg.SessionID = sessionView.SessionID
+		msg.SenderID = sessionView.ID
+		msg.SenderName = sessionView.Name
+		msg.ServerID = sessionView.ServerID
+		msg.ServerEra = sessionView.ServerEra
 	}
 	if keyID != "" {
 		msg.EncryptionKeyID = sql.NullString{
@@ -55,11 +57,14 @@ func NewMessage(
 func (m *Message) ToBackend() proto.Message {
 	msg := proto.Message{
 		UnixTime: proto.Time(m.Posted),
-		Sender: &proto.IdentityView{
-			ID:        m.SenderID,
-			Name:      m.SenderName,
-			ServerID:  m.ServerID,
-			ServerEra: m.ServerEra,
+		Sender: &proto.SessionView{
+			IdentityView: &proto.IdentityView{
+				ID:        m.SenderID,
+				Name:      m.SenderName,
+				ServerID:  m.ServerID,
+				ServerEra: m.ServerEra,
+			},
+			SessionID: m.SessionID,
 		},
 		Content: m.Content,
 	}

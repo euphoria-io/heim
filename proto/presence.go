@@ -7,7 +7,7 @@ import (
 )
 
 type Presence struct {
-	IdentityView
+	SessionView
 	LastInteracted time.Time           `json:"last_interacted"`
 	MessageID      snowflake.Snowflake `json:"message_id"`
 	Typing         bool                `json:"typing"`

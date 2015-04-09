@@ -79,18 +79,27 @@ func TestRoomBroadcast(t *testing.T) {
 			[]message{
 				{
 					cmdType: proto.JoinEventType,
-					payload: proto.PresenceEvent{ID: "B"},
+					payload: proto.PresenceEvent{
+						SessionID:    "B",
+						IdentityView: &proto.IdentityView{ID: "B"},
+					},
 				},
 				{
 					cmdType: proto.JoinEventType,
-					payload: proto.PresenceEvent{ID: "C"},
+					payload: proto.PresenceEvent{
+						SessionID:    "C",
+						IdentityView: &proto.IdentityView{ID: "C"},
+					},
 				},
 			})
 		So(userB.history, ShouldResemble,
 			[]message{
 				{
 					cmdType: proto.JoinEventType,
-					payload: proto.PresenceEvent{ID: "C"},
+					payload: proto.PresenceEvent{
+						SessionID:    "C",
+						IdentityView: &proto.IdentityView{ID: "C"},
+					},
 				},
 			})
 		So(userC.history, ShouldResemble,
@@ -103,11 +112,17 @@ func TestRoomBroadcast(t *testing.T) {
 			[]message{
 				{
 					cmdType: proto.JoinEventType,
-					payload: proto.PresenceEvent{ID: "B"},
+					payload: proto.PresenceEvent{
+						SessionID:    "B",
+						IdentityView: &proto.IdentityView{ID: "B"},
+					},
 				},
 				{
 					cmdType: proto.JoinEventType,
-					payload: proto.PresenceEvent{ID: "C"},
+					payload: proto.PresenceEvent{
+						SessionID:    "C",
+						IdentityView: &proto.IdentityView{ID: "C"},
+					},
 				},
 				{
 					cmdType: proto.SendEventType,
@@ -118,7 +133,10 @@ func TestRoomBroadcast(t *testing.T) {
 			[]message{
 				{
 					cmdType: proto.JoinEventType,
-					payload: proto.PresenceEvent{ID: "C"},
+					payload: proto.PresenceEvent{
+						SessionID:    "C",
+						IdentityView: &proto.IdentityView{ID: "C"},
+					},
 				},
 				{cmdType: proto.SendEventType, payload: proto.Message{Content: "2"}},
 			})

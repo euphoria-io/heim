@@ -240,16 +240,18 @@ func testLurker(s *serverUnderTest) {
 
 		conn2.expectPing()
 		conn2.expectSnapshot(s.backend.Version(),
-			[]string{fmt.Sprintf(`{"id":"%s","server_id":"test1","server_era":"era1"}`, id1)},
+			[]string{
+				fmt.Sprintf(`{"session_id":"%s","id":"%s","server_id":"test1","server_era":"era1"}`,
+					conn1.sessionID, id1)},
 			nil)
 		id2 := conn2.id()
 
 		conn2.send("1", "nick", `{"name":"speaker"}`)
-		conn2.expect("1", "nick-reply", `{"id":"%s","from":"","to":"speaker"}`, id2)
+		conn2.expect("1", "nick-reply", `{"id":"%s","from":"","to":"speaker"}`, conn2.sessionID)
 
 		conn1.expect("", "join-event",
-			`{"id":"%s","server_id":"test1","server_era":"era1"}`, id2)
-		conn1.expect("", "nick-event", `{"id":"%s","to":"speaker"}`, id2)
+			`{"session_id":"%s","id":"%s","server_id":"test1","server_era":"era1"}`, conn2.sessionID, id2)
+		conn1.expect("", "nick-event", `{"id":"%s","to":"speaker"}`, conn2.sessionID)
 	})
 }
 
@@ -273,20 +275,25 @@ func testBroadcast(s *serverUnderTest) {
 			conn.expectPing()
 			conn.expectSnapshot(s.backend.Version(), listingParts, nil)
 			me := conn.id()
-			ids[i] = proto.IdentityView{ID: me, Name: fmt.Sprintf("user%d", i)}
+			ids[i] = proto.SessionView{
+				SessionID:    conn.sessionID,
+				IdentityView: &proto.IdentityView{ID: me, Name: fmt.Sprintf("user%d", i)},
+			}
 			listingParts = append(listingParts,
-				fmt.Sprintf(`{"id":"%s","name":"%s","server_id":"test1","server_era":"era1"}`,
-					ids[i].ID, ids[i].Name))
+				fmt.Sprintf(
+					`{"session_id":"%s","id":"%s","name":"%s","server_id":"test1","server_era":"era1"}`,
+					ids[i].SessionID, ids[i].ID, ids[i].Name))
 
 			conn.expect("1", "nick-reply",
-				`{"id":"%s","from":"","to":"%s"}`, ids[i].ID, ids[i].Name)
+				`{"id":"%s","from":"","to":"%s"}`, ids[i].SessionID, ids[i].Name)
 			conn.expect("2", "who-reply", `{"listing":[%s]}`, strings.Join(listingParts, ","))
 
 			for _, c := range conns[:i] {
 				c.expect("", "join-event",
-					`{"id":"%s","server_id":"test1","server_era":"era1"}`, ids[i].ID)
+					`{"session_id":"%s","id":"%s","server_id":"test1","server_era":"era1"}`,
+					ids[i].SessionID, ids[i].ID)
 				c.expect("", "nick-event",
-					`{"id":"%s","from":"","to":"%s"}`, ids[i].ID, ids[i].Name)
+					`{"id":"%s","from":"","to":"%s"}`, ids[i].SessionID, ids[i].Name)
 			}
 		}
 
@@ -303,27 +310,27 @@ func testBroadcast(s *serverUnderTest) {
 
 		conns[1].send("2", "send", `{"content":"hi"}`)
 		conns[0].expect("", "send-event",
-			`{"id":"%s","time":1,"sender":{"id":"%s","name":"%s",%s},"content":"hi"}`,
-			sf1, ids[1].ID, ids[1].Name, server)
+			`{"id":"%s","time":1,"sender":{"session_id":"%s","id":"%s","name":"%s",%s},"content":"hi"}`,
+			sf1, ids[1].SessionID, ids[1].ID, ids[1].Name, server)
 
 		conns[2].send("2", "send", `{"content":"bye"}`)
 		conns[0].expect("", "send-event",
-			`{"id":"%s","time":2,"sender":{"id":"%s","name":"%s",%s},"content":"bye"}`,
-			sf2, ids[2].ID, ids[2].Name, server)
+			`{"id":"%s","time":2,"sender":{"session_id":"%s","id":"%s","name":"%s",%s},"content":"bye"}`,
+			sf2, ids[2].SessionID, ids[2].ID, ids[2].Name, server)
 
 		conns[1].expect("2", "send-reply",
-			`{"id":"%s","time":1,"sender":{"id":"%s","name":"%s",%s},"content":"hi"}`,
-			sf1, ids[1].ID, ids[1].Name, server)
+			`{"id":"%s","time":1,"sender":{"session_id":"%s","id":"%s","name":"%s",%s},"content":"hi"}`,
+			sf1, ids[1].SessionID, ids[1].ID, ids[1].Name, server)
 		conns[1].expect("", "send-event",
-			`{"id":"%s","time":2,"sender":{"id":"%s","name":"%s",%s},"content":"bye"}`,
-			sf2, ids[2].ID, ids[2].Name, server)
+			`{"id":"%s","time":2,"sender":{"session_id":"%s","id":"%s","name":"%s",%s},"content":"bye"}`,
+			sf2, ids[2].SessionID, ids[2].ID, ids[2].Name, server)
 
 		conns[2].expect("", "send-event",
-			`{"id":"%s","time":1,"sender":{"id":"%s","name":"%s",%s},"content":"hi"}`,
-			sf1, ids[1].ID, ids[1].Name, server)
+			`{"id":"%s","time":1,"sender":{"session_id":"%s","id":"%s","name":"%s",%s},"content":"hi"}`,
+			sf1, ids[1].SessionID, ids[1].ID, ids[1].Name, server)
 		conns[2].expect("2", "send-reply",
-			`{"id":"%s","time":2,"sender":{"id":"%s","name":"%s",%s},"content":"bye"}`,
-			sf2, ids[2].ID, ids[2].Name, server)
+			`{"id":"%s","time":2,"sender":{"session_id":"%s","id":"%s","name":"%s",%s},"content":"bye"}`,
+			sf2, ids[2].SessionID, ids[2].ID, ids[2].Name, server)
 	})
 }
 
@@ -338,8 +345,10 @@ func testThreading(s *serverUnderTest) {
 		conn.expectPing()
 		conn.expectSnapshot(s.backend.Version(), nil, nil)
 
-		id := &proto.IdentityView{ID: conn.id(), Name: "user"}
-		id.Name = id.ID
+		id := &proto.SessionView{
+			SessionID:    conn.sessionID,
+			IdentityView: &proto.IdentityView{ID: conn.id(), Name: conn.id()},
+		}
 		sfs := snowflakes(2)
 		sf1 := sfs[0]
 		sf2 := sfs[1]
@@ -347,20 +356,20 @@ func testThreading(s *serverUnderTest) {
 
 		conn.send("1", "send", `{"content":"root"}`)
 		conn.expect("1", "send-reply",
-			`{"id":"%s","time":1,"sender":{"id":"%s",%s},"content":"root"}`,
-			sf1, id.ID, server)
+			`{"id":"%s","time":1,"sender":{"session_id":"%s","id":"%s",%s},"content":"root"}`,
+			sf1, id.SessionID, id.ID, server)
 
 		conn.send("2", "send", `{"parent":"%s","content":"ch1"}`, sf1)
 		conn.expect("2", "send-reply",
-			`{"id":"%s","parent":"%s","time":2,"sender":{"id":"%s",%s},"content":"ch1"}`,
-			sf2, sf1, id.ID, server)
+			`{"id":"%s","parent":"%s","time":2,"sender":{"session_id":"%s","id":"%s",%s},"content":"ch1"}`,
+			sf2, sf1, id.SessionID, id.ID, server)
 
 		conn.send("3", "log", `{"n":10}`)
 		conn.expect("3", "log-reply",
 			`{"log":[`+
-				`{"id":"%s","time":1,"sender":{"id":"%s",%s},"content":"root"},`+
-				`{"id":"%s","parent":"%s","time":2,"sender":{"id":"%s",%s},"content":"ch1"}]}`,
-			sf1, id.ID, server, sf2, sf1, id.ID, server)
+				`{"id":"%s","time":1,"sender":{"session_id":"%s","id":"%s",%s},"content":"root"},`+
+				`{"id":"%s","parent":"%s","time":2,"sender":{"session_id":"%s","id":"%s",%s},"content":"ch1"}]}`,
+			sf1, id.SessionID, id.ID, server, sf2, sf1, id.SessionID, id.ID, server)
 	})
 }
 
@@ -392,23 +401,28 @@ func testPresence(factory func() proto.Backend) {
 		other.expectPing()
 		other.expectSnapshot(s.backend.Version(),
 			[]string{
-				fmt.Sprintf(`{"id":"%s","server_id":"test1","server_era":"era1"}`, selfID),
+				fmt.Sprintf(
+					`{"session_id":"%s","id":"%s","server_id":"test1","server_era":"era1"}`,
+					self.sessionID, selfID),
 			}, nil)
 		otherID := other.id()
 
 		self.expect("", "join-event",
-			`{"id":"%s","server_id":"test1","server_era":"era1"}`, otherID)
+			`{"session_id":"%s","id":"%s","server_id":"test1","server_era":"era1"}`,
+			other.sessionID, otherID)
 		self.send("1", "who", "")
 		server := `"server_id":"test1","server_era":"era1"`
 		self.expect("1", "who-reply",
-			`{"listing":[{"id":"%s",%s},{"id":"%s",%s}]}`,
-			selfID, server, otherID, server)
+			`{"listing":[{"session_id":"%s","id":"%s",%s},{"session_id":"%s","id":"%s",%s}]}`,
+			self.sessionID, selfID, server, other.sessionID, otherID, server)
 
 		other.Close()
-		self.expect("", "part-event", `{"id":"%s",%s}`, otherID, server)
+		self.expect("", "part-event",
+			`{"session_id":"%s","id":"%s",%s}`, other.sessionID, otherID, server)
 
 		self.send("2", "who", "")
-		self.expect("2", "who-reply", `{"listing":[{"id":"%s",%s}]}`, selfID, server)
+		self.expect("2", "who-reply",
+			`{"listing":[{"session_id":"%s","id":"%s",%s}]}`, self.sessionID, selfID, server)
 	})
 
 	Convey("Join after other party, other party parts", func() {
@@ -422,25 +436,27 @@ func testPresence(factory func() proto.Backend) {
 		self.expectPing()
 		self.expectSnapshot(s.backend.Version(),
 			[]string{
-				fmt.Sprintf(`{"id":"%s","server_id":"test1","server_era":"era1"}`,
-					otherID)},
+				fmt.Sprintf(`{"session_id":"%s","id":"%s","server_id":"test1","server_era":"era1"}`,
+					other.sessionID, otherID)},
 			nil)
 		selfID := self.id()
 
 		other.expect("", "join-event",
-			`{"id":"%s","server_id":"test1","server_era":"era1"}`, selfID)
+			`{"session_id":"%s","id":"%s","server_id":"test1","server_era":"era1"}`,
+			self.sessionID, selfID)
 		self.send("1", "who", "")
 		server := `"server_id":"test1","server_era":"era1"`
 		self.expect("1", "who-reply",
-			`{"listing":[{"id":"%s",%s},{"id":"%s",%s}]}`,
-			otherID, server, selfID, server)
+			`{"listing":[{"session_id":"%s","id":"%s",%s},{"session_id":"%s","id":"%s",%s}]}`,
+			other.sessionID, otherID, server, self.sessionID, selfID, server)
 
 		other.Close()
-		self.expect("", "part-event", `{"id":"%s",%s}`, otherID, server)
+		self.expect("", "part-event",
+			`{"session_id":"%s","id":"%s",%s}`, other.sessionID, otherID, server)
 
 		self.send("2", "who", "")
 		self.expect("2", "who-reply",
-			`{"listing":[{"id":"%s",%s}]}`, selfID, server)
+			`{"listing":[{"session_id":"%s","id":"%s",%s}]}`, self.sessionID, selfID, server)
 	})
 
 	/*
@@ -536,20 +552,22 @@ func testDeletion(s *serverUnderTest) {
 		conn.expectPing()
 		conn.expectSnapshot(s.backend.Version(), nil, nil)
 
-		id := &proto.IdentityView{ID: conn.id(), Name: "user"}
-		id.Name = id.ID
+		id := &proto.SessionView{
+			SessionID:    conn.sessionID,
+			IdentityView: &proto.IdentityView{ID: conn.id(), Name: conn.id()},
+		}
 		sf := snowflakes(1)[0]
 		server := `"server_id":"test1","server_era":"era1"`
 
 		conn.send("1", "send", `{"content":"root"}`)
 		conn.expect("1", "send-reply",
-			`{"id":"%s","time":1,"sender":{"id":"%s",%s},"content":"@#$!"}`,
-			sf, id.ID, server)
+			`{"id":"%s","time":1,"sender":{"session_id":"%s","id":"%s",%s},"content":"@#$!"}`,
+			sf, id.SessionID, id.ID, server)
 
 		conn.send("3", "log", `{"n":10}`)
 		conn.expect("3", "log-reply",
-			`{"log":[{"id":"%s","time":1,"sender":{"id":"%s",%s},"content":"@#$!"}]},`,
-			sf, id.ID, server, server)
+			`{"log":[{"id":"%s","time":1,"sender":{"session_id":"%s","id":"%s",%s},"content":"@#$!"}]},`,
+			sf, id.SessionID, id.ID, server, server)
 
 		room, err := s.backend.GetRoom("deletion", false)
 		So(err, ShouldBeNil)

@@ -38,16 +38,18 @@ type console struct {
 
 // Implement Session and Identity.
 // TODO: log details about the client
-func (c *console) Identity() proto.Identity { return c }
+func (c *console) Identity() proto.Identity { return (*consoleIdentity)(c) }
 func (c *console) ID() string               { return "console" }
-func (c *console) Name() string             { return "console" }
 func (c *console) ServerID() string         { return "" }
 func (c *console) SetName(name string)      {}
 func (c *console) Close()                   {}
 func (c *console) CheckAbandoned() error    { return nil }
 
-func (c *console) View() *proto.IdentityView {
-	return &proto.IdentityView{ID: "console", Name: "console"}
+func (c *console) View() *proto.SessionView {
+	return &proto.SessionView{
+		IdentityView: c.Identity().View(),
+		SessionID:    "console",
+	}
 }
 
 func (c *console) Send(scope.Context, proto.PacketType, interface{}) error {
@@ -61,6 +63,16 @@ func (c *console) Printf(format string, args ...interface{}) { fmt.Fprintf(c, fo
 func (c *console) Write(data []byte) (int, error) {
 	data = bytes.Replace(data, []byte("\n"), []byte("\r\n"), -1)
 	return c.ioterm.Write(data)
+}
+
+type consoleIdentity console
+
+func (c *consoleIdentity) ID() string       { return "console" }
+func (c *consoleIdentity) Name() string     { return "console" }
+func (c *consoleIdentity) ServerID() string { return "" }
+
+func (c *consoleIdentity) View() *proto.IdentityView {
+	return &proto.IdentityView{ID: "console", Name: "console"}
 }
 
 type handler interface {

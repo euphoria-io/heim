@@ -9,13 +9,16 @@ import (
 
 // A Listing is a sortable list of Identitys present in a Room.
 // TODO: these should be Sessions
-type Listing []IdentityView
+type Listing []SessionView
 
 func (l Listing) Len() int      { return len(l) }
 func (l Listing) Swap(i, j int) { l[i], l[j] = l[j], l[i] }
 
 func (l Listing) Less(i, j int) bool {
 	if l[i].Name == l[j].Name {
+		if l[i].ID == l[j].ID {
+			return l[i].SessionID < l[j].SessionID
+		}
 		return l[i].ID < l[j].ID
 	}
 	return l[i].Name < l[j].Name

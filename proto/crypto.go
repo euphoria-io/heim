@@ -68,7 +68,10 @@ func EncryptMessage(msg *Message, keyID string, key *security.ManagedKey) error 
 	digestStr := base64.URLEncoding.EncodeToString(digest)
 	cipherStr := base64.URLEncoding.EncodeToString(ciphertext)
 
-	msg.Sender = &IdentityView{ID: msg.Sender.ID}
+	msg.Sender = &SessionView{
+		IdentityView: &IdentityView{ID: msg.Sender.ID},
+		SessionID:    msg.Sender.SessionID,
+	}
 	msg.Content = digestStr + "/" + cipherStr
 	msg.EncryptionKeyID = "v1/" + keyID
 	return nil

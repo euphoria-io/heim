@@ -13,7 +13,7 @@ type Message struct {
 	Parent          snowflake.Snowflake `json:"parent"`
 	PreviousEditID  snowflake.Snowflake `json:"previous_edit_id,omitempty"`
 	UnixTime        Time                `json:"time"`
-	Sender          *IdentityView       `json:"sender"`
+	Sender          *SessionView        `json:"sender"`
 	Content         string              `json:"content"`
 	EncryptionKeyID string              `json:"encryption_key_id,omitempty"`
 	Edited          Time                `json:"edited,omitempty"`

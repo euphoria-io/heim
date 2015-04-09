@@ -40,7 +40,7 @@ func (rb *RoomBinding) GetMessage(ctx scope.Context, id snowflake.Snowflake) (*p
 	err := rb.DbMap.SelectOne(
 		&msg,
 		"SELECT room, id, previous_edit_id, parent, posted, edited, deleted,"+
-			" sender_id, sender_name, server_id, server_era, content, encryption_key_id"+
+			" session_id, sender_id, sender_name, server_id, server_era, content, encryption_key_id"+
 			" FROM message WHERE room = $1 AND id = $2",
 		rb.Name, id.String())
 	if err != nil {
@@ -96,7 +96,7 @@ func (rb *RoomBinding) EditMessage(
 	err = t.SelectOne(
 		&msg,
 		"SELECT room, id, previous_edit_id, parent, posted, edited, deleted,"+
-			" sender_id, sender_name, server_id, server_era, content, encryption_key_id"+
+			" session_id, sender_id, sender_name, server_id, server_era, content, encryption_key_id"+
 			" FROM message WHERE room = $1 AND id = $2",
 		rb.Name, edit.ID.String())
 	if err != nil {
@@ -191,7 +191,7 @@ func (rb *RoomBinding) RenameUser(ctx scope.Context, session proto.Session, form
 		Updated:   time.Now(),
 	}
 	err := presence.SetFact(&proto.Presence{
-		IdentityView:   *session.Identity().View(),
+		SessionView:    *session.View(),
 		LastInteracted: presence.Updated,
 	})
 	if err != nil {
@@ -202,7 +202,7 @@ func (rb *RoomBinding) RenameUser(ctx scope.Context, session proto.Session, form
 	}
 
 	event := &proto.NickEvent{
-		ID:   session.Identity().ID(),
+		ID:   session.ID(),
 		From: formerName,
 		To:   session.Identity().Name(),
 	}

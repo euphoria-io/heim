@@ -26,4 +26,11 @@ type Session interface {
 	// CheckAbandoned() issues an immediate ping to the session with a short
 	// timeout.
 	CheckAbandoned() error
+
+	View() *SessionView
+}
+
+type SessionView struct {
+	*IdentityView
+	SessionID string `json:"session_id"`
 }

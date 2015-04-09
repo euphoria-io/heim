@@ -82,7 +82,7 @@ func (r *memRoom) Join(ctx scope.Context, session proto.Session) error {
 
 	r.live[id] = append(r.live[id], session)
 	return r.broadcast(ctx, proto.JoinType,
-		proto.PresenceEvent(*session.Identity().View()), session)
+		proto.PresenceEvent(*session.View()), session)
 }
 
 func (r *memRoom) Part(ctx scope.Context, session proto.Session) error {
@@ -103,7 +103,7 @@ func (r *memRoom) Part(ctx scope.Context, session proto.Session) error {
 		delete(r.identities, id)
 	}
 	return r.broadcast(ctx, proto.PartType,
-		proto.PresenceEvent(*session.Identity().View()), session)
+		proto.PresenceEvent(*session.View()), session)
 }
 
 func (r *memRoom) Send(ctx scope.Context, session proto.Session, message proto.Message) (
@@ -172,7 +172,7 @@ func (r *memRoom) Listing(ctx scope.Context) (proto.Listing, error) {
 	listing := proto.Listing{}
 	for _, sessions := range r.live {
 		for _, session := range sessions {
-			listing = append(listing, *session.Identity().View())
+			listing = append(listing, *session.View())
 		}
 	}
 	sort.Sort(listing)
@@ -185,7 +185,7 @@ func (r *memRoom) RenameUser(
 	backend.Logger(ctx).Printf(
 		"renaming %s from %s to %s\n", session.ID(), formerName, session.Identity().Name())
 	payload := &proto.NickEvent{
-		ID:   session.Identity().ID(),
+		ID:   session.ID(),
 		From: formerName,
 		To:   session.Identity().Name(),
 	}

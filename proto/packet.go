@@ -84,7 +84,7 @@ type EditMessageEvent struct {
 	EditID snowflake.Snowflake `json:"edit_id"`
 }
 
-type PresenceEvent IdentityView
+type PresenceEvent SessionView
 
 type LogCommand struct {
 	N      int                 `json:"n"`

@@ -90,6 +90,13 @@ func (s *session) ServerEra() string        { return s.serverEra }
 func (s *session) Identity() proto.Identity { return s.identity }
 func (s *session) SetName(name string)      { s.identity.name = name }
 
+func (s *session) View() *proto.SessionView {
+	return &proto.SessionView{
+		IdentityView: s.identity.View(),
+		SessionID:    s.id,
+	}
+}
+
 func (s *session) Send(ctx scope.Context, cmdType proto.PacketType, payload interface{}) error {
 	var err error
 	payload, err = proto.DecryptPayload(payload, s.auth)
@@ -401,7 +408,7 @@ func (s *session) handleSendCommand(cmd *proto.SendCommand) (interface{}, error)
 		ID:      msgID,
 		Content: cmd.Content,
 		Parent:  cmd.Parent,
-		Sender:  s.identity.View(),
+		Sender:  s.View(),
 	}
 
 	if s.keyID != "" {

@@ -98,7 +98,7 @@ module.exports.store = Reflux.createStore({
         if (!ev.body.error) {
           this.state.who = this.state.who
             .mergeIn([ev.body.data.id], {
-              id: ev.body.data.id,
+              session_id: ev.body.data.session_id,
               name: ev.body.data.to,
               hue: hueHash.hue(ev.body.data.to),
             })
@@ -106,9 +106,9 @@ module.exports.store = Reflux.createStore({
       } else if (ev.body.type == 'join-event') {
         ev.body.data.hue = hueHash.hue(ev.body.data.name)
         this.state.who = this.state.who
-          .set(ev.body.data.id, Immutable.fromJS(ev.body.data))
+          .set(ev.body.data.session_id, Immutable.fromJS(ev.body.data))
       } else if (ev.body.type == 'part-event') {
-        this.state.who = this.state.who.delete(ev.body.data.id)
+        this.state.who = this.state.who.delete(ev.body.data.session_id)
       } else if (ev.body.type == 'network-event') {
         if (ev.body.data.type == 'partition') {
           var id = ev.body.data.server_id
@@ -141,7 +141,7 @@ module.exports.store = Reflux.createStore({
           }
         }
         message.sender.hue = hueHash.hue(message.sender.name)
-        who.mergeIn([message.sender.id], {
+        who.mergeIn([message.session_id], {
           lastSent: message.time
         })
       })
@@ -178,7 +178,7 @@ module.exports.store = Reflux.createStore({
       Immutable.Seq(data.listing)
         .map(function(user) {
           user.hue = hueHash.hue(user.name)
-          return [user.id, Immutable.Map(user)]
+          return [user.session_id, Immutable.Map(user)]
         }, this)
     )
   },

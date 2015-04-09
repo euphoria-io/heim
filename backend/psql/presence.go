@@ -30,12 +30,12 @@ func (p *Presence) SetFact(fact *proto.Presence) error {
 	return nil
 }
 
-func (p *Presence) IdentityView() (proto.IdentityView, error) {
+func (p *Presence) SessionView() (proto.SessionView, error) {
 	var fact proto.Presence
 	if err := json.Unmarshal(p.Fact, &fact); err != nil {
-		return proto.IdentityView{}, err
+		return proto.SessionView{}, err
 	}
-	return fact.IdentityView, nil
+	return fact.SessionView, nil
 }
 
 type roomConn struct {
