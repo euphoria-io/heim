@@ -247,11 +247,13 @@ func testLurker(s *serverUnderTest) {
 		id2 := conn2.id()
 
 		conn2.send("1", "nick", `{"name":"speaker"}`)
-		conn2.expect("1", "nick-reply", `{"id":"%s","from":"","to":"speaker"}`, conn2.sessionID)
+		conn2.expect("1", "nick-reply",
+			`{"session_id":"%s","id":"%s","from":"","to":"speaker"}`, conn2.sessionID, conn2.id())
 
 		conn1.expect("", "join-event",
 			`{"session_id":"%s","id":"%s","server_id":"test1","server_era":"era1"}`, conn2.sessionID, id2)
-		conn1.expect("", "nick-event", `{"id":"%s","to":"speaker"}`, conn2.sessionID)
+		conn1.expect("", "nick-event",
+			`{"session_id":"%s","id":"%s","to":"speaker"}`, conn2.sessionID, conn2.id())
 	})
 }
 
@@ -285,7 +287,8 @@ func testBroadcast(s *serverUnderTest) {
 					ids[i].SessionID, ids[i].ID, ids[i].Name))
 
 			conn.expect("1", "nick-reply",
-				`{"id":"%s","from":"","to":"%s"}`, ids[i].SessionID, ids[i].Name)
+				`{"session_id":"%s","id":"%s","from":"","to":"%s"}`,
+				ids[i].SessionID, ids[i].ID, ids[i].Name)
 			conn.expect("2", "who-reply", `{"listing":[%s]}`, strings.Join(listingParts, ","))
 
 			for _, c := range conns[:i] {
@@ -293,7 +296,8 @@ func testBroadcast(s *serverUnderTest) {
 					`{"session_id":"%s","id":"%s","server_id":"test1","server_era":"era1"}`,
 					ids[i].SessionID, ids[i].ID)
 				c.expect("", "nick-event",
-					`{"id":"%s","from":"","to":"%s"}`, ids[i].SessionID, ids[i].Name)
+					`{"session_id":"%s","id":"%s","from":"","to":"%s"}`,
+					ids[i].SessionID, ids[i].ID, ids[i].Name)
 			}
 		}
 

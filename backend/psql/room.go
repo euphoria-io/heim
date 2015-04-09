@@ -202,9 +202,10 @@ func (rb *RoomBinding) RenameUser(ctx scope.Context, session proto.Session, form
 	}
 
 	event := &proto.NickEvent{
-		ID:   session.ID(),
-		From: formerName,
-		To:   session.Identity().Name(),
+		SessionID: session.ID(),
+		ID:        session.Identity().ID(),
+		From:      formerName,
+		To:        session.Identity().Name(),
 	}
 	return event, rb.Backend.broadcast(ctx, rb.Room, proto.NickEventType, event, session)
 }

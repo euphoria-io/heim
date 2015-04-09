@@ -30,6 +30,7 @@ module.exports.store = Reflux.createStore({
   init: function() {
     this.state = {
       serverVersion: null,
+      id: null,
       sessionId: null,
       connected: null,  // => socket connected
       canJoin: null,
@@ -75,6 +76,7 @@ module.exports.store = Reflux.createStore({
         }
       } else if (ev.body.type == 'snapshot-event') {
         this.state.serverVersion = ev.body.data.version
+        this.state.id = ev.body.data.identity
         this.state.sessionId = ev.body.data.session_id
         this._handleWhoReply(ev.body.data)
         this._handleLogReply(ev.body.data)
@@ -192,7 +194,7 @@ module.exports.store = Reflux.createStore({
     delete this.state.tentativeNick
     storage.setRoom(this.state.roomName, 'nick', this.state.nick)
     Raven.setUserContext({
-      'id': this.state.sessionId.split('-')[0],
+      'id': this.state.id,
       'nick': this.state.nick,
       'session_id': this.state.sessionId,
     })

@@ -103,9 +103,10 @@ type NickCommand struct {
 }
 
 type NickReply struct {
-	ID   string `json:"id"`
-	From string `json:"from"`
-	To   string `json:"to"`
+	SessionID string `json:"session_id"`
+	ID        string `json:"id"`
+	From      string `json:"from"`
+	To        string `json:"to"`
 }
 
 type NickEvent NickReply

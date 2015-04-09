@@ -168,6 +168,7 @@ describe('chat store', function() {
     'type': 'snapshot-event',
     'data': {
       'version': 'deadbeef',
+      'identity': 'agent:tester1',
       'session_id': 'aabbccddeeff0011-00000abc',
       'listing': whoReply.data.listing,
       'log': logReply.data.log,
@@ -1004,7 +1005,7 @@ describe('chat store', function() {
         handleSocket({status: 'receive', body: nickReply}, function() {
           sinon.assert.calledOnce(Raven.setUserContext)
           sinon.assert.calledWithExactly(Raven.setUserContext, {
-            'id': 'aabbccddeeff0011',
+            'id': 'agent:tester1',
             'nick': 'tester',
             'session_id': 'aabbccddeeff0011-00000abc',
           })

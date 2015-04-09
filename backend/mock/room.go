@@ -185,9 +185,10 @@ func (r *memRoom) RenameUser(
 	backend.Logger(ctx).Printf(
 		"renaming %s from %s to %s\n", session.ID(), formerName, session.Identity().Name())
 	payload := &proto.NickEvent{
-		ID:   session.ID(),
-		From: formerName,
-		To:   session.Identity().Name(),
+		SessionID: session.ID(),
+		ID:        session.Identity().ID(),
+		From:      formerName,
+		To:        session.Identity().Name(),
 	}
 	return payload, r.broadcast(ctx, proto.NickType, payload, session)
 }
