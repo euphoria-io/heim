@@ -118,18 +118,6 @@ module.exports = function(roomName) {
     }
   }
 
-  if (roomName == 'xkcd') {
-    Heim.hook('page-bottom', function() {
-      return (
-        <style key="xkcd-style" dangerouslySetInnerHTML={{__html:`
-          .embeds {
-            display: none !important;
-          }
-        `}} />
-      )
-    })
-  }
-
   if (roomName == 'music' || roomName == 'youtube') {
     var clientTimeOffset = 0
     Heim.socket.store.listen(function(ev) {
