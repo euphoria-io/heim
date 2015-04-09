@@ -106,6 +106,11 @@ gulp.task('heim-static', function() {
     .pipe(gulp.dest(heimDest))
 })
 
+gulp.task('embed-static', function() {
+  return gulp.src('./static/robots.txt')
+    .pipe(gulp.dest(embedDest))
+})
+
 gulp.task('heim-html', function() {
   return gulp.src(['./lib/index.html', './lib/home.html'])
     .pipe(gulp.dest(heimDest))
@@ -151,8 +156,8 @@ gulp.task('watch', function () {
   gulp.watch('./lib/**/*.less', ['heim-less'])
   gulp.watch('./res/**/*', ['heim-less'])
   gulp.watch('./lib/**/*.html', ['heim-html', 'embed-html'])
-  gulp.watch('./static/**/*', ['heim-static'])
+  gulp.watch('./static/**/*', ['heim-static', 'embed-static'])
 })
 
-gulp.task('build', ['heim-js', 'raven-js', 'embed-js', 'heim-less', 'heim-static', 'heim-html', 'embed-html'])
-gulp.task('default', ['raven-js', 'heim-less', 'heim-static', 'heim-html', 'embed-html', 'watch', 'heim-watchify', 'embed-watchify'])
+gulp.task('build', ['heim-js', 'raven-js', 'embed-js', 'heim-less', 'heim-static', 'embed-static', 'heim-html', 'embed-html'])
+gulp.task('default', ['raven-js', 'heim-less', 'heim-static', 'embed-static', 'heim-html', 'embed-html', 'watch', 'heim-watchify', 'embed-watchify'])
