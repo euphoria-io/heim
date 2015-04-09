@@ -250,4 +250,16 @@ module.exports = function(roomName) {
       )
     })
   }
+
+  if (roomName == 'adventure') {
+    Heim.hook('page-bottom', function() {
+      return (
+        <style key="adventure-style" dangerouslySetInnerHTML={{__html:`
+          .messages-container, .messages-container input, .messages-container textarea, .sidebar {
+            font-family: monospace;
+          }
+        `}} />
+      )
+    })
+  }
 }
