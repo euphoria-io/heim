@@ -40,7 +40,7 @@ describe('chat store', function() {
     'time': 123456,
     'sender': {
       'session_id': '32.64.96.128:12345',
-      'id': '32.64.96.128:12345',
+      'id': 'agent:tester1',
       'name': 'tester',
     },
     'content': 'test',
@@ -51,7 +51,7 @@ describe('chat store', function() {
     'time': 123457,
     'sender': {
       'session_id': '32.64.96.128:12345',
-      'id': '32.64.96.128:12345',
+      'id': 'agent:tester1',
       'name': 'tester',
     },
     'content': 'test2',
@@ -63,7 +63,7 @@ describe('chat store', function() {
     'time': 123458,
     'sender': {
       'session_id': '32.64.96.128:12346',
-      'id': '32.64.96.128:12346',
+      'id': 'agent:tester2',
       'name': 'tester2',
     },
     'content': 'test3',
@@ -86,7 +86,7 @@ describe('chat store', function() {
     'time': 123460,
     'sender': {
       'session_id': '32.64.96.128:12345',
-      'id': '32.64.96.128:12345',
+      'id': 'agent:tester1',
       'name': 'tester',
     },
     'content': 'test',
@@ -113,7 +113,7 @@ describe('chat store', function() {
           'time': 223460,
           'sender': {
             'session_id': '32.64.96.128:12345',
-            'id': '32.64.96.128:12345',
+            'id': 'agent:tester1',
             'name': 'tester',
           },
           'content': 'hello?',
@@ -129,21 +129,21 @@ describe('chat store', function() {
       'listing': [
         {
           'session_id': '32.64.96.128:12344',
-          'id': '32.64.96.128:12344',
+          'id': 'agent:tester1',
           'name': '000tester',
           'server_id': '1a2a3a4a5a6a',
           'server_era': '1b2b3b4b5b6b',
         },
         {
           'session_id': '32.64.96.128:12345',
-          'id': '32.64.96.128:12345',
+          'id': 'agent:tester1',
           'name': 'guest',
           'server_id': '1a2a3a4a5a6a',
           'server_era': '1b2b3b4b5b6b',
         },
         {
           'session_id': '32.64.96.128:12346',
-          'id': '32.64.96.128:12346',
+          'id': 'agent:tester2',
           'name': 'tester2',
           'server_id': '1x2x3x4x5x6x',
           'server_era': '1y2y3y4y5y6y',
@@ -157,7 +157,7 @@ describe('chat store', function() {
     'type': 'nick-reply',
     'data': {
       'session_id': '32.64.96.128:12345',
-      'id': '32.64.96.128:12345',
+      'id': 'agent:tester1',
       'from': 'guest',
       'to': 'tester',
     }
@@ -474,7 +474,7 @@ describe('chat store', function() {
         'time': 123456,
         'sender': {
           'session_id': '32.64.96.128:12346',
-          'id': '32.64.96.128:12346',
+          'id': 'agent:tester2',
           'name': 'tester2',
         },
         'content': 'hey @tester',
@@ -940,7 +940,7 @@ describe('chat store', function() {
       'type': 'nick-event',
       'data': {
         'session_id': '32.64.96.128:54321',
-        'id': '32.64.96.128:54321',
+        'id': 'agent:noman',
         'from': 'nonexistence',
         'to': 'absence',
       }
@@ -1019,7 +1019,8 @@ describe('chat store', function() {
       'id': '1',
       'type': 'join-event',
       'data': {
-        'id': '32.64.96.128:12347',
+        'session_id': '32.64.96.128:12347',
+        'id': 'agent:someone',
         'name': '32.64.96.128:12347',
         'server_id': '1a2a3a4a5a6a',
         'server_era': '1b2b3b4b5b6b',
@@ -1048,7 +1049,8 @@ describe('chat store', function() {
       'id': '1',
       'type': 'part-event',
       'data': {
-        'id': '32.64.96.128:12345',
+        'session_id': '32.64.96.128:12345',
+        'id': 'agent:tester1',
         'name': 'tester',
       },
     }

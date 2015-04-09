@@ -97,7 +97,7 @@ module.exports.store = Reflux.createStore({
         }
         if (!ev.body.error) {
           this.state.who = this.state.who
-            .mergeIn([ev.body.data.id], {
+            .mergeIn([ev.body.data.session_id], {
               session_id: ev.body.data.session_id,
               name: ev.body.data.to,
               hue: hueHash.hue(ev.body.data.to),
