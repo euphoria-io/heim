@@ -139,6 +139,7 @@ describe('notification store', function() {
 
     var mockChatState2 = {
       joined: true,
+      roomName: 'ezzie',
       messages: new Tree('time').reset([
         message1,
         message2,
@@ -212,9 +213,16 @@ describe('notification store', function() {
       })
     })
 
-    describe('when popups enabled', function() {
-      var storageMock = {notify: true, room: {}}
+    describe('setting a room notification mode', function() {
+      it('should store mode', function() {
+        notification.store.setRoomNotificationMode('ezzie', 'none')
+        sinon.assert.calledWithExactly(storage.setRoom, 'ezzie', 'notifyMode', 'none')
+      })
+    })
 
+    var storageMock = {notify: true, room: {ezzie: {notifyMode: 'message'}}}
+
+    describe('when popups enabled', function() {
       beforeEach(function() {
         notification.store.focusChange({windowFocused: false})
         notification.store.storageChange(storageMock)
@@ -246,6 +254,14 @@ describe('notification store', function() {
           sinon.assert.calledOnce(Heim.setFavicon)
           sinon.assert.calledWithExactly(Heim.setFavicon, '/static/favicon-active.png')
         })
+
+        it('if notify mode is "mention" should set favicon but not display a notification', function() {
+          notification.store.storageChange({notify: true, room: {ezzie: {notifyMode: 'mention'}}})
+          notification.store.messageReceived(Immutable.Map(message1), mockChatState)
+          sinon.assert.calledOnce(Heim.setFavicon)
+          sinon.assert.calledWithExactly(Heim.setFavicon, '/static/favicon-active.png')
+          sinon.assert.notCalled(Notification)
+        })
       })
 
       describe('receiving the same message again', function() {
@@ -268,6 +284,14 @@ describe('notification store', function() {
 
       describe('receiving a mention', function() {
         describe('when joined', function() {
+          it('if notify mode is "none" should set favicon but not display a notification', function() {
+            notification.store.storageChange({notify: true, room: {ezzie: {notifyMode: 'none'}}})
+            notification.store.messagesChanged([messageMention.id], mockChatStateMention)
+            sinon.assert.calledOnce(Heim.setFavicon)
+            sinon.assert.calledWithExactly(Heim.setFavicon, '/static/favicon-highlight.png')
+            sinon.assert.notCalled(Notification)
+          })
+
           it('should display a notification, set favicon, and store seen', function() {
             notification.store.messagesChanged([messageMention.id], mockChatStateMention)
             sinon.assert.calledOnce(Notification)
@@ -331,14 +355,14 @@ describe('notification store', function() {
 
       it('should not open notifications when focused', function() {
         notification.store.focusChange({windowFocused: true})
-        notification.store.storageChange({notify: true, room: {}})
+        notification.store.storageChange(storageMock)
         notification.store.messageReceived(Immutable.Map(message1), mockChatState)
         sinon.assert.notCalled(Notification)
       })
 
       it('should close notification when window focused', function() {
         notification.store.focusChange({windowFocused: false})
-        notification.store.storageChange({notify: true, room: {}})
+        notification.store.storageChange(storageMock)
         notification.store.messageReceived(Immutable.Map(message1), mockChatState)
         sinon.assert.calledOnce(Notification)
         notification.store.focusChange({windowFocused: true})
@@ -347,7 +371,7 @@ describe('notification store', function() {
 
       it('should reset favicon when window focused', function() {
         notification.store.focusChange({windowFocused: false})
-        notification.store.storageChange({notify: true, room: {}})
+        notification.store.storageChange(storageMock)
         notification.store.messageReceived(Immutable.Map(message1), mockChatState)
         sinon.assert.calledOnce(Heim.setFavicon)
         Heim.setFavicon.reset()
@@ -361,7 +385,7 @@ describe('notification store', function() {
     describe('with a notification showing', function() {
       beforeEach(function() {
         notification.store.focusChange({windowFocused: false})
-        notification.store.storageChange({notify: true, room: {}})
+        notification.store.storageChange(storageMock)
         notification.store.messageReceived(Immutable.Map(message1), mockChatState)
         sinon.stub(actions, 'focusMessage')
         window.uiwindow = {focus: sinon.stub()}

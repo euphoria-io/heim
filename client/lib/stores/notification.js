@@ -11,6 +11,7 @@ var storeActions = Reflux.createActions([
   'enablePopups',
   'disablePopups',
   'pausePopupsUntil',
+  'setRoomNotificationMode',
 ])
 _.extend(module.exports, storeActions)
 
@@ -75,6 +76,10 @@ module.exports.store = Reflux.createStore({
 
   pausePopupsUntil: function(time) {
     storage.set('notifyPausedUntil', Math.floor(time))
+  },
+
+  setRoomNotificationMode: function(roomName, mode) {
+    storage.setRoom(roomName, 'notifyMode', mode)
   },
 
   onPermission: function(permission) {
@@ -184,7 +189,7 @@ module.exports.store = Reflux.createStore({
     delete this.notifications[name]
   },
 
-  notify: function(name, message, messageId, options) {
+  notify: function(name, roomName, messageId, options) {
     if (this.focus) {
       return
     }
@@ -196,12 +201,19 @@ module.exports.store = Reflux.createStore({
     delete options.favicon
     this.updateFavicon()
 
+    var notifyMode = (this._roomStorage[roomName] || {}).notifyMode || 'mention'
+    if (notifyMode == 'none') {
+      return
+    } else if (name == 'new-message' && notifyMode == 'mention') {
+      return
+    }
+
     var popupsPaused = this.state.popupsPausedUntil && Date.now() < this.state.popupsPausedUntil
     if (this.state.popupsEnabled && !popupsPaused) {
       var timeoutDuration = options.timeout
       delete options.timeout
 
-      notification.popup = new Notification(message, options)
+      notification.popup = new Notification(roomName, options)
       notification.popup.onclick = function() {
         uiwindow.focus()
         actions.focusMessage(messageId)

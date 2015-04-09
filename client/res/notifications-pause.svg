@@ -26,7 +26,7 @@
     </rdf:RDF>
   </metadata>
   <g
-     transform="translate(0,-1032.3622)"
+     transform="matrix(0.99444469,0,0,0.99445733,0.05555207,-1026.5849)"
      id="layer1">
     <g
        transform="matrix(0.73883633,0,0,0.73883633,-1007.9091,880.74138)"
@@ -38,10 +38,9 @@
            transform="translate(0.2272689,65.609451)"
            id="g4640-3-3-8-3-9">
           <path
-             d="m 227.03179,510.79416 a 13.763329,13.763329 0 1 1 -27.52666,0 13.763329,13.763329 0 1 1 27.52666,0 z"
-             transform="matrix(0.85130844,0,0,0.85130844,180.73399,685.20489)"
+             d="m 374.00682,1120.0483 a 11.71566,11.715659 0 1 1 -23.43132,0 11.71566,11.715659 0 1 1 23.43132,0 z"
              id="path3797-2-9-4-9-7-1-6-0-1-4"
-             style="color:#000000;fill:none;stroke:#4b4b4b;stroke-width:3.05820966;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate" />
+             style="color:#000000;fill:none;stroke:#4b4b4b;stroke-width:2.61800694;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate" />
           <g
              transform="matrix(0.88854739,0,0,1,39.914527,0)"
              id="g4636-8-12-8-6-6"

@@ -578,34 +578,88 @@ iframe.js {
     }
 
     .notification-settings {
+      display: flex;
       font-size: .8em;
-      margin-right: 10px;
+      margin-right: 12px;
+      user-select: none;
 
       .notification-toggle {
-        padding: 2px 4px;
+        padding: 1px 4px;
         border-radius: 2px;
+      }
 
-        &.enable {
-          background: @welcome-color;
-          .touchable-bg(@welcome-color);
-          .button-icon('../res/notifications-disabled.svg', 14px, @spacing: 4px);
+      &.disabled .notification-toggle {
+        background: @welcome-color;
+        .touchable-bg(@welcome-color);
+        .button-icon('../res/notifications-disabled.svg', 15px);
+      }
+
+      &.enabled .notification-toggle {
+        .touchable-bg(#fff);
+        .button-icon('../res/notifications-pause.svg', 15px);
+      }
+
+      &.snoozed .notification-toggle {
+        color: #a76d2f;
+        .touchable-bg(#fff);
+        .button-icon('../res/notifications-pause-snoozed.svg', 15px);
+      }
+
+      &.paused .notification-toggle {
+        color: #930000;
+        .touchable-bg(#fff);
+        .button-icon('../res/notifications-pause-active.svg', 15px);
+      }
+
+      .mode-selector {
+        display: flex;
+        padding: 2px 1px;
+        margin-left: 2px;
+        background: #e7e7e7;
+        border-radius: 2px;
+        opacity: .5;
+        transition: opacity .15s ease;
+
+        .mode {
+          padding: 0 3px;
+          margin: 0 1px;
+          border-radius: 2px;
+          font-size: 0;
+
+          &.selected {
+            background: #fafafa;
+          }
         }
 
-        &.normal {
+        .none {
           .touchable-bg(#fff);
-          .button-icon('../res/notifications-pause.svg', 14px, @spacing: 4px);
+          .button-icon('../res/notifications-none.svg', 14px, @spacing: 0);
         }
 
-        &.snoozed {
-          color: #a76d2f;
+        .mention {
           .touchable-bg(#fff);
-          .button-icon('../res/notifications-pause-snoozed.svg', 14px, @spacing: 4px);
+          .button-icon('../res/notifications-mention.svg', 14px, @spacing: 0);
         }
 
-        &.paused {
-          color: #930000;
+        .message {
           .touchable-bg(#fff);
-          .button-icon('../res/notifications-pause-active.svg', 14px, @spacing: 4px);
+          .button-icon('../res/notifications-message.svg', 14px, @spacing: 0);
+        }
+      }
+
+      &.enabled .mode-selector {
+        opacity: 1;
+
+        .none.selected {
+          .button-icon('../res/notifications-none-active.svg', 14px, @spacing: 0);
+        }
+
+        .mention.selected {
+          .button-icon('../res/notifications-mention-active.svg', 14px, @spacing: 0);
+        }
+
+        .message.selected {
+          .button-icon('../res/notifications-message-active.svg', 14px, @spacing: 0);
         }
       }
     }

@@ -1,4 +1,5 @@
 var React = require('react/addons')
+var cx = React.addons.classSet
 var Reflux = require('reflux')
 var moment = require('moment')
 
@@ -48,27 +49,48 @@ module.exports = React.createClass({
     notification.disablePopups()
   },
 
+  setMode: function(mode) {
+    notification.setRoomNotificationMode(this.props.roomName, mode)
+  },
+
   render: function() {
     if (!this.state.notification.popupsSupported) {
       return <span className="notification-settings" />
     }
 
+    var notificationsClass
     var notificationsButton
+    var notificationModeUI
     if (!this.state.notification.popupsPermission) {
-      notificationsButton = <FastButton className="notification-toggle " onClick={this.enableNotify}>enable notifications</FastButton>
+      notificationsClass = 'disabled'
+      notificationsButton = <FastButton className="notification-toggle" onClick={this.enableNotify}>enable notifications</FastButton>
     } else {
       if (this.state.notification.popupsPausedUntil && Date.now() < this.state.notification.popupsPausedUntil) {
-        notificationsButton = <FastButton className="notification-toggle snoozed" onClick={this.disableNotify}>{'for ' + this.state.pauseTimeRemaining}</FastButton>
+        notificationsClass = 'snoozed'
+        notificationsButton = <FastButton className="notification-toggle" onClick={this.disableNotify}>{'for ' + this.state.pauseTimeRemaining}</FastButton>
       } else if (!this.state.notification.popupsEnabled) {
-        notificationsButton = <FastButton className="notification-toggle paused" onClick={this.enableNotify}>for now</FastButton>
+        notificationsClass = 'paused'
+        notificationsButton = <FastButton className="notification-toggle" onClick={this.enableNotify}>for now</FastButton>
       } else {
-        notificationsButton = <FastButton className="notification-toggle normal" onClick={this.snoozeNotify}>notifications</FastButton>
+        notificationsClass = 'enabled'
+        notificationsButton = <FastButton className="notification-toggle" onClick={this.snoozeNotify}>notifications</FastButton>
       }
+
+      var roomStorage = this.state.storage.room[this.props.roomName] || {}
+      var currentMode = roomStorage.notifyMode || 'mention'
+      notificationModeUI = (
+        <span className="mode-selector">
+          <FastButton className={cx({'mode': true, 'none': true, 'selected': currentMode == 'none'})} onClick={() => this.setMode('none')}>none</FastButton>
+          <FastButton className={cx({'mode': true, 'mention': true, 'selected': currentMode == 'mention'})} onClick={() => this.setMode('mention')}>mention</FastButton>
+          <FastButton className={cx({'mode': true, 'message': true, 'selected': currentMode == 'message'})} onClick={() => this.setMode('message')}>message</FastButton>
+        </span>
+      )
     }
 
     return  (
-      <span className="notification-settings">
+      <span className={'notification-settings ' + notificationsClass}>
         {notificationsButton}
+        {notificationModeUI}
       </span>
     )
   },

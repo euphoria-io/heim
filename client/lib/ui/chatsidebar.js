@@ -47,7 +47,7 @@ module.exports = React.createClass({
     return (
       <div className="sidebar" style={{marginRight: this.props.scrollbarWidth}}>
         <div className="top-line">
-          <NotificationSettings />
+          <NotificationSettings roomName={this.props.roomName} />
           <ReactCSSTransitionGroup transitionName="settings">
             {this.state.settingsOpen && <Settings />}
           </ReactCSSTransitionGroup>
