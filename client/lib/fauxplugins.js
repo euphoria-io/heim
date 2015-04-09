@@ -249,19 +249,20 @@ module.exports = function(roomName) {
             right: 0;
             top: 0;
             width: 100%;
-            height: 50vh;
+            height: 56.25vw;
             background: black;
           }
 
           .chat {
             position: fixed;
-            top: 50vh;
-            height: 50vh;
+            top: 56.25vw;
+            bottom: 0;
             width: 100%;
+            height: auto;
           }
 
           .chat .sidebar {
-            top: calc(50vh + 8px);
+            top: calc(56.25vw + 8px);
             width: 150px;
           }
 
