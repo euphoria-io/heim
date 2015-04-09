@@ -94,7 +94,7 @@ module.exports.store = Reflux.createStore({
     if (!data) {
       return
     }
-    this.state.popupsEnabled = this.state.popupsPermission && data.notify
+    this.state.popupsEnabled = data.notify
     this.state.popupsPausedUntil = data.notifyPausedUntil
     this._roomStorage = data.room
     this.trigger(this.state)
@@ -209,7 +209,7 @@ module.exports.store = Reflux.createStore({
     }
 
     var popupsPaused = this.state.popupsPausedUntil && Date.now() < this.state.popupsPausedUntil
-    if (this.state.popupsEnabled && !popupsPaused) {
+    if (this.state.popupsPermission && this.state.popupsEnabled && !popupsPaused) {
       var timeoutDuration = options.timeout
       delete options.timeout
 
