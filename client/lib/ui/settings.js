@@ -18,7 +18,7 @@ module.exports = React.createClass({
   render: function() {
     return (
       <span className="settings-content">
-        <label><input type="checkbox" checked={this.state.storage.useOpenDyslexic} onChange={this.onChangeOpenDyslexic} />dyslexic font</label>
+        <label><input type="checkbox" checked={this.state.storage.useOpenDyslexic} onChange={this.onChangeOpenDyslexic} />dyslexia font</label>
       </span>
     )
   },
