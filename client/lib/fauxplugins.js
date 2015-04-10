@@ -50,7 +50,10 @@ module.exports = function(roomName) {
       return (
         <div key="norman" className="norman">
           <p>norman</p>
-          <img src="//i.imgur.com/UKbitCO.jpg" />
+          <iframe src={'//embed.space/?' + queryString.stringify({
+            kind: 'img',
+            url: '//i.imgur.com/f4TnHEw.png',
+          })} />
         </div>
       )
     })
@@ -64,7 +67,7 @@ module.exports = function(roomName) {
             opacity: .5;
           }
 
-          .norman, .norman img {
+          .norman, .norman iframe {
             transition: all .15s ease;
           }
 
@@ -72,9 +75,9 @@ module.exports = function(roomName) {
             opacity: 1;
           }
 
-          .norman:hover img {
-            width: 22vw;
-            max-width: 250px;
+          .norman:hover iframe {
+            width: 32vw;
+            height: 18vw;
           }
 
           .norman p {
@@ -82,10 +85,10 @@ module.exports = function(roomName) {
             font-size: 12px;
           }
 
-          .norman img {
-            width: 15vw;
-            min-width: 50px;
-            max-width: 100px;
+          .norman iframe {
+            width: 16vw;
+            height: 9vw;
+            border: none;
           }
         `}} />
       )
