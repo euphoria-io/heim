@@ -2,6 +2,7 @@ var _ = require('lodash')
 var React = require('react')
 var cx = React.addons.classSet
 var moment = require('moment')
+var queryString = require('querystring')
 
 var actions = require('../actions')
 var MessageText = require('./messagetext')
@@ -57,15 +58,30 @@ var Message = module.exports = React.createClass({
       if (rest) {
         return string
       }
-      embeds.push(<a key={offset} href={'//imgur.com/' + id} target="_blank"><img src={'//i.imgur.com/' + id + (ext == '.gif' ? '' : 't') + (ext || '.jpg')} /></a>)
+      embeds.push({
+        link: '//imgur.com/' + id,
+        img: '//i.imgur.com/' + id + (ext == '.gif' ? '' : 't') + (ext || '.jpg'),
+      })
       return ''
     })
-    content = content.replace(/(?:https?:\/\/)?(imgs\.xkcd\.com\/comics\/.*\.(?:png|jpg)|i\.ytimg\.com\/.*\.jpg)/g, (match, imgUrl, offset) => {
-      embeds.push(<a key={offset} href={'//' + imgUrl} target="_blank"><img src={'//' + imgUrl} /></a>)
+    content = content.replace(/(?:https?:\/\/)?(imgs\.xkcd\.com\/comics\/.*\.(?:png|jpg)|i\.ytimg\.com\/.*\.jpg)/g, (match, imgUrl) => {
+      embeds.push({
+        link: '//' + imgUrl,
+        img: '//' + imgUrl,
+      })
       return ''
     })
     if (embeds.length) {
-      messageEmbeds = <div className="embeds">{embeds}</div>
+      messageEmbeds = (
+        <div className="embeds">{_.map(embeds, (embed, idx) =>
+          <a key={idx} href={embed.link} target="_blank">
+            <iframe src={'//embed.space/?' + queryString.stringify({
+              kind: 'img',
+              url: embed.img,
+            })} />
+          </a>
+        )}</div>
+      )
     }
 
     var messageRender
