@@ -211,12 +211,14 @@ module.exports = function(roomName) {
             max-height: calc(80vh - 195px);
           }
 
-          .chat .sidebar {
-            width: 240px;
-          }
+          @media (min-width: 500px) {
+            .chat .sidebar {
+              width: 240px;
+            }
 
-          .chat .messages-container .messages .line {
-            margin-right: 245px;
+            .chat .messages-container .messages .line {
+              margin-right: 245px;
+            }
           }
 
           @media (min-width: 920px) {
