@@ -60,7 +60,7 @@ var Message = module.exports = React.createClass({
       }
       embeds.push({
         link: '//imgur.com/' + id,
-        img: '//i.imgur.com/' + id + (ext == '.gif' ? '' : 't') + (ext || '.jpg'),
+        img: '//i.imgur.com/' + id + (ext || '.jpg'),
       })
       return ''
     })
