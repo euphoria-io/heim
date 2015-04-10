@@ -52,7 +52,7 @@ module.exports = function(roomName) {
           <p>norman</p>
           <iframe src={'//embed.space/?' + queryString.stringify({
             kind: 'img',
-            url: '//i.imgur.com/f4TnHEw.png',
+            url: '//i.imgur.com/UKbitCO.jpg',
           })} />
         </div>
       )
@@ -76,8 +76,8 @@ module.exports = function(roomName) {
           }
 
           .norman:hover iframe {
-            width: 32vw;
-            height: 18vw;
+            width: 30vw;
+            height: 20vw;
           }
 
           .norman p {
@@ -86,8 +86,8 @@ module.exports = function(roomName) {
           }
 
           .norman iframe {
-            width: 16vw;
-            height: 9vw;
+            width: 15vw;
+            height: 10vw;
             border: none;
           }
         `}} />
