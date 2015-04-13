@@ -1,44 +1,34 @@
-[![Build Status](https://drone.euphoria.io/api/badge/github.com/euphoria-io/heim/status.svg?branch=master)](http://drone.euphoria.io/github.com/euphoria-io/heim)
+# ◓
 
-Getting Started
-===============
+Heim is the backend and frontend of [euphoria](https://euphoria.io). The
+backend is a Go server that speaks JSON over WebSockets, persisting data to
+PostgreSQL. Our web client is built in React/Reflux.
 
-You'll probably need to install a lot of dependencies. Good luck.
-
-1. git (obviously)
-2. lxc-docker (we've had success with 1.3.3)
-3. fig (pip install?)
-
-
-Initialize Database
-===================
-
-```
-# Create data volume.
-fig run psqldata
-
-# Create tables.
-fig run --rm upgradedb
-```
+**Currently, heim is released in a pre-alpha state**. Please be advised that
+new development is currently being prioritized over stability. We're releasing
+in this form because we want to open up our codebase and development progress.
+We will make breaking changes to the protocol, and will be slow to merge
+complex pull requests while we get our core building blocks in place.
 
 
-Compile Frontend
-================
+## Getting started
 
-```
-fig run --rm frontend
-```
+1. Install `git`, [`docker`](https://docs.docker.com/installation/), and
+   [`docker-compose`](https://docs.docker.com/compose/install/).
 
-You can also get live recompiling by keeping this running in the background:
+2. Link in our dependencies repository:
+    1. Clone [heim-deps](https://github.com/euphoria-io/heim-deps).
+    2. `./heim-deps/deps.sh link ./path/to/heim/repo`
 
-```
-fig run --rm frontend gulp
-```
+3. Build the client static files: `docker-compose run frontend`.
 
+4. Init your db: `docker-compose run upgradedb sql-migrate up`.
 
-Run Backend
-===========
+5. Start the server: `docker-compose up backend`.
 
-```
-fig up backend
-```
+Heim is now running on port 8080. \o/
+
+## Discussion
+
+Questions? Feedback? Ideas? Come join us in
+[&euphoria](https://euphoria.io/room/euphoria) or email hi@euphoria.io.
