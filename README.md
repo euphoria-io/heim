@@ -32,3 +32,13 @@ Heim is now running on port 8080. \o/
 
 Questions? Feedback? Ideas? Come join us in
 [&euphoria](https://euphoria.io/room/euphoria) or email hi@euphoria.io.
+
+## Licensing
+
+Most of the server is distributed under the terms of the GNU Affero General Public License 3.0.
+
+The client is distributed under the terms of the MIT license.
+
+Art and documentation are distributed under the terms of the CC-BY 4.0 license.
+
+See [LICENSE.md](LICENSE.md) for licensing details.
