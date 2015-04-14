@@ -31,7 +31,7 @@ Heim is now running on port 8080. \o/
 ## Discussion
 
 Questions? Feedback? Ideas? Come join us in
-[&euphoria](https://euphoria.io/room/euphoria) or email hi@euphoria.io.
+[&heim](https://euphoria.io/room/heim) or email hi@euphoria.io.
 
 ## Licensing
 
