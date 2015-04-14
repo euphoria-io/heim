@@ -224,9 +224,6 @@ iframe.js {
         }
 
         .message {
-          width: 100%;
-          max-height: 200px;
-          overflow: auto;
           white-space: pre-wrap;
         }
 
@@ -275,6 +272,15 @@ iframe.js {
             border-top-left-radius: 0;
             border-bottom-left-radius: 0;
           }
+        }
+      }
+
+      .message-node.tall {
+        .message {
+          display: block;
+          width: 100%;
+          max-height: 200px;
+          overflow-y: auto;
         }
       }
 
@@ -864,11 +870,6 @@ iframe.js {
     padding-left: 0;
 
     .messages {
-      .message-node {
-        max-height: 200px;
-        overflow: auto;
-      }
-
       .line {
         display: block;
         margin-left: .5em;

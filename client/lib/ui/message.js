@@ -119,4 +119,19 @@ var Message = module.exports = React.createClass({
       </div>
     )
   },
+
+  componentDidMount: function() {
+    this.overflowTall()
+  },
+
+  componentDidUpdate: function() {
+    this.overflowTall()
+  },
+
+  overflowTall: function() {
+    var node = this.getDOMNode()
+    if (node.clientHeight > 300) {
+      node.classList.toggle('tall', true)
+    }
+  },
 })
