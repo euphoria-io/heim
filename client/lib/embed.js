@@ -1,4 +1,5 @@
 var queryString = require('querystring')
+var escapeString = require('lodash/string/escape')
 
 var allowedImageDomains = {
   'i.imgur.com': true,
@@ -14,7 +15,7 @@ function render() {
     if (!domain || !allowedImageDomains.hasOwnProperty(domain[1])) {
       return
     }
-    document.body.style.backgroundImage = 'url(\'' + data.url + '\')'
+    document.body.style.backgroundImage = 'url(\'' + escapeString(data.url) + '\')'
     document.body.style.backgroundRepeat = 'no-repeat'
     document.body.style.backgroundSize = 'cover'
     document.body.style.backgroundPosition = 'left top'
