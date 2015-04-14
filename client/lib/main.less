@@ -864,12 +864,15 @@ iframe.js {
     padding-left: 0;
 
     .messages {
+      .message-node {
+        max-height: 200px;
+        overflow: auto;
+      }
+
       .line {
         display: block;
         margin-left: .5em;
         text-indent: -.5em;
-        max-height: 200px;
-        overflow: auto;
 
         .content, .message {
           display: inline;
