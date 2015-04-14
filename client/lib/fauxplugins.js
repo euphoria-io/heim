@@ -284,7 +284,7 @@ module.exports = function(roomName) {
       return (
         <style key="adventure-style" dangerouslySetInnerHTML={{__html:`
           .messages-container, .messages-container input, .messages-container textarea, .sidebar {
-            font-family: monospace;
+            font-family: Droid Sans Mono, monospace;
           }
         `}} />
       )
