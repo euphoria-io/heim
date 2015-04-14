@@ -80,6 +80,7 @@ module.exports = React.createClass({
     var InfoBar = this.state.thin ? ChatTopBar : ChatSidebar
     return (
       <div className="chat" onMouseDownCapture={this.onMouseDown} onClickCapture={this.onClick} onTouchMove={this.onTouchMove}>
+        {this.state.storage && this.state.storage.useOpenDyslexic && <link rel="stylesheet" type="text/css" id="css" href="/static/od.css" />}
         <InfoBar scrollbarWidth={this.state.scrollbarWidth} who={this.state.chat.who} roomName={this.state.chat.roomName} joined={this.state.chat.joined} authType={this.state.chat.authType} updateReady={this.state.update.get('ready')} wide={this.state.wide} />
         <Scroller
           ref="scroller"
@@ -101,7 +102,6 @@ module.exports = React.createClass({
           </div>
         </Scroller>
         {this.templateHook('page-bottom')}
-        {this.state.storage && this.state.storage.useOpenDyslexic && <link rel="stylesheet" type="text/css" id="css" href="/static/od.css" />}
       </div>
     )
   },
