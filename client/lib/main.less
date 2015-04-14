@@ -180,8 +180,6 @@ iframe.js {
         display: flex;
         align-items: flex-start;
         margin: 2px 0;
-        max-height: 200px;
-        overflow: auto;
         word-wrap: break-word;
 
         &.focus-highlight {
@@ -227,6 +225,8 @@ iframe.js {
 
         .message {
           width: 100%;
+          max-height: 200px;
+          overflow: auto;
           white-space: pre-wrap;
         }
 
@@ -868,6 +868,8 @@ iframe.js {
         display: block;
         margin-left: .5em;
         text-indent: -.5em;
+        max-height: 200px;
+        overflow: auto;
 
         .content, .message {
           display: inline;
