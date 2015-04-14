@@ -1,0 +1,14 @@
+language: go
+
+go:
+  - 1.4
+
+install:
+  - export DEPS_PATH=${HOME}/heim-deps DB_HOST=localhost
+  - cd ${HOME}
+  - git clone https://github.com/euphoria-io/heim-deps.git
+  - mkdir -p ${HOME}/src/euphoria.io
+  - mv ${TRAVIS_BUILD_DIR} ${HOME}/src/euphoria.io/
+  - cd ${HOME}/src/euphoria.io/heim
+
+script: ./ci/test.sh

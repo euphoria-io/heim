@@ -10,6 +10,7 @@ in this form because we want to open up our codebase and development progress.
 We will make breaking changes to the protocol, and will be slow to merge
 complex pull requests while we get our core building blocks in place.
 
+[![Build Status](https://travis-ci.org/euphoria-io/heim.svg?branch=master)](https://travis-ci.org/euphoria-io/heim)
 
 ## Getting started
 
