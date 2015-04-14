@@ -1,53 +1,27 @@
 #!/bin/bash
-
 set -ex
 
-PATH=${PATH}:/var/cache/drone/bin
-SRCDIR=/var/cache/drone/src
-HEIMDIR=${SRCDIR}/euphoria.io/heim
-DEPSDIR=/var/cache/heim-deps
-
-setup_deps() {
-  ${DEPSDIR}/deps.sh link ${HEIMDIR}
-  # required for running gulp out of that directory.
-  ln -s ${DEPSDIR}/node_modules ${HEIMDIR}/node_modules
-  PATH=${PATH}:${HEIMDIR}/node_modules/.bin
-  GOPATH=${HEIMDIR}/deps/godeps:${GOPATH}
-}
-
-test_backend() {
-  psql -c 'create database heimtest;' -U postgres -h $POSTGRES_PORT_5432_TCP_ADDR
-  export DSN="postgres://postgres@$POSTGRES_PORT_5432_TCP_ADDR/heimtest?sslmode=disable"
-  go install github.com/coreos/etcd
-  PATH="${PATH}":${HEIMDIR}/deps/godeps/bin go test -v euphoria.io/heim/...
-}
-
-test_client() {
-  export NODE_ENV=development
-  cd ${HEIMDIR}/client
-  gulp lint && mochify
-}
-
 generate_manifest() {
-    echo 'Generating manifest...'
-    (
-        cd "$1"
-        find . -path ./MANIFEST.txt -prune -o -type f -exec md5sum {} \; \
-            | sed -e 's@^\([0-9a-f]\+\) \+\./\(.*\)$@\2\t\1@g' | tee MANIFEST.txt
-    )
+  echo 'Generating manifest...'
+  (
+    cd "$1"
+    find . -path ./MANIFEST.txt -prune -o -type f -exec md5sum {} \; \
+      | sed -e 's@^\([0-9a-f]\+\) \+\./\(.*\)$@\2\t\1@g' | tee MANIFEST.txt
+  )
 }
 
 build_release() {
   export NODE_ENV=production
-  cd ${HEIMDIR}/client
+  pushd ./client
   gulp build
+  popd
 
   go install -ldflags "-X main.version ${DRONE_COMMIT}" euphoria.io/heim/heimctl
   go install euphoria.io/heim/heimlich
 
-  mv ${HEIMDIR}/client/build/heim /var/cache/drone/bin/static
-  mv ${HEIMDIR}/client/build/embed /var/cache/drone/bin/embed
-  cd /var/cache/drone/bin
+  mv ./client/build/heim ${HEIM_GOPATH}/bin/static
+  mv ./client/build/embed ${HEIM_GOPATH}/bin/embed
+  pushd ${HEIM_GOPATH}/bin
   generate_manifest static
   generate_manifest embed
   find static embed -type f | xargs heimlich heimctl
@@ -64,13 +38,7 @@ build_release() {
   if [ ${DRONE_BRANCH%/*} == chromakode ]; then
     s3cmd cp s3://heim-release/${DRONE_COMMIT} s3://heim-release/${DRONE_BRANCH}
   fi
+  popd
 }
-
-mv ${SRCDIR}/github.com/euphoria-io ${SRCDIR}/euphoria.io
-
-setup_deps
-
-test_backend
-test_client
 
 build_release
