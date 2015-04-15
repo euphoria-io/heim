@@ -30,7 +30,7 @@ module.exports.hue = function(text) {
     }
     val = val * 33 + normalized.charCodeAt(i)
   }
-  val = (val + 155) % 255
+  val = (val + 155) % 360
   cache.data = cache.data.set(text, val)
 
   return val
