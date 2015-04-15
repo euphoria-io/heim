@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   version="1.1"
+   width="512"
+   height="512"
+   id="svg2"
+   inkscape:version="0.48.5 r10040"
+   sodipodi:docname="logo-disconnected-favicon.svg"
+   inkscape:export-filename="/home/chromakode/dev/euphoria/heim/client/static/favicon-disconnected.png"
+   inkscape:export-xdpi="5.625"
+   inkscape:export-ydpi="5.625">
+  <sodipodi:namedview
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1"
+     objecttolerance="10"
+     gridtolerance="10"
+     guidetolerance="10"
+     inkscape:pageopacity="0"
+     inkscape:pageshadow="2"
+     inkscape:window-width="1276"
+     inkscape:window-height="1389"
+     id="namedview3783"
+     showgrid="false"
+     inkscape:zoom="1"
+     inkscape:cx="349.85267"
+     inkscape:cy="263.91709"
+     inkscape:window-x="0"
+     inkscape:window-y="49"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="svg2"
+     inkscape:snap-global="true"
+     inkscape:snap-bbox="true"
+     inkscape:snap-page="true" />
+  <defs
+     id="defs4">
+    <radialGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient5783"
+       id="radialGradient5915"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="matrix(2.5661594,0,0,2.6379861,-400.93688,-780.97305)"
+       cx="256"
+       cy="515.82324"
+       fx="256"
+       fy="515.82324"
+       r="225.34375" />
+    <linearGradient
+       id="linearGradient5783">
+      <stop
+         style="stop-color:#6e6e6e;stop-opacity:1;"
+         offset="0"
+         id="stop5785" />
+      <stop
+         id="stop5827"
+         offset="0.89822036"
+         style="stop-color:#373737;stop-opacity:1;" />
+      <stop
+         style="stop-color:#393939;stop-opacity:1;"
+         offset="1"
+         id="stop5787" />
+    </linearGradient>
+    <linearGradient
+       id="linearGradient5921">
+      <stop
+         id="stop5923"
+         offset="0"
+         style="stop-color:#000000;stop-opacity:0;" />
+      <stop
+         style="stop-color:#393939;stop-opacity:0;"
+         offset="0.79508531"
+         id="stop5925" />
+      <stop
+         id="stop5927"
+         offset="1"
+         style="stop-color:#393939;stop-opacity:1;" />
+    </linearGradient>
+    <radialGradient
+       r="225.34375"
+       fy="766.47577"
+       fx="1546.0001"
+       cy="766.47577"
+       cx="1546.0001"
+       gradientTransform="matrix(1.2768721,0,0,1.2769607,-428.04432,-220.56537)"
+       gradientUnits="userSpaceOnUse"
+       id="radialGradient5984"
+       xlink:href="#linearGradient5921"
+       inkscape:collect="always" />
+  </defs>
+  <metadata
+     id="metadata7">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     id="g5910"
+     transform="matrix(1.1360326,0,0,1.1360326,-1500.3065,-648.69556)"
+     style="opacity:0.5">
+    <path
+       inkscape:connector-curvature="0"
+       style="color:#000000;fill:url(#radialGradient5915);fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:65;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       d="M 256,0 C 115.0452,0 0,115.0452 0,256 0,396.9548 115.0452,512.03125 256,512.03125 396.9548,512.03125 512,396.9548 512,256 512,115.0452 396.9548,0 256,0 z m -182.15625,256 364.3125,0 C 438.15625,357.04756 357.0476,438.1875 256,438.1875 154.9524,438.1875 73.843864,357.04756 73.84375,256 z"
+       transform="matrix(0.88025643,0,0,0.88025643,1320.6544,571.01844)"
+       id="path3004-90-9" />
+    <path
+       inkscape:connector-curvature="0"
+       id="path3004-90-9-0"
+       d="m 1546.0001,571.01843 c -124.0764,0 -225.3438,101.26738 -225.3438,225.34375 0,124.07637 101.2674,225.37502 225.3438,225.37502 124.0763,0 225.3437,-101.29865 225.3437,-225.37502 0,-124.07637 -101.2674,-225.34375 -225.3437,-225.34375 z"
+       style="opacity:0.25000000000000000;color:#000000;fill:url(#radialGradient5984);fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:65;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate" />
+  </g>
+  <g
+     id="g6809" />
+</svg>

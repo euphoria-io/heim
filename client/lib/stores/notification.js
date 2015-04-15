@@ -1,3 +1,4 @@
+var fs = require('fs')
 var _ = require('lodash')
 var Reflux = require('reflux')
 var Immutable = require('immutable')
@@ -6,6 +7,17 @@ var actions = require('../actions')
 var storage = require('./storage')
 var chat = require('./chat')
 
+
+var favicons = module.exports.favicons = {
+  'active': 'data:image/png;base64,' + fs.readFileSync(__dirname + '/../../res/favicon-active.png', 'base64'),
+  'highlight': 'data:image/png;base64,' + fs.readFileSync(__dirname + '/../../res/favicon-highlight.png', 'base64'),
+  'disconnected': 'data:image/png;base64,' + fs.readFileSync(__dirname + '/../../res/favicon-disconnected.png', 'base64'),
+}
+
+var icons = module.exports.icons = {
+  'normal': 'data:image/png;base64,' + fs.readFileSync(__dirname + '/../../res/icon.png', 'base64'),
+  'highlight': 'data:image/png;base64,' + fs.readFileSync(__dirname + '/../../res/icon-highlight.png', 'base64'),
+}
 
 var storeActions = Reflux.createActions([
   'enablePopups',
@@ -21,6 +33,7 @@ module.exports.store = Reflux.createStore({
   listenables: [
     storeActions,
     {storageChange: storage.store},
+    {chatStateChange: chat.store},
     {messageReceived: chat.messageReceived},
     {messagesChanged: chat.messagesChanged},
     {focusChange: require('./focus').store},
@@ -37,6 +50,7 @@ module.exports.store = Reflux.createStore({
     }
 
     this.focus = true
+    this.connected = false
     this.notifications = {}
     this._roomStorage = null
     this._lastMsgId = null
@@ -100,6 +114,11 @@ module.exports.store = Reflux.createStore({
     this.trigger(this.state)
   },
 
+  chatStateChange: function(chatState) {
+    this.connected = chatState.connected
+    this.updateFavicon()
+  },
+
   messageReceived: function(message, state) {
     if (!state.joined) {
       return
@@ -113,8 +132,8 @@ module.exports.store = Reflux.createStore({
 
     if (lastMsgId && lastMsgId != this._lastMsgId && !lastMsg.get('mention')) {
       this.notify('new-message', state.roomName, lastMsgId, {
-        favicon: '/static/favicon-active.png',
-        icon: '/static/icon.png',
+        favicon: favicons.active,
+        icon: icons.normal,
         body: lastMsg.getIn(['sender', 'name']) + ': ' + lastMsg.get('content'),
         timeout: this.timeout,
       })
@@ -142,8 +161,8 @@ module.exports.store = Reflux.createStore({
     if (mentions.size) {
       var msg = mentions.first()
       this.notify('new-mention', state.roomName, msg.get('id'), {
-        favicon: '/static/favicon-highlight.png',
-        icon: '/static/icon-highlight.png',
+        favicon: favicons.highlight,
+        icon: icons.highlight,
         body: msg.getIn(['sender', 'name']) + ': ' + msg.get('content'),
       })
     }
@@ -160,8 +179,15 @@ module.exports.store = Reflux.createStore({
   },
 
   updateFavicon: function() {
-    var notification = this.notifications['new-mention'] || this.notifications['new-message']
-    Heim.setFavicon(notification ? notification.favicon : '/static/favicon.png')
+    if (!window.Heim) {
+      // still initializing the global
+      return
+    } else if (!this.connected) {
+      Heim.setFavicon(favicons.disconnected)
+    } else {
+      var notification = this.notifications['new-mention'] || this.notifications['new-message']
+      Heim.setFavicon(notification ? notification.favicon : '/static/favicon.png')
+    }
   },
 
   closeNotification: function(name) {

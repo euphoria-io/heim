@@ -220,10 +220,20 @@ describe('notification store', function() {
       })
     })
 
+    describe('when disconnected', function() {
+      it('should set favicon', function() {
+        notification.store.chatStateChange({connected: false})
+        sinon.assert.calledOnce(Heim.setFavicon)
+        sinon.assert.calledWithExactly(Heim.setFavicon, notification.favicons.disconnected)
+      })
+    })
+
     var storageMock = {notify: true, room: {ezzie: {notifyMode: 'message'}}}
 
     describe('when popups enabled', function() {
       beforeEach(function() {
+        notification.store.chatStateChange({connected: true})
+        Heim.setFavicon.reset()
         notification.store.focusChange({windowFocused: false})
         notification.store.storageChange(storageMock)
       })
@@ -248,18 +258,18 @@ describe('notification store', function() {
           notification.store.messageReceived(Immutable.Map(message1), mockChatState)
           sinon.assert.calledOnce(Notification)
           sinon.assert.calledWithExactly(Notification, 'ezzie', {
-            icon: '/static/icon.png',
+            icon: notification.icons.normal,
             body: 'logan: hello, ezzie!',
           })
           sinon.assert.calledOnce(Heim.setFavicon)
-          sinon.assert.calledWithExactly(Heim.setFavicon, '/static/favicon-active.png')
+          sinon.assert.calledWithExactly(Heim.setFavicon, notification.favicons.active)
         })
 
         it('if notify mode is "mention" should set favicon but not display a notification', function() {
           notification.store.storageChange({notify: true, room: {ezzie: {notifyMode: 'mention'}}})
           notification.store.messageReceived(Immutable.Map(message1), mockChatState)
           sinon.assert.calledOnce(Heim.setFavicon)
-          sinon.assert.calledWithExactly(Heim.setFavicon, '/static/favicon-active.png')
+          sinon.assert.calledWithExactly(Heim.setFavicon, notification.favicons.active)
           sinon.assert.notCalled(Notification)
         })
       })
@@ -288,7 +298,7 @@ describe('notification store', function() {
             notification.store.storageChange({notify: true, room: {ezzie: {notifyMode: 'none'}}})
             notification.store.messagesChanged([messageMention.id], mockChatStateMention)
             sinon.assert.calledOnce(Heim.setFavicon)
-            sinon.assert.calledWithExactly(Heim.setFavicon, '/static/favicon-highlight.png')
+            sinon.assert.calledWithExactly(Heim.setFavicon, notification.favicons.highlight)
             sinon.assert.notCalled(Notification)
           })
 
@@ -296,11 +306,11 @@ describe('notification store', function() {
             notification.store.messagesChanged([messageMention.id], mockChatStateMention)
             sinon.assert.calledOnce(Notification)
             sinon.assert.calledWithExactly(Notification, 'ezzie', {
-              icon: '/static/icon-highlight.png',
+              icon: notification.icons.highlight,
               body: 'tester: hello @ezzie!',
             })
             sinon.assert.calledOnce(Heim.setFavicon)
-            sinon.assert.calledWithExactly(Heim.setFavicon, '/static/favicon-highlight.png')
+            sinon.assert.calledWithExactly(Heim.setFavicon, notification.favicons.highlight)
             sinon.assert.calledOnce(storage.setRoom)
             sinon.assert.calledWithExactly(storage.setRoom, 'ezzie', 'seenMentions', {id3: 43200000})
           })
@@ -316,7 +326,7 @@ describe('notification store', function() {
             notification.store.storageChange({notify: true, room: {ezzie: {seenMentions: {id3: Date.now() - 1000, other: Date.now() - 1000}}}})
             notification.store.messagesChanged([messageMention.id], mockChatStateMention)
             sinon.assert.calledOnce(Heim.setFavicon)
-            sinon.assert.calledWithExactly(Heim.setFavicon, '/static/favicon-highlight.png')
+            sinon.assert.calledWithExactly(Heim.setFavicon, notification.favicons.highlight)
             sinon.assert.calledOnce(storage.setRoom)
             sinon.assert.calledWithExactly(storage.setRoom, 'ezzie', 'seenMentions', {id3: 43200000})
           })
@@ -370,6 +380,8 @@ describe('notification store', function() {
       })
 
       it('should reset favicon when window focused', function() {
+        notification.store.chatStateChange({connected: true})
+        Heim.setFavicon.reset()
         notification.store.focusChange({windowFocused: false})
         notification.store.storageChange(storageMock)
         notification.store.messageReceived(Immutable.Map(message1), mockChatState)
@@ -384,6 +396,8 @@ describe('notification store', function() {
 
     describe('with a notification showing', function() {
       beforeEach(function() {
+        notification.store.chatStateChange({connected: true})
+        Heim.setFavicon.reset()
         notification.store.focusChange({windowFocused: false})
         notification.store.storageChange(storageMock)
         notification.store.messageReceived(Immutable.Map(message1), mockChatState)
