@@ -103,12 +103,12 @@ var Message = module.exports = React.createClass({
         </div>
       )
     } else {
-      messageRender = <MessageText content={content} className="message" />
+      messageRender = <MessageText ref="message" content={content} className="message" />
     }
 
     return (
       <div data-message-id={message.get('id')} className="message-node">
-        <div ref="line" className={cx(lineClasses)} onClick={this.focusMessage}>
+        <div className={cx(lineClasses)} onClick={this.focusMessage}>
           <time dateTime={time.toISOString()} title={time.format('MMMM Do YYYY, h:mm:ss a')} style={timeStyle}>
             {time.format('h:mma')}
           </time>
@@ -140,8 +140,11 @@ var Message = module.exports = React.createClass({
   },
 
   overflowTall: function() {
-    var node = this.refs.line.getDOMNode()
-    if (node.clientHeight > 200) {
+    if (!this.refs.message) {
+      return
+    }
+    var node = this.refs.message.getDOMNode()
+    if (node.getBoundingClientRect().height > 200) {
       this.setState({tall: true})
     }
   },
