@@ -28,9 +28,14 @@ module.exports.hue = function(text) {
     if (/\s/.test(normalized[i])) {
       continue
     }
-    val = val * 33 + normalized.charCodeAt(i)
+    var oval = val
+    val = val << 5
+    val += oval
+    val += normalized.charCodeAt(i)
   }
-  val = (val + 155) % 360
+  val = val << 0
+  val += Math.pow(2, 31)
+  val = (val + 29) % 360
   cache.data = cache.data.set(text, val)
 
   return val
