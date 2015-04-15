@@ -497,7 +497,7 @@ describe('chat store', function() {
 
     it('should be assigned a hue', function(done) {
       handleSocket({status: 'receive', body: sendEvent}, function(state) {
-        assert.equal(state.messages.last().getIn(['sender', 'hue']), 36)
+        assert.equal(state.messages.last().getIn(['sender', 'hue']), 70)
         done()
       })
     })
@@ -965,7 +965,7 @@ describe('chat store', function() {
       handleSocket({status: 'receive', body: whoReply}, function() {
         handleSocket({status: 'receive', body: nickReply}, function(state) {
           // jshint camelcase: false
-          assert.equal(state.who.getIn([nickReply.data.session_id, 'hue']), 36)
+          assert.equal(state.who.getIn([nickReply.data.session_id, 'hue']), 70)
           done()
         })
       })
@@ -1039,7 +1039,7 @@ describe('chat store', function() {
     it('should assign a hue', function(done) {
       handleSocket({status: 'receive', body: joinEvent}, function(state) {
         // jshint camelcase: false
-        assert.equal(state.who.getIn([joinEvent.data.session_id, 'hue']), 247)
+        assert.equal(state.who.getIn([joinEvent.data.session_id, 'hue']), 50)
         done()
       })
     })
