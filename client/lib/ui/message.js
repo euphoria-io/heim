@@ -90,7 +90,7 @@ var Message = module.exports = React.createClass({
     var messageRender
     if (!_.trim(content)) {
       messageRender = null
-    } else if (/^\/me/.test(content)) {
+    } else if (/^\/me/.test(content) && content.length < 240) {
       content = content.replace(/^\/me ?/, '')
       messageRender = <MessageText content={content} className="message message-emote" style={{background: 'hsl(' + message.getIn(['sender', 'hue']) + ', 65%, 95%)'}} />
       lineClasses['line-emote'] = true
