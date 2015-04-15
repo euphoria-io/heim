@@ -5,6 +5,7 @@ var moment = require('moment')
 var queryString = require('querystring')
 
 var actions = require('../actions')
+var FastButton = require('./fastbutton')
 var MessageText = require('./messagetext')
 var ChatEntry = require('./chatentry')
 
@@ -46,6 +47,7 @@ var Message = module.exports = React.createClass({
 
     var lineClasses = {
       'line': true,
+      'expanded': this.state.expanded,
       'focus-highlight': entry || this.props.displayFocusHighlight,
       'mention': message.get('mention'),
     }
@@ -82,6 +84,7 @@ var Message = module.exports = React.createClass({
           </a>
         )}</div>
       )
+      lineClasses['has-embed'] = true
     }
 
     var messageRender
@@ -91,6 +94,14 @@ var Message = module.exports = React.createClass({
       content = content.replace(/^\/me ?/, '')
       messageRender = <MessageText content={content} className="message message-emote" style={{background: 'hsl(' + message.getIn(['sender', 'hue']) + ', 65%, 95%)'}} />
       lineClasses['line-emote'] = true
+    } else if (this.state.tall) {
+      var action = this.state.expanded ? 'collapse' : 'expand'
+      messageRender = (
+        <div className="message expando" onClick={this[action]}>
+          <MessageText content={content} />
+          <FastButton className="expand" onClick={this[action]}>{action}</FastButton>
+        </div>
+      )
     } else {
       messageRender = <MessageText content={content} className="message" />
     }
@@ -130,8 +141,19 @@ var Message = module.exports = React.createClass({
 
   overflowTall: function() {
     var node = this.refs.line.getDOMNode()
-    if (node.clientHeight > 300) {
-      node.classList.toggle('tall', true)
+    if (node.clientHeight > 200) {
+      this.setState({tall: true})
     }
+  },
+
+  expand: function(ev) {
+    this.setState({expanded: true})
+    // don't focus the message
+    ev.stopPropagation()
+  },
+
+  collapse: function(ev) {
+    this.setState({expanded: false})
+    ev.stopPropagation()
   },
 })
