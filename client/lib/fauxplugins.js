@@ -50,7 +50,8 @@ module.exports = function(roomName) {
       return (
         <div key="norman" className="norman">
           <p>norman</p>
-          <iframe src={'//embed.space/?' + queryString.stringify({
+          <iframe id="embed-norman" src={process.env.EMBED_ENDPOINT + '/?' + queryString.stringify({
+            id: 'norman',
             kind: 'img',
             url: '//i.imgur.com/UKbitCO.jpg',
           })} />
@@ -68,7 +69,7 @@ module.exports = function(roomName) {
           }
 
           .norman, .norman iframe {
-            transition: all .15s ease;
+            transition: transform .15s ease;
           }
 
           .norman:hover {
@@ -76,8 +77,7 @@ module.exports = function(roomName) {
           }
 
           .norman:hover iframe {
-            width: 30vw;
-            height: 20vw;
+            transform: translate(-50%, 50%) scale(2);
           }
 
           .norman p {
@@ -86,7 +86,7 @@ module.exports = function(roomName) {
           }
 
           .norman iframe {
-            width: 15vw;
+            width: 0;
             height: 10vw;
             border: none;
           }
