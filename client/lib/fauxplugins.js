@@ -87,7 +87,7 @@ module.exports = function(roomName) {
 
           .norman iframe {
             width: 0;
-            height: 10vw;
+            height: 100px;
             border: none;
           }
         `}} />
