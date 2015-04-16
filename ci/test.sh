@@ -22,7 +22,8 @@ test_backend() {
 test_client() {
   export NODE_ENV=development
   pushd ./client
-  gulp lint && mochify
+  gulp lint
+  mochify
   popd
 }
 
