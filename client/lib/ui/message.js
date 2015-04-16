@@ -10,6 +10,8 @@ var MessageText = require('./messagetext')
 var ChatEntry = require('./chatentry')
 
 
+var embedId = 0
+
 var Message = module.exports = React.createClass({
   displayName: 'Message',
 
@@ -77,7 +79,8 @@ var Message = module.exports = React.createClass({
       messageEmbeds = (
         <div className="embeds">{_.map(embeds, (embed, idx) =>
           <a key={idx} href={embed.link} target="_blank">
-            <iframe src={process.env.EMBED_ENDPOINT + '/?' + queryString.stringify({
+            <iframe id={'embed-' + embedId} className="embed" src={process.env.EMBED_ENDPOINT + '/?' + queryString.stringify({
+              id: embedId,
               kind: 'img',
               url: embed.img,
             })} />
@@ -85,6 +88,7 @@ var Message = module.exports = React.createClass({
         )}</div>
       )
       lineClasses['has-embed'] = true
+      embedId++
     }
 
     var messageRender

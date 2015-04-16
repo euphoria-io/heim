@@ -112,6 +112,17 @@ if (!window.frameElement) {
       Heim.focus.windowFocused()
     }
 
+    Heim.addEventListener(uiwindow, 'message', function(ev) {
+      if (ev.origin != process.env.EMBED_ENDPOINT) {
+        return
+      }
+
+      if (ev.data.type == 'size') {
+        var iframe = uidocument.getElementById('embed-' + ev.data.id)
+        iframe.style.width = ev.data.data.width + 'px'
+      }
+    }, false)
+
     Heim.addEventListener(uidocument.body, 'keypress', function(ev) {
       if (!uiwindow.getSelection().isCollapsed){
         return

@@ -1,5 +1,4 @@
 var queryString = require('querystring')
-var escapeString = require('lodash/string/escape')
 
 var allowedImageDomains = {
   'i.imgur.com': true,
@@ -15,10 +14,23 @@ function render() {
     if (!domain || !allowedImageDomains.hasOwnProperty(domain[1])) {
       return
     }
-    document.body.style.backgroundImage = 'url(\'' + escapeString(data.url) + '\')'
-    document.body.style.backgroundRepeat = 'no-repeat'
-    document.body.style.backgroundSize = 'cover'
-    document.body.style.backgroundPosition = 'left top'
+    var img = document.createElement('img')
+    img.src = data.url
+    img.onload = function() {
+      var ratio = img.width / img.height
+      if (ratio < 9/16) {
+        img.style.width = (9/16 * window.innerHeight) + 'px'
+        img.style.height = 'auto'
+      }
+      window.top.postMessage({
+        id: data.id,
+        type: 'size',
+        data: {
+          width: img.width,
+        }
+      }, process.env.HEIM_ENDPOINT)
+    }
+    document.body.appendChild(img)
   } else if (data.kind == 'youtube') {
     // jshint camelcase: false
     var embed = document.createElement('iframe')
