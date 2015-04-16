@@ -18,7 +18,7 @@ function render() {
     img.src = data.url
 
     var checkTimeout
-    function checkImage() {
+    var checkImage = function() {
       if (img.naturalWidth) {
         sendImageSize()
         img.onload = null
@@ -27,7 +27,7 @@ function render() {
       }
     }
 
-    function sendImageSize() {
+    var sendImageSize = function() {
       clearTimeout(checkTimeout)
       var displayHeight = window.innerHeight
       var displayWidth
