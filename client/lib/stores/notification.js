@@ -59,13 +59,13 @@ module.exports.store = Reflux.createStore({
       this.state.popupsPermission = Notification.permission == 'granted'
     }
 
-    window.addEventListener('unload', this.closeAllNotifications)
+    window.addEventListener('unload', this.clearAllNotifications)
   },
 
   focusChange: function(state) {
     this.focus = state.windowFocused
     if (this.focus) {
-      this.closeAllNotifications()
+      this.clearAllNotifications()
       this.updateFavicon()
     }
   },
@@ -190,29 +190,35 @@ module.exports.store = Reflux.createStore({
     }
   },
 
-  closeNotification: function(name) {
+  closePopup: function(name) {
     var notification = this.notifications[name]
-    if (notification) {
-      // when we close a notification, its onclose callback will get called
-      // async. displaying a new notification can race with this, causing the
-      // new notification to be invalidly forgotten.
-      if (notification.popup) {
-        notification.popup.onclose = null
-        notification.popup.close()
-      }
-      this.resetNotification(name)
+    if (!notification) {
+      return
     }
-  },
-
-  closeAllNotifications: function() {
-    _.each(this.notifications, (notification, name) => {
-      this.closeNotification(name)
-    })
-  },
-
-  resetNotification: function(name) {
     clearTimeout(this.notifications[name].timeout)
+    // when we close a notification, its onclose callback will get called
+    // async. displaying a new notification can race with this, causing the
+    // new notification to be invalidly forgotten.
+    if (notification.popup) {
+      notification.popup.onclose = null
+      notification.popup.close()
+    }
+    notification.popup = null
+  },
+
+  clearNotification: function(name) {
+    var notification = this.notifications[name]
+    if (!notification) {
+      return
+    }
+    this.closePopup(name)
     delete this.notifications[name]
+  },
+
+  clearAllNotifications: function() {
+    _.each(this.notifications, (notification, name) => {
+      this.clearNotification(name)
+    })
   },
 
   notify: function(name, roomName, messageId, options) {
@@ -220,9 +226,9 @@ module.exports.store = Reflux.createStore({
       return
     }
 
-    this.closeNotification(name)
+    this.clearNotification(name)
 
-    var notification = this.notifications[name] = this.notifications[name] || {}
+    var notification = this.notifications[name] = {}
     notification.favicon = options.favicon
     delete options.favicon
     this.updateFavicon()
@@ -244,10 +250,10 @@ module.exports.store = Reflux.createStore({
         uiwindow.focus()
         actions.focusMessage(messageId)
       }
-      notification.popup.onclose = _.partial(this.resetNotification, name)
+      notification.popup.onclose = _.partial(this.closePopup, name)
 
       if (timeoutDuration) {
-        notification.timeout = setTimeout(_.partial(this.closeNotification, name), timeoutDuration)
+        notification.timeout = setTimeout(notification.popup.onclose, timeoutDuration)
       }
     }
   },

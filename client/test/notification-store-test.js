@@ -427,9 +427,18 @@ describe('notification store', function() {
         sinon.assert.calledOnce(fakeNotification.close)
       })
 
+      it('should retain favicon state after timeout and reconnect', function() {
+        support.clock.tick(3000)
+        notification.store.chatStateChange({connected: false})
+        Heim.setFavicon.reset()
+        notification.store.chatStateChange({connected: true})
+        sinon.assert.calledOnce(Heim.setFavicon)
+        sinon.assert.calledWithExactly(Heim.setFavicon, notification.favicons.active)
+      })
+
       describe('when window unloading', function() {
         it('should close the notification', function() {
-          notification.store.closeAllNotifications()
+          notification.store.clearAllNotifications()
           sinon.assert.calledOnce(fakeNotification.close)
         })
       })
