@@ -29,10 +29,16 @@ function shell(cmd, cb) {
 
 function heimBundler(args) {
   return browserify('./lib/client.js', args)
+    .transform(envify({
+      EMBED_ENDPOINT: process.env.EMBED_ENDPOINT,
+    }))
 }
 
 function embedBundler(args) {
   return browserify('./lib/embed.js', args)
+    .transform(envify({
+      HEIM_ENDPOINT: process.env.HEIM_ENDPOINT,
+    }))
 }
 
 gulp.task('heim-js', function() {

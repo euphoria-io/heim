@@ -40,6 +40,8 @@ frontend:
   environment:
     NODE_ENV: development
     SENTRY_ENDPOINT: http://sentry@euphoria.local:9000/2
+    HEIM_ENDPOINT: http://euphoria.local:8080
+    EMBED_ENDPOINT: http://euphoria.local:8081
 
 # The upgradedb container runs the upgradedb command against the psql container.
 upgradedb:

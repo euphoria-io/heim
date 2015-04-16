@@ -77,7 +77,7 @@ var Message = module.exports = React.createClass({
       messageEmbeds = (
         <div className="embeds">{_.map(embeds, (embed, idx) =>
           <a key={idx} href={embed.link} target="_blank">
-            <iframe src={'//embed.space/?' + queryString.stringify({
+            <iframe src={process.env.EMBED_ENDPOINT + '/?' + queryString.stringify({
               kind: 'img',
               url: embed.img,
             })} />
