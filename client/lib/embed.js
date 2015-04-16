@@ -16,21 +16,41 @@ function render() {
     }
     var img = document.createElement('img')
     img.src = data.url
-    img.onload = function() {
-      var ratio = img.width / img.height
+
+    var checkTimeout
+    function checkImage() {
+      if (img.naturalWidth) {
+        sendImageSize()
+        img.onload = null
+      } else {
+        checkTimeout = setTimeout(checkImage, 100)
+      }
+    }
+
+    function sendImageSize() {
+      clearTimeout(checkTimeout)
+      var displayHeight = window.innerHeight
+      var displayWidth
+      var ratio = img.naturalWidth / img.naturalHeight
       if (ratio < 9/16) {
-        img.style.width = (9/16 * window.innerHeight) + 'px'
+        displayWidth = 9/16 * displayHeight
+        img.style.width = displayWidth + 'px'
         img.style.height = 'auto'
+      } else {
+        displayWidth = img.naturalWidth * (displayHeight / img.naturalHeight)
       }
       window.top.postMessage({
         id: data.id,
         type: 'size',
         data: {
-          width: img.width,
+          width: displayWidth,
         }
       }, process.env.HEIM_ENDPOINT)
     }
+
+    img.onload = sendImageSize
     document.body.appendChild(img)
+    checkImage()
   } else if (data.kind == 'youtube') {
     // jshint camelcase: false
     var embed = document.createElement('iframe')
