@@ -2,15 +2,13 @@ var _ = require('lodash')
 var React = require('react')
 var cx = React.addons.classSet
 var moment = require('moment')
-var queryString = require('querystring')
 
 var actions = require('../actions')
 var FastButton = require('./fastbutton')
+var Embed = require('./embed')
 var MessageText = require('./messagetext')
 var ChatEntry = require('./chatentry')
 
-
-var embedId = 0
 
 var Message = module.exports = React.createClass({
   displayName: 'Message',
@@ -79,16 +77,11 @@ var Message = module.exports = React.createClass({
       messageEmbeds = (
         <div className="embeds">{_.map(embeds, (embed, idx) =>
           <a key={idx} href={embed.link} target="_blank">
-            <iframe id={'embed-' + embedId} className="embed" src={process.env.EMBED_ENDPOINT + '/?' + queryString.stringify({
-              id: embedId,
-              kind: 'img',
-              url: embed.img,
-            })} />
+            <Embed kind="img" url={embed.img} />
           </a>
         )}</div>
       )
       lineClasses['has-embed'] = true
-      embedId++
     }
 
     var messageRender

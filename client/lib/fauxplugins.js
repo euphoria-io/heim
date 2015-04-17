@@ -1,7 +1,8 @@
 var React = require('react/addons')
 var Reflux = require('reflux')
 var Immutable = require('immutable')
-var queryString = require('querystring')
+
+var Embed = require('./ui/embed')
 
 
 module.exports = function(roomName) {
@@ -50,11 +51,7 @@ module.exports = function(roomName) {
       return (
         <div key="norman" className="norman">
           <p>norman</p>
-          <iframe id="embed-norman" src={process.env.EMBED_ENDPOINT + '/?' + queryString.stringify({
-            id: 'norman',
-            kind: 'img',
-            url: '//i.imgur.com/UKbitCO.jpg',
-          })} />
+          <Embed kind="img" url="//i.imgur.com/UKbitCO.jpg" />
         </div>
       )
     })
@@ -68,7 +65,7 @@ module.exports = function(roomName) {
             opacity: .5;
           }
 
-          .norman, .norman iframe {
+          .norman, .norman .embed {
             transition: transform .15s ease;
           }
 
@@ -76,7 +73,7 @@ module.exports = function(roomName) {
             opacity: 1;
           }
 
-          .norman:hover iframe {
+          .norman:hover .embed {
             transform: translate(-50%, 50%) scale(2);
           }
 
@@ -85,7 +82,7 @@ module.exports = function(roomName) {
             font-size: 12px;
           }
 
-          .norman iframe {
+          .norman .embed {
             width: 0;
             height: 100px;
             border: none;
@@ -163,12 +160,13 @@ module.exports = function(roomName) {
 
       render: function() {
         // jshint camelcase: false
-        return <iframe className="youtube-tv" src={this.state.tv.youtubeId && 'https://embed.space/?' + queryString.stringify({
-          kind: 'youtube',
-          autoplay: 1,
-          youtube_id: this.state.tv.youtubeId,
-          start: Math.max(0, Math.floor(Date.now() / 1000 - this.state.tv.time - clientTimeOffset)),
-        })} />
+        return <Embed
+          className="youtube-tv"
+          kind="youtube"
+          autoplay="1"
+          youtube_id={this.state.tv.youtubeId}
+          start={Math.max(0, Math.floor(Date.now() / 1000 - this.state.tv.time - clientTimeOffset))}
+        />
       }
     })
 

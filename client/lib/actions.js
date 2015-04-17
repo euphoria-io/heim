@@ -14,6 +14,7 @@ module.exports = Reflux.createActions([
   'tryRoomPasscode',
   'connect',
   'joinRoom',
+  'embedMessage',
 ])
 
 // sync so that we connect in the load tick
@@ -29,3 +30,6 @@ module.exports.focusEntry.sync = true
 
 // sync to allow entry to preventDefault keydown events
 module.exports.keydownOnEntry.sync = true
+
+// sync so that embed components can react quickly to events
+module.exports.embedMessage.sync = true

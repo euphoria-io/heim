@@ -113,13 +113,8 @@ if (!window.frameElement) {
     }
 
     Heim.addEventListener(uiwindow, 'message', function(ev) {
-      if (ev.origin != process.env.EMBED_ENDPOINT) {
-        return
-      }
-
-      if (ev.data.type == 'size') {
-        var iframe = uidocument.getElementById('embed-' + ev.data.id)
-        iframe.style.width = ev.data.data.width + 'px'
+      if (ev.origin == process.env.EMBED_ENDPOINT) {
+        Heim.actions.embedMessage(ev.data)
       }
     }, false)
 
