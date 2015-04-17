@@ -356,7 +356,11 @@ func testThreading(s *serverUnderTest) {
 		sfs := snowflakes(2)
 		sf1 := sfs[0]
 		sf2 := sfs[1]
-		server := `"server_id":"test1","server_era":"era1"`
+		server := `"name":"test","server_id":"test1","server_era":"era1"`
+
+		conn.send("1", "nick", `{"name":"test"}`)
+		conn.expect("1", "nick-reply",
+			`{"session_id":"%s","id":"%s","from":"","to":"test"}`, conn.sessionID, conn.id())
 
 		conn.send("1", "send", `{"content":"root"}`)
 		conn.expect("1", "send-reply",

@@ -467,6 +467,10 @@ func (s *session) join() error {
 }
 
 func (s *session) handleSendCommand(cmd *proto.SendCommand) (interface{}, error) {
+	if s.Identity().Name() == "" {
+		return nil, fmt.Errorf("you must choose a name before you may begin chatting")
+	}
+
 	msgID, err := snowflake.New()
 	if err != nil {
 		return nil, err
