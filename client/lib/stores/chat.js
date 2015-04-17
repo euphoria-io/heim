@@ -10,7 +10,7 @@ var plugins = require('./plugins')
 var hueHash = require('../huehash')
 
 
-var mentionRe = module.exports.mentionRe = /\B@([^\s]+?(?=$|[,.!:;&'\s]|&#39;|&quot;|&amp;))/g
+var mentionRe = module.exports.mentionRe = /\B@([^\s]+?(?=$|[,.!?:;&'\s]|&#39;|&quot;|&amp;))/g
 
 var storeActions = module.exports.actions = Reflux.createActions([
   'messageReceived',
