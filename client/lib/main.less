@@ -262,6 +262,10 @@ iframe.js {
           cursor: pointer;
           .box-outline;
 
+          &:before, &:after {
+            pointer-events: none;
+          }
+
           &:after {
             content: '';
             .fill;
