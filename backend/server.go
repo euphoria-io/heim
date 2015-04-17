@@ -217,7 +217,7 @@ func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
 	defer conn.Close()
 
 	// Serve the session.
-	session := newSession(ctx, conn, s.ID, s.Era, room, agentID)
+	session := newSession(ctx, conn, s.ID, s.Era, roomName, room, agentID)
 	if err = session.serve(); err != nil {
 		// TODO: error handling
 		return

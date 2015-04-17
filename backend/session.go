@@ -1,6 +1,7 @@
 package backend
 
 import (
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -13,9 +14,13 @@ import (
 	"euphoria.io/scope"
 
 	"github.com/gorilla/websocket"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
-const MaxKeepAliveMisses = 3
+const (
+	MaxKeepAliveMisses = 3
+	MaxAuthFailures    = 5
+)
 
 var (
 	KeepAlive     = 20 * time.Second
@@ -25,7 +30,38 @@ var (
 	ErrReplaced     = fmt.Errorf("connection replaced")
 
 	sessionIDCounter uint64
+
+	sessionCount = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name:      "sessions",
+		Subsystem: "backend",
+		Help:      "Cumulative number of sessions served by this backend",
+	}, []string{"room"})
+
+	authAttempts = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name:      "attempts",
+		Subsystem: "auth",
+		Help:      "Counter of authentication attempts",
+	}, []string{"room"})
+
+	authFailures = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name:      "failures",
+		Subsystem: "auth",
+		Help:      "Counter of authentication failures",
+	}, []string{"room"})
+
+	authTerminations = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name:      "terminations",
+		Subsystem: "auth",
+		Help:      "Counter of sessions ignored due to excessive auth failures",
+	}, []string{"room"})
 )
+
+func init() {
+	prometheus.MustRegister(sessionCount)
+	prometheus.MustRegister(authAttempts)
+	prometheus.MustRegister(authFailures)
+	prometheus.MustRegister(authTerminations)
+}
 
 type cmdState func(*proto.Packet) (interface{}, error)
 
@@ -36,6 +72,7 @@ type session struct {
 	identity  *memIdentity
 	serverID  string
 	serverEra string
+	roomName  string
 	room      proto.Room
 
 	state   cmdState
@@ -46,6 +83,8 @@ type session struct {
 	incoming chan *proto.Packet
 	outgoing chan *proto.Packet
 
+	authFailCount int
+
 	m                   sync.Mutex
 	banned              bool
 	maybeAbandoned      bool
@@ -55,10 +94,11 @@ type session struct {
 }
 
 func newSession(
-	ctx scope.Context, conn *websocket.Conn, serverID, serverEra string, room proto.Room,
+	ctx scope.Context, conn *websocket.Conn, serverID, serverEra, roomName string, room proto.Room,
 	agentID []byte) *session {
 
 	nextID := atomic.AddUint64(&sessionIDCounter, 1)
+	sessionCount.WithLabelValues(roomName).Set(float64(nextID))
 	sessionID := fmt.Sprintf("%x-%08x", agentID, nextID)
 	ctx = LoggingContext(ctx, fmt.Sprintf("[%s] ", sessionID))
 
@@ -69,6 +109,7 @@ func newSession(
 		identity:  newMemIdentity(fmt.Sprintf("agent:%08x", agentID), serverID, serverEra),
 		serverID:  serverID,
 		serverEra: serverEra,
+		roomName:  roomName,
 		room:      room,
 
 		incoming: make(chan *proto.Packet),
@@ -246,6 +287,15 @@ func (s *session) readMessages() {
 	}
 }
 
+func (s *session) ignore(cmd *proto.Packet) (interface{}, error) {
+	switch cmd.Type {
+	case proto.PingType, proto.PingReplyType:
+		return s.handleCommand(cmd)
+	default:
+		return nil, nil
+	}
+}
+
 func (s *session) handleAuth(cmd *proto.Packet) (interface{}, error) {
 	payload, err := cmd.Payload()
 	if err != nil {
@@ -254,13 +304,32 @@ func (s *session) handleAuth(cmd *proto.Packet) (interface{}, error) {
 
 	switch msg := payload.(type) {
 	case *proto.AuthCommand:
+		if s.authFailCount > 0 {
+			buf := []byte{0}
+			if _, err := rand.Read(buf); err != nil {
+				return nil, err
+			}
+			jitter := 4 * time.Duration(int(buf[0])-128) * time.Millisecond
+			time.Sleep(2*time.Second + jitter)
+		}
+
+		authAttempts.WithLabelValues(s.roomName).Inc()
 		auth, err := proto.Authenticate(s.ctx, s.room, msg)
 		if err != nil {
 			return nil, err
 		}
 		if auth.FailureReason != "" {
+			authFailures.WithLabelValues(s.roomName).Inc()
+			s.authFailCount++
+			if s.authFailCount >= MaxAuthFailures {
+				Logger(s.ctx).Printf(
+					"max authentication failures on room %s by %s", s.roomName, s.Identity().ID())
+				authTerminations.WithLabelValues(s.roomName).Inc()
+				s.state = s.ignore
+			}
 			return &proto.AuthReply{Reason: auth.FailureReason}, nil
 		}
+
 		// TODO: support holding multiple keys
 		s.auth = map[string]*proto.Authentication{auth.KeyID: auth}
 		s.keyID = auth.KeyID
