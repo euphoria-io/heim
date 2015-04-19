@@ -139,7 +139,7 @@ module.exports.store = Reflux.createStore({
         var nick = this.state.nick || this.state.tentativeNick
         if (nick) {
           var mention = message.content.match(mentionRe)
-          if (mention && _.any(mention, m => m.substr(1).toLowerCase() == hueHash.stripSpaces(nick).toLowerCase())) {
+          if (mention && _.any(mention, m => hueHash.normalize(m.substr(1)) == hueHash.normalize(nick))) {
             message.mention = true
           }
         }
