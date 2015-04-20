@@ -214,6 +214,7 @@ describe('chat store', function() {
     assert.equal(initialState.messages.size, 0)
     assert.equal(initialState.who.size, 0)
     assert.deepEqual(initialState.nickHues, {})
+    assert(Immutable.is(initialState.roomSettings, Immutable.Map()))
   })
 
   describe('connect action', function() {
@@ -1064,6 +1065,16 @@ describe('chat store', function() {
           done()
         })
       })
+    })
+  })
+
+  describe('setRoomSettings action', function() {
+    it('should merge with roomSettings data', function() {
+      chat.store.setRoomSettings({testing: true, another: {test: false}})
+      assert.equal(chat.store.state.roomSettings.get('testing'), true)
+      assert.equal(chat.store.state.roomSettings.getIn(['another', 'test']), false)
+      chat.store.setRoomSettings({another: {test: true}})
+      assert.equal(chat.store.state.roomSettings.getIn(['another', 'test']), true)
     })
   })
 

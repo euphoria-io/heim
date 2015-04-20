@@ -91,7 +91,7 @@ var Message = module.exports = React.createClass({
       content = content.replace(/^\/me ?/, '')
       messageRender = <MessageText content={content} className="message message-emote" style={{background: 'hsl(' + message.getIn(['sender', 'hue']) + ', 65%, 95%)'}} />
       lineClasses['line-emote'] = true
-    } else if (this.state.tall) {
+    } else if (this.state.tall && this.props.roomSettings.get('collapse') !== false) {
       var action = this.state.expanded ? 'collapse' : 'expand'
       messageRender = (
         <div className="message expando" onClick={this[action]}>
@@ -118,7 +118,7 @@ var Message = module.exports = React.createClass({
         {(children.size > 0 || entry) &&
           <div className="replies">
             {children.toSeq().map(function(nodeId) {
-              return <Message key={nodeId} tree={this.props.tree} nodeId={nodeId} depth={this.props.depth + 1} displayFocusHighlight={!!entry} />
+              return <Message key={nodeId} tree={this.props.tree} nodeId={nodeId} depth={this.props.depth + 1} displayFocusHighlight={!!entry} roomSettings={this.props.roomSettings} />
             }, this).toArray()}
             {entry && <ChatEntry />}
           </div>
@@ -137,7 +137,7 @@ var Message = module.exports = React.createClass({
   },
 
   overflowTall: function() {
-    if (!this.refs.message) {
+    if (!this.refs.message || this.props.roomSettings.get('collapse') === false) {
       return
     }
     var node = this.refs.message.getDOMNode()

@@ -19,7 +19,7 @@ module.exports = React.createClass({
     return (
       <div className="message-list">
         {this.state.node.get('children').toSeq().map(function(nodeId) {
-          return <Message key={nodeId} tree={this.props.tree} nodeId={nodeId} depth={this.props.depth} />
+          return <Message key={nodeId} tree={this.props.tree} nodeId={nodeId} depth={this.props.depth} roomSettings={this.props.roomSettings} />
         }, this).toArray()}
       </div>
     )

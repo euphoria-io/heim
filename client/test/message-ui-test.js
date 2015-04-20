@@ -2,6 +2,7 @@ require('./support/setup')
 var assert = require('assert')
 var React = require('react/addons')
 var TestUtils = React.addons.TestUtils
+var Immutable = require('immutable')
 
 
 describe('<Message>', function() {
@@ -23,7 +24,7 @@ describe('<Message>', function() {
     ])
 
     var message = TestUtils.renderIntoDocument(
-      <Message tree={testTree} nodeId="id1" depth={0} />
+      <Message tree={testTree} nodeId="id1" depth={0} roomSettings={Immutable.Map()} />
     )
 
     return TestUtils.findRenderedDOMComponentWithClass(message, 'message')

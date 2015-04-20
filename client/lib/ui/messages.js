@@ -31,7 +31,7 @@ module.exports = React.createClass({
 
     var rendered = (
       <div className="messages">
-        <MessageList tree={this.state.messages} />
+        <MessageList tree={this.state.messages} roomSettings={this.state.roomSettings} />
         {disconnected ?
           <div key="status" className="line status disconnected">
             <time dateTime={now.toISOString()} title={now.format('MMMM Do YYYY, h:mm:ss a')}>

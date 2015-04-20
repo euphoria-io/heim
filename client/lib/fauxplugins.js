@@ -287,5 +287,7 @@ module.exports = function(roomName) {
         `}} />
       )
     })
+
+    Heim.chat.setRoomSettings({collapse: false})
   }
 }

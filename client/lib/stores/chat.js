@@ -15,7 +15,9 @@ var mentionRe = module.exports.mentionRe = /\B@([^\s]+?(?=$|[,.!?:;&'\s]|&#39;|&
 var storeActions = module.exports.actions = Reflux.createActions([
   'messageReceived',
   'messagesChanged',
+  'setRoomSettings',
 ])
+storeActions.setRoomSettings.sync = true
 _.extend(module.exports, storeActions)
 
 module.exports.store = Reflux.createStore({
@@ -36,6 +38,7 @@ module.exports.store = Reflux.createStore({
       canJoin: null,
       joined: false,  // => received snapshot; sent nick; ui ready
       roomName: null,
+      roomSettings: Immutable.Map(),
       tentativeNick: null,
       nick: null,
       authType: null,
@@ -304,6 +307,11 @@ module.exports.store = Reflux.createStore({
     this.state.authData = passcode
     this.state.authState = 'trying'
     this._sendPasscode(passcode)
+    this.trigger(this.state)
+  },
+
+  setRoomSettings: function(settings) {
+    this.state.roomSettings = this.state.roomSettings.merge(settings)
     this.trigger(this.state)
   },
 
