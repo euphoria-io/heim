@@ -66,4 +66,19 @@ func TestNormalizeNick(t *testing.T) {
 		So(pass(string(name)+"a"), ShouldEqual, expected+"a")
 		reject(string(name) + "aa")
 	})
+
+	Convey("Bidi isolates and overrides are popped", t, func() {
+		testCases := [][]string{
+			{"\u202Btest", "\u202Btest\u202C"},
+			{"\u202B\u202Bte\u202Cst", "\u202B\u202Bte\u202Cst\u202C"},
+			{"\u2067\u202Atest\u2069test", "\u2067\u202Atest\u2069test\u202C"},
+			{"\u2067\u202Atest\u202Ctest", "\u2067\u202Atest\u202Ctest\u2069"},
+		}
+
+		for _, testCase := range testCases {
+			output, err := NormalizeNick(testCase[0])
+			So(err, ShouldBeNil)
+			So(output, ShouldEqual, testCase[1])
+		}
+	})
 }
