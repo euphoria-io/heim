@@ -2,19 +2,19 @@ var React = require('react/addons')
 var cx = React.addons.classSet
 var Reflux = require('reflux')
 
-var isTextInput = require('../istextinput')
+var isTextInput = require('../is-text-input')
 var actions = require('../actions')
 var Scroller = require('./scroller')
 var Messages = require('./messages')
-var ChatSidebar = require('./chatsidebar')
-var ChatTopBar = require('./chattopbar')
+var ChatSidebar = require('./chat-sidebar')
+var ChatTopBar = require('./chat-top-bar')
 
 
 module.exports = React.createClass({
   displayName: 'Main',
 
   mixins: [
-    require('./hooksmixin'),
+    require('./hooks-mixin'),
     Reflux.connect(require('../stores/chat').store, 'chat'),
     Reflux.connect(require('../stores/focus').store, 'focus'),
     Reflux.connect(require('../stores/update').store, 'update'),

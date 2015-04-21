@@ -39,8 +39,8 @@ if (!window.frameElement) {
   var _ = require('lodash')
   require('setimmediate')
 
-  var EventListeners = require('./eventlisteners')
-  var isTextInput = require('./istextinput')
+  var EventListeners = require('./event-listeners')
+  var isTextInput = require('./is-text-input')
 
   var evs = new EventListeners()
 
@@ -57,7 +57,7 @@ if (!window.frameElement) {
     update: require('./stores/update'),
     plugins: require('./stores/plugins'),
 
-    setFavicon: _.partial(require('./setfavicon'), uidocument),
+    setFavicon: _.partial(require('./set-favicon'), uidocument),
 
     // http://stackoverflow.com/a/6447935
     isTouch: 'ontouchstart' in window,

@@ -4,7 +4,7 @@ var sinon = require('sinon')
 
 
 describe('EventListeners', function() {
-  var EventListeners = require('../lib/eventlisteners')
+  var EventListeners = require('../lib/event-listeners')
   var eventType = 'test'
   var eventCallback = function() {}
   var evs

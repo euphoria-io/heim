@@ -1,6 +1,6 @@
 var React = require('react/addons')
 
-var FastButton = require('./fastbutton')
+var FastButton = require('./fast-button')
 var Bubble = require('./bubble')
 
 

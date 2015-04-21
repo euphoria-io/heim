@@ -11,7 +11,7 @@ module.exports = React.createClass({
 
   mixins: [
     React.addons.LinkedStateMixin,
-    require('./entrymixin'),
+    require('./entry-mixin'),
     Reflux.listenTo(chat.store, '_onChatUpdate'),
     Reflux.listenTo(actions.focusEntry, 'focus'),
     Reflux.listenTo(actions.keydownOnEntry, 'proxyKeyDown'),

@@ -1,10 +1,10 @@
 var React = require('react/addons')
 
 var update = require('../stores/update')
-var FastButton = require('./fastbutton')
-var UserList = require('./userlist')
+var FastButton = require('./fast-button')
+var UserList = require('./user-list')
 var Bubble = require('./bubble')
-var RoomTitle = require('./roomtitle')
+var RoomTitle = require('./room-title')
 
 
 module.exports = React.createClass({

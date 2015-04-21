@@ -4,10 +4,10 @@ var cx = React.addons.classSet
 var moment = require('moment')
 
 var actions = require('../actions')
-var FastButton = require('./fastbutton')
+var FastButton = require('./fast-button')
 var Embed = require('./embed')
-var MessageText = require('./messagetext')
-var ChatEntry = require('./chatentry')
+var MessageText = require('./message-text')
+var ChatEntry = require('./chat-entry')
 
 
 var Message = module.exports = React.createClass({
@@ -15,7 +15,7 @@ var Message = module.exports = React.createClass({
 
   mixins: [
     require('react-immutable-render-mixin'),
-    require('./treenodemixin'),
+    require('./tree-node-mixin'),
   ],
 
   focusMessage: function() {

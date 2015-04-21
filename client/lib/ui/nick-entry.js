@@ -9,7 +9,7 @@ module.exports = React.createClass({
 
   mixins: [
     React.addons.LinkedStateMixin,
-    require('./entrymixin'),
+    require('./entry-mixin'),
     Reflux.connect(require('../stores/chat').store, 'chat'),
     Reflux.listenTo(actions.focusEntry, 'focus'),
     Reflux.listenTo(actions.keydownOnEntry, 'proxyKeyDown'),

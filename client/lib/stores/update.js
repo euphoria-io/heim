@@ -17,7 +17,7 @@ module.exports.store = Reflux.createStore({
     {focusChange: require('./focus').store},
   ],
 
-  mixins: [require('./immutablemixin')],
+  mixins: [require('./immutable-mixin')],
 
   init: function() {
     this.state = Immutable.Map({

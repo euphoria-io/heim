@@ -22,6 +22,6 @@ module.exports.store = Reflux.createStore({
   listenables: storeActions,
 
   load: function(roomName) {
-    require('../fauxplugins')(roomName)
+    require('../faux-plugins')(roomName)
   },
 })

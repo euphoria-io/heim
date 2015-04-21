@@ -5,7 +5,7 @@ var moment = require('moment')
 
 var notification = require('../stores/notification')
 var storage = require('../stores/storage')
-var FastButton = require('./fastbutton')
+var FastButton = require('./fast-button')
 
 
 module.exports = React.createClass({

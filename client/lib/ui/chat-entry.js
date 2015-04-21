@@ -4,13 +4,13 @@ var Reflux = require('reflux')
 
 var actions = require('../actions')
 var chat = require('../stores/chat')
-var hueHash = require('../huehash')
+var hueHash = require('../hue-hash')
 
 module.exports = React.createClass({
   displayName: 'ChatEntry',
 
   mixins: [
-    require('./entrymixin'),
+    require('./entry-mixin'),
     Reflux.connect(chat.store, 'chat'),
     Reflux.listenTo(actions.focusEntry, 'focus'),
     Reflux.listenTo(actions.keydownOnEntry, 'onKeyDown'),

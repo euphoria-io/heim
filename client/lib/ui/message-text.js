@@ -3,7 +3,7 @@ var React = require('react')
 var Autolinker = require('autolinker')
 
 var chat = require('../stores/chat')
-var hueHash = require('../huehash')
+var hueHash = require('../hue-hash')
 
 
 var autolinker = new Autolinker({

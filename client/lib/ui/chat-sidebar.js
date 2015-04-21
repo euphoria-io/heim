@@ -4,18 +4,18 @@ var Reflux = require('reflux')
 
 var actions = require('../actions')
 var update = require('../stores/update')
-var UserList = require('./userlist')
+var UserList = require('./user-list')
 var Settings = require('./settings')
-var NotificationSettings = require('./notificationsettings')
-var FastButton = require('./fastbutton')
-var RoomTitle = require('./roomtitle')
+var NotificationSettings = require('./notification-settings')
+var FastButton = require('./fast-button')
+var RoomTitle = require('./room-title')
 
 
 module.exports = React.createClass({
   displayName: 'ChatSidebar',
 
   mixins: [
-    require('./hooksmixin'),
+    require('./hooks-mixin'),
     require('react-immutable-render-mixin'),
     Reflux.listenTo(actions.showSettings, 'showSettings'),
   ],

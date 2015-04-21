@@ -8,7 +8,7 @@ module.exports = React.createClass({
 
   mixins: [
     require('react-immutable-render-mixin'),
-    require('./treenodemixin'),
+    require('./tree-node-mixin'),
   ],
 
   getDefaultProps: function() {

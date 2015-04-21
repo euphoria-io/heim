@@ -7,7 +7,7 @@ var Tree = require('../tree')
 var storage = require('./storage')
 var socket = require('./socket')
 var plugins = require('./plugins')
-var hueHash = require('../huehash')
+var hueHash = require('../hue-hash')
 
 
 var mentionRe = module.exports.mentionRe = /\B@([^\s]+?(?=$|[,.!?:;&'\s]|&#39;|&quot;|&amp;))/g

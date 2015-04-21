@@ -2,10 +2,10 @@ var React = require('react/addons')
 var Reflux = require('reflux')
 var moment = require('moment')
 
-var MessageList = require('./messagelist')
-var ChatEntry = require('./chatentry')
-var NickEntry = require('./nickentry')
-var PasscodeEntry = require('./passcodeentry')
+var MessageList = require('./message-list')
+var ChatEntry = require('./chat-entry')
+var NickEntry = require('./nick-entry')
+var PasscodeEntry = require('./passcode-entry')
 
 
 module.exports = React.createClass({
