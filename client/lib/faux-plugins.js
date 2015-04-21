@@ -242,41 +242,6 @@ module.exports = function(roomName) {
     })
   }
 
-  if (roomName == 'youtube') {
-    Heim.hook('page-bottom', function() {
-      return (
-        <style key="youtubetv-big-style" dangerouslySetInnerHTML={{__html:`
-          .youtube-tv {
-            position: fixed;
-            left: 0;
-            right: 0;
-            top: 0;
-            width: 100%;
-            height: 56.25vw;
-            background: black;
-          }
-
-          .chat {
-            position: fixed;
-            top: 56.25vw;
-            bottom: 0;
-            width: 100%;
-            height: auto;
-          }
-
-          .chat .sidebar {
-            top: calc(56.25vw + 8px);
-            width: 150px;
-          }
-
-          .chat .messages-container .messages .line {
-            margin-right: 150px;
-          }
-        `}} />
-      )
-    })
-  }
-
   if (roomName == 'adventure') {
     Heim.hook('page-bottom', function() {
       return (
