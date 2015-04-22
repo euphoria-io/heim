@@ -1,4 +1,4 @@
-var React = require('react/addons')
+var React = require('react')
 
 
 // A button that triggers on touch start on mobile to increase responsiveness.
