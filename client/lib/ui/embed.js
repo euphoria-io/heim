@@ -1,6 +1,6 @@
 var _ = require('lodash')
 var React = require('react')
-var cx = React.addons.classSet
+var classNames = require('classnames')
 var EventEmitter = require('eventemitter3')
 var queryString = require('querystring')
 
@@ -61,6 +61,6 @@ module.exports = React.createClass({
     if (this.props.className) {
       classes[this.props.className] = true
     }
-    return <iframe key={url} ref="iframe" className={cx(classes)} style={{width: this.state.width}} src={url} />
+    return <iframe key={url} ref="iframe" className={classNames(classes)} style={{width: this.state.width}} src={url} />
   },
 })

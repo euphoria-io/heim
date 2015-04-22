@@ -1,5 +1,5 @@
-var React = require('react/addons')
-var cx = React.addons.classSet
+var React = require('react')
+var classNames = require('classnames')
 var Reflux = require('reflux')
 
 var isTextInput = require('../is-text-input')
@@ -86,7 +86,7 @@ module.exports = React.createClass({
           ref="scroller"
           target=".entry"
           edgeSpace={156}
-          className={cx({
+          className={classNames({
             'messages-container': true,
             'focus-highlighting': !!this.state.chat.focusedMessage,
             'form-focus': this.state.focus.windowFocused && this.state.chat.connected !== false,

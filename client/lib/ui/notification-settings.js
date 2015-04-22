@@ -1,5 +1,5 @@
-var React = require('react/addons')
-var cx = React.addons.classSet
+var React = require('react')
+var classNames = require('classnames')
 var Reflux = require('reflux')
 var moment = require('moment')
 
@@ -80,9 +80,9 @@ module.exports = React.createClass({
       var currentMode = roomStorage.notifyMode || 'mention'
       notificationModeUI = (
         <span className="mode-selector">
-          <FastButton className={cx({'mode': true, 'none': true, 'selected': currentMode == 'none'})} onClick={() => this.setMode('none')}>none</FastButton>
-          <FastButton className={cx({'mode': true, 'mention': true, 'selected': currentMode == 'mention'})} onClick={() => this.setMode('mention')}>mention</FastButton>
-          <FastButton className={cx({'mode': true, 'message': true, 'selected': currentMode == 'message'})} onClick={() => this.setMode('message')}>message</FastButton>
+          <FastButton className={classNames({'mode': true, 'none': true, 'selected': currentMode == 'none'})} onClick={() => this.setMode('none')}>none</FastButton>
+          <FastButton className={classNames({'mode': true, 'mention': true, 'selected': currentMode == 'mention'})} onClick={() => this.setMode('mention')}>mention</FastButton>
+          <FastButton className={classNames({'mode': true, 'message': true, 'selected': currentMode == 'message'})} onClick={() => this.setMode('message')}>message</FastButton>
         </span>
       )
     }
