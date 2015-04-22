@@ -6,12 +6,16 @@ var Immutable = require('immutable')
 
 
 describe('chat store', function() {
-  var actions = require('../lib/actions')
   var chat = require('../lib/stores/chat')
   var socket = require('../lib/stores/socket')
   var storage = require('../lib/stores/storage')
+  var clock
+
+  var startTime = chat.store.seenTTL + 100 * 1000
 
   beforeEach(function() {
+    clock = support.setupClock()
+    clock.tick(startTime)
     sinon.stub(chat.actions, 'messageReceived')
     sinon.stub(chat.actions, 'messagesChanged')
     sinon.stub(socket, 'send')
@@ -21,6 +25,7 @@ describe('chat store', function() {
   })
 
   afterEach(function() {
+    clock.restore()
     chat.actions.messageReceived.restore()
     chat.actions.messagesChanged.restore()
     socket.send.restore()
@@ -37,7 +42,7 @@ describe('chat store', function() {
 
   var message1 = {
     'id': 'id1',
-    'time': 123456,
+    'time': startTime / 1000 - 2,
     'sender': {
       'session_id': '32.64.96.128:12345',
       'id': 'agent:tester1',
@@ -48,7 +53,7 @@ describe('chat store', function() {
 
   var message2 = {
     'id': 'id2',
-    'time': 123457,
+    'time': startTime / 1000 - 1,
     'sender': {
       'session_id': '32.64.96.128:12345',
       'id': 'agent:tester1',
@@ -60,7 +65,7 @@ describe('chat store', function() {
   var message3 = {
     'id': 'id3',
     'parent': 'id2',
-    'time': 123458,
+    'time': startTime / 1000,
     'sender': {
       'session_id': '32.64.96.128:12346',
       'id': 'agent:tester2',
@@ -83,7 +88,7 @@ describe('chat store', function() {
 
   var message0 = {
     'id': 'id0',
-    'time': 123460,
+    'time': 0,
     'sender': {
       'session_id': '32.64.96.128:12345',
       'id': 'agent:tester1',
@@ -100,25 +105,6 @@ describe('chat store', function() {
         message0,
       ],
       'before': 'id1',
-    }
-  }
-
-  var laterLogReply = {
-    'id': '0',
-    'type': 'log-reply',
-    'data': {
-      'log': [
-        {
-          'id': 'id9',
-          'time': 223460,
-          'sender': {
-            'session_id': '32.64.96.128:12345',
-            'id': 'agent:tester1',
-            'name': 'tester',
-          },
-          'content': 'hello?',
-        }
-      ],
     }
   }
 
@@ -200,6 +186,7 @@ describe('chat store', function() {
           type: 'passcode',
           data: 'hunter2',
         },
+        lastVisit: startTime - 60 * 1000,
       }
     }
   }
@@ -272,6 +259,36 @@ describe('chat store', function() {
     })
   })
 
+  describe('markMessagesSeen action', function() {
+    it('should store messages marked as seen, culling messages seen earlier than the TTL', function() {
+      var mockSeenMessages = {
+        'id1': Date.now() - chat.store.seenTTL,
+        'id3': Date.now() - chat.store.seenTTL - 1,
+      }
+      chat.store.state.roomName = 'ezzie'
+      chat.store.storageChange({room: {ezzie: {seenMessages: mockSeenMessages}}})
+      chat.store.socketEvent({status: 'receive', body: logReply})
+      chat.store.markMessagesSeen(['id2'])
+      sinon.assert.calledOnce(storage.setRoom)
+      var expectedSeenMessages = {
+        'id1': mockSeenMessages.id1,
+        'id2': Date.now(),
+      }
+      sinon.assert.calledWithExactly(storage.setRoom, 'ezzie', 'seenMessages', expectedSeenMessages)
+    })
+
+    it('should not update the store if seen messages unchanged', function() {
+      var mockSeenMessages = {
+        'id3': Date.now(),
+      }
+      chat.store.state.roomName = 'ezzie'
+      chat.store.storageChange({room: {ezzie: {seenMessages: mockSeenMessages}}})
+      chat.store.socketEvent({status: 'receive', body: logReply})
+      chat.store.markMessagesSeen(['id3'])
+      sinon.assert.notCalled(storage.setRoom)
+    })
+  })
+
   describe('sendMessage action', function() {
     it('should send a message', function() {
       var testContent = 'hello, ezzie!'
@@ -283,65 +300,12 @@ describe('chat store', function() {
     })
 
     it('should send a message with a parent', function() {
+      chat.store.socketEvent({status: 'receive', body: logReply})
       var testContent = 'hello, ezzie!'
-      chat.store.sendMessage(testContent, '123test')
+      chat.store.sendMessage(testContent, 'id1')
       sinon.assert.calledWithExactly(socket.send, {
         type: 'send',
-        data: {content: testContent, parent: '123test'},
-      })
-    })
-  })
-
-  describe('setEntryText action', function() {
-    it('should update entryText in next getInitialState', function() {
-      var text = 'hello, ezzie!'
-      chat.store.setEntryText(text)
-      assert.equal(chat.store.getInitialState().entryText, text)
-    })
-  })
-
-  describe('toggleFocusMessage action', function() {
-    beforeEach(function() {
-      sinon.stub(actions, 'focusMessage')
-    })
-
-    afterEach(function() {
-      actions.focusMessage.restore()
-    })
-
-    describe('on a top-level message', function() {
-      describe('if not already focused', function() {
-        it('should focus', function() {
-          chat.store.toggleFocusMessage('id1', '__root')
-          sinon.assert.calledOnce(actions.focusMessage)
-          sinon.assert.calledWithExactly(actions.focusMessage, 'id1')
-        })
-      })
-
-      describe('if already focused', function() {
-        it('should reset focus', function() {
-          chat.store.state.focusedMessage = 'id1'
-          chat.store.toggleFocusMessage('id1', '__root')
-          sinon.assert.calledOnce(actions.focusMessage)
-          sinon.assert.calledWithExactly(actions.focusMessage, null)
-        })
-      })
-    })
-
-    describe('on a child message', function() {
-      describe('if parent not already focused', function() {
-        it('should focus parent', function() {
-          chat.store.toggleFocusMessage('id2', 'id1')
-          sinon.assert.calledOnce(actions.focusMessage)
-          sinon.assert.calledWithExactly(actions.focusMessage, 'id1')
-        })
-
-        it('should focus child', function() {
-          chat.store.state.focusedMessage = 'id1'
-          chat.store.toggleFocusMessage('id2', 'id1')
-          sinon.assert.calledOnce(actions.focusMessage)
-          sinon.assert.calledWithExactly(actions.focusMessage, 'id2')
-        })
+        data: {content: testContent, parent: 'id1'},
       })
     })
   })
@@ -424,6 +388,29 @@ describe('chat store', function() {
         done()
       })
     })
+
+    it('should persist lastVisit node', function(done) {
+      var prevLastVisit = chat.store.state.messages.get('__lastVisit')
+      chat.store.socketEvent({status: 'open'})
+      handleSocket({status: 'receive', body: snapshotReply}, function(state) {
+        assert(Immutable.is(state.messages.get('__lastVisit'), prevLastVisit))
+        done()
+      })
+    })
+
+    it('should persist shadow nodes (underscored properties)', function(done) {
+      chat.store.state.messages.add({id: 'test', parent: 'id1', _data: 'retained'})
+      assert.equal(chat.store.state.messages.get('test').get('parent'), 'id1')
+
+      chat.store.socketEvent({status: 'open'})
+      handleSocket({status: 'receive', body: snapshotReply}, function(state) {
+        var testNode = state.messages.get('test')
+        assert(testNode)
+        assert.equal(testNode.get('parent'), null)
+        assert.equal(testNode.get('_data'), 'retained')
+        done()
+      })
+    })
   })
 
   describe('on storage change', function() {
@@ -443,15 +430,47 @@ describe('chat store', function() {
       chat.store.storageChange(mockStorage)
       assert.equal(chat.store.state.tentativeNick, 'tester')
     })
+
+    it('should not set tentative nick if current nick', function() {
+      chat.store.state.nick = 'test'
+      chat.store.state.tentativeNick = 'unchanged'
+      chat.store.storageChange(mockStorage)
+      assert.equal(chat.store.state.tentativeNick, 'unchanged')
+    })
+
+    it('should set lastVisit and create tree node if not set', function() {
+      assert.equal(chat.store.state.lastVisit, null)
+      chat.store.storageChange(mockStorage)
+      assert.equal(chat.store.state.lastVisit, mockStorage.room.ezzie.lastVisit)
+      var lastVisitNode = chat.store.state.messages.get('__lastVisit')
+      assert(lastVisitNode)
+      assert.equal(lastVisitNode.get('time'), mockStorage.room.ezzie.lastVisit / 1000)
+    })
   })
 
-  describe('on focus change', function() {
-    it('should trigger a socket idle ping if connected and focused', function() {
+  describe('when ui becomes active', function() {
+    beforeEach(function() {
       sinon.stub(socket, 'pingIfIdle')
-      chat.store.state.connected = true
-      chat.store.focusChange({windowFocused: true})
-      sinon.assert.calledOnce(socket.pingIfIdle)
+    })
+
+    afterEach(function() {
       socket.pingIfIdle.restore()
+    })
+
+    describe('when connected', function() {
+      it('should ping the server', function() {
+        chat.store.state.connected = true
+        chat.store.onActive()
+        sinon.assert.calledOnce(socket.pingIfIdle)
+      })
+    })
+
+    describe('when disconnected', function() {
+      it('should do nothing', function() {
+        chat.store.state.connected = false
+        chat.store.onActive()
+        sinon.assert.notCalled(socket.pingIfIdle)
+      })
     })
   })
 
@@ -540,7 +559,7 @@ describe('chat store', function() {
     it('should trigger messagesChanged action', function(done) {
       handleSocket({status: 'receive', body: sendEvent}, function(state) {
         sinon.assert.calledOnce(chat.actions.messagesChanged)
-        sinon.assert.calledWithExactly(chat.actions.messagesChanged, ['id2', '__root'], state)
+        sinon.assert.calledWithExactly(chat.actions.messagesChanged, ['__root', 'id2'], state)
         done()
       })
     })
@@ -548,7 +567,29 @@ describe('chat store', function() {
     it('should be tagged as a mention, if it matches', function(done) {
       chat.store.state.tentativeNick = 'test er'
       handleSocket({status: 'receive', body: sendMentionEvent}, function(state) {
-        assert(state.messages.last().get('mention'))
+        assert(state.messages.last().get('_mention'))
+        done()
+      })
+    })
+
+    it('older than seenTTL should be marked seen = true', function(done) {
+      var msgTime = (Date.now() - chat.store.seenTTL) / 1000 - 10
+      var oldSendEvent = _.merge({}, sendEvent, {data: {time: msgTime}})
+      handleSocket({status: 'receive', body: oldSendEvent}, function(state) {
+        assert.equal(state.messages.last().get('_seen'), true)
+        done()
+      })
+    })
+
+    it('newer than seenTTL should be looked up whether seen', function(done) {
+      var msgTime = Date.now() / 1000 - 5
+      var seenSendEvent = _.merge({}, sendEvent, {data: {time: msgTime}})
+      var mockSeenMessages = {}
+      var seenTime = mockSeenMessages[seenSendEvent.data.id] = msgTime * 1000
+      chat.store.state.roomName = 'ezzie'
+      chat.store.storageChange({room: {ezzie: {seenMessages: mockSeenMessages}}})
+      handleSocket({status: 'receive', body: seenSendEvent}, function(state) {
+        assert.equal(state.messages.last().get('_seen'), seenTime)
         done()
       })
     })
@@ -618,7 +659,7 @@ describe('chat store', function() {
       chat.actions.messagesChanged.reset()
       handleSocket({status: 'receive', body: msgBody}, function(state) {
         var ids = Immutable.Seq(msgBody.data.log).map(msg => msg.id).toArray()
-        ids.push('__root')
+        ids.unshift('__root')
         sinon.assert.calledOnce(chat.actions.messagesChanged)
         sinon.assert.calledWithExactly(chat.actions.messagesChanged, ids, state)
         done()
@@ -696,20 +737,6 @@ describe('chat store', function() {
         checkLogs(logReply)
       })
 
-      it('should persist focusedMessage state', function(done) {
-        chat.store.state.nick = 'test'
-        support.listenOnce(chat.store, function(state) {
-          assert.equal(state.messages.get('id1').get('entry'), true)
-
-          handleSocket({status: 'receive', body: logReply}, function(state) {
-            assert.equal(state.messages.get('id1').get('entry'), true)
-            done()
-          })
-        })
-
-        chat.store.focusMessage('id1')
-      })
-
       it('should not trigger messagesChanged action', function(done) {
         var logReplyWithBefore = _.merge(_.clone(logReply), {data: {before: 'id0'}})
         chat.actions.messagesChanged.reset()
@@ -717,83 +744,6 @@ describe('chat store', function() {
           sinon.assert.notCalled(chat.actions.messagesChanged)
           done()
         })
-      })
-    })
-
-    describe('receiving logs more after a long absence', function() {
-      it('should reset focusedMessage state if old message unavailable', function(done) {
-        chat.store.socketEvent({status: 'receive', body: logReply})
-
-        chat.store.state.nick = 'test'
-        support.listenOnce(chat.store, function(state) {
-          assert.equal(state.messages.get('id1').get('entry'), true)
-
-          handleSocket({status: 'receive', body: laterLogReply}, function(state) {
-            assert.equal(state.focusedMessage, null)
-            done()
-          })
-        })
-
-        chat.store.focusMessage('id1')
-      })
-    })
-
-    describe('focusMessage action', function() {
-      beforeEach(function() {
-        chat.store.state.nick = 'test'
-        chat.store.socketEvent({status: 'receive', body: logReply})
-        sinon.stub(actions, 'focusEntry')
-      })
-
-      afterEach(function() {
-        actions.focusEntry.restore()
-      })
-
-      it('should enable entry on specified message and disable entry on previously focused message', function(done) {
-        support.listenOnce(chat.store, function(state) {
-          assert.equal(state.messages.get('id1').get('entry'), true)
-
-          support.listenOnce(chat.store, function(state) {
-            assert.equal(state.messages.get('id1').get('entry'), false)
-            assert.equal(state.messages.get('id2').get('entry'), true)
-            done()
-          })
-
-          chat.store.focusMessage('id2')
-        })
-
-        chat.store.focusMessage('id1')
-      })
-
-      it('should update focusedMessage value', function(done) {
-        support.listenOnce(chat.store, function(state) {
-          assert.equal(state.focusedMessage, 'id1')
-          done()
-        })
-
-        chat.store.focusMessage('id1')
-      })
-
-      it('should trigger focus to entry', function() {
-        chat.store.focusMessage('id1')
-        sinon.assert.calledOnce(actions.focusEntry)
-      })
-
-      it('should just focus entry if specified message already focused', function() {
-        sinon.stub(chat.store, 'trigger')
-        chat.store.focusMessage('id1')
-        chat.store.focusMessage('id1')
-        sinon.assert.calledOnce(chat.store.trigger)
-        sinon.assert.calledTwice(actions.focusEntry)
-        chat.store.trigger.restore()
-      })
-
-      it('should not update if no nick set', function() {
-        chat.store.state.nick = null
-        sinon.stub(chat.store, 'trigger')
-        chat.store.focusMessage('id1')
-        sinon.assert.notCalled(chat.store.trigger)
-        chat.store.trigger.restore()
       })
     })
 
@@ -821,6 +771,29 @@ describe('chat store', function() {
           chat.store.loadMoreLogs()
           sinon.assert.calledTwice(socket.send)
           done()
+        })
+      })
+
+      describe('status indicator', function() {
+        beforeEach(function() {
+          chat.store.socketEvent({status: 'receive', body: logReply})
+        })
+
+        it('should be set when loading more logs', function() {
+          chat.store.loadMoreLogs()
+          assert.equal(chat.store.state.loadingLogs, true)
+        })
+
+        it('should be reset 250ms after no more logs received', function() {
+          chat.store.loadMoreLogs()
+          assert.equal(chat.store.state.loadingLogs, true)
+          clock.tick(1000)
+          chat.store.socketEvent({status: 'receive', body: moreLogReply})
+          assert.equal(chat.store.state.loadingLogs, true)
+          clock.tick(100)
+          assert.equal(chat.store.state.loadingLogs, true)
+          clock.tick(150)
+          assert.equal(chat.store.state.loadingLogs, false)
         })
       })
     })
@@ -885,9 +858,9 @@ describe('chat store', function() {
         chat.store.joinRoom()
       })
 
-      it('should set joined state to true', function(done) {
+      it('should set joined state to the join time', function(done) {
         handleSocket({status: 'receive', body: snapshotReply}, function(state) {
-          assert.equal(state.joined, true)
+          assert.equal(state.joined, Date.now())
           done()
         })
       })
@@ -1210,6 +1183,58 @@ describe('chat store', function() {
           done()
         })
       })
+    })
+  })
+
+  describe('received ping events', function() {
+    it('should be ignored', function() {
+      var storeSpy = sinon.spy()
+      support.listenOnce(chat.store, storeSpy)
+      chat.store.socketEvent({status: 'receive', body: {type: 'ping-event'}})
+      chat.store.socketEvent({status: 'receive', body: {type: 'ping-reply'}})
+      sinon.assert.notCalled(storeSpy)
+    })
+  })
+
+  describe('received unknown chat events', function() {
+    var unknownEvent = {
+      'id': '1',
+      'type': 'wat-event',
+      'data': {
+        'wat': 'wat',
+      },
+    }
+
+    beforeEach(function() {
+      sinon.stub(console, 'warn')
+    })
+
+    afterEach(function() {
+      console.warn.restore()
+    })
+
+    it('should log a warning', function(done) {
+      handleSocket({status: 'receive', body: unknownEvent}, function() {
+        sinon.assert.calledOnce(console.warn)
+        sinon.assert.calledWithExactly(console.warn, sinon.match.string, unknownEvent.type)
+        done()
+      })
+    })
+  })
+
+  describe('received unknown socket events', function() {
+    beforeEach(function() {
+      sinon.stub(console, 'warn')
+    })
+
+    afterEach(function() {
+      console.warn.restore()
+    })
+
+    it('should log a warning', function() {
+      chat.store.socketEvent({status: 'wat'})
+      sinon.assert.calledOnce(console.warn)
+      sinon.assert.calledWithExactly(console.warn, sinon.match.string, 'wat')
     })
   })
 })

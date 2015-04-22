@@ -1,4 +1,3 @@
-var _ = require('lodash')
 var React = require('react/addons')
 var classNames = require('classnames')
 var ReactCSSTransitionGroup = React.addons.CSSTransitionGroup
@@ -9,6 +8,13 @@ module.exports = React.createClass({
 
   mixins: [require('react-immutable-render-mixin')],
 
+  getDefaultProps: function() {
+    return {
+      edgeSpacing: 10,
+      topOffset: 0,
+    }
+  },
+
   componentWillMount: function() {
     Heim.addEventListener(uidocument.body, Heim.isTouch ? 'touchstart' : 'click', this.onOutsideClick, false)
   },
@@ -18,8 +24,8 @@ module.exports = React.createClass({
   },
 
   onOutsideClick: function(ev) {
-    if (!this.getDOMNode().contains(ev.target) && this.props.onDismiss) {
-      this.props.onDismiss()
+    if (this.props.visible && !this.getDOMNode().contains(ev.target) && this.props.onDismiss) {
+      this.props.onDismiss(ev)
     }
   },
 
@@ -27,11 +33,34 @@ module.exports = React.createClass({
     return (
       <ReactCSSTransitionGroup transitionName="bubble">
         {this.props.visible &&
-          <div key="bubble" className={classNames('bubble', this.props.className)} style={{marginRight: this.props.rightOffset}}>
+          <div ref="bubble" key="bubble" className={classNames('bubble', this.props.className)}>
             {this.props.children}
           </div>
         }
       </ReactCSSTransitionGroup>
     )
+  },
+
+  componentDidMount: function() {
+    this.reposition()
+  },
+
+  componentDidUpdate: function() {
+    this.reposition()
+  },
+
+  reposition: function() {
+    // FIXME: only handles left anchors. expand/complexify to work for multiple
+    // orientations when necessary.
+    if (this.props.visible && this.props.anchorEl) {
+      var box = this.props.anchorEl.getBoundingClientRect()
+      var node = this.refs.bubble.getDOMNode()
+
+      var top = box.top
+      top -= Math.max(0, top + node.clientHeight + this.props.edgeSpacing + this.props.topOffset - uiwindow.innerHeight)
+
+      node.style.left = box.right + 'px'
+      node.style.top = top + 'px'
+    }
   },
 })

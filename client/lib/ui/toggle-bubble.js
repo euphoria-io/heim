@@ -38,7 +38,7 @@ module.exports = React.createClass({
 
   render: function() {
     return (
-      <Bubble {...this.props} visible={this.state.visible} onDismiss={this._hide}>
+      <Bubble {...this.props} visible={this.props.visible || this.state.visible} onDismiss={this.props.sticky ? null : this._hide}>
         {this.props.children}
       </Bubble>
     )

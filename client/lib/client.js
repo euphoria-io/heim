@@ -17,6 +17,27 @@ if (!window.frameElement) {
 
 
   var moment = require('moment')
+  moment.relativeTimeThreshold('s', 0)
+  moment.relativeTimeThreshold('m', 60)
+
+  moment.locale('en-short', {
+    relativeTime: {
+      future: 'in %s',
+      past: '%s ago',
+      s: '%ds',
+      m: '1m',
+      mm: '%dm',
+      h: '1h',
+      hh: '%dh',
+      d: '1d',
+      dd: '%dd',
+      M: '1mo',
+      MM: '%dmo',
+      y: '1y',
+      yy: '%dy',
+    }
+  })
+
   moment.locale('en', {
     relativeTime: {
       future: 'in %s',
@@ -34,9 +55,6 @@ if (!window.frameElement) {
       yy: '%d years',
     }
   })
-  moment.relativeTimeThreshold('s', 0)
-  moment.relativeTimeThreshold('m', 60)
-
 
   var queryString = require('querystring')
   var _ = require('lodash')
@@ -51,16 +69,9 @@ if (!window.frameElement) {
     addEventListener: evs.addEventListener.bind(evs),
     removeEventListener: evs.removeEventListener.bind(evs),
 
-    actions: require('./actions'),
-    socket: require('./stores/socket'),
-    chat: require('./stores/chat'),
-    notification: require('./stores/notification'),
-    storage: require('./stores/storage'),
-    focus: require('./stores/focus'),
-    update: require('./stores/update'),
-    plugins: require('./stores/plugins'),
+    tabPressed: false,
 
-    setFavicon: _.partial(require('./set-favicon'), uidocument),
+    setFavicon: function(favicon) { Heim._favicon = favicon },
 
     // http://stackoverflow.com/a/6447935
     isTouch: 'ontouchstart' in window,
@@ -68,6 +79,19 @@ if (!window.frameElement) {
     isAndroid: /android/i.test(navigator.userAgent),
     isiOS: /ipad|iphone|ipod/i.test(navigator.userAgent),
   }
+
+  _.extend(Heim, {
+    actions: require('./actions'),
+    socket: require('./stores/socket'),
+    chat: require('./stores/chat'),
+    ui: require('./stores/ui'),
+    notification: require('./stores/notification'),
+    storage: require('./stores/storage'),
+    activity: require('./stores/activity'),
+    click: require('./stores/clock'),
+    update: require('./stores/update'),
+    plugins: require('./stores/plugins'),
+  })
 
   Heim.hook = Heim.plugins.hook
 
@@ -126,10 +150,13 @@ if (!window.frameElement) {
 
     Heim.addEventListener(uiwindow, 'storage', Heim.storage.storageChange, false)
 
-    Heim.addEventListener(uiwindow, 'focus', Heim.focus.windowFocused, false)
-    Heim.addEventListener(uiwindow, 'blur', Heim.focus.windowBlurred, false)
+    Heim.addEventListener(uiwindow, 'focus', function() {
+      Heim.activity.windowFocused()
+      Heim.activity.touch(roomName)
+    }, false)
+    Heim.addEventListener(uiwindow, 'blur', Heim.activity.windowBlurred, false)
     if (uidocument.hasFocus()) {
-      Heim.focus.windowFocused()
+      Heim.activity.windowFocused()
     }
 
     Heim.addEventListener(uiwindow, 'message', function(ev) {
@@ -152,59 +179,91 @@ if (!window.frameElement) {
       }
 
       var character = String.fromCharCode(ev.which)
-      if (character && /\S/.test(character)) {
+      if (character) {
         // in Chrome, if we focus synchronously, the input receives the
         // keypress event -- not so in Firefox. we'll delay the focus event to
         // avoid double key insertion in Chrome.
         setImmediate(function() {
-          Heim.actions.focusEntry(character)
+          Heim.ui.focusEntry(character)
         })
       }
     }, true)
 
-    Heim.addEventListener(uidocument.body, 'keydown', function(ev) {
-      if (isTextInput(ev.target)) {
-        return
-      }
+    Heim.addEventListener(uidocument.body, 'keydown', function(originalEv) {
+      Heim.activity.touch(roomName)
 
-      // prevent backspace from navigating the page
-      if (ev.which == 8) {
+      // dig into React a little so it normalizes the event (namely ev.key).
+      var ev = new SyntheticKeyboardEvent(null, null, originalEv)
+
+      // prevent alt-left/alt-right back/forward navigation
+      if (ev.altKey && (ev.key == 'ArrowLeft' || ev.key == 'ArrowRight')) {
         ev.preventDefault()
       }
 
-      // dig into React a little so it normalizes the event (namely ev.key).
-      var reactEvent = new SyntheticKeyboardEvent(null, null, ev)
-      Heim.actions.keydownOnEntry(reactEvent)
+      // prevent backspace from navigating the page
+      if (ev.key == 'Backspace' && ev.target == uidocument.body) {
+        ev.preventDefault()
+      }
+
+      if (ev.key == 'Tab') {
+        Heim.tabPressed = true
+      }
+
+      if (!Heim.mainComponent.getDOMNode().contains(ev.target)) {
+        Heim.mainComponent.onKeyDown(ev)
+      }
     }, false)
+
+    Heim.addEventListener(uidocument.body, 'keyup', function(originalEv) {
+      var ev = new SyntheticKeyboardEvent(null, null, originalEv)
+      if (ev.key == 'Tab') {
+        Heim.tabPressed = false
+      }
+    })
 
     if (Heim.isTouch) {
       React.initializeTouchEvents()
       uidocument.body.classList.add('touch')
 
       Heim.addEventListener(uidocument.body, 'touchstart', function(ev) {
+        Heim.activity.touch(roomName)
         ev.target.classList.add('touching')
       }, false)
 
       Heim.addEventListener(uidocument.body, 'touchend', function(ev) {
         ev.target.classList.remove('touching')
       }, false)
+    } else {
+      Heim.addEventListener(uidocument.body, 'mousedown', function() {
+        Heim.activity.touch(roomName)
+      }, false)
+    }
+
+    Heim.setFavicon = _.partial(require('./set-favicon'), uidocument)
+    if (Heim._favicon) {
+      Heim.setFavicon(Heim._favicon)
+      delete Heim._favicon
     }
 
     setImmediate(function() {
-      Heim.ui = React.render(
-        <Main />,
-        uidocument.getElementById('container')
-      )
-      uidocument.body.classList.add('ready')
+      React.addons.batchedUpdates(() => {
+        Heim.mainComponent = React.render(
+          <Main />,
+          uidocument.getElementById('container')
+        )
+        uidocument.body.classList.add('ready')
+      })
     })
     window.top.Heim = Heim
     window.top.require = require
+
+    Heim.activity.touch(roomName)
   }
 
   Heim.detachUI = function() {
     uidocument.body.classList.remove('ready')
     evs.removeAllEventListeners()
-    Heim.ui.unmountComponent()
+    Heim.mainComponent.unmountComponent()
   }
 
   Heim.prepareUpdate = function(hash) {

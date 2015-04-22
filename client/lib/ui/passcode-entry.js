@@ -13,14 +13,18 @@ module.exports = React.createClass({
     React.addons.LinkedStateMixin,
     require('./entry-mixin'),
     Reflux.listenTo(chat.store, '_onChatUpdate'),
-    Reflux.listenTo(actions.focusEntry, 'focus'),
-    Reflux.listenTo(actions.keydownOnEntry, 'proxyKeyDown'),
   ],
 
   componentWillMount: function() {
     // debounce state changes to reduce jank from fast responses
     // TODO: break out into a debounced connect mixin, once chat store is fully immutable?
     this._onChatUpdate = _.debounce(this.onChatUpdate, 250, {leading: true, trailing: true})
+  },
+
+  componentDidMount: function() {
+    this.listenTo(this.props.pane.focusEntry, 'focus')
+    this.listenTo(this.props.pane.blurEntry, 'blur')
+    this.listenTo(this.props.pane.keydownOnPane, 'proxyKeyDown')
   },
 
   getInitialState: function() {

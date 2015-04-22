@@ -1,9 +1,10 @@
 var _ = require('lodash')
+var React = require('react/addons')
 var Reflux = require('reflux')
 var Immutable = require('immutable')
 
 var actions = require('../actions')
-var Tree = require('../tree')
+var ChatTree = require('../chat-tree')
 var storage = require('./storage')
 var socket = require('./socket')
 var plugins = require('./plugins')
@@ -14,10 +15,13 @@ var mentionRe = module.exports.mentionRe = /\B@([^\s]+?(?=$|[,.!?:;&'\s]|&#39;|&
 
 var storeActions = module.exports.actions = Reflux.createActions([
   'messageReceived',
+  'logsReceived',
   'messagesChanged',
   'setRoomSettings',
+  'markMessagesSeen',
 ])
 storeActions.setRoomSettings.sync = true
+storeActions.messagesChanged.sync = true
 _.extend(module.exports, storeActions)
 
 module.exports.store = Reflux.createStore({
@@ -26,8 +30,10 @@ module.exports.store = Reflux.createStore({
     storeActions,
     {socketEvent: socket.store},
     {storageChange: storage.store},
-    {focusChange: require('./focus').store},
+    {onActive: require('./activity').becameActive},
   ],
+
+  seenTTL: 12 * 60 * 60 * 1000,
 
   init: function() {
     this.state = {
@@ -37,6 +43,7 @@ module.exports.store = Reflux.createStore({
       connected: null,  // => socket connected
       canJoin: null,
       joined: false,  // => received snapshot; sent nick; ui ready
+      loadingLogs: false,
       roomName: null,
       roomSettings: Immutable.Map(),
       tentativeNick: null,
@@ -44,21 +51,22 @@ module.exports.store = Reflux.createStore({
       authType: null,
       authState: null,
       authData: null,
-      messages: new Tree('time'),
+      messages: new ChatTree(),
       earliestLog: null,
       nickHues: {},
       who: Immutable.Map(),
-      focusedMessage: null,
-      entryText: '',
-      entrySelectionStart: null,
-      entrySelectionEnd: null,
+      lastVisit: null,
     }
 
+    this._loadingLogs = false
+    this._seenMessages = Immutable.Map()
     this._joinWhenReady = false
 
     this.state.messages.changes.on('__all', ids => {
       storeActions.messagesChanged(ids, this.state)
     })
+
+    this._resetLoadingLogsDebounced = _.debounce(this._resetLoadingLogs, 250)
   },
 
   getInitialState: function() {
@@ -81,9 +89,9 @@ module.exports.store = Reflux.createStore({
         this.state.serverVersion = ev.body.data.version
         this.state.id = ev.body.data.identity
         this.state.sessionId = ev.body.data.session_id
+        this._joinReady()
         this._handleWhoReply(ev.body.data)
         this._handleLogReply(ev.body.data)
-        this._joinReady()
       } else if (ev.body.type == 'bounce-event') {
         this.state.canJoin = false
         this.state.authType = 'passcode'
@@ -114,12 +122,15 @@ module.exports.store = Reflux.createStore({
           .set(ev.body.data.session_id, Immutable.fromJS(ev.body.data))
       } else if (ev.body.type == 'part-event') {
         this.state.who = this.state.who.delete(ev.body.data.session_id)
-      } else if (ev.body.type == 'network-event') {
-        if (ev.body.data.type == 'partition') {
-          var id = ev.body.data.server_id
-          var era = ev.body.data.server_era
-          this.state.who = this.state.who.filterNot(v => v.get('server_id') == id && v.get('server_era') == era)
-        }
+      } else if (ev.body.type == 'network-event' && ev.body.data.type == 'partition') {
+        var id = ev.body.data.server_id
+        var era = ev.body.data.server_era
+        this.state.who = this.state.who.filterNot(v => v.get('server_id') == id && v.get('server_era') == era)
+      } else if (ev.body.type == 'ping-event' || ev.body.type == 'ping-reply') {
+        // ignore
+        return
+      } else {
+        console.warn('received unknown event of type:', ev.body.type)
       }
     } else if (ev.status == 'open') {
       this.state.connected = true
@@ -131,51 +142,90 @@ module.exports.store = Reflux.createStore({
       this.state.connected = false
       this.state.joined = false
       this.state.canJoin = false
+    } else {
+      console.warn('unexpected socket store status:', ev.status)
     }
     this.trigger(this.state)
   },
 
   _handleMessagesData: function(messages) {
+    var seenCutoff = Date.now() - this.seenTTL
+    var nick = this.state.nick || this.state.tentativeNick
+
     this.state.who = this.state.who.withMutations(who => {
       _.each(messages, message => {
         // jshint camelcase: false
-        var nick = this.state.nick || this.state.tentativeNick
         if (nick) {
           var mention = message.content.match(mentionRe)
           if (mention && _.any(mention, m => hueHash.normalize(m.substr(1)) == hueHash.normalize(nick))) {
-            message.mention = true
+            message._mention = true
           }
         }
         message.sender.hue = hueHash.hue(message.sender.name)
         who.mergeIn([message.sender.session_id], {
           lastSent: message.time
         })
+
+        if (message.sender.id == this.state.id) {
+          message._own = true
+        }
+
+        if (!message.parent) {
+          delete message.parent
+        }
+
+        if (message.time * 1000 < seenCutoff) {
+          message._seen = true
+        } else {
+          var seen = this._seenMessages.get(message.id)
+          message._seen = seen ? seen : false
+        }
       })
     })
+
     plugins.hooks.run('incoming-messages', null, messages)
     return messages
   },
 
+  _resetLoadingLogs: function() {
+    this.state.loadingLogs = false
+    this.trigger(this.state)
+  },
+
   _handleLogReply: function(data) {
+    this._loadingLogs = false
+    this._resetLoadingLogsDebounced()
     if (!data.log.length) {
       return
     }
-    this._loadingLogs = false
     this.state.earliestLog = data.log[0].id
-    var log = this._handleMessagesData(data.log)
-    if (data.before) {
-      this.state.messages.add(log)
-    } else {
-      this.state.messages.reset(log)
-    }
+    React.addons.batchedUpdates(() => {
+      var log = this._handleMessagesData(data.log)
 
-    if (this.state.focusedMessage) {
-      if (this.state.messages.get(this.state.focusedMessage)) {
-        this.state.messages.mergeNode(this.state.focusedMessage, {entry: true})
-      } else {
-        this.state.focusedMessage = null
+      if (!data.before) {
+        // persist local tree data but reset out server state
+        var shadows = []
+        this.state.messages.mapDFS(node => {
+          var shadow = node.filter((v, k) => /^_/.test(k))
+          if (shadow.size) {
+            shadow = shadow.toJS()
+            shadow.id = node.get('id')
+            shadow.parent = null
+            shadows.push(shadow)
+          }
+        })
+
+        var lastVisit = this.state.messages.get('__lastVisit')
+        if (lastVisit) {
+          shadows.push(lastVisit.toJS())
+        }
+
+        this.state.messages.reset(shadows)
       }
-    }
+      this.state.messages.add(log)
+      storeActions.logsReceived(_.map(log, m => m.id), this.state)
+      this.trigger(this.state)
+    })
   },
 
   _handleWhoReply: function(data) {
@@ -213,7 +263,7 @@ module.exports.store = Reflux.createStore({
     } else {
       if (this.state.authState == 'trying-stored') {
         this.state.authState = 'needs-passcode'
-      } else if (this.state.authState == 'trying') {
+      } else {
         this.state.authState = 'failed'
       }
     }
@@ -237,7 +287,7 @@ module.exports.store = Reflux.createStore({
       }
 
       this.state.authState = null
-      this.state.joined = true
+      this.state.joined = Date.now()
     }
   },
 
@@ -253,11 +303,20 @@ module.exports.store = Reflux.createStore({
       this.state.authType = roomStorage.auth.type
       this.state.authData = roomStorage.auth.data
     }
+    if (roomStorage.lastVisit != this.state.lastVisit) {
+      this.state.lastVisit = roomStorage.lastVisit
+      this.state.messages.add({
+        id: '__lastVisit',
+        time: this.state.lastVisit / 1000,
+        content: 'last visit',
+      })
+    }
+    this._seenMessages = Immutable.Map(roomStorage.seenMessages || {})
     this.trigger(this.state)
   },
 
-  focusChange: function(focusState) {
-    if (focusState.windowFocused && this.state.connected) {
+  onActive: function() {
+    if (this.state.connected) {
       socket.pingIfIdle()
     }
   },
@@ -320,7 +379,10 @@ module.exports.store = Reflux.createStore({
       return
     }
 
+    this._resetLoadingLogsDebounced.cancel()
     this._loadingLogs = true
+    this.state.loadingLogs = true
+    this.trigger(this.state)
 
     socket.send({
       type: 'log',
@@ -328,50 +390,24 @@ module.exports.store = Reflux.createStore({
     })
   },
 
-  focusMessage: function(messageId) {
-    if (!this.state.nick) {
-      return
-    }
+  markMessagesSeen: function(ids) {
+    var now = Date.now()
 
-    messageId = messageId || null
-    if (messageId == this.state.focusedMessage) {
-      actions.focusEntry()
-      return
-    }
+    var unseen = Immutable.Seq(ids)
+      .filterNot(id => this.state.messages.get(id).get('_seen'))
+      .cacheResult()
 
-    if (this.state.focusedMessage) {
-      this.state.messages.mergeNode(this.state.focusedMessage, {entry: false})
-    }
-    if (messageId) {
-      this.state.messages.mergeNode(messageId, {entry: true})
-    }
-    this.state.focusedMessage = messageId
-    this.trigger(this.state)
-    actions.focusEntry()
-  },
+    this.state.messages.mergeNodes(unseen.toJS(), {_seen: now})
 
-  toggleFocusMessage: function(messageId, parentId) {
-    var focusParent
-    if (parentId == '__root') {
-      parentId = null
-      focusParent = this.state.focusedMessage == messageId
-    } else {
-      focusParent = this.state.focusedMessage != parentId
-    }
+    var expireThreshold = now - this.seenTTL
+    var seenMessages = unseen
+      .map(id => [id, now])
+      .fromEntrySeq()
+      .concat(this._seenMessages.filterNot(ts => ts < expireThreshold))
 
-    if (focusParent) {
-      actions.focusMessage(parentId)
-    } else {
-      actions.focusMessage(messageId)
+    if (!Immutable.is(seenMessages, this._seenMessages)) {
+      storage.setRoom(this.state.roomName, 'seenMessages', seenMessages.toJS())
     }
-  },
-
-  setEntryText: function(text, selectionStart, selectionEnd) {
-    this.state.entryText = text
-    this.state.entrySelectionStart = selectionStart
-    this.state.entrySelectionEnd = selectionEnd
-    // Note: no need to trigger here as nothing updates from this; this data is
-    // used to persist entry state across focus changes.
   },
 
   sendMessage: function(content, parent) {

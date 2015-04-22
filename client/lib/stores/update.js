@@ -2,6 +2,8 @@ var _ = require('lodash')
 var Reflux = require('reflux')
 var Immutable = require('immutable')
 
+var activity = require('./activity')
+
 
 var storeActions = Reflux.createActions([
   'prepare',
@@ -14,7 +16,8 @@ module.exports.store = Reflux.createStore({
   listenables: [
     storeActions,
     {chatChange: require('./chat').store},
-    {focusChange: require('./focus').store},
+    {onActive: activity.becameActive},
+    {onInactive: activity.becameInactive},
   ],
 
   mixins: [require('./immutable-mixin')],
@@ -27,7 +30,7 @@ module.exports.store = Reflux.createStore({
     })
 
     this._preparedVersion = null
-    this._windowFocused = false
+    this._active = false
     this._doUpdate = null
   },
 
@@ -48,7 +51,7 @@ module.exports.store = Reflux.createStore({
 
       if (state.get('currentVersion') != version && state.get('newVersion') != version) {
         state = state.set('newVersion', version)
-        if (this._windowFocused) {
+        if (this._active) {
           storeActions.prepare(version)
         }
       }
@@ -57,11 +60,13 @@ module.exports.store = Reflux.createStore({
     this.triggerUpdate(state)
   },
 
-  focusChange: function(focusState) {
-    this._windowFocused = focusState.windowFocused
-    if (focusState.windowFocused) {
-      storeActions.prepare(this.state.get('newVersion'))
-    }
+  onActive: function() {
+    this._active = true
+    storeActions.prepare(this.state.get('newVersion'))
+  },
+
+  onInactive: function() {
+    this._active = false
   },
 
   prepare: function(version) {

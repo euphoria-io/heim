@@ -1,19 +1,18 @@
-var _ = require('lodash')
 var React = require('react/addons')
 var Reflux = require('reflux')
 
 var actions = require('../actions')
 var chat = require('../stores/chat')
 var hueHash = require('../hue-hash')
+var KeyboardActionHandler = require('./keyboard-action-handler')
 
 module.exports = React.createClass({
   displayName: 'ChatEntry',
 
   mixins: [
     require('./entry-mixin'),
+    Reflux.ListenerMixin,
     Reflux.connect(chat.store, 'chat'),
-    Reflux.listenTo(actions.focusEntry, 'focus'),
-    Reflux.listenTo(actions.keydownOnEntry, 'onKeyDown'),
   ],
 
   componentWillMount: function() {
@@ -21,85 +20,26 @@ module.exports = React.createClass({
   },
 
   componentDidMount: function() {
-    this.refs.input.getDOMNode().setSelectionRange(this.state.chat.entrySelectionStart, this.state.chat.entrySelectionEnd)
+    this.listenTo(this.props.pane.store, state => this.setState({'pane': state}))
+    this.listenTo(this.props.pane.focusEntry, 'focus')
+    this.listenTo(this.props.pane.blurEntry, 'blur')
+    var input = this.refs.input.getDOMNode()
+    input.value = this.state.pane.entryText
+    // in Chrome, it appears that setting the selection range can focus the
+    // input without changing document.activeElement (!)
+    if (this.state.pane.entrySelectionStart && this.state.pane.entrySelectionEnd) {
+      input.setSelectionRange(this.state.pane.entrySelectionStart, this.state.pane.entrySelectionEnd)
+    }
     this.autoSize(true)
   },
 
   getInitialState: function() {
     return {
+      pane: this.props.pane.store.getInitialState(),
       nickText: null,
       nickFocused: false,
       empty: true,
     }
-  },
-
-  chatMove: function(dir) {
-    // FIXME: quick'n'dirty hack. a real tree traversal in the store
-    // would be more efficient and testable.
-    var elems = uidocument.querySelectorAll('.reply-anchor, .entry')
-    var idx = _.indexOf(elems, this.getDOMNode())
-    if (idx == -1) {
-      throw new Error('could not locate entry in document')
-    }
-
-    var target
-    switch (dir) {
-      case 'up':
-        if (idx === 0) {
-          // at beginning
-          target = elems[idx + 1].parentNode
-          break
-        }
-        var steps = 0
-        do {
-          // find prev leaf
-          idx--
-          target = elems[idx]
-          target = target && target.parentNode
-          steps++
-        } while (target.querySelectorAll('.replies').length)
-        if (steps > 1) {
-          // if we descended deeply, focus parent of leaf
-          idx++
-        }
-        target = elems[idx]
-        target = target && target.parentNode
-        break
-      case 'down':
-        if (idx == elems.length - 1) {
-          // at end
-          target = elems[idx].parentNode
-          break
-        }
-        idx++
-        target = elems[idx]
-        target = target && target.parentNode
-        if (!target.querySelectorAll('.replies .message-node').length) {
-          // last focused was a leaf
-          idx++
-          target = elems[idx]
-          target = target && target.parentNode
-        } else {
-          // find next leaf
-          do {
-            idx++
-            target = elems[idx]
-            target = target && target.parentNode
-          } while (target && target.querySelectorAll('.replies').length)
-        }
-        break
-      case 'left':
-        target = elems[idx]
-        target = target && target.parentNode
-        target = target && target.parentNode
-        target = target && target.parentNode
-        target = target && target.parentNode
-        break
-      case 'right':
-        target = null
-        break
-    }
-    actions.focusMessage(target && target.dataset.messageId)
   },
 
   chatSend: function(ev) {
@@ -114,8 +54,8 @@ module.exports = React.createClass({
     if (!input.value.length) {
       return
     }
-    actions.sendMessage(input.value, this.state.chat.focusedMessage)
-    actions.setEntryText('')
+    this.props.pane.sendMessage(input.value)
+    this.props.pane.setEntryText('')
     input.value = ''
     this.setState({empty: true})
 
@@ -125,60 +65,16 @@ module.exports = React.createClass({
       input.blur()
       input.focus()
     }
+
+    this.props.pane.scrollToEntry()
   },
 
-  onKeyDown: function(ev) {
-    if (ev.shiftKey) {
-      return
-    }
+  isEmpty: function() {
+    return this.refs.input.getDOMNode().value.length === 0
+  },
 
-    var input = this.refs.input.getDOMNode()
-    var length = input.value.length
-
-    if (ev.target != input && this.proxyKeyDown(ev)) {
-      return
-    }
-
-    this.saveEntryState()
-
-    if (ev.key == 'Enter') {
-      this.chatSend(ev)
-      return
-    }
-
-    if (!length) {
-      switch (ev.key) {
-        case 'ArrowLeft':
-          this.chatMove('left')
-          return
-        case 'ArrowRight':
-          this.chatMove('right')
-          return
-      }
-    }
-
-    if (!/\n/.test(input.value)) {
-      switch (ev.key) {
-        case 'ArrowUp':
-          this.chatMove('up')
-          ev.preventDefault()
-          return
-        case 'ArrowDown':
-          this.chatMove('down')
-          ev.preventDefault()
-          return
-      }
-    }
-
-    switch (ev.key) {
-      case 'Escape':
-        this.chatMove('right')
-        break
-      case 'Tab':
-        this.complete()
-        ev.preventDefault()
-        break
-    }
+  isMultiline: function() {
+    return /\n/.test(this.refs.input.getDOMNode().value)
   },
 
   complete: function() {
@@ -241,10 +137,15 @@ module.exports = React.createClass({
       setImmediate(function() {
         input.focus()
       })
+      ev.stopPropagation()
     } else if (ev.key == 'Escape') {
       this.setState({nickText: this.state.chat.nick}, function() {
         input.focus()
       })
+      ev.stopPropagation()
+    } else if (/^Arrow/.test(ev.key) || ev.key == 'Tab' || ev.key == 'Backspace') {
+      // don't let the keyboard action handler react to these
+      ev.stopPropagation()
     }
   },
 
@@ -259,8 +160,15 @@ module.exports = React.createClass({
 
   saveEntryState: function() {
     var input = this.refs.input.getDOMNode()
-    actions.setEntryText(input.value, input.selectionStart, input.selectionEnd)
+    this.props.pane.setEntryText(input.value, input.selectionStart, input.selectionEnd)
     this.setState({empty: !input.value.length})
+  },
+
+  onChange: function(ev) {
+    this.saveEntryState()
+    if (this.props.onChange) {
+      this.props.onChange(ev)
+    }
   },
 
   render: function() {
@@ -276,16 +184,28 @@ module.exports = React.createClass({
     }
 
     return (
-      <form className="entry" onSubmit={ev => ev.preventDefault()}>
-        <div className="nick-box">
-          <div className="auto-size-container">
-            <input className="nick" ref="nick" value={nick} onFocus={this.onNickFocus} onBlur={this.onNickBlur} onChange={this.onNickChange} onKeyDown={this.onNickKeyDown} />
-            <span className="nick">{nick}</span>
+      <KeyboardActionHandler listenTo={this.props.pane.keydownOnPane} keys={{
+        ArrowLeft: () => this.isEmpty() && this.props.pane.moveMessageFocus('out'),
+        ArrowRight: () => this.isEmpty() && this.props.pane.moveMessageFocus('top'),
+        ArrowUp: () => !this.isMultiline() && this.props.pane.moveMessageFocus('up'),
+        ArrowDown: () => !this.isMultiline() && this.props.pane.moveMessageFocus('down'),
+        Escape: () => this.props.pane.escape(),
+        Enter: this.chatSend,
+        TabEnter: this.props.pane.openFocusedMessageInPane,
+        Backspace: this.proxyKeyDown,
+        Tab: this.complete,
+      }}>
+        <form className="entry focus-target" onSubmit={ev => ev.preventDefault()}>
+          <div className="nick-box">
+            <div className="auto-size-container">
+              <input className="nick" ref="nick" value={nick} onFocus={this.onNickFocus} onBlur={this.onNickBlur} onChange={this.onNickChange} onKeyDown={this.onNickKeyDown} />
+              <span className="nick">{nick}</span>
+            </div>
           </div>
-        </div>
-        <textarea key="msg" ref="input" autoFocus defaultValue={this.state.chat.entryText} onChange={this.saveEntryState} onKeyDown={this.onKeyDown} onClick={this.saveEntryState} onFocus={actions.scrollToEntry} />
-        <textarea key="measure" ref="measure" className="measure" />
-      </form>
+          <textarea key="msg" ref="input" onChange={this.onChange} onKeyDown={this.saveEntryState} onClick={this.saveEntryState} />
+          <textarea key="measure" ref="measure" className="measure" />
+        </form>
+      </KeyboardActionHandler>
     )
   },
 

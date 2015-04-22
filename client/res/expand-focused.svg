@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   id="svg7254"
+   height="14"
+   width="14"
+   version="1.1">
+  <defs
+     id="defs7256" />
+  <metadata
+     id="metadata7259">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     style="stroke-width:2.71358252;stroke-miterlimit:4;stroke-dasharray:none"
+     id="g5796"
+     transform="matrix(0.70414918,0,0,0.70414918,-0.04428001,-0.04288292)">
+    <rect
+       style="color:#000000;fill:none;stroke:#7070be;stroke-width:2.840307;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       id="rect5743-2-4-0"
+       y="1.5024567"
+       x="1.502455"
+       ry="1.7751921"
+       rx="1.7751921"
+       height="16.995077"
+       width="16.995077" />
+    <path
+       style="color:#000000;fill:none;stroke:#7070be;stroke-width:2.840307;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       id="path5008-0-3-5-3-9"
+       d="m 14.0576,10.000002 -8.1152115,0" />
+  </g>
+  <path
+     style="color:#000000;display:inline;overflow:visible;visibility:visible;fill:none;stroke:#7070be;stroke-width:1.99999988;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;marker:none;enable-background:accumulate"
+     id="path5008-0-3-5-3-9-7"
+     d="m 6.9972077,9.8557701 0,-5.7143196" />
+</svg>

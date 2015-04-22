@@ -2,27 +2,29 @@ var React = require('react/addons')
 var Reflux = require('reflux')
 var Immutable = require('immutable')
 
-var Embed = require('./ui/embed')
 
+// allow var redeclaration for import dupes
+// jshint -W004
 
 module.exports = function(roomName) {
   if (roomName == 'thedrawingroom' || roomName == 'lovenest' || roomName == 'has') {
     Heim.hook('page-bottom', function() {
       return (
         <style key="drawingroom-style" dangerouslySetInnerHTML={{__html:`
-          .chat {
+          .chat-pane.timestamps-visible {
             background: #333;
           }
 
-          .chat .room .name {
+          .main-pane .room .name,
+          .info-pane .thread-list .thread .info .title {
             color: #222;
           }
 
-          .chat time {
+          .chat-pane time {
             opacity: .5;
           }
 
-          .chat .room .privacy-level,
+          .main-pane .room .state,
           .nick {
             background: #e8e8e8 !important;
           }
@@ -47,7 +49,9 @@ module.exports = function(roomName) {
   }
 
   if (roomName == 'space') {
-    Heim.hook('sidebar-bottom', function() {
+    var Embed = require('./ui/embed')
+
+    Heim.hook('main-sidebar', function() {
       // jshint camelcase: false
       return (
         <div key="norman" className="norman">
@@ -61,7 +65,6 @@ module.exports = function(roomName) {
       return (
         <style key="norman-style" dangerouslySetInnerHTML={{__html:`
           .norman {
-            margin-top: 15px;
             text-align: right;
             opacity: .5;
           }
@@ -94,6 +97,10 @@ module.exports = function(roomName) {
   }
 
   if (roomName == 'music' || roomName == 'youtube') {
+    var Embed = require('./ui/embed')
+    var MessageText = require('./ui/message-text')
+    var ChatPane = require('./ui/chat-pane')
+
     var clientTimeOffset = 0
     Heim.socket.store.listen(function(ev) {
       if (ev.status == 'receive' && ev.body.type == 'ping-event') {
@@ -105,13 +112,19 @@ module.exports = function(roomName) {
       'changeVideo',
     ])
 
+    var tvPane = Heim.ui.createCustomPane('youtube-tv')
+
     var TVStore = Reflux.createStore({
-      listenables: [TVActions],
+      listenables: [
+        TVActions,
+        {chatChange: Heim.chat.store},
+      ],
 
       init: function() {
         this.state = {
-          youtubeId: null,
           time: 0,
+          messageId: null,
+          youtubeId: null,
         }
       },
 
@@ -119,14 +132,26 @@ module.exports = function(roomName) {
         return this.state
       },
 
+      chatChange: function(state) {
+        this.chatState = state
+      },
+
       changeVideo: function(video) {
+        // FIXME: abstract this process more cleanly
+        var oldMessageId = this.state.messageId
+        if (oldMessageId) {
+          this.chatState.messages.mergeNodes(oldMessageId, {_inCustomPane: false, _collapseCaption: null})
+        }
         this.state = video
+        tvPane.store._reset({rootId: video.messageId})
+        tvPane.focusMessage(video.messageId)
+        this.chatState.messages.mergeNodes(video.messageId, {_inCustomPane: 'youtube-tv', _collapseCaption: 'playing'})
         this.trigger(this.state)
       }
     })
 
-    var YouTubeTV = React.createClass({
-      displayName: 'YouTubeTV',
+    var YouTubePane = React.createClass({
+      displayName: 'YouTubePane',
 
       mixins: [
         Reflux.connect(TVStore, 'tv'),
@@ -135,34 +160,48 @@ module.exports = function(roomName) {
 
       render: function() {
         // jshint camelcase: false
-        return <Embed
-          className="youtube-tv"
-          kind="youtube"
-          autoplay="1"
-          youtube_id={this.state.tv.youtubeId}
-          start={Math.max(0, Math.floor(Date.now() / 1000 - this.state.tv.time - clientTimeOffset))}
-        />
+        return (
+          <div className="chat-pane-container youtube-pane">
+            <div className="top-bar">
+              <MessageText className="title" content=":notes: :tv: :notes:" />
+            </div>
+            <div className="aspect-wrapper">
+              <Embed
+                className="youtube-tv"
+                kind="youtube"
+                autoplay="1"
+                youtube_id={this.state.tv.youtubeId}
+                start={Math.max(0, Math.floor(Date.now() / 1000 - this.state.tv.time - clientTimeOffset))}
+              />
+            </div>
+            {this.state.tv.youtubeId && <ChatPane pane={tvPane} showParent={true} showAllReplies={true} />}
+          </div>
+        )
       }
     })
 
-    Heim.hook('sidebar-top', function() {
-      return <YouTubeTV key="youtube-tv" />
+    Heim.hook('thread-panes', function() {
+      return <YouTubePane key="youtube-tv" />
     })
 
     Heim.chat.messagesChanged.listen(function(ids, state) {
       var playRe = /!play [^?]*\?v=([-\w]+)/
 
       var video = Immutable.Seq(ids)
-        .map(id => state.messages.get(id))
-        .map(msg => {
-          if (msg.get('id') == '__root') {
+        .map(messageId => {
+          var msg = state.messages.get(messageId)
+          if (messageId == '__root' || !msg.get('content')) {
             return
           }
           var match = msg.get('content').match(playRe)
-          return match && {time: msg.get('time'), youtubeId: match[1]}
+          return match && {
+            time: msg.get('time'),
+            messageId: messageId,
+            youtubeId: match[1],
+          }
         })
         .filter(Boolean)
-        .sortBy(msg => msg.time)
+        .sortBy(video => video.time)
         .last()
 
       if (video && video.time > TVStore.state.time) {
@@ -173,44 +212,32 @@ module.exports = function(roomName) {
     Heim.hook('page-bottom', function() {
       return (
         <style key="youtubetv-style" dangerouslySetInnerHTML={{__html:`
-          .youtube-tv {
-            width: 240px;
-            height: 180px;
-            margin-bottom: 15px;
+          .youtube-pane {
+            z-index: 9;
+          }
+
+          .youtube-pane .aspect-wrapper {
+            position: relative;
+            width: 100%;
+            box-shadow: 0 0 12px rgba(0, 0, 0, .25);
+            z-index: 5;
+          }
+
+          .youtube-pane .aspect-wrapper:before {
+            content: '';
+            display: block;
+            padding-top: 75%;
+          }
+
+          .youtube-pane .youtube-tv {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            width: 100%;
+            height: 100%;
             border: none;
-          }
-
-          .chat .user-list {
-            max-height: calc(80vh - 195px);
-          }
-
-          @media (min-width: 500px) {
-            .chat .sidebar {
-              width: 240px;
-            }
-
-            .chat .messages-container .messages .line {
-              margin-right: 245px;
-            }
-          }
-
-          @media (min-width: 920px) {
-            .youtube-tv {
-              width: 360px;
-              height: 270px;
-            }
-
-            .chat .user-list {
-              max-height: calc(80vh - 285px);
-            }
-
-            .chat .sidebar {
-              width: 360px;
-            }
-
-            .chat .messages-container .messages .line {
-              margin-right: 365px;
-            }
           }
         `}} />
       )
@@ -221,7 +248,7 @@ module.exports = function(roomName) {
     Heim.hook('page-bottom', function() {
       return (
         <style key="adventure-style" dangerouslySetInnerHTML={{__html:`
-          .messages-container, .messages-container input, .messages-container textarea, .sidebar {
+          .messages-container, .messages-container input, .messages-container textarea {
             font-family: Droid Sans Mono, monospace;
           }
         `}} />

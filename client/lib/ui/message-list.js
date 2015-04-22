@@ -8,7 +8,7 @@ module.exports = React.createClass({
 
   mixins: [
     require('react-immutable-render-mixin'),
-    require('./tree-node-mixin'),
+    require('./tree-node-mixin')(),
   ],
 
   getDefaultProps: function() {
@@ -16,12 +16,21 @@ module.exports = React.createClass({
   },
 
   render: function() {
+    var children = this.state.node.get('children')
     return (
       <div className="message-list">
-        {this.state.node.get('children').toSeq().map(function(nodeId) {
-          return <Message key={nodeId} tree={this.props.tree} nodeId={nodeId} depth={this.props.depth} roomSettings={this.props.roomSettings} />
-        }, this).toArray()}
+        {children.toIndexedSeq().map((nodeId, idx) =>
+          <Message key={nodeId} pane={this.props.pane} tree={this.props.tree} nodeId={nodeId} showTimeAgo={idx == children.size - 1} showTimeStamps={this.props.showTimeStamps} roomSettings={this.props.roomSettings} />
+        ).toArray()}
       </div>
     )
+  },
+
+  componentDidMount: function() {
+    this.props.pane.messageRenderFinished()
+  },
+
+  componentDidUpdate: function() {
+    this.props.pane.messageRenderFinished()
   },
 })
