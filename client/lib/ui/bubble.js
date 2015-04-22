@@ -1,6 +1,6 @@
 var _ = require('lodash')
-var React = require('react')
-var cx = React.addons.classSet
+var React = require('react/addons')
+var classNames = require('classnames')
 var ReactCSSTransitionGroup = React.addons.CSSTransitionGroup
 
 
@@ -48,14 +48,10 @@ module.exports = React.createClass({
   },
 
   render: function() {
-    var classes = {'bubble': true}
-    if (this.props.className) {
-      classes[this.props.className] = true
-    }
     return (
       <ReactCSSTransitionGroup transitionName="bubble">
         {this.state.visible &&
-          <div key="bubble" className={cx(classes)} style={{marginRight: this.props.rightOffset}}>
+          <div key="bubble" className={classNames('bubble', this.props.className)} style={{marginRight: this.props.rightOffset}}>
             {this.props.children}
           </div>
         }

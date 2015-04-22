@@ -1,6 +1,6 @@
 var _ = require('lodash')
 var React = require('react')
-var cx = React.addons.classSet
+var classNames = require('classnames')
 var moment = require('moment')
 
 var actions = require('../actions')
@@ -112,7 +112,7 @@ var Message = module.exports = React.createClass({
 
     return (
       <div data-message-id={message.get('id')} className="message-node">
-        <div className={cx(lineClasses)} onClick={this.focusMessage}>
+        <div className={classNames(lineClasses)} onClick={this.focusMessage}>
           <time dateTime={time.toISOString()} title={time.format('MMMM Do YYYY, h:mm:ss a')} style={timeStyle}>
             {time.format('h:mma')}
           </time>
