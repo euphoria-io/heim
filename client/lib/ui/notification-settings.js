@@ -5,37 +5,18 @@ var moment = require('moment')
 
 var notification = require('../stores/notification')
 var storage = require('../stores/storage')
+var clock = require('../stores/clock')
 var FastButton = require('./fast-button')
 
 
 module.exports = React.createClass({
-  displayName: 'Settings',
+  displayName: 'NotificationSettings',
 
   mixins: [
-    Reflux.listenTo(notification.store, 'notificationChange', 'notificationChange'),
     Reflux.connect(notification.store, 'notification'),
     Reflux.connect(storage.store, 'storage'),
+    Reflux.connect(clock.second, 'now'),
   ],
-
-  notificationChange: function(state) {
-    if (state.popupsPausedUntil) {
-      if (!this._updateInterval) {
-        this._updateInterval = setInterval(this.updateTimeRemaining, 5 * 1000)
-      }
-      this.updateTimeRemaining()
-    } else {
-      if (this._updateInterval) {
-        clearInterval(this._updateInterval)
-        this._updateInterval = null
-      }
-    }
-  },
-
-  updateTimeRemaining: function() {
-    this.setState({
-      pauseTimeRemaining: moment(this.state.notification.popupsPausedUntil).fromNow(true)
-    })
-  },
 
   enableNotify: function() {
     notification.enablePopups()
@@ -66,23 +47,25 @@ module.exports = React.createClass({
       notificationsButton = <FastButton className="notification-toggle" onClick={this.enableNotify}>enable notifications</FastButton>
     } else {
       if (this.state.notification.popupsPausedUntil && Date.now() < this.state.notification.popupsPausedUntil) {
+        var pauseTimeRemaining = moment(this.state.notification.popupsPausedUntil).from(this.state.now, true)
         notificationsClass = 'snoozed'
-        notificationsButton = <FastButton className="notification-toggle" onClick={this.disableNotify}>{'for ' + this.state.pauseTimeRemaining}</FastButton>
+        notificationsButton = <FastButton className="notification-toggle" onClick={this.disableNotify} title="pause notifications">{'for ' + pauseTimeRemaining}</FastButton>
       } else if (!this.state.notification.popupsEnabled) {
         notificationsClass = 'paused'
-        notificationsButton = <FastButton className="notification-toggle" onClick={this.enableNotify}>for now</FastButton>
+        notificationsButton = <FastButton className="notification-toggle" onClick={this.enableNotify} title="resume notifications">for now</FastButton>
       } else {
         notificationsClass = 'enabled'
-        notificationsButton = <FastButton className="notification-toggle" onClick={this.snoozeNotify}>notifications</FastButton>
+        notificationsButton = <FastButton className="notification-toggle" onClick={this.snoozeNotify} title="snooze notifications">notifications</FastButton>
       }
 
       var roomStorage = this.state.storage.room[this.props.roomName] || {}
       var currentMode = roomStorage.notifyMode || 'mention'
       notificationModeUI = (
         <span className="mode-selector">
-          <FastButton className={classNames({'mode': true, 'none': true, 'selected': currentMode == 'none'})} onClick={() => this.setMode('none')}>none</FastButton>
-          <FastButton className={classNames({'mode': true, 'mention': true, 'selected': currentMode == 'mention'})} onClick={() => this.setMode('mention')}>mention</FastButton>
-          <FastButton className={classNames({'mode': true, 'message': true, 'selected': currentMode == 'message'})} onClick={() => this.setMode('message')}>message</FastButton>
+          <FastButton className={classNames({'mode': true, 'none': true, 'selected': currentMode == 'none'})} onClick={() => this.setMode('none')} title="no notifications">none</FastButton>
+          <FastButton className={classNames({'mode': true, 'mention': true, 'selected': currentMode == 'mention'})} onClick={() => this.setMode('mention')} title="only notify @mentions">mention</FastButton>
+          <FastButton className={classNames({'mode': true, 'reply': true, 'selected': currentMode == 'reply'})} onClick={() => this.setMode('reply')} title="notify @mentions and replies to your messages">reply</FastButton>
+          <FastButton className={classNames({'mode': true, 'message': true, 'selected': currentMode == 'message'})} onClick={() => this.setMode('message')} title="notify all messages">message</FastButton>
         </span>
       )
     }

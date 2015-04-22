@@ -10,10 +10,15 @@ module.exports = React.createClass({
   mixins: [
     React.addons.LinkedStateMixin,
     require('./entry-mixin'),
+    Reflux.ListenerMixin,
     Reflux.connect(require('../stores/chat').store, 'chat'),
-    Reflux.listenTo(actions.focusEntry, 'focus'),
-    Reflux.listenTo(actions.keydownOnEntry, 'proxyKeyDown'),
   ],
+
+  componentDidMount: function() {
+    this.listenTo(this.props.pane.focusEntry, 'focus')
+    this.listenTo(this.props.pane.blurEntry, 'blur')
+    this.listenTo(this.props.pane.keydownOnPane, 'proxyKeyDown')
+  },
 
   getInitialState: function() {
     return {value: ''}

@@ -57,10 +57,6 @@ module.exports = React.createClass({
     var data = _.extend({}, this.props, {id: this.embedId})
     delete data.className
     var url = process.env.EMBED_ORIGIN + '/?' + queryString.stringify(data)
-    var classes = {'embed': true}
-    if (this.props.className) {
-      classes[this.props.className] = true
-    }
-    return <iframe key={url} ref="iframe" className={classNames(classes)} style={{width: this.state.width}} src={url} />
+    return <iframe key={url} ref="iframe" className={classNames('embed', this.props.className)} style={{width: this.state.width}} src={url} />
   },
 })

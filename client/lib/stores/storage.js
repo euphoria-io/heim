@@ -18,7 +18,7 @@ module.exports.store = Reflux.createStore({
   init: function() {
     this.state = null
     this._dirtyChanges = {}
-    this._saveDebounced = _.debounce(this._save, 1000)
+    this._saveThrottled = _.throttle(this._save, 1000)
   },
 
   getInitialState: function() {
@@ -76,7 +76,7 @@ module.exports.store = Reflux.createStore({
     this._dirtyChanges[key] = value
     this.state[key] = value
     this.trigger(this.state)
-    this._saveDebounced()
+    this._saveThrottled()
   },
 
   setRoom: function(room, key, value) {
@@ -98,7 +98,7 @@ module.exports.store = Reflux.createStore({
     this.state.room[room][key] = value
 
     this.trigger(this.state)
-    this._saveDebounced()
+    this._saveThrottled()
   },
 
   _save: function() {

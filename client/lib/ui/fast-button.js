@@ -7,7 +7,10 @@ module.exports = React.createClass({
   displayName: 'FastButton',
 
   getDefaultProps: function() {
-    return {component: 'button'}
+    return {
+      component: 'button',
+      tabIndex: 0,
+    }
   },
 
   onClick: function(ev) {
@@ -45,7 +48,7 @@ module.exports = React.createClass({
         onTouchStart: this.onClick,
         onKeyDown: this.onKeyDown,
       }),
-      <div className="inner">{this.props.children}</div>
+      !this.props.empty && <div className="inner">{this.props.children}</div>
     )
   },
 })

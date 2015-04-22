@@ -34,7 +34,6 @@ module.exports = React.createClass({
   displayName: 'Scroller',
 
   componentWillMount: function() {
-    Heim.addEventListener(uiwindow, 'resize', this.onResize)
     this._onScroll = _.throttle(this.onScroll, 100)
     this._checkScroll = _.throttle(this.checkScroll, 150)
     this._targetInView = false
@@ -50,12 +49,7 @@ module.exports = React.createClass({
 
   componentDidMount: function() {
     this.updateAnchorPos()
-    this.checkScrollbar()
-    this.onResize()
-  },
-
-  componentWillUnmount: function() {
-    Heim.removeEventListener(uiwindow, 'resize', this.onResize)
+    this.update()
   },
 
   componentWillUnmount: function() {
@@ -69,17 +63,6 @@ module.exports = React.createClass({
       this._animationFrames[id] = uiwindow.requestAnimationFrame(callback)
     } else {
       callback()
-    }
-  },
-
-  onResize: function() {
-    // When resizing, the goal is to keep the entry onscreen in the same
-    // position, if possible. This is accomplished by scrolling relative to the
-    // previous display height factored into the pos recorded by updateAnchorPos.
-    this.scroll()
-    if (this.props.onResize) {
-      var node = this.getDOMNode()
-      this.props.onResize(node.offsetWidth, node.offsetHeight)
     }
   },
 
@@ -102,12 +85,10 @@ module.exports = React.createClass({
 
   onUpdate: function() {
     this.scroll()
-    this.updateAnchorPos()
     this.checkScrollbar()
-    this._checkScroll()
   },
 
-  componentDidUpdate: function() {
+  update: function() {
     this._waitingForUpdate = false
     this.onUpdate()
   },
@@ -280,6 +261,11 @@ module.exports = React.createClass({
 
   _isTouching: function() {
     return this._lastTouch === true || new Date() - this._lastTouch < 100
+  },
+
+  getPosition: function() {
+    var node = this.getDOMNode()
+    return node.scrollTop / (node.scrollHeight - node.clientHeight) || 1
   },
 
   render: function() {

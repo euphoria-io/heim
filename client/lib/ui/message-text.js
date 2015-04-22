@@ -44,9 +44,15 @@ module.exports = React.createClass({
   ],
 
   render: function() {
-    // FIXME: replace with React splitting parser
+    // FIXME: replace with React splitting parser + preserve links when trimmed
 
-    var html = _.escape(this.props.content)
+    var content = this.props.content
+
+    if (this.props.maxLength) {
+      content = _.trunc(content, this.props.maxLength)
+    }
+
+    var html = _.escape(content)
 
     if (!this.props.onlyEmoji) {
       html = html.replace(/\B&amp;(\w+)(?=$|[^\w;])/g, function(match, name) {

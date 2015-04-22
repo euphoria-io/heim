@@ -3,6 +3,9 @@ var sinon = require('sinon')
 var Immutable = require('immutable')
 Immutable.Iterable.noLengthWarning = true
 
+var Reflux = require('reflux')
+Reflux.nextTick(callback => window.setTimeout(callback, 0))
+
 var support = {}
 
 support.setupClock = function() {
@@ -13,12 +16,18 @@ support.setupClock = function() {
 
   // set up fake clock to work with lodash
   var _ = require('lodash')
+
   var origDebounce = _.debounce
-  _.debounce = _.runInContext(window).debounce
+  var origThrottle = _.throttle
+
+  var mock_ = _.runInContext(window)
+  _.debounce = mock_.debounce
+  _.throttle = mock_.throttle
 
   var origRestore = clock.restore.bind(clock)
   clock.restore = function() {
     _.debounce = origDebounce
+    _.throttle = origThrottle
     origRestore()
   }
 

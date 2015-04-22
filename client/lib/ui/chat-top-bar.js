@@ -1,4 +1,5 @@
 var React = require('react/addons')
+var ReactCSSTransitionGroup = React.addons.CSSTransitionGroup
 
 var update = require('../stores/update')
 var FastButton = require('./fast-button')
@@ -26,18 +27,17 @@ module.exports = React.createClass({
     // use an outer container element so we can z-index the bar above the
     // bubbles. this makes the bubbles slide from "underneath" the bar.
     return (
-      <div className="topbar-container" style={{marginRight: this.props.scrollbarWidth + 1}}>
-        <div className="topbar">
-          <RoomTitle name={this.props.roomName} authType={this.props.authType} joined={this.props.joined} />
-          <div className="right">
-            {this.props.updateReady && <FastButton fastTouch className="update" onClick={this.showUpdateBubble} />}
-            {this.props.joined && <FastButton fastTouch className="user-count" onClick={this.showUserList}>{userCount}</FastButton>}
-          </div>
+      <div className="top-bar">
+        <RoomTitle name={this.props.roomName} authType={this.props.authType} connected={this.props.connected} joined={this.props.joined} />
+        <div className="right">
+          <ReactCSSTransitionGroup transitionName="spinner">{this.props.working && <div key="spinner" className="spinner" />}</ReactCSSTransitionGroup>
+          {this.props.updateReady && <FastButton fastTouch className="update-available" onClick={this.showUpdateBubble} />}
+          {this.props.joined && <FastButton fastTouch className="user-count" onClick={this.showUserList}>{userCount}</FastButton>}
         </div>
-        <ToggleBubble ref="userList" className="users" rightOffset={this.props.scrollbarWidth + 1}>
+        <ToggleBubble ref="userList" className="users" sticky={true}>
           {userCount > 0 ? <UserList users={this.props.who} /> : <div className="nick">nobody here :(</div>}
         </ToggleBubble>
-        <ToggleBubble ref="updateBubble" className="update" rightOffset={this.props.scrollbarWidth + 1}>
+        <ToggleBubble ref="updateBubble" className="update">
           <FastButton className="update-button" onClick={update.perform}><p>update ready<em>{Heim.isTouch ? 'tap' : 'click'} to reload</em></p></FastButton>
         </ToggleBubble>
       </div>
