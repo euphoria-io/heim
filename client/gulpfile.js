@@ -1,5 +1,6 @@
 var gulp = require('gulp')
 var gutil = require('gulp-util')
+var gzip = require('gulp-gzip')
 var less = require('gulp-less')
 var autoprefixer = require('gulp-autoprefixer')
 var uglify = require('gulp-uglify')
@@ -59,6 +60,8 @@ gulp.task('heim-js', function() {
     .pipe(sourcemaps.write('./', {includeContent: true}))
     .on('error', gutil.log.bind(gutil, 'browserify error'))
     .pipe(gulp.dest(heimDest))
+    .pipe(gzip())
+    .pipe(gulp.dest(heimDest))
 })
 
 gulp.task('embed-js', function() {
@@ -70,6 +73,8 @@ gulp.task('embed-js', function() {
       .pipe(process.env.NODE_ENV == 'production' ? uglify() : gutil.noop())
     .pipe(sourcemaps.write('./', {includeContent: true}))
     .on('error', gutil.log.bind(gutil, 'browserify error'))
+    .pipe(gulp.dest(embedDest))
+    .pipe(gzip())
     .pipe(gulp.dest(embedDest))
 })
 
@@ -88,6 +93,8 @@ gulp.task('raven-js', ['heim-js'], function() {
         .pipe(process.env.NODE_ENV == 'production' ? uglify() : gutil.noop())
         .on('error', gutil.log.bind(gutil, 'browserify error'))
         .pipe(gulp.dest(heimDest))
+        .pipe(gzip())
+        .pipe(gulp.dest(heimDest))
     })
   })
 })
@@ -104,6 +111,8 @@ gulp.task('heim-less', function() {
       gutil.log(gutil.colors.red('autoprefixer error:'), err.message)
       this.emit('end')
     })
+    .pipe(gulp.dest(heimDest))
+    .pipe(gzip())
     .pipe(gulp.dest(heimDest))
 })
 
@@ -148,6 +157,8 @@ function watchifyTask(name, bundler, outFile, dest) {
           gutil.log(gutil.colors.red('Watchify error:'), err.message)
         })
         .pipe(source(outFile))
+        .pipe(gulp.dest(dest))
+        .pipe(gzip())
         .pipe(gulp.dest(dest))
     }
 

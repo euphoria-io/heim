@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"path"
+	"strings"
 	"sync"
 	"time"
 
@@ -81,7 +82,8 @@ func (s *Server) route() {
 	s.r.Path("/metrics").Handler(
 		prometheus.InstrumentHandler("metrics", prometheus.UninstrumentedHandler()))
 
-	s.r.PathPrefix("/static/").Handler(prometheus.InstrumentHandlerFunc("static", s.handleStatic))
+	s.r.PathPrefix("/static/").Handler(
+		prometheus.InstrumentHandler("static", http.StripPrefix("/static", http.HandlerFunc(s.handleStatic))))
 
 	s.r.Handle("/", prometheus.InstrumentHandlerFunc("home", s.handleHomeStatic))
 
@@ -100,13 +102,11 @@ func (s *Server) handleProbe(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleStatic(w http.ResponseWriter, r *http.Request) {
-	if s.staticPath == "" || r.URL.Path == "/static/" {
+	if s.staticPath == "" || r.URL.Path == "" {
 		http.NotFound(w, r)
 		return
 	}
-
-	handler := http.StripPrefix("/static/", http.FileServer(http.Dir(s.staticPath)))
-	handler.ServeHTTP(w, r)
+	s.serveGzippedFile(w, r, path.Clean(r.URL.Path))
 }
 
 func (s *Server) handleRoomStatic(w http.ResponseWriter, r *http.Request) {
@@ -120,15 +120,66 @@ func (s *Server) handleRoomStatic(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	http.ServeFile(w, r, path.Join(s.staticPath, "index.html"))
+	s.serveGzippedFile(w, r, "index.html")
 }
 
 func (s *Server) handleHomeStatic(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, path.Join(s.staticPath, "home.html"))
+	s.serveGzippedFile(w, r, "home.html")
 }
 
 func (s *Server) handleRobotsTxt(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, path.Join(s.staticPath, "robots.txt"))
+	s.serveGzippedFile(w, r, "robots.txt")
+}
+
+type gzipResponseWriter struct {
+	http.ResponseWriter
+}
+
+func (w *gzipResponseWriter) WriteHeader(code int) {
+	header := w.Header()
+	header.Set("Content-Encoding", "gzip")
+	header.Add("Vary", "Accept-Encoding")
+	w.ResponseWriter.WriteHeader(code)
+}
+
+func (s *Server) serveGzippedFile(w http.ResponseWriter, r *http.Request, filename string) {
+	dir := http.Dir(s.staticPath)
+	var err error
+	var f http.File
+	gzipped := false
+
+	if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+		f, err = dir.Open(filename + ".gz")
+		if err != nil {
+			f = nil
+		} else {
+			gzipped = true
+		}
+	}
+
+	if f == nil {
+		f, err = dir.Open(filename)
+		if err != nil {
+			http.NotFound(w, r)
+			return
+		}
+	}
+
+	defer f.Close()
+
+	d, err := f.Stat()
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	name := d.Name()
+	if gzipped {
+		name = strings.TrimSuffix(name, ".gz")
+		w = &gzipResponseWriter{ResponseWriter: w}
+	}
+
+	http.ServeContent(w, r, name, d.ModTime(), f)
 }
 
 func (s *Server) generateAgentID() ([]byte, error) {
