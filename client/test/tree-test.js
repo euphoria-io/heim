@@ -11,10 +11,7 @@ describe('Tree', function() {
   }
 
   function checkMapOnlyRoot(tree) {
-    var spy = sinon.spy()
-    tree.mapDFS(spy)
-    sinon.assert.calledOnce(spy)
-    sinon.assert.calledWithExactly(spy, tree.index.__root, Immutable.OrderedSet(), 0)
+    assert.deepEqual(tree.mapDFS(debugMap), ['__root', 0, []])
   }
 
   function expectEmit(tree, ids) {
