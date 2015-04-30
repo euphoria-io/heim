@@ -141,7 +141,7 @@ _.extend(Tree.prototype, {
     }
 
     var node = this.index[nodeId]
-    var children = node.get('children').map(function(childId) {
+    var children = node.get('children').toSeq().map(function(childId) {
       return this.mapDFS(visit, thisArg, childId, depth + 1)
     }, this)
 
