@@ -150,6 +150,8 @@ function watchifyTask(name, bundler, outFile, dest) {
         })
         .pipe(source(outFile))
         .pipe(gulp.dest(dest))
+        .pipe(gzip())
+        .pipe(gulp.dest(dest))
     }
 
     return rebundle()
