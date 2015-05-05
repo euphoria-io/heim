@@ -7,6 +7,7 @@ var emojiIndex = require('emoji-annotation-to-unicode')
 var chat = require('../stores/chat')
 var hueHash = require('../hue-hash')
 
+var emojiNameIndex = _.invert(emojiIndex)
 var emojiNames = _.filter(_.map(emojiIndex, (v, k) => v && _.escapeRegExp(k)))
 var emojiNamesRe = new RegExp(':(' + emojiNames.join('|') + '):', 'g')
 
@@ -58,15 +59,17 @@ module.exports = React.createClass({
       })
     }
 
+    html = html.replace(emojiNamesRe, function(match, name) {
+      return React.renderToStaticMarkup(<div className={'emoji emoji-' + emojiIndex[name]} title={match}>{match}</div>)
+    })
+
     html = twemoji.replace(html, function(match, icon, variant) {
       if (variant == '\uFE0E') {
         return match
       }
-      return React.renderToStaticMarkup(<div className={'emoji emoji-' + twemoji.convert.toCodePoint(icon)}>{icon}</div>)
-    })
-
-    html = html.replace(emojiNamesRe, function(match, name) {
-      return React.renderToStaticMarkup(<div className={'emoji emoji-' + emojiIndex[name]}>{match}</div>)
+      var codePoint = twemoji.convert.toCodePoint(icon)
+      var emojiName = emojiNameIndex[codePoint] && ':' + emojiNameIndex[codePoint] + ':'
+      return React.renderToStaticMarkup(<div className={'emoji emoji-' + codePoint} title={emojiName}>{icon}</div>)
     })
 
     if (!this.props.onlyEmoji) {
