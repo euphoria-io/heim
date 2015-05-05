@@ -3,6 +3,7 @@ function writeEnv(doc, hash) {
   doc.write('<script src="/static/raven.js' + query +  '"></script>')
   doc.write('<script src="/static/main.js' + query +  '"></script>')
   doc.write('<link rel="stylesheet" type="text/css" id="css" href="/static/main.css' + query + '">')
+  doc.write('<link rel="stylesheet" type="text/css" id="emoji-css" href="/static/emoji.css' + query + '">')
   doc.close()
 }
 
@@ -78,6 +79,27 @@ if (!window.frameElement) {
 
   var roomName = location.pathname.match(/(\w+)\/$/)[1]
 
+  Heim.loadCSS = function(id) {
+    var cssEl = uidocument.getElementById(id)
+    var cssURL = document.getElementById(id).getAttribute('href')
+    if (!cssEl || cssEl.parentNode != uidocument.head || cssEl.getAttribute('href') != cssURL) {
+      var newCSSEl = uidocument.createElement('link')
+      newCSSEl.rel = 'stylesheet'
+      newCSSEl.type = 'text/css'
+      newCSSEl.href = cssURL
+      uidocument.head.appendChild(newCSSEl)
+
+      if (cssEl) {
+        cssEl.id = id + '-old'
+
+        // allow both stylesheets to coexist briefly in an attempt to avoid FOUSC
+        setTimeout(function() {
+          cssEl.parentNode.removeChild(cssEl)
+        }, 30)
+      }
+    }
+  }
+
   Heim.attachUI = function() {
     var Reflux = require('reflux')
 
@@ -90,19 +112,8 @@ if (!window.frameElement) {
 
     uidocument.title = roomName
 
-    var cssEl = uidocument.getElementById('css')
-    var cssURL = document.getElementById('css').getAttribute('href')
-    if (cssEl.parentNode != uidocument.head || cssEl.getAttribute('href') != cssURL) {
-      var newCSSEl = cssEl.cloneNode()
-      newCSSEl.href = cssURL
-      cssEl.id = 'css-old'
-      uidocument.head.appendChild(newCSSEl)
-
-      // allow both stylesheets to coexist briefly in an attempt to avoid FOUSC
-      setTimeout(function() {
-        cssEl.parentNode.removeChild(cssEl)
-      }, 30)
-    }
+    Heim.loadCSS('css')
+    Heim.loadCSS('emoji-css')
 
     Heim.addEventListener(uiwindow, 'storage', Heim.storage.storageChange, false)
 

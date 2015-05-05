@@ -153,6 +153,14 @@ iframe.js {
     unicode-bidi: embed;
   }
 
+  .emoji {
+    display: inline-block;
+    width: 1.25em;
+    height: 1.25em;
+    text-indent: -9999px;
+    background-repeat: no-repeat;
+  }
+
   .messages-container {
     position: relative;
     flex: 1;
@@ -249,6 +257,23 @@ iframe.js {
         .message {
           white-space: pre-wrap;
           max-width: 100%;
+        }
+
+        .message {
+          .emoji {
+            @oversize: 2px;
+            height: 19px;
+            width: 19px + 2 * @oversize;
+            vertical-align: @oversize;
+            margin-top: -@oversize;
+            padding-bottom: @oversize
+          }
+        }
+
+        .nick {
+          .emoji {
+            filter: contrast(115%) drop-shadow(0 0 1.5px fade(black, 75%));
+          }
         }
 
         .message.expando {

@@ -1,5 +1,7 @@
+var _ = require('lodash')
 var gulp = require('gulp')
 var gutil = require('gulp-util')
+var gfile = require('gulp-file')
 var gzip = require('gulp-gzip')
 var less = require('gulp-less')
 var autoprefixer = require('gulp-autoprefixer')
@@ -12,6 +14,7 @@ var browserify = require('browserify')
 var envify = require('envify/custom')
 var react = require('gulp-react')
 var jshint = require('gulp-jshint')
+var path = require('path')
 var exec = require('child_process').exec
 
 
@@ -116,6 +119,24 @@ gulp.task('heim-less', function() {
     .pipe(gulp.dest(heimDest))
 })
 
+gulp.task('emoji-less', function() {
+  var emojis = require('emoji-annotation-to-unicode')
+  var twemojiPath = path.dirname(require.resolve('twemoji')) + '/svg/'
+  var leadingZeroes = /^0*/
+  var source = _.map(_.uniq(_.values(emojis)), function(code) {
+    if (!code) {
+      return
+    }
+    var twemojiName = code.replace(leadingZeroes, '')
+    return '.emoji-' + code + ' { background-image: data-uri("' + twemojiPath + twemojiName + '.svg") }'
+  }).join('\n')
+  return gfile('emoji.less', source, {src: true})
+    .pipe(less({compress: true}))
+    .pipe(gulp.dest(heimDest))
+    .pipe(gzip())
+    .pipe(gulp.dest(heimDest))
+})
+
 gulp.task('heim-static', function() {
   return gulp.src('./static/**/*')
     .pipe(gulp.dest(heimDest))
@@ -169,7 +190,7 @@ function watchifyTask(name, bundler, outFile, dest) {
 watchifyTask('heim-watchify', heimBundler, 'main.js', heimDest)
 watchifyTask('embed-watchify', embedBundler, 'embed.js', embedDest)
 
-gulp.task('build-statics', ['raven-js', 'heim-less', 'heim-static', 'embed-static', 'heim-html', 'embed-html'])
+gulp.task('build-statics', ['raven-js', 'heim-less', 'emoji-less', 'heim-static', 'embed-static', 'heim-html', 'embed-html'])
 gulp.task('build-browserify', ['heim-js', 'embed-js'])
 
 gulp.task('watch', function () {
