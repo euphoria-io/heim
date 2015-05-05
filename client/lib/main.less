@@ -164,6 +164,12 @@ iframe.js {
     vertical-align: bottom;
   }
 
+  .nick {
+    .emoji {
+      filter: contrast(115%) drop-shadow(0 0 1px fade(black, 75%));
+    }
+  }
+
   .messages-container {
     position: relative;
     flex: 1;
@@ -268,12 +274,6 @@ iframe.js {
             height: 19px;
             width: 19px + 2 * @oversize;
             margin-top: -@oversize;
-          }
-        }
-
-        .nick {
-          .emoji {
-            filter: contrast(115%) drop-shadow(0 0 1px fade(black, 75%));
           }
         }
 
