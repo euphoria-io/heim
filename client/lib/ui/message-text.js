@@ -2,10 +2,13 @@ var _ = require('lodash')
 var React = require('react')
 var Autolinker = require('autolinker')
 var twemoji = require('twemoji')
+var emojiIndex = require('emoji-annotation-to-unicode')
 
 var chat = require('../stores/chat')
 var hueHash = require('../hue-hash')
 
+var emojiNames = _.filter(_.map(emojiIndex, (v, k) => v && _.escapeRegExp(k)))
+var emojiNamesRe = new RegExp(':(' + emojiNames.join('|') + '):', 'g')
 
 var autolinker = new Autolinker({
   twitter: false,
@@ -60,6 +63,10 @@ module.exports = React.createClass({
         return match
       }
       return React.renderToStaticMarkup(<div className={'emoji emoji-' + twemoji.convert.toCodePoint(icon)}>{icon}</div>)
+    })
+
+    html = html.replace(emojiNamesRe, function(match, name) {
+      return React.renderToStaticMarkup(<div className={'emoji emoji-' + emojiIndex[name]}>{match}</div>)
     })
 
     if (!this.props.onlyEmoji) {
