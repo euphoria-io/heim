@@ -158,6 +158,9 @@ function watchifyTask(name, bundler, outFile, dest) {
 watchifyTask('heim-watchify', heimBundler, 'main.js', heimDest)
 watchifyTask('embed-watchify', embedBundler, 'embed.js', embedDest)
 
+gulp.task('build-statics', ['raven-js', 'heim-less', 'heim-static', 'embed-static', 'heim-html', 'embed-html'])
+gulp.task('build-browserify', ['heim-js', 'embed-js'])
+
 gulp.task('watch', function () {
   gulp.watch('./lib/**/*.less', ['heim-less'])
   gulp.watch('./res/**/*', ['heim-less'])
@@ -165,5 +168,5 @@ gulp.task('watch', function () {
   gulp.watch('./static/**/*', ['heim-static', 'embed-static'])
 })
 
-gulp.task('build', ['heim-js', 'raven-js', 'embed-js', 'heim-less', 'heim-static', 'embed-static', 'heim-html', 'embed-html'])
-gulp.task('default', ['raven-js', 'heim-less', 'heim-static', 'embed-static', 'heim-html', 'embed-html', 'watch', 'heim-watchify', 'embed-watchify'])
+gulp.task('build', ['build-statics', 'build-browserify'])
+gulp.task('default', ['build-statics', 'watch', 'heim-watchify', 'embed-watchify'])
