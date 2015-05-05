@@ -14,6 +14,7 @@ var browserify = require('browserify')
 var envify = require('envify/custom')
 var react = require('gulp-react')
 var jshint = require('gulp-jshint')
+var fs = require('fs')
 var path = require('path')
 var exec = require('child_process').exec
 
@@ -120,15 +121,19 @@ gulp.task('heim-less', function() {
 })
 
 gulp.task('emoji-less', function() {
-  var emojis = require('emoji-annotation-to-unicode')
+  var emoji = require('./lib/emoji')
   var twemojiPath = path.dirname(require.resolve('twemoji')) + '/svg/'
   var leadingZeroes = /^0*/
-  var source = _.map(_.uniq(_.values(emojis)), function(code) {
+  var source = _.map(emoji.codes, function(code) {
     if (!code) {
       return
     }
     var twemojiName = code.replace(leadingZeroes, '')
-    return '.emoji-' + code + ' { background-image: data-uri("' + twemojiPath + twemojiName + '.svg") }'
+    var emojiPath = './res/emoji/' + twemojiName + '.svg'
+    if (!fs.existsSync(emojiPath)) {
+      emojiPath = twemojiPath + twemojiName + '.svg'
+    }
+    return '.emoji-' + code + ' { background-image: data-uri("' + emojiPath + '") }'
   }).join('\n')
   return gfile('emoji.less', source, {src: true})
     .pipe(less({compress: true}))
@@ -195,7 +200,7 @@ gulp.task('build-browserify', ['heim-js', 'embed-js'])
 
 gulp.task('watch', function () {
   gulp.watch('./lib/**/*.less', ['heim-less'])
-  gulp.watch('./res/**/*', ['heim-less'])
+  gulp.watch('./res/**/*', ['heim-less', 'emoji-less'])
   gulp.watch('./lib/**/*.html', ['heim-html', 'embed-html'])
   gulp.watch('./static/**/*', ['heim-static', 'embed-static'])
 })

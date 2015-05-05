@@ -2,13 +2,13 @@ var _ = require('lodash')
 var React = require('react')
 var Autolinker = require('autolinker')
 var twemoji = require('twemoji')
-var emojiIndex = require('emoji-annotation-to-unicode')
+var emoji = require('../emoji')
 
 var chat = require('../stores/chat')
 var hueHash = require('../hue-hash')
 
-var emojiNameIndex = _.invert(emojiIndex)
-var emojiNames = _.filter(_.map(emojiIndex, (v, k) => v && _.escapeRegExp(k)))
+
+var emojiNames = _.filter(_.map(emoji.index, (v, k) => v && _.escapeRegExp(k)))
 var emojiNamesRe = new RegExp(':(' + emojiNames.join('|') + '):', 'g')
 
 var autolinker = new Autolinker({
@@ -60,7 +60,7 @@ module.exports = React.createClass({
     }
 
     html = html.replace(emojiNamesRe, function(match, name) {
-      return React.renderToStaticMarkup(<div className={'emoji emoji-' + emojiIndex[name]} title={match}>{match}</div>)
+      return React.renderToStaticMarkup(<div className={'emoji emoji-' + emoji.index[name]} title={match}>{match}</div>)
     })
 
     html = twemoji.replace(html, function(match, icon, variant) {
@@ -68,7 +68,7 @@ module.exports = React.createClass({
         return match
       }
       var codePoint = twemoji.convert.toCodePoint(icon)
-      var emojiName = emojiNameIndex[codePoint] && ':' + emojiNameIndex[codePoint] + ':'
+      var emojiName = emoji.names[codePoint] && ':' + emoji.names[codePoint] + ':'
       return React.renderToStaticMarkup(<div className={'emoji emoji-' + codePoint} title={emojiName}>{icon}</div>)
     })
 
