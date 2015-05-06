@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"net/url"
 
 	"euphoria.io/heim/backend"
 	"euphoria.io/heim/backend/cluster"
@@ -78,7 +79,15 @@ func NewBackend(
 		version = serverDesc.Version
 	}
 
-	log.Printf("psql backend %s on %s", version, dsn)
+	parsedDSN, err := url.Parse(dsn)
+	if err == nil {
+		if parsedDSN.User != nil {
+			parsedDSN.User = url.UserPassword(parsedDSN.User.Username(), "xxxxxx")
+		}
+		log.Printf("psql backend %s on %s", version, parsedDSN.String())
+	} else {
+		return nil, fmt.Errorf("url.Parse: %s", err)
+	}
 
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
