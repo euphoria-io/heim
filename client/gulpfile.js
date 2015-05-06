@@ -19,6 +19,7 @@ var path = require('path')
 var exec = require('child_process').exec
 
 
+var watching = false
 var heimDest = './build/heim'
 var embedDest = './build/embed'
 
@@ -30,6 +31,17 @@ function shell(cmd, cb) {
     }
     cb(stdout.trim())
   })
+}
+
+function handleError(title) {
+  return function(err) {
+    gutil.log(gutil.colors.red(title + ':'), err.message)
+    if (watching) {
+      this.emit('end')
+    } else {
+      process.exit(1)
+    }
+  }
 }
 
 function heimBundler(args) {
@@ -62,7 +74,7 @@ gulp.task('heim-js', function() {
     .pipe(sourcemaps.init({loadMaps: true}))
       .pipe(process.env.NODE_ENV == 'production' ? uglify() : gutil.noop())
     .pipe(sourcemaps.write('./', {includeContent: true}))
-    .on('error', gutil.log.bind(gutil, 'browserify error'))
+    .on('error', handleError('heim browserify error'))
     .pipe(gulp.dest(heimDest))
     .pipe(gzip())
     .pipe(gulp.dest(heimDest))
@@ -76,7 +88,7 @@ gulp.task('embed-js', function() {
     .pipe(sourcemaps.init({loadMaps: true}))
       .pipe(process.env.NODE_ENV == 'production' ? uglify() : gutil.noop())
     .pipe(sourcemaps.write('./', {includeContent: true}))
-    .on('error', gutil.log.bind(gutil, 'browserify error'))
+    .on('error', handleError('embed browserify error'))
     .pipe(gulp.dest(embedDest))
     .pipe(gzip())
     .pipe(gulp.dest(embedDest))
@@ -95,7 +107,7 @@ gulp.task('raven-js', ['heim-js'], function() {
         .pipe(source('raven.js'))
         .pipe(buffer())
         .pipe(process.env.NODE_ENV == 'production' ? uglify() : gutil.noop())
-        .on('error', gutil.log.bind(gutil, 'browserify error'))
+        .on('error', handleError('raven browserify error'))
         .pipe(gulp.dest(heimDest))
         .pipe(gzip())
         .pipe(gulp.dest(heimDest))
@@ -106,15 +118,9 @@ gulp.task('raven-js', ['heim-js'], function() {
 gulp.task('heim-less', function() {
   return gulp.src(['./lib/main.less', './lib/od.less', './lib/home.less'])
     .pipe(less({compress: true}))
-    .on('error', function(err) {
-      gutil.log(gutil.colors.red('LESS error:'), err.message)
-      this.emit('end')
-    })
+    .on('error', handleError('LESS error'))
     .pipe(autoprefixer({cascade: false}))
-    .on('error', function(err) {
-      gutil.log(gutil.colors.red('autoprefixer error:'), err.message)
-      this.emit('end')
-    })
+    .on('error', handleError('autoprefixer error'))
     .pipe(gulp.dest(heimDest))
     .pipe(gzip())
     .pipe(gulp.dest(heimDest))
@@ -179,9 +185,7 @@ function watchifyTask(name, bundler, outFile, dest) {
 
     function rebundle() {
       return bundler.bundle()
-        .on('error', function(err) {
-          gutil.log(gutil.colors.red('Watchify error:'), err.message)
-        })
+        .on('error', handleError('Watchify error:'))
         .pipe(source(outFile))
         .pipe(gulp.dest(dest))
         .pipe(gzip())
@@ -199,6 +203,7 @@ gulp.task('build-statics', ['raven-js', 'heim-less', 'emoji-less', 'heim-static'
 gulp.task('build-browserify', ['heim-js', 'embed-js'])
 
 gulp.task('watch', function() {
+  watching = true
   gulp.watch('./lib/**/*.less', ['heim-less'])
   gulp.watch('./res/**/*', ['heim-less', 'emoji-less'])
   gulp.watch('./lib/**/*.html', ['heim-html', 'embed-html'])
