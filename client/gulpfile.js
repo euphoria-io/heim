@@ -198,7 +198,7 @@ watchifyTask('embed-watchify', embedBundler, 'embed.js', embedDest)
 gulp.task('build-statics', ['raven-js', 'heim-less', 'emoji-less', 'heim-static', 'embed-static', 'heim-html', 'embed-html'])
 gulp.task('build-browserify', ['heim-js', 'embed-js'])
 
-gulp.task('watch', function () {
+gulp.task('watch', function() {
   gulp.watch('./lib/**/*.less', ['heim-less'])
   gulp.watch('./res/**/*', ['heim-less', 'emoji-less'])
   gulp.watch('./lib/**/*.html', ['heim-html', 'embed-html'])
