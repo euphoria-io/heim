@@ -12,6 +12,7 @@ index['bronze'] = 'bronze'
 index['bronze!?'] = 'bronze2'
 index['bronze?!'] = 'bronze2'
 index['euphoria'] = 'euphoria'
+index['euphoria!'] = 'euphoric'
 index['chromakode'] = 'chromakode'
 
 module.exports.names = _.invert(index)
