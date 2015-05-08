@@ -242,7 +242,7 @@ module.exports = function(roomName) {
     })
   }
 
-  if (roomName == 'adventure') {
+  if (roomName == 'adventure' || roomName == 'chess') {
     Heim.hook('page-bottom', function() {
       return (
         <style key="adventure-style" dangerouslySetInnerHTML={{__html:`
