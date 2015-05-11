@@ -217,7 +217,7 @@ func (cmd *Packet) Payload() (interface{}, error) {
 		return nil, fmt.Errorf("invalid command type: %s", cmd.Type)
 	}
 	payload := reflect.New(payloadType).Interface()
-	if payload != nil {
+	if payload != nil && payloadType.NumField() > 0 {
 		if err := json.Unmarshal(cmd.Data, payload); err != nil {
 			return nil, err
 		}
