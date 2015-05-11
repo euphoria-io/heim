@@ -180,12 +180,12 @@ function watchifyTask(name, bundler, outFile, dest) {
   gulp.task(name, function() {
     // via https://github.com/gulpjs/gulp/blob/master/docs/recipes/fast-browserify-builds-with-watchify.md
     bundler = watchify(bundler(watchify.args))
-    bundler.on('log', gutil.log.bind(gutil, gutil.colors.green('Watchify')))
+    bundler.on('log', gutil.log.bind(gutil, gutil.colors.green('JS (' + name + ')')))
     bundler.on('update', rebundle)
 
     function rebundle() {
       return bundler.bundle()
-        .on('error', handleError('Watchify error:'))
+        .on('error', handleError('JS (' + name + ') error'))
         .pipe(source(outFile))
         .pipe(gulp.dest(dest))
         .pipe(gzip())
