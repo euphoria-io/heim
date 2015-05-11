@@ -3,6 +3,7 @@ package backend
 import (
 	"crypto/rand"
 	"fmt"
+	"mime"
 	"net/http"
 	"path"
 	"strings"
@@ -54,6 +55,8 @@ type Server struct {
 func NewServer(
 	ctx scope.Context, backend proto.Backend, cluster cluster.Cluster, kms security.KMS,
 	id, era, staticPath string) (*Server, error) {
+
+	mime.AddExtensionType(".map", "application/json")
 
 	cookieSecret, err := cluster.GetSecret(kms, "cookie", cookieKeySize)
 	if err != nil {
