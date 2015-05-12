@@ -87,8 +87,8 @@ module.exports = React.createClass({
   onScroll: function() {
     this._checkScroll()
     this.updateAnchorPos()
-    if (!this._scrollQueued) {
-      this.props.onScroll(this._lastTouch === true || new Date() - this._lastTouch < 100)
+    if (!this._scrollQueued && this.props.onScroll) {
+      this.props.onScroll(this._isTouching())
     }
   },
 
@@ -274,6 +274,10 @@ module.exports = React.createClass({
 
   onTouchEnd: function() {
     this._lastTouch = new Date()
+  },
+
+  _isTouching: function() {
+    return this._lastTouch === true || new Date() - this._lastTouch < 100
   },
 
   render: function() {
