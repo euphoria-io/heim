@@ -74,7 +74,7 @@ module.exports = React.createClass({
     // previous display height factored into the pos recorded by updateAnchorPos.
     this.scroll()
     if (this.props.onResize) {
-      var node = this.refs.scroller.getDOMNode()
+      var node = this.getDOMNode()
       this.props.onResize(node.offsetWidth, node.offsetHeight)
     }
   },
@@ -113,7 +113,7 @@ module.exports = React.createClass({
 
     // Record the position of our point of reference. Either the target (if
     // it's in view), or the centermost child element.
-    var node = this.refs.scroller.getDOMNode()
+    var node = this.getDOMNode()
     var nodeBox = dimensions(node)
     var viewTop = nodeBox.top
     var viewHeight = nodeBox.height
@@ -146,7 +146,7 @@ module.exports = React.createClass({
   },
 
   checkScrollbar: function() {
-    var node = this.refs.scroller.getDOMNode()
+    var node = this.getDOMNode()
 
     if (this.props.onScrollbarSize) {
       var scrollbarWidth = node.offsetWidth - node.clientWidth
@@ -162,7 +162,7 @@ module.exports = React.createClass({
       return
     }
 
-    var node = this.refs.scroller.getDOMNode()
+    var node = this.getDOMNode()
 
     if (this.props.onNearTop && node.scrollTop < node.scrollHeight / 8) {
       // since RAF doesn't execute while the page is hidden, scrolling in
@@ -191,7 +191,7 @@ module.exports = React.createClass({
     // If the target was not previously in view, maintain the position of the
     // anchor element.
     //
-    var node = this.refs.scroller.getDOMNode()
+    var node = this.getDOMNode()
     var nodeBox = dimensions(node)
     var viewTop = nodeBox.top
     var viewHeight = nodeBox.height
@@ -264,7 +264,7 @@ module.exports = React.createClass({
     }
 
     // http://stackoverflow.com/a/14130056
-    var node = this.refs.scroller.getDOMNode()
+    var node = this.getDOMNode()
     if (node.scrollTop === 0) {
       node.scrollTop = 1
     } else if (node.scrollHeight === node.scrollTop + node.offsetHeight) {
@@ -278,7 +278,7 @@ module.exports = React.createClass({
 
   render: function() {
     return (
-      <div ref="scroller" onScroll={this._onScroll} onLoad={this.onUpdate} onTouchStart={this.onTouchStart} onTouchEnd={this.onTouchEnd} className={this.props.className}>
+      <div onScroll={this._onScroll} onLoad={this.onUpdate} onTouchStart={this.onTouchStart} onTouchEnd={this.onTouchEnd} className={this.props.className}>
         {this.props.children}
       </div>
     )
