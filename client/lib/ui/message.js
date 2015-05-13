@@ -109,7 +109,7 @@ var Message = module.exports = React.createClass({
           <time dateTime={time.toISOString()} title={time.format('MMMM Do YYYY, h:mm:ss a')} style={timeStyle}>
             {time.format('h:mma')}
           </time>
-          <span className="nick" style={{background: 'hsl(' + message.getIn(['sender', 'hue']) + ', 65%, 85%)'}}>{message.getIn(['sender', 'name'])}</span>
+          <MessageText className="nick" onlyEmoji={true} style={{background: 'hsl(' + message.getIn(['sender', 'hue']) + ', 65%, 85%)'}} content={message.getIn(['sender', 'name'])} />
           <span className="content">
             {messageRender}
             {messageEmbeds}

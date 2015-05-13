@@ -1,10 +1,15 @@
 var _ = require('lodash')
 var React = require('react')
 var Autolinker = require('autolinker')
+var twemoji = require('twemoji')
+var emoji = require('../emoji')
 
 var chat = require('../stores/chat')
 var hueHash = require('../hue-hash')
 
+
+var emojiNames = _.filter(_.map(emoji.index, (v, k) => v && _.escapeRegExp(k)))
+var emojiNamesRe = new RegExp(':(' + emojiNames.join('|') + '):', 'g')
 
 var autolinker = new Autolinker({
   twitter: false,
@@ -39,18 +44,37 @@ module.exports = React.createClass({
   ],
 
   render: function() {
+    // FIXME: replace with React splitting parser
+
     var html = _.escape(this.props.content)
 
-    html = html.replace(/\B&amp;(\w+)(?=$|[^\w;])/g, function(match, name) {
-      return React.renderToStaticMarkup(<a href={'/room/' + name} target="_blank">&amp;{name}</a>)
+    if (!this.props.onlyEmoji) {
+      html = html.replace(/\B&amp;(\w+)(?=$|[^\w;])/g, function(match, name) {
+        return React.renderToStaticMarkup(<a href={'/room/' + name} target="_blank">&amp;{name}</a>)
+      })
+
+      html = html.replace(chat.mentionRe, function(match, name) {
+        var color = 'hsl(' + hueHash.hue(name) + ', 50%, 42%)'
+        return React.renderToStaticMarkup(<span style={{color: color}} className="mention-nick">@{name}</span>)
+      })
+    }
+
+    html = html.replace(emojiNamesRe, function(match, name) {
+      return React.renderToStaticMarkup(<div className={'emoji emoji-' + emoji.index[name]} title={match}>{match}</div>)
     })
 
-    html = html.replace(chat.mentionRe, function(match, name) {
-      var color = 'hsl(' + hueHash.hue(name) + ', 50%, 42%)'
-      return React.renderToStaticMarkup(<span style={{color: color}} className="mention-nick">@{name}</span>)
+    html = twemoji.replace(html, function(match, icon, variant) {
+      if (variant == '\uFE0E') {
+        return match
+      }
+      var codePoint = twemoji.convert.toCodePoint(icon)
+      var emojiName = emoji.names[codePoint] && ':' + emoji.names[codePoint] + ':'
+      return React.renderToStaticMarkup(<div className={'emoji emoji-' + codePoint} title={emojiName}>{icon}</div>)
     })
 
-    html = autolinker.link(html)
+    if (!this.props.onlyEmoji) {
+      html = autolinker.link(html)
+    }
 
     return <span className={this.props.className} style={this.props.style} dangerouslySetInnerHTML={{
       __html: html
