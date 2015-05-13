@@ -3,6 +3,7 @@ package proto
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
 
 	"euphoria.io/heim/proto/snowflake"
 )
@@ -51,6 +52,43 @@ var (
 	SnapshotEventType = PacketType("snapshot").Event()
 
 	ErrorReplyType = PacketType("error").Reply()
+
+	payloadMap = map[PacketType]reflect.Type{
+		SendType:      reflect.TypeOf(SendCommand{}),
+		SendReplyType: reflect.TypeOf(SendReply{}),
+		SendEventType: reflect.TypeOf(SendEvent{}),
+
+		EditMessageType:      reflect.TypeOf(EditMessageCommand{}),
+		EditMessageEventType: reflect.TypeOf(EditMessageEvent{}),
+		EditMessageReplyType: reflect.TypeOf(EditMessageReply{}),
+
+		LogType:      reflect.TypeOf(LogCommand{}),
+		LogEventType: reflect.TypeOf(LogEvent{}),
+		LogReplyType: reflect.TypeOf(LogReply{}),
+
+		JoinEventType: reflect.TypeOf(PresenceEvent{}),
+		PartEventType: reflect.TypeOf(PresenceEvent{}),
+
+		NickType:      reflect.TypeOf(NickCommand{}),
+		NickReplyType: reflect.TypeOf(NickReply{}),
+		NickEventType: reflect.TypeOf(NickEvent{}),
+
+		PingType:      reflect.TypeOf(PingCommand{}),
+		PingEventType: reflect.TypeOf(PingEvent{}),
+		PingReplyType: reflect.TypeOf(PingReply{}),
+
+		AuthType:      reflect.TypeOf(AuthCommand{}),
+		AuthEventType: reflect.TypeOf(AuthEvent{}),
+		AuthReplyType: reflect.TypeOf(AuthReply{}),
+
+		BounceEventType:   reflect.TypeOf(BounceEvent{}),
+		NetworkEventType:  reflect.TypeOf(NetworkEvent{}),
+		SnapshotEventType: reflect.TypeOf(SnapshotEvent{}),
+
+		WhoType:      reflect.TypeOf(WhoCommand{}),
+		WhoEventType: reflect.TypeOf(WhoEvent{}),
+		WhoReplyType: reflect.TypeOf(WhoReply{}),
+	}
 )
 
 type ErrorReply struct {
@@ -174,71 +212,16 @@ func (cmd *Packet) Payload() (interface{}, error) {
 	if cmd.Error != "" {
 		return &ErrorReply{Error: cmd.Error}, nil
 	}
-
-	var payload interface{}
-
-	// TODO: use reflect + a map
-	switch cmd.Type {
-	case SendType:
-		payload = &SendCommand{}
-	case SendReplyType:
-		payload = &SendReply{}
-	case SendEventType:
-		payload = &SendEvent{}
-	case EditMessageType:
-		payload = &EditMessageCommand{}
-	case EditMessageEventType:
-		payload = &EditMessageEvent{}
-	case EditMessageReplyType:
-		payload = &EditMessageReply{}
-	case LogType:
-		payload = &LogCommand{}
-	case LogEventType:
-		payload = &LogEvent{}
-	case LogReplyType:
-		payload = &LogReply{}
-	case JoinEventType, PartEventType:
-		payload = &PresenceEvent{}
-	case NickType:
-		payload = &NickCommand{}
-	case NickReplyType:
-		payload = &NickReply{}
-	case NickEventType:
-		payload = &NickEvent{}
-	case PingType:
-		payload = &PingCommand{}
-	case PingEventType:
-		payload = &PingEvent{}
-	case PingReplyType:
-		payload = &PingReply{}
-	case AuthType:
-		payload = &AuthCommand{}
-	case AuthEventType:
-		payload = &AuthEvent{}
-	case AuthReplyType:
-		payload = &AuthReply{}
-	case BounceEventType:
-		payload = &BounceEvent{}
-	case NetworkEventType:
-		payload = &NetworkEvent{}
-	case SnapshotEventType:
-		payload = &SnapshotEvent{}
-	case WhoType:
-		return &WhoCommand{}, nil
-	case WhoEventType:
-		payload = &WhoEvent{}
-	case WhoReplyType:
-		payload = &WhoReply{}
-	default:
+	payloadType, ok := payloadMap[cmd.Type]
+	if !ok {
 		return nil, fmt.Errorf("invalid command type: %s", cmd.Type)
 	}
-
-	if payload != nil {
+	payload := reflect.New(payloadType).Interface()
+	if payload != nil && payloadType.NumField() > 0 {
 		if err := json.Unmarshal(cmd.Data, payload); err != nil {
 			return nil, err
 		}
 	}
-
 	return payload, nil
 }
 
