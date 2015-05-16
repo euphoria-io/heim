@@ -39,6 +39,12 @@ var (
 		Help:      "Number of unique, active agents in the presence table.",
 	})
 
+	uniqueLurkingAgentCount = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name:      "unique_lurking_agents",
+		Subsystem: "presence",
+		Help:      "Number of unique, lurking agents in the presence table.",
+	})
+
 	sessionsPerAgent = prometheus.NewHistogram(prometheus.HistogramOpts{
 		Name:      "sessions_per_agent",
 		Subsystem: "presence",
@@ -54,5 +60,6 @@ func init() {
 	prometheus.MustRegister(lurkingRowCount)
 	prometheus.MustRegister(lurkingRowCountPerRoom)
 	prometheus.MustRegister(uniqueAgentCount)
+	prometheus.MustRegister(uniqueLurkingAgentCount)
 	prometheus.MustRegister(sessionsPerAgent)
 }

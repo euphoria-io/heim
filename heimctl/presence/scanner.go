@@ -58,6 +58,7 @@ func scan(ctx scope.Context, c cluster.Cluster, pb *psql.Backend) error {
 	activeRows := 0
 	activeRowsPerRoom := map[string]int{}
 	activeSessionsPerAgent := map[string]int{}
+	lurkingSessionsPerAgent := map[string]int{}
 
 	lurkingRows := 0
 	lurkingRowsPerRoom := map[string]int{}
@@ -85,6 +86,7 @@ func scan(ctx scope.Context, c cluster.Cluster, pb *psql.Backend) error {
 			if session.Name == "" {
 				lurkingRows++
 				lurkingRowsPerRoom[presence.Room]++
+				lurkingSessionsPerAgent[parts[0]]++
 			}
 		}
 	}
@@ -93,6 +95,7 @@ func scan(ctx scope.Context, c cluster.Cluster, pb *psql.Backend) error {
 	activeRowCount.Set(float64(activeRows))
 	lurkingRowCount.Set(float64(lurkingRows))
 	uniqueAgentCount.Set(float64(len(activeSessionsPerAgent)))
+	uniqueLurkingAgentCount.Set(float64(len(lurkingSessionsPerAgent)))
 
 	for room, count := range activeRowsPerRoom {
 		activeRowCountPerRoom.With(prometheus.Labels{"room": room}).Set(float64(count))
