@@ -45,7 +45,7 @@ func ScanLoop(ctx scope.Context, c cluster.Cluster, pb *psql.Backend, interval t
 func scan(ctx scope.Context, c cluster.Cluster, pb *psql.Backend) error {
 	rows, err := pb.DbMap.Select(
 		psql.Presence{},
-		"SELECT room, session_id, server_id, server_era, updated FROM presence")
+		"SELECT room, session_id, server_id, server_era, updated, fact FROM presence")
 	if err != nil {
 		return err
 	}
@@ -79,7 +79,7 @@ func scan(ctx scope.Context, c cluster.Cluster, pb *psql.Backend) error {
 			// Check lurker status. Currently this is indicated by a blank name on the session.
 			session, err := presence.SessionView()
 			if err != nil {
-				fmt.Printf("error: failed to extract session from presence row: %s", err)
+				fmt.Printf("error: failed to extract session from presence row: %s\n", err)
 				continue
 			}
 			if session.Name == "" {
