@@ -59,6 +59,9 @@ func scan(ctx scope.Context, c cluster.Cluster, pb *psql.Backend) error {
 	activeRowsPerRoom := map[string]int{}
 	activeSessionsPerAgent := map[string]int{}
 
+	lurkingRows := 0
+	lurkingRowsPerRoom := map[string]int{}
+
 	for _, row := range rows {
 		presence, ok := row.(*psql.Presence)
 		if !ok {
@@ -72,17 +75,26 @@ func scan(ctx scope.Context, c cluster.Cluster, pb *psql.Backend) error {
 
 			parts := strings.Split(presence.SessionID, "-")
 			activeSessionsPerAgent[parts[0]]++
-		} else {
 
+			// Check lurker status. Currently this is indicated by a blank name on the session.
+			if session, err := presence.SessionView(); err == nil && session.Name == "" {
+				lurkingRows++
+				lurkingRowsPerRoom[presence.Room]++
+			}
 		}
 	}
 
 	rowCount.Set(float64(len(rows)))
 	activeRowCount.Set(float64(activeRows))
+	lurkingRowCount.Set(float64(lurkingRows))
 	uniqueAgentCount.Set(float64(len(activeSessionsPerAgent)))
 
 	for room, count := range activeRowsPerRoom {
 		activeRowCountPerRoom.With(prometheus.Labels{"room": room}).Set(float64(count))
+	}
+
+	for room, count := range lurkingRowsPerRoom {
+		lurkingRowCountPerRoom.With(prometheus.Labels{"room": room}).Set(float64(count))
 	}
 
 	for _, count := range activeSessionsPerAgent {

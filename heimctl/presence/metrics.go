@@ -21,6 +21,18 @@ var (
 		Help:      "Number of active rows in the presence table, labelled by room.",
 	}, []string{"room"})
 
+	lurkingRowCount = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name:      "lurking_rows",
+		Subsystem: "presence",
+		Help:      "Number of lurking rows in the presence table (rows without a nick).",
+	})
+
+	lurkingRowCountPerRoom = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name:      "lurking_rows_per_room",
+		Subsystem: "presence",
+		Help:      "Number of lurking rows in the presence table (rows without a nick), labelled by room.",
+	}, []string{"room"})
+
 	uniqueAgentCount = prometheus.NewGauge(prometheus.GaugeOpts{
 		Name:      "unique_agents",
 		Subsystem: "presence",
@@ -39,6 +51,8 @@ func init() {
 	prometheus.MustRegister(rowCount)
 	prometheus.MustRegister(activeRowCount)
 	prometheus.MustRegister(activeRowCountPerRoom)
+	prometheus.MustRegister(lurkingRowCount)
+	prometheus.MustRegister(lurkingRowCountPerRoom)
 	prometheus.MustRegister(uniqueAgentCount)
 	prometheus.MustRegister(sessionsPerAgent)
 }
