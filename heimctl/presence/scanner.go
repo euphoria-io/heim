@@ -77,7 +77,12 @@ func scan(ctx scope.Context, c cluster.Cluster, pb *psql.Backend) error {
 			activeSessionsPerAgent[parts[0]]++
 
 			// Check lurker status. Currently this is indicated by a blank name on the session.
-			if session, err := presence.SessionView(); err == nil && session.Name == "" {
+			session, err := presence.SessionView()
+			if err != nil {
+				fmt.Printf("error: failed to extract session from presence row: %s", err)
+				continue
+			}
+			if session.Name == "" {
 				lurkingRows++
 				lurkingRowsPerRoom[presence.Room]++
 			}
