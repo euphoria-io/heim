@@ -507,7 +507,13 @@ func (s *session) handleSendCommand(cmd *proto.SendCommand) (interface{}, error)
 		return nil, err
 	}
 
-	// TODO: verify parent
+	isValidParent, err := s.room.IsValidParent(cmd.Parent)
+	if err != nil {
+		return nil, err
+	}
+	if !isValidParent {
+		return nil, proto.ErrInvalidParent
+	}
 	msg := proto.Message{
 		ID:      msgID,
 		Content: cmd.Content,

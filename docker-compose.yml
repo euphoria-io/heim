@@ -99,6 +99,22 @@ presence:
     HEIM_CONFIG: /go/src/euphoria.io/heim/heim.yml
   command: run.sh heimctl presence-exporter -http :80 -interval 10s
 
+retention:
+  build: backend
+  links:
+    - etcd
+    - psql
+  volumes:
+    - .:/go/src/euphoria.io/heim
+    - deps/godeps:/godeps
+  ports:
+    - "8082:80"
+  environment:
+    HEIM_ETCD: http://etcd:4001
+    HEIM_ETCD_HOME: /dev/euphoria.io
+    HEIM_CONFIG: /go/src/euphoria.io/heim/heim.yml
+  command: run.sh heimctl log-retention -http :80 -interval 10s
+
 activity:
   build: backend
   links:

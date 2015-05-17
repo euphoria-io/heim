@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"euphoria.io/heim/proto/security"
+	"euphoria.io/heim/proto/snowflake"
 	"euphoria.io/scope"
 )
 
@@ -79,6 +80,9 @@ type Room interface {
 	// GetCapability retrieves the capability under the given ID, or
 	// returns nil if it doesn't exist.
 	GetCapability(ctx scope.Context, id string) (security.Capability, error)
+
+	// IsValidParent checks whether the message with the given ID is able to be replied to.
+	IsValidParent(id snowflake.Snowflake) (bool, error)
 }
 
 type RoomKey interface {
