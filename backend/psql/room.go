@@ -19,8 +19,9 @@ var notImpl = fmt.Errorf("not implemented")
 var logger = backend.Logger
 
 type Room struct {
-	Name      string
-	FoundedBy string `db:"founded_by"`
+	Name          string
+	FoundedBy     string `db:"founded_by"`
+	RetentionDays int    `db:"retention_days"`
 }
 
 func (r *Room) Bind(b *Backend) *RoomBinding {
@@ -51,6 +52,28 @@ func (rb *RoomBinding) GetMessage(ctx scope.Context, id snowflake.Snowflake) (*p
 	}
 	m := msg.ToBackend()
 	return &m, nil
+}
+
+func (rb *RoomBinding) IsValidParent(id snowflake.Snowflake) (bool, error) {
+	if id.String() == "" || rb.RetentionDays == 0 {
+		return true, nil
+	}
+	var parentTime time.Time
+	err := rb.DbMap.SelectOne(&parentTime,
+		"SELECT posted FROM message WHERE room = $1 AND id = $2",
+		rb.Name, id.String())
+	if err != nil {
+		// check for nonexistant parent
+		if err == sql.ErrNoRows {
+			return false, nil
+		}
+		return false, err
+	}
+	threshold := time.Now().Add(time.Duration(-rb.RetentionDays) * 24 * time.Hour)
+	if parentTime.Before(threshold) {
+		return false, nil
+	}
+	return true, nil
 }
 
 func (rb *RoomBinding) Latest(ctx scope.Context, n int, before snowflake.Snowflake) (

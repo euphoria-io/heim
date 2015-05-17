@@ -266,6 +266,11 @@ func (r *memRoom) UnbanIP(ctx scope.Context, ip string) error {
 	return nil
 }
 
+func (r *memRoom) IsValidParent(id snowflake.Snowflake) (bool, error) {
+	// TODO: actually check log to see if it is valid.
+	return true, nil
+}
+
 type roomKey struct {
 	id        string
 	timestamp time.Time
