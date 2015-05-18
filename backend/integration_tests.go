@@ -19,6 +19,7 @@ import (
 	"github.com/gorilla/websocket"
 
 	. "github.com/smartystreets/goconvey/convey"
+	"github.com/smartystreets/goconvey/convey/reporting"
 )
 
 // TODO: move time mocking to snowflake_test?
@@ -146,7 +147,21 @@ func (tc *testConn) expect(id, cmdType, data string, args ...interface{}) {
 		snapshot.Identity = "???"
 	}
 
-	So(payload, ShouldResemble, expectedPayload)
+	result := ""
+
+	if msg := ShouldResemble(payload, expectedPayload); msg != "" {
+		e, _ := json.Marshal(expectedPayload)
+		a, _ := json.Marshal(payload)
+		view := reporting.FailureView{
+			Message:  fmt.Sprintf("Expected: %s\nActual:   %s\nShould resemble!", string(e), string(a)),
+			Expected: string(e),
+			Actual:   string(a),
+		}
+		r, _ := json.Marshal(view)
+		result = string(r)
+	}
+
+	So(nil, func(interface{}, ...interface{}) string { return result })
 }
 
 func (tc *testConn) expectError(id, cmdType, errFormat string, errArgs ...interface{}) {
