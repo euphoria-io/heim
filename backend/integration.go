@@ -222,6 +222,7 @@ func IntegrationTest(factory func() proto.Backend) {
 	runTest(testBroadcast)
 	runTest(testThreading)
 	runTest(testAuthentication)
+	runTest(testDeletion)
 
 	runTestWithFactory(testPresence)
 }
