@@ -13,6 +13,7 @@ setup_deps() {
 }
 
 test_backend() {
+  psql -V
   psql -c 'create database heimtest;' -U postgres -h $DB_HOST
   export DSN="postgres://postgres@$DB_HOST/heimtest?sslmode=disable"
   go install github.com/coreos/etcd

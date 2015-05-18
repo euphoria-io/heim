@@ -27,8 +27,6 @@ func (lm ListenerMap) Broadcast(ctx scope.Context, event *proto.Packet, exclude 
 		excludeSet[exc] = struct{}{}
 	}
 
-	backend.Logger(ctx).Printf("broadcasting %#v", payload)
-
 	// Inspect packet to see if it's a bounce event. If so, we'll deliver it
 	// only to the bounced parties.
 	bounceAgentID := ""

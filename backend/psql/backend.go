@@ -66,6 +66,7 @@ type Backend struct {
 	peers     map[string]string
 	listeners map[string]ListenerMap
 	ctx       scope.Context
+	logger    *log.Logger
 }
 
 func NewBackend(
@@ -104,6 +105,7 @@ func NewBackend(
 		listeners: map[string]ListenerMap{},
 		ctx:       ctx,
 	}
+	b.logger = log.New(os.Stdout, fmt.Sprintf("[backend %p] ", b), log.LstdFlags)
 
 	if serverDesc != nil {
 		b.peers[serverDesc.ID] = serverDesc.Era
@@ -118,6 +120,8 @@ func NewBackend(
 
 	return b, nil
 }
+
+func (b *Backend) debug(format string, args ...interface{}) { b.logger.Printf(format, args...) }
 
 func (b *Backend) start() error {
 	b.DbMap = &gorp.DbMap{Db: b.DB, Dialect: gorp.PostgresDialect{}}
@@ -136,7 +140,11 @@ func (b *Backend) start() error {
 
 	b.cancel = b.ctx.Cancel
 	b.ctx.WaitGroup().Add(1)
-	go b.background()
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go b.background(wg)
+	wg.Wait()
 	return nil
 }
 
@@ -147,9 +155,9 @@ func (b *Backend) Close() {
 	b.cluster.Part()
 }
 
-func (b *Backend) background() {
+func (b *Backend) background(wg *sync.WaitGroup) {
 	ctx := b.ctx.Fork()
-	logger := backend.Logger(ctx)
+	logger := b.logger
 
 	defer ctx.WaitGroup().Done()
 
@@ -158,10 +166,14 @@ func (b *Backend) background() {
 		// TODO: manage this more nicely
 		panic("pq listen: " + err.Error())
 	}
+	logger.Printf("pq listener started")
 
 	peerWatcher := b.cluster.Watch()
 	keepalive := time.NewTicker(3 * cluster.TTL / 4)
 	defer keepalive.Stop()
+
+	// Signal to constructor that we're ready to handle client connections.
+	wg.Done()
 
 	for {
 		select {
@@ -201,6 +213,7 @@ func (b *Backend) background() {
 			b.Unlock()
 		case notice := <-listener.Notify:
 			if notice == nil {
+				logger.Printf("pq listen: received nil notification")
 				// A nil notice indicates a loss of connection. We could
 				// re-snapshot for all connected clients, but for now it's
 				// easier to just shut down and force everyone to reconnect.
@@ -227,11 +240,15 @@ func (b *Backend) background() {
 			}
 
 			if lm, ok := b.listeners[msg.Room]; ok {
+				logger.Printf("broadcasting %s to %s", msg.Event.Type, msg.Room)
 				if err := lm.Broadcast(ctx, msg.Event, msg.Exclude...); err != nil {
 					logger.Printf("error: pq listen: broadcast error on %s: %s", msg.Room, err)
 				}
 				continue
 			}
+
+			logger.Printf("pq listen: dropping notification %s to %s because no listeners",
+				msg.Event.Type, msg.Room)
 
 			// TODO: if room name is empty, broadcast globally
 		}
@@ -429,6 +446,7 @@ func (b *Backend) join(ctx scope.Context, room *Room, session proto.Session) err
 	// Add session to listeners.
 	lm, ok := b.listeners[room.Name]
 	if !ok {
+		b.debug("registering listener for %s", room.Name)
 		lm = ListenerMap{}
 		b.listeners[room.Name] = lm
 	}
@@ -454,8 +472,8 @@ func (b *Backend) join(ctx scope.Context, room *Room, session proto.Session) err
 	if err := b.DbMap.Insert(presence); err != nil {
 		return fmt.Errorf("presence insert error: %s", err)
 	}
-	fmt.Printf("joining session: %#v\n", session)
-	fmt.Printf(" -> %#v\n", session.View())
+	b.debug("joining session: %#v", session)
+	b.debug(" -> %#v", session.View())
 	return b.broadcast(ctx, room,
 		proto.JoinEventType, proto.PresenceEvent(*session.View()), session)
 }
@@ -498,15 +516,14 @@ func (b *Backend) listing(ctx scope.Context, room *Room) (proto.Listing, error) 
 	result := proto.Listing{}
 	for _, row := range rows {
 		p := row.(*Presence)
-		fmt.Printf("presence row: %#v\n", p)
 		if b.peers[p.ServerID] == p.ServerEra {
 			if view, err := p.SessionView(); err == nil {
 				result = append(result, view)
 			} else {
-				fmt.Printf("ignoring presence row because error: %s\n", err)
+				b.debug("ignoring presence row because error: %s", err)
 			}
 		} else {
-			fmt.Printf("ignoring presence row because era doesn't match (%s != %s)\n",
+			b.debug("ignoring presence row because era doesn't match (%s != %s)",
 				p.ServerEra, b.peers[p.ServerID])
 		}
 	}

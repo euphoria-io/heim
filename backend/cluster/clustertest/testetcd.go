@@ -77,7 +77,7 @@ func StartEtcd() (*EtcdServer, error) {
 	ch := make(chan string)
 	go s.consumeStderr(stderr, ch)
 
-	timeout := time.After(2 * time.Second)
+	timeout := time.After(10 * time.Second)
 	select {
 	case <-timeout:
 		defer s.Shutdown()

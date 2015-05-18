@@ -3,6 +3,9 @@ language: go
 go:
   - 1.4
 
+addons:
+  - postgresql: "9.4"
+
 install:
   - export DEPS_PATH=${HOME}/heim-deps DB_HOST=localhost
   - cd ${HOME}

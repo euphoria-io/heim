@@ -75,6 +75,7 @@ type serverUnderTest struct {
 func (s *serverUnderTest) Close() {
 	s.server.CloseClientConnections()
 	s.server.Close()
+	s.backend.Close()
 }
 
 func (s *serverUnderTest) Connect(roomName string) *testConn {
@@ -110,7 +111,7 @@ func (tc *testConn) readPacket() (proto.PacketType, interface{}) {
 	So(err, ShouldBeNil)
 	So(msgType, ShouldEqual, websocket.TextMessage)
 
-	fmt.Printf("packet: %s\n", string(data))
+	fmt.Printf("%s received %s\n", tc.LocalAddr(), string(data))
 	var packet proto.Packet
 	So(json.Unmarshal(data, &packet), ShouldBeNil)
 
@@ -130,7 +131,6 @@ func (tc *testConn) expect(id, cmdType, data string, args ...interface{}) {
 
 	fmt.Printf("reading packet, expecting %s\n", cmdType)
 	packetType, payload := tc.readPacket()
-	fmt.Printf("%s received %v, %#v\n", tc.RemoteAddr(), packetType, payload)
 	So(packetType, ShouldEqual, cmdType)
 
 	var expected proto.Packet
@@ -172,7 +172,6 @@ func (tc *testConn) expectError(id, cmdType, errFormat string, errArgs ...interf
 
 	fmt.Printf("reading packet, expecting %s error\n", cmdType)
 	packetType, payload := tc.readPacket()
-	fmt.Printf("%s received %v, %#v\n", tc.RemoteAddr(), packetType, payload)
 	So(packetType, ShouldEqual, cmdType)
 	err, ok := payload.(error)
 	So(ok, ShouldBeTrue)
@@ -181,8 +180,7 @@ func (tc *testConn) expectError(id, cmdType, errFormat string, errArgs ...interf
 
 func (tc *testConn) expectPing() {
 	fmt.Printf("reading packet, expecting ping-event\n")
-	packetType, payload := tc.readPacket()
-	fmt.Printf("%s received %v, %#v\n", tc.RemoteAddr(), packetType, payload)
+	packetType, _ := tc.readPacket()
 	So(packetType, ShouldEqual, "ping-event")
 }
 
@@ -283,7 +281,18 @@ func testBroadcast(s *serverUnderTest) {
 
 		ids := make(proto.Listing, len(conns))
 
-		listingParts := []string{}
+		// Connect a lurker first. We'll receive events through this connection
+		// first, to control timing.
+		lurker := s.Connect("broadcast")
+		defer lurker.Close()
+
+		lurker.expectPing()
+		lurker.expectSnapshot(s.backend.Version(), nil, nil)
+		listingParts := []string{
+			fmt.Sprintf(
+				`{"session_id":"%s","id":"%s","name":"","server_id":"test1","server_era":"era1"}`,
+				lurker.sessionID, lurker.id()),
+		}
 
 		for i := range conns {
 			conn := s.Connect("broadcast")
@@ -308,7 +317,15 @@ func testBroadcast(s *serverUnderTest) {
 				ids[i].SessionID, ids[i].ID, ids[i].Name)
 			conn.expect("2", "who-reply", `{"listing":[%s]}`, strings.Join(listingParts, ","))
 
-			for _, c := range conns[:i] {
+			lurker.expect("", "join-event",
+				`{"session_id":"%s","id":"%s","server_id":"test1","server_era":"era1"}`,
+				ids[i].SessionID, ids[i].ID)
+			lurker.expect("", "nick-event",
+				`{"session_id":"%s","id":"%s","from":"","to":"%s"}`,
+				ids[i].SessionID, ids[i].ID, ids[i].Name)
+
+			for j, c := range conns[:i] {
+				fmt.Printf("\n>>> id %s expecting events for new conn %s\n\n", ids[j].ID, ids[i].ID)
 				c.expect("", "join-event",
 					`{"session_id":"%s","id":"%s","server_id":"test1","server_era":"era1"}`,
 					ids[i].SessionID, ids[i].ID)
