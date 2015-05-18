@@ -40,6 +40,7 @@ func NewTestClock() io.Closer {
 	snowflake.Clock = tc.clock
 	snowflake.DefaultSnowflaker = tc
 	snowflake.Epoch = time.Unix(0, 0)
+	snowflake.SeqCounter = 0
 	return tc
 }
 
@@ -222,9 +223,9 @@ func IntegrationTest(factory func() proto.Backend) {
 	runTest(testBroadcast)
 	runTest(testThreading)
 	runTest(testAuthentication)
-	runTest(testDeletion)
 
 	runTestWithFactory(testPresence)
+	runTest(testDeletion)
 }
 
 func testLurker(s *serverUnderTest) {
@@ -551,7 +552,7 @@ func testAuthentication(s *serverUnderTest) {
 }
 
 func testDeletion(s *serverUnderTest) {
-	Convey("Send with parent", func() {
+	Convey("Deletion", func() {
 		tc := NewTestClock()
 		defer tc.Close()
 
@@ -565,18 +566,25 @@ func testDeletion(s *serverUnderTest) {
 			SessionID:    conn.sessionID,
 			IdentityView: &proto.IdentityView{ID: conn.id(), Name: conn.id()},
 		}
-		sf := snowflakes(1)[0]
-		server := `"server_id":"test1","server_era":"era1"`
 
-		conn.send("1", "send", `{"content":"root"}`)
+		sfs := snowflakes(2)
+		sf := sfs[0]
+
+		server := `"name":"speaker","server_id":"test1","server_era":"era1"`
+
+		conn.send("1", "nick", `{"name":"speaker"}`)
+		conn.expect("1", "nick-reply",
+			`{"session_id":"%s","id":"%s","from":"","to":"speaker"}`, conn.sessionID, conn.id())
+
+		conn.send("1", "send", `{"content":"@#$!"}`)
 		conn.expect("1", "send-reply",
 			`{"id":"%s","time":1,"sender":{"session_id":"%s","id":"%s",%s},"content":"@#$!"}`,
 			sf, id.SessionID, id.ID, server)
 
 		conn.send("3", "log", `{"n":10}`)
 		conn.expect("3", "log-reply",
-			`{"log":[{"id":"%s","time":1,"sender":{"session_id":"%s","id":"%s",%s},"content":"@#$!"}]},`,
-			sf, id.SessionID, id.ID, server, server)
+			`{"log":[{"id":"%s","time":1,"sender":{"session_id":"%s","id":"%s",%s},"content":"@#$!"}]}`,
+			sf, id.SessionID, id.ID, server)
 
 		room, err := s.backend.GetRoom("deletion", false)
 		So(err, ShouldBeNil)
@@ -589,13 +597,17 @@ func testDeletion(s *serverUnderTest) {
 		So(room.EditMessage(scope.New(), nil, cmd), ShouldBeNil)
 
 		conn.expect("", "edit-message-event",
-			`{"id":"%s","time":1,"sender":{"id":"%s",%s},"deleted":2,"content":"@#$!"}`,
-			sf, id.ID, server, server)
+			`{"id":"%s","time":1,"sender":{"session_id":"%s","id":"%s",%s},"deleted":3,"edited":3,`+
+				`"content":"@#$!","edit_id":"%s"}`,
+			sf, id.SessionID, id.ID, server, sfs[1])
 
 		conn2 := s.Connect("deletion")
 		defer conn2.Close()
 
 		conn2.expectPing()
-		conn2.expectSnapshot(s.backend.Version(), nil, nil)
+		conn2.expectSnapshot(
+			s.backend.Version(),
+			[]string{fmt.Sprintf(`{"session_id":"%s","id":"%s",%s}`, conn.sessionID, id.ID, server)},
+			nil)
 	})
 }

@@ -126,16 +126,17 @@ func (r *memRoom) Send(ctx scope.Context, session proto.Session, message proto.M
 func (r *memRoom) EditMessage(
 	ctx scope.Context, session proto.Session, edit proto.EditMessageCommand) error {
 
+	editID, err := snowflake.New()
+	if err != nil {
+		return err
+	}
+
 	msg, err := r.log.edit(edit)
 	if err != nil {
 		return err
 	}
 
 	if edit.Announce {
-		editID, err := snowflake.New()
-		if err != nil {
-			return err
-		}
 		event := &proto.EditMessageEvent{
 			EditID:  editID,
 			Message: *msg,
@@ -151,7 +152,9 @@ func (r *memRoom) broadcast(
 
 	excMap := make(map[string]struct{}, len(excluding))
 	for _, x := range excluding {
-		excMap[x.ID()] = struct{}{}
+		if x != nil {
+			excMap[x.ID()] = struct{}{}
+		}
 	}
 
 	for _, sessions := range r.live {

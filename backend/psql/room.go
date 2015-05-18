@@ -110,13 +110,9 @@ func (rb *RoomBinding) EditMessage(
 	}
 
 	entry := &MessageEditLog{
-		EditID:    editID.String(),
-		Room:      rb.Name,
-		MessageID: edit.ID.String(),
-		EditorID: sql.NullString{
-			String: session.Identity().ID(),
-			Valid:  true,
-		},
+		EditID:          editID.String(),
+		Room:            rb.Name,
+		MessageID:       edit.ID.String(),
 		PreviousEditID:  msg.PreviousEditID,
 		PreviousContent: msg.Content,
 		PreviousParent: sql.NullString{
@@ -124,16 +120,22 @@ func (rb *RoomBinding) EditMessage(
 			Valid:  true,
 		},
 	}
+	// TODO: tests pass in a nil session, until we add support for the edit command
+	if session != nil {
+		entry.EditorID = sql.NullString{
+			String: session.Identity().ID(),
+			Valid:  true,
+		}
+	}
 	if err := t.Insert(entry); err != nil {
 		rollback()
 		return err
 	}
 
-	now := time.Now()
+	now := time.Time(proto.Now())
 	sets := []string{"edited = $3", "previous_edit_id = $4"}
 	args := []interface{}{rb.Name, edit.ID.String(), now, editID.String()}
 	msg.Edited = gorp.NullTime{Valid: true, Time: now}
-	msg.PreviousEditID = sql.NullString{Valid: true, String: editID.String()}
 	if edit.Content != "" {
 		args = append(args, edit.Content)
 		sets = append(sets, fmt.Sprintf("content = $%d", len(args)))
@@ -146,7 +148,6 @@ func (rb *RoomBinding) EditMessage(
 	}
 	if edit.Delete != msg.Deleted.Valid {
 		if edit.Delete {
-			now := time.Now()
 			args = append(args, now)
 			sets = append(sets, fmt.Sprintf("deleted = $%d", len(args)))
 			msg.Deleted = gorp.NullTime{Valid: true, Time: now}

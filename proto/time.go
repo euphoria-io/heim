@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"strconv"
 	"time"
+
+	"euphoria.io/heim/proto/snowflake"
 )
 
 type Time time.Time
@@ -28,4 +30,4 @@ func (t *Time) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func Now() Time { return Time(time.Now().UTC()) }
+func Now() Time { return Time(snowflake.Clock().UTC()) }

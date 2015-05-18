@@ -6,12 +6,12 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net/url"
 	"os"
 	"sort"
 	"strings"
 	"sync"
 	"time"
-	"net/url"
 
 	"euphoria.io/heim/backend"
 	"euphoria.io/heim/backend/cluster"
@@ -337,13 +337,15 @@ func (b *Backend) broadcast(
 	packet := &proto.Packet{Type: packetType, Data: json.RawMessage(encodedPayload)}
 	broadcastMsg := BroadcastMessage{
 		Event:   packet,
-		Exclude: make([]string, len(exclude)),
+		Exclude: make([]string, 0, len(exclude)),
 	}
 	if room != nil {
 		broadcastMsg.Room = room.Name
 	}
-	for i, s := range exclude {
-		broadcastMsg.Exclude[i] = s.ID()
+	for _, s := range exclude {
+		if s != nil {
+			broadcastMsg.Exclude = append(broadcastMsg.Exclude, s.ID())
+		}
 	}
 
 	encoded, err := json.Marshal(broadcastMsg)

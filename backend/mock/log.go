@@ -75,6 +75,7 @@ func (log *memLog) edit(e proto.EditMessageCommand) (*proto.Message, error) {
 	log.Lock()
 	defer log.Unlock()
 
+	now := proto.Now()
 	for _, msg := range log.msgs {
 		if msg.ID == e.ID {
 			if e.Parent != 0 {
@@ -84,11 +85,11 @@ func (log *memLog) edit(e proto.EditMessageCommand) (*proto.Message, error) {
 				msg.Content = e.Content
 			}
 			if e.Delete {
-				msg.Deleted = proto.Now()
+				msg.Deleted = now
 			} else {
 				msg.Deleted = proto.Time{}
 			}
-			msg.Edited = proto.Now()
+			msg.Edited = now
 			return msg, nil
 		}
 	}
