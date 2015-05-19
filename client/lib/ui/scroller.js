@@ -94,8 +94,8 @@ module.exports = React.createClass({
   },
 
   componentDidUpdate: function() {
-    this.onUpdate()
     this._waitingForUpdate = false
+    this.onUpdate()
   },
 
   updateAnchorPos: function() {
@@ -157,8 +157,8 @@ module.exports = React.createClass({
       // infinite scroll won't occur in Chrome if users are on another tab.
       // this was causing an infinite loop: the log would continuously be
       // fetched since the scrollTop remained at 0.
-      this._chromeRAFHack('checkScroll', this.props.onNearTop)
       this._waitingForUpdate = true
+      this._chromeRAFHack('checkScroll', this.props.onNearTop)
     }
   },
 
