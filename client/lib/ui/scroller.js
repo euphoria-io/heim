@@ -282,7 +282,7 @@ module.exports = React.createClass({
 
   render: function() {
     return (
-      <div onScroll={this._onScroll} onLoad={this.onUpdate} onTouchStart={this.onTouchStart} onTouchEnd={this.onTouchEnd} className={this.props.className}>
+      <div onScroll={this._onScroll} onTouchStart={this.onTouchStart} onTouchEnd={this.onTouchEnd} className={this.props.className}>
         {this.props.children}
       </div>
     )
