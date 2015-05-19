@@ -12,6 +12,7 @@ import (
 type Listener struct {
 	proto.Session
 	*proto.Client
+	enabled bool
 }
 
 type ListenerMap map[string]Listener
@@ -40,13 +41,20 @@ func (lm ListenerMap) Broadcast(ctx scope.Context, event *proto.Packet, exclude 
 		}
 	}
 
-	// Inspect packet to see if it's a join event. If so, we'll look for aliased
-	// sessions to kick into fast-keepalive mode.
+	// Inspect packet to see if it's a join event. If so, we'll enable the excluded
+	// listener, and look for aliased sessions to kick into fast-keepalive mode.
 	fastKeepaliveAgentID := ""
 	if event.Type == proto.JoinEventType {
 		if presence, ok := payload.(*proto.PresenceEvent); ok {
 			if idx := strings.IndexRune(presence.ID, '-'); idx >= 0 {
 				fastKeepaliveAgentID = presence.ID[:idx]
+			}
+		}
+		for _, sessionID := range exclude {
+			listener, ok := lm[sessionID]
+			if ok && !listener.enabled {
+				listener.enabled = true
+				lm[sessionID] = listener
 			}
 		}
 	}
@@ -79,6 +87,12 @@ func (lm ListenerMap) Broadcast(ctx scope.Context, event *proto.Packet, exclude 
 				if err := listener.CheckAbandoned(); err != nil {
 					fmt.Errorf("fast keepalive to %s: %s", listener.ID(), err)
 				}
+			}
+			if !listener.enabled {
+				// The event occurred before the listener joined, so don't deliver it.
+				backend.Logger(ctx).Printf("not delivering event %s before %s joined",
+					event.Type, listener.ID())
+				continue
 			}
 			if err := listener.Send(ctx, event.Type, payload); err != nil {
 				// TODO: accumulate errors
