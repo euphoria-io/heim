@@ -84,6 +84,7 @@ if (!window.frameElement) {
     var cssURL = document.getElementById(id).getAttribute('href')
     if (!cssEl || cssEl.parentNode != uidocument.head || cssEl.getAttribute('href') != cssURL) {
       var newCSSEl = uidocument.createElement('link')
+      newCSSEl.id = id
       newCSSEl.rel = 'stylesheet'
       newCSSEl.type = 'text/css'
       newCSSEl.href = cssURL
