@@ -119,6 +119,9 @@ type ManagedKey struct {
 
 func (k *ManagedKey) Clone() ManagedKey {
 	dup := func(v []byte) []byte {
+		if v == nil {
+			return nil
+		}
 		w := make([]byte, len(v))
 		copy(w, v)
 		return w
@@ -144,7 +147,7 @@ func (k *ManagedKey) Encrypt(keyKey *ManagedKey) error {
 		return ErrIVRequired
 	}
 
-	if err := keyKey.BlockCrypt(k.IV, keyKey.Plaintext, k.Ciphertext, false); err != nil {
+	if err := keyKey.BlockCrypt(k.IV, keyKey.Plaintext, k.Plaintext, true); err != nil {
 		return err
 	}
 
