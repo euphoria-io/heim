@@ -20,7 +20,9 @@ module.exports = React.createClass({
       }
     }
 
-    this.props.onClick(ev)
+    if (this.props.onClick) {
+      this.props.onClick(ev)
+    }
   },
 
   render: function() {
