@@ -3,6 +3,7 @@ package console
 import (
 	"fmt"
 
+	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/security"
 	"euphoria.io/scope"
 )
@@ -39,9 +40,14 @@ func (setRoomPasscode) run(ctx scope.Context, c *console, args []string) error {
 		return fmt.Errorf("room doesn't exist or isn't locked")
 	}
 
-	roomKey := mkey.ManagedKey()
-	capability, err := security.GrantCapabilityOnSubjectWithPasscode(
-		ctx, c.kms, mkey.Nonce(), &roomKey, []byte(passcode))
+	subject, err := proto.RoomCapabilitySubject(ctx, room)
+	if err != nil {
+		return err
+	}
+
+	holder := security.PasscodeCapabilityHolder(
+		[]byte(passcode), subject.Nonce(security.AES128.KeySize()))
+	capability, err := security.NewCapability(c.kms, holder, subject)
 	if err != nil {
 		return err
 	}

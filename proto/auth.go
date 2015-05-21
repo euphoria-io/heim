@@ -43,7 +43,9 @@ func authenticateWithPasscode(ctx scope.Context, room Room, passcode string) (
 		return &Authentication{}, nil
 	}
 
-	capabilityID, err := security.GetCapabilityIDForPasscode(mkey.Nonce(), []byte(passcode))
+	holder := security.PasscodeCapabilityHolder([]byte(passcode), mkey.Nonce())
+	subject := &roomCapabilitySubject{RoomKey: mkey}
+	capabilityID, err := security.GetCapabilityID(holder, subject)
 	if err != nil {
 		return nil, err
 	}

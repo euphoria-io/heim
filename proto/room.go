@@ -1,6 +1,7 @@
 package proto
 
 import (
+	"fmt"
 	"time"
 
 	"euphoria.io/heim/proto/security"
@@ -97,4 +98,38 @@ type RoomKey interface {
 
 	// ManagedKey returns the current encrypted ManagedKey for the room.
 	ManagedKey() security.ManagedKey
+}
+
+func RoomCapabilitySubject(ctx scope.Context, room Room) (security.CapabilitySubject, error) {
+	key, err := room.MasterKey(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if key == nil {
+		return nil, fmt.Errorf("room is unlocked")
+	}
+	return &roomCapabilitySubject{RoomKey: key}, nil
+}
+
+type roomCapabilitySubject struct {
+	RoomKey
+}
+
+func (s *roomCapabilitySubject) Nonce(size int) []byte {
+	nonce := make([]byte, size)
+	data := s.RoomKey.Nonce()
+	fmt.Printf("data: %#v\n", data)
+	//copy(nonce, s.RoomKey.Nonce())
+	copy(nonce, data)
+	return nonce
+}
+
+func (s *roomCapabilitySubject) PublicData() interface{} { return nil }
+
+func (s *roomCapabilitySubject) PrivateData(kms security.KMS) (interface{}, error) {
+	key := s.ManagedKey()
+	if err := kms.DecryptKey(&key); err != nil {
+		return nil, err
+	}
+	return key.Plaintext, nil
 }

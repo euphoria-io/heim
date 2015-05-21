@@ -3,9 +3,6 @@ package security
 import (
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
-
-	"euphoria.io/scope"
 )
 
 // Capability is a generic handle on a cryptographic grant of access.
@@ -26,41 +23,52 @@ type Capability interface {
 	EncryptedPayload() []byte
 }
 
-// NewCapability creates a generic capability for a given grant. It
-// requires a decrypted client key (TODO: asymmetric key support),
-// a random nonce associated with the subject of the grant, and public
-// and private payloads.
-//
-// The nonce *must* be truly random, and must be the same size as
-// the clientKey's BlockSize.
-func NewCapability(kms KMS, clientKey *ManagedKey, nonce []byte, public, private interface{}) (
-	Capability, error) {
+type CapabilitySubject interface {
+	Nonce(size int) []byte
+	PublicData() interface{}
+	PrivateData(kms KMS) (interface{}, error)
+}
 
-	id, err := generateCapabilityID(clientKey, nonce)
+type CapabilityHolder interface {
+	NonceSize() int
+	Sign(nonce []byte) ([]byte, error)
+	Seal(iv, data []byte) ([]byte, error)
+	Open(iv, data []byte) ([]byte, error)
+}
+
+// NewCapability creates a capability that is granted to holder on subject.
+// The public and private values will be encoded to JSON. The encoding of
+// the private value will be sealed such that only the holder can access it.
+func NewCapability(kms KMS, holder CapabilityHolder, subject CapabilitySubject) (Capability, error) {
+	nonce := subject.Nonce(holder.NonceSize())
+	id, err := holder.Sign(nonce)
 	if err != nil {
 		return nil, err
 	}
 
-	publicData, err := json.Marshal(public)
+	publicData, err := json.Marshal(subject.PublicData())
 	if err != nil {
 		return nil, err
 	}
 
-	privateData, err := json.Marshal(private)
+	data, err := subject.PrivateData(kms)
+	if err != nil {
+		return nil, err
+	}
+	privateData, err := json.Marshal(data)
 	if err != nil {
 		return nil, err
 	}
 
-	// Use the ID as the IV for encrypting the private payload.
-	privateData = clientKey.KeyType.Pad(privateData)
-	if err := clientKey.KeyType.BlockCrypt(id, clientKey.Plaintext, privateData, true); err != nil {
+	encryptedPrivateData, err := holder.Seal(id, privateData)
+	if err != nil {
 		return nil, err
 	}
 
 	grant := &capability{
 		IDString:         base64.URLEncoding.EncodeToString(id),
 		Public:           publicData,
-		EncryptedPrivate: privateData,
+		EncryptedPrivate: encryptedPrivateData,
 	}
 	return grant, nil
 }
@@ -80,57 +88,16 @@ func (c *capability) EncryptedPayload() []byte {
 	return dup
 }
 
-func GrantCapabilityOnSubject(
-	ctx scope.Context, kms KMS, nonce []byte, encryptedSubjectKey, clientKey *ManagedKey) (
-	Capability, error) {
-
-	// Decrypt subject key.
-	subjectKey := encryptedSubjectKey.Clone()
-	if err := kms.DecryptKey(&subjectKey); err != nil {
-		return nil, err
-	}
-
-	// TODO: make private data a struct
-	return NewCapability(kms, clientKey, nonce, nil, subjectKey.Plaintext)
+func PasscodeCapabilityHolder(passcode, salt []byte) CapabilityHolder {
+	key := KeyFromPasscode(passcode, salt, AES128.KeySize())
+	return key.CapabilityHolder()
 }
 
-func GrantCapabilityOnSubjectWithPasscode(
-	ctx scope.Context, kms KMS, nonce []byte, encryptedSubjectKey *ManagedKey, passcode []byte) (
-	Capability, error) {
-
-	clientKey := KeyFromPasscode(passcode, nonce, AES128.KeySize())
-	return GrantCapabilityOnSubject(ctx, kms, nonce, encryptedSubjectKey, clientKey)
-}
-
-func GetCapabilityID(nonce []byte, clientKey *ManagedKey) (string, error) {
-	id, err := generateCapabilityID(clientKey, nonce)
+func GetCapabilityID(holder CapabilityHolder, subject CapabilitySubject) (string, error) {
+	nonce := subject.Nonce(holder.NonceSize())
+	id, err := holder.Sign(nonce)
 	if err != nil {
 		return "", err
 	}
 	return base64.URLEncoding.EncodeToString(id), nil
-}
-
-func GetCapabilityIDForPasscode(nonce, passcode []byte) (string, error) {
-	clientKey := KeyFromPasscode(passcode, nonce, AES128.KeySize())
-	return GetCapabilityID(nonce, clientKey)
-}
-
-func generateCapabilityID(clientKey *ManagedKey, nonce []byte) ([]byte, error) {
-	if len(nonce) != clientKey.BlockSize() {
-		return nil, fmt.Errorf("nonce must be %d bytes", clientKey.BlockSize())
-	}
-
-	if clientKey.Encrypted() {
-		return nil, fmt.Errorf("client key must be decrypted")
-	}
-
-	// Generate capability ID by encrypting nonce with client key. We use
-	// the nonce itself as the IV.
-	id := make([]byte, len(nonce))
-	copy(id, nonce)
-	if err := clientKey.KeyType.BlockCrypt(nonce, clientKey.Plaintext, id, true); err != nil {
-		return nil, err
-	}
-
-	return id, nil
 }

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"euphoria.io/heim/backend/mock"
+	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/security"
 	"euphoria.io/scope"
 
@@ -50,7 +51,10 @@ func TestSetRoomPasscode(t *testing.T) {
 		runCommand(ctx, ctrl, "set-room-passcode", term, []string{"test"})
 		So(term.String(), ShouldStartWith, "Passcode added to test: ")
 
-		capabilityID, err := security.GetCapabilityIDForPasscode(mkey.Nonce(), []byte("hunter2"))
+		subject, err := proto.RoomCapabilitySubject(ctx, room)
+		So(err, ShouldBeNil)
+		holder := security.PasscodeCapabilityHolder([]byte("hunter2"), mkey.Nonce())
+		capabilityID, err := security.GetCapabilityID(holder, subject)
 		So(err, ShouldBeNil)
 
 		capability, err := room.GetCapability(ctx, capabilityID)

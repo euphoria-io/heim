@@ -544,13 +544,16 @@ func testAuthentication(s *serverUnderTest) {
 	ctx := scope.New()
 	kms := security.LocalKMS()
 	kms.SetMasterKey(make([]byte, security.AES256.KeySize()))
-	rkey, err := room.GenerateMasterKey(ctx, kms)
+	mkey, err := room.GenerateMasterKey(ctx, kms)
 	So(err, ShouldBeNil)
 
-	mkey := rkey.ManagedKey()
-	capability, err := security.GrantCapabilityOnSubjectWithPasscode(
-		ctx, kms, rkey.Nonce(), &mkey, []byte("hunter2"))
+	subject, err := proto.RoomCapabilitySubject(ctx, room)
 	So(err, ShouldBeNil)
+
+	holder := security.PasscodeCapabilityHolder([]byte("hunter2"), mkey.Nonce())
+	capability, err := security.NewCapability(kms, holder, subject)
+	So(err, ShouldBeNil)
+
 	So(room.SaveCapability(ctx, capability), ShouldBeNil)
 
 	Convey("Access denied", func() {
