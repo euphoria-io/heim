@@ -72,3 +72,48 @@ func TestKeyPairType(t *testing.T) {
 		})
 	})
 }
+
+func TestManagedKeyPair(t *testing.T) {
+	Convey("Clone", t, func() {
+		x := ManagedKeyPair{}
+		y := x.Clone()
+		So(x, ShouldResemble, y)
+		So(y.IV, ShouldBeNil)
+
+		x.IV = []byte("iv")
+		x.PrivateKey = []byte("private key")
+		x.EncryptedPrivateKey = []byte("encrypted private key")
+		x.PublicKey = []byte("public key")
+		y = x.Clone()
+		So(x, ShouldResemble, y)
+		So(x.IV, ShouldNotEqual, y.IV)
+		So(x.PrivateKey, ShouldNotEqual, y.PrivateKey)
+		So(x.EncryptedPrivateKey, ShouldNotEqual, y.EncryptedPrivateKey)
+		So(x.PublicKey, ShouldNotEqual, y.PublicKey)
+	})
+
+	Convey("Crypto", t, func() {
+		k := &ManagedKeyPair{PrivateKey: []byte("private key with len of 32 bytes")}
+		So(k.Encrypted(), ShouldBeFalse)
+
+		keyKey := &ManagedKey{
+			KeyType:   AES128,
+			Plaintext: make([]byte, AES128.KeySize()),
+		}
+		So(k.Decrypt(keyKey), ShouldEqual, ErrKeyMustBeEncrypted)
+		So(k.Encrypt(keyKey), ShouldEqual, ErrIVRequired)
+
+		k.IV = make([]byte, AES128.BlockSize())
+		So(k.Encrypt(keyKey), ShouldBeNil)
+		So(k.Encrypted(), ShouldBeTrue)
+		So(k.Encrypt(keyKey), ShouldEqual, ErrKeyMustBeDecrypted)
+
+		k.IV = nil
+		So(k.Decrypt(keyKey), ShouldEqual, ErrIVRequired)
+
+		k.IV = make([]byte, AES128.BlockSize())
+		So(k.Decrypt(keyKey), ShouldBeNil)
+		So(k.Encrypted(), ShouldBeFalse)
+		So(string(k.PrivateKey), ShouldEqual, "private key with len of 32 bytes")
+	})
+}

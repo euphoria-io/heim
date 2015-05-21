@@ -120,3 +120,81 @@ func (t KeyPairType) Open(message, nonce, peersPublicKey, privateKey []byte) ([]
 		return nil, ErrInvalidKey
 	}
 }
+
+type ManagedKeyPair struct {
+	KeyPairType
+	IV                  []byte
+	PrivateKey          []byte
+	EncryptedPrivateKey []byte
+	PublicKey           []byte
+}
+
+func (k *ManagedKeyPair) Clone() ManagedKeyPair {
+	dup := func(v []byte) []byte {
+		if v == nil {
+			return nil
+		}
+		w := make([]byte, len(v))
+		copy(w, v)
+		return w
+	}
+	return ManagedKeyPair{
+		KeyPairType:         k.KeyPairType,
+		IV:                  dup(k.IV),
+		PrivateKey:          dup(k.PrivateKey),
+		EncryptedPrivateKey: dup(k.EncryptedPrivateKey),
+		PublicKey:           dup(k.PublicKey),
+	}
+}
+
+func (k *ManagedKeyPair) Encrypted() bool { return k.EncryptedPrivateKey != nil }
+
+func (k *ManagedKeyPair) Encrypt(keyKey *ManagedKey) error {
+	if keyKey.Encrypted() || k.Encrypted() {
+		return ErrKeyMustBeDecrypted
+	}
+
+	if k.IV == nil {
+		return ErrIVRequired
+	}
+
+	buf := k.PrivateKey
+	if k.PrivateKeySize()%keyKey.BlockSize() != 0 {
+		buf = keyKey.Pad(buf)
+	}
+
+	if err := keyKey.BlockCrypt(k.IV, keyKey.Plaintext, buf, true); err != nil {
+		return err
+	}
+
+	k.EncryptedPrivateKey = buf
+	k.PrivateKey = nil
+	return nil
+}
+
+func (k *ManagedKeyPair) Decrypt(keyKey *ManagedKey) error {
+	if keyKey.Encrypted() {
+		return ErrKeyMustBeDecrypted
+	}
+
+	if !k.Encrypted() {
+		return ErrKeyMustBeEncrypted
+	}
+
+	if k.IV == nil {
+		return ErrIVRequired
+	}
+
+	buf := k.EncryptedPrivateKey
+	if k.PrivateKeySize()%keyKey.BlockSize() != 0 {
+		buf = keyKey.Unpad(buf)
+	}
+
+	if err := keyKey.BlockCrypt(k.IV, keyKey.Plaintext, buf, false); err != nil {
+		return err
+	}
+
+	k.PrivateKey = buf
+	k.EncryptedPrivateKey = nil
+	return nil
+}
