@@ -178,50 +178,6 @@ func (k *ManagedKey) Decrypt(keyKey *ManagedKey) error {
 	return nil
 }
 
-func (k *ManagedKey) CapabilityHolder() CapabilityHolder {
-	return &managedKeyCapabilityHolder{k.Clone()}
-}
-
-type managedKeyCapabilityHolder struct {
-	ManagedKey
-}
-
-func (k *managedKeyCapabilityHolder) NonceSize() int { return k.BlockSize() }
-
-func (k *managedKeyCapabilityHolder) Sign(nonce []byte) ([]byte, error) {
-	if k.Encrypted() {
-		return nil, ErrKeyMustBeDecrypted
-	}
-
-	// This key's signature for a nonce is the nonce encrypted by this key with
-	// the nonce itself as the IV.
-	if err := k.BlockCrypt(nonce, k.Plaintext, nonce, true); err != nil {
-		return nil, err
-	}
-	return nonce, nil
-}
-
-func (k *managedKeyCapabilityHolder) Seal(iv, data []byte) ([]byte, error) {
-	if k.Encrypted() {
-		return nil, ErrKeyMustBeDecrypted
-	}
-	data = k.Pad(data)
-	if err := k.BlockCrypt(iv, k.Plaintext, data, true); err != nil {
-		return nil, err
-	}
-	return data, nil
-}
-
-func (k *managedKeyCapabilityHolder) Open(iv, data []byte) ([]byte, error) {
-	if k.Encrypted() {
-		return nil, ErrKeyMustBeDecrypted
-	}
-	if err := k.BlockCrypt(iv, k.Plaintext, data, false); err != nil {
-		return nil, err
-	}
-	return k.Unpad(data), nil
-}
-
 func KeyFromPasscode(passcode, salt []byte, keySize int) *ManagedKey {
 	return &ManagedKey{
 		Plaintext: pbkdf2.Key(passcode, salt, keyDerivationIterations, keySize, sha256.New),

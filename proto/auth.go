@@ -43,9 +43,9 @@ func authenticateWithPasscode(ctx scope.Context, room Room, passcode string) (
 		return &Authentication{}, nil
 	}
 
-	holder := security.PasscodeCapabilityHolder([]byte(passcode), mkey.Nonce())
-	subject := &roomCapabilitySubject{RoomKey: mkey}
-	capabilityID, err := security.GetCapabilityID(holder, subject)
+	holderKey := security.KeyFromPasscode([]byte(passcode), mkey.Nonce(), security.AES128.KeySize())
+
+	capabilityID, err := security.SharedSecretCapabilityID(holderKey, mkey.Nonce())
 	if err != nil {
 		return nil, err
 	}
@@ -59,8 +59,7 @@ func authenticateWithPasscode(ctx scope.Context, room Room, passcode string) (
 		return &Authentication{FailureReason: "passcode incorrect"}, nil
 	}
 
-	clientKey := security.KeyFromPasscode([]byte(passcode), mkey.Nonce(), security.AES128.KeySize())
-	roomKey, err := decryptRoomKey(clientKey, capability)
+	roomKey, err := decryptRoomKey(holderKey, capability)
 	if err != nil {
 		return nil, err
 	}

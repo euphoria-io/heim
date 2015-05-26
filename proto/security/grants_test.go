@@ -28,10 +28,10 @@ func TestGrants(t *testing.T) {
 		backend := &mock.TestBackend{}
 		room, err := backend.GetRoom("test", true)
 		So(err, ShouldBeNil)
-		_, err = room.GenerateMasterKey(ctx, kms)
+		rkey, err := room.GenerateMasterKey(ctx, kms)
 		So(err, ShouldBeNil)
-		subject, err := proto.RoomCapabilitySubject(ctx, room)
-		So(err, ShouldBeNil)
+		mkey := rkey.ManagedKey()
+		So(kms.DecryptKey(&mkey), ShouldBeNil)
 
 		// Sign in as alice and send an encrypted message with aliceSendTime
 		// as the nonce.
@@ -43,7 +43,7 @@ func TestGrants(t *testing.T) {
 			Plaintext: make([]byte, security.AES256.KeySize()),
 		}
 
-		grant, err := security.NewCapability(kms, aliceKey.CapabilityHolder(), subject)
+		grant, err := security.GrantSharedSecretCapability(aliceKey, rkey.Nonce(), nil, mkey.Plaintext)
 		So(err, ShouldBeNil)
 
 		alice := mock.TestSession("Alice")
@@ -80,7 +80,7 @@ func TestGrants(t *testing.T) {
 			Plaintext: make([]byte, security.AES256.KeySize()),
 		}
 		//bobKey.Plaintext[0] = 1
-		grant, err = security.NewCapability(kms, bobKey.CapabilityHolder(), subject)
+		grant, err = security.GrantSharedSecretCapability(bobKey, rkey.Nonce(), nil, mkey.Plaintext)
 		So(err, ShouldBeNil)
 
 		iv, err = base64.URLEncoding.DecodeString(grant.CapabilityID())

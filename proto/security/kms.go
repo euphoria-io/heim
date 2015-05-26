@@ -73,7 +73,7 @@ func (kms *localKMS) GenerateEncryptedKey(keyType KeyType, ctxKey, ctxVal string
 
 func (kms *localKMS) DecryptKey(mkey *ManagedKey) error {
 	if !mkey.Encrypted() {
-		return ErrInvalidKey
+		return ErrKeyMustBeEncrypted
 	}
 	return kms.xorKey(mkey)
 }

@@ -3,7 +3,6 @@ package console
 import (
 	"fmt"
 
-	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/security"
 	"euphoria.io/scope"
 )
@@ -29,27 +28,27 @@ func (setRoomPasscode) run(ctx scope.Context, c *console, args []string) error {
 
 	room, err := c.backend.GetRoom(args[0], false)
 	if err != nil {
-		return err
+		return fmt.Errorf("room lookup error: %s", err)
 	}
 
-	mkey, err := room.MasterKey(ctx)
+	rkey, err := room.MasterKey(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("room key error: %s", err)
 	}
-	if mkey == nil {
+	if rkey == nil {
 		return fmt.Errorf("room doesn't exist or isn't locked")
 	}
 
-	subject, err := proto.RoomCapabilitySubject(ctx, room)
-	if err != nil {
-		return err
+	mkey := rkey.ManagedKey()
+	if err := c.kms.DecryptKey(&mkey); err != nil {
+		return fmt.Errorf("room key decryption error: %s", err)
 	}
 
-	holder := security.PasscodeCapabilityHolder(
-		[]byte(passcode), subject.Nonce(security.AES128.KeySize()))
-	capability, err := security.NewCapability(c.kms, holder, subject)
+	ckey := security.KeyFromPasscode([]byte(passcode), rkey.Nonce(), security.AES128.KeySize())
+
+	capability, err := security.GrantSharedSecretCapability(ckey, rkey.Nonce(), nil, mkey.Plaintext)
 	if err != nil {
-		return err
+		return fmt.Errorf("capability grant error: %s", err)
 	}
 
 	if err := room.SaveCapability(ctx, capability); err != nil {

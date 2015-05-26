@@ -101,7 +101,7 @@ func TestLocalKMS(t *testing.T) {
 			IV:        make([]byte, AES128.BlockSize()),
 			Plaintext: make([]byte, AES128.KeySize()),
 		}
-		So(LocalKMS().DecryptKey(mkey), ShouldEqual, ErrInvalidKey)
+		So(LocalKMS().DecryptKey(mkey), ShouldEqual, ErrKeyMustBeEncrypted)
 	})
 
 	Convey("Encrypted key with bad IV cannot be decrypted", t, func() {

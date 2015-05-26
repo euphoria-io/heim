@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"euphoria.io/heim/backend/mock"
-	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/security"
 	"euphoria.io/scope"
 
@@ -29,7 +28,7 @@ func TestSetRoomPasscode(t *testing.T) {
 		}
 		term := &testTerm{}
 		runCommand(ctx, ctrl, "set-room-passcode", term, []string{"test"})
-		So(term.String(), ShouldEqual, "error: no such room\r\n")
+		So(term.String(), ShouldEqual, "error: room lookup error: no such room\r\n")
 	})
 
 	Convey("Set passcode on room", t, func() {
@@ -44,17 +43,21 @@ func TestSetRoomPasscode(t *testing.T) {
 
 		room, err := ctrl.backend.GetRoom("test", true)
 		So(err, ShouldBeNil)
-		mkey, err := room.GenerateMasterKey(ctx, kms)
+		rkey, err := room.GenerateMasterKey(ctx, kms)
 		So(err, ShouldBeNil)
 
 		term = &testTerm{password: "hunter2"}
 		runCommand(ctx, ctrl, "set-room-passcode", term, []string{"test"})
 		So(term.String(), ShouldStartWith, "Passcode added to test: ")
 
-		subject, err := proto.RoomCapabilitySubject(ctx, room)
+		rkey, err = room.MasterKey(ctx)
 		So(err, ShouldBeNil)
-		holder := security.PasscodeCapabilityHolder([]byte("hunter2"), mkey.Nonce())
-		capabilityID, err := security.GetCapabilityID(holder, subject)
+
+		mkey := rkey.ManagedKey()
+		So(kms.DecryptKey(&mkey), ShouldBeNil)
+
+		ckey := security.KeyFromPasscode([]byte("hunter2"), rkey.Nonce(), security.AES128.KeySize())
+		capabilityID, err := security.SharedSecretCapabilityID(ckey, rkey.Nonce())
 		So(err, ShouldBeNil)
 
 		capability, err := room.GetCapability(ctx, capabilityID)

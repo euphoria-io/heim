@@ -544,14 +544,12 @@ func testAuthentication(s *serverUnderTest) {
 	ctx := scope.New()
 	kms := security.LocalKMS()
 	kms.SetMasterKey(make([]byte, security.AES256.KeySize()))
-	mkey, err := room.GenerateMasterKey(ctx, kms)
+	rkey, err := room.GenerateMasterKey(ctx, kms)
 	So(err, ShouldBeNil)
-
-	subject, err := proto.RoomCapabilitySubject(ctx, room)
-	So(err, ShouldBeNil)
-
-	holder := security.PasscodeCapabilityHolder([]byte("hunter2"), mkey.Nonce())
-	capability, err := security.NewCapability(kms, holder, subject)
+	mkey := rkey.ManagedKey()
+	So(kms.DecryptKey(&mkey), ShouldBeNil)
+	clientKey := security.KeyFromPasscode([]byte("hunter2"), rkey.Nonce(), security.AES128.KeySize())
+	capability, err := security.GrantSharedSecretCapability(clientKey, rkey.Nonce(), nil, mkey.Plaintext)
 	So(err, ShouldBeNil)
 
 	So(room.SaveCapability(ctx, capability), ShouldBeNil)
