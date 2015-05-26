@@ -43,9 +43,15 @@ func ScanLoop(ctx scope.Context, c cluster.Cluster, pb *psql.Backend, interval t
 }
 
 func scan(ctx scope.Context, c cluster.Cluster, pb *psql.Backend) error {
+	type PresenceWithUserAgent struct {
+		psql.Presence
+		UserAgent string `db:"user_agent"`
+	}
+
 	rows, err := pb.DbMap.Select(
 		psql.Presence{},
-		"SELECT room, session_id, server_id, server_era, updated, fact FROM presence")
+		"SELECT p.room, p.session_id, p.server_id, p.server_era, p.updated, p.fact, s.user_agent"+
+			" FROM presence p, session_log s WHERE p.session_id = s.session_id")
 	if err != nil {
 		return err
 	}
@@ -59,12 +65,13 @@ func scan(ctx scope.Context, c cluster.Cluster, pb *psql.Backend) error {
 	activeRowsPerRoom := map[string]int{}
 	activeSessionsPerAgent := map[string]int{}
 	lurkingSessionsPerAgent := map[string]int{}
+	webSessionsPerAgent := map[string]int{}
 
 	lurkingRows := 0
 	lurkingRowsPerRoom := map[string]int{}
 
 	for _, row := range rows {
-		presence, ok := row.(*psql.Presence)
+		presence, ok := row.(*PresenceWithUserAgent)
 		if !ok {
 			fmt.Printf("error: expected row of type *psql.Presence, got %T\n", row)
 			continue
@@ -88,6 +95,12 @@ func scan(ctx scope.Context, c cluster.Cluster, pb *psql.Backend) error {
 				lurkingRowsPerRoom[presence.Room]++
 				lurkingSessionsPerAgent[parts[0]]++
 			}
+
+			// Check web-client status.
+			// TODO: use positive fingerprint from web client instead of user-agent
+			if presence.UserAgent != "" && !strings.HasPrefix(presence.UserAgent, "Python") {
+				webSessionsPerAgent[parts[0]]++
+			}
 		}
 	}
 
@@ -96,6 +109,7 @@ func scan(ctx scope.Context, c cluster.Cluster, pb *psql.Backend) error {
 	lurkingRowCount.Set(float64(lurkingRows))
 	uniqueAgentCount.Set(float64(len(activeSessionsPerAgent)))
 	uniqueLurkingAgentCount.Set(float64(len(lurkingSessionsPerAgent)))
+	uniqueWebAgentCount.Set(float64(len(webSessionsPerAgent)))
 
 	for room, count := range activeRowsPerRoom {
 		activeRowCountPerRoom.With(prometheus.Labels{"room": room}).Set(float64(count))
