@@ -49,7 +49,7 @@ func scan(ctx scope.Context, c cluster.Cluster, pb *psql.Backend) error {
 	}
 
 	rows, err := pb.DbMap.Select(
-		psql.Presence{},
+		PresenceWithUserAgent{},
 		"SELECT p.room, p.session_id, p.server_id, p.server_era, p.updated, p.fact, s.user_agent"+
 			" FROM presence p, session_log s WHERE p.session_id = s.session_id")
 	if err != nil {
@@ -73,7 +73,7 @@ func scan(ctx scope.Context, c cluster.Cluster, pb *psql.Backend) error {
 	for _, row := range rows {
 		presence, ok := row.(*PresenceWithUserAgent)
 		if !ok {
-			fmt.Printf("error: expected row of type *psql.Presence, got %T\n", row)
+			fmt.Printf("error: expected row of type *PresenceWithUserAgent, got %T\n", row)
 			continue
 		}
 
@@ -83,6 +83,12 @@ func scan(ctx scope.Context, c cluster.Cluster, pb *psql.Backend) error {
 
 			parts := strings.Split(presence.SessionID, "-")
 			activeSessionsPerAgent[parts[0]]++
+
+			// Check web-client status.
+			// TODO: use positive fingerprint from web client instead of user-agent
+			if presence.UserAgent != "" && !strings.HasPrefix(presence.UserAgent, "Python") {
+				webSessionsPerAgent[parts[0]]++
+			}
 
 			// Check lurker status. Currently this is indicated by a blank name on the session.
 			session, err := presence.SessionView()
@@ -94,12 +100,6 @@ func scan(ctx scope.Context, c cluster.Cluster, pb *psql.Backend) error {
 				lurkingRows++
 				lurkingRowsPerRoom[presence.Room]++
 				lurkingSessionsPerAgent[parts[0]]++
-			}
-
-			// Check web-client status.
-			// TODO: use positive fingerprint from web client instead of user-agent
-			if presence.UserAgent != "" && !strings.HasPrefix(presence.UserAgent, "Python") {
-				webSessionsPerAgent[parts[0]]++
 			}
 		}
 	}
