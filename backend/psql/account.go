@@ -46,6 +46,18 @@ func (ab *AccountBinding) KeyFromPassword(password string) *security.ManagedKey 
 	return security.KeyFromPasscode([]byte(password), ab.Account.Nonce, security.AES256)
 }
 
+func (ab *AccountBinding) KeyPair() security.ManagedKeyPair {
+	iv := make([]byte, security.AES256.BlockSize())
+	copy(iv, ab.Account.Nonce)
+
+	return security.ManagedKeyPair{
+		KeyPairType:         security.Curve25519,
+		IV:                  iv,
+		EncryptedPrivateKey: ab.Account.EncryptedPrivateKey,
+		PublicKey:           ab.Account.PublicKey,
+	}
+}
+
 func (ab *AccountBinding) Unlock(clientKey *security.ManagedKey) (*security.ManagedKeyPair, error) {
 	iv := make([]byte, security.AES256.BlockSize())
 	copy(iv, ab.Account.Nonce)

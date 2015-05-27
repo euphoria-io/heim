@@ -405,6 +405,23 @@ func (b *Backend) ResolveAccount(ctx scope.Context, namespace, id string) (proto
 	return acc.Bind(b), nil
 }
 
+func (b *Backend) GetAccount(ctx scope.Context, id snowflake.Snowflake) (proto.Account, error) {
+	var acc Account
+	err := b.DbMap.SelectOne(
+		&acc,
+		"SELECT id, nonce, mac, encrypted_system_kek, encrypted_user_kek, encrypted_private_key,"+
+			" public_key"+
+			" FROM account WHERE id = $1",
+		id.String())
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, proto.ErrAccountNotFound
+		}
+		return nil, err
+	}
+	return acc.Bind(b), nil
+}
+
 func (b *Backend) sendMessageToRoom(
 	ctx scope.Context, room *Room, msg proto.Message, exclude ...proto.Session) (proto.Message, error) {
 

@@ -674,7 +674,13 @@ func testAccounts(s *serverUnderTest) {
 	Convey("Account lookup", func() {
 		ctx := scope.New()
 
-		account, err := b.ResolveAccount(ctx, "email", "max@euphoria.io")
+		var badID snowflake.Snowflake
+		badID.FromString("nosuchaccount")
+		account, err := b.GetAccount(ctx, badID)
+		So(err, ShouldEqual, proto.ErrAccountNotFound)
+		So(account, ShouldBeNil)
+
+		account, err = b.ResolveAccount(ctx, "email", "max@euphoria.io")
 		So(err, ShouldEqual, proto.ErrAccountNotFound)
 		So(account, ShouldBeNil)
 
@@ -691,5 +697,10 @@ func testAccounts(s *serverUnderTest) {
 		kp, err = account.Unlock(account.KeyFromPassword("hunter2"))
 		So(err, ShouldBeNil)
 		So(kp, ShouldNotBeNil)
+
+		dup, err := b.GetAccount(ctx, account.ID())
+		So(err, ShouldBeNil)
+		So(dup, ShouldNotBeNil)
+		So(dup.KeyPair().PublicKey, ShouldResemble, kp.PublicKey)
 	})
 }

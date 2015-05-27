@@ -5,6 +5,7 @@ import (
 
 	"euphoria.io/heim/backend/cluster"
 	"euphoria.io/heim/proto/security"
+	"euphoria.io/heim/proto/snowflake"
 	"euphoria.io/scope"
 )
 
@@ -36,9 +37,12 @@ type Backend interface {
 	// Version returns the implementation version string.
 	Version() string
 
+	// GetAccount returns the account with the given ID.
+	GetAccount(ctx scope.Context, id snowflake.Snowflake) (Account, error)
+
 	// RegisterAccount creates and returns a new, unverified account.
 	RegisterAccount(ctx scope.Context, kms security.KMS, namespace, id, password string) (Account, error)
 
-	// ResolveAccount returns any account registered under the given account ID.
+	// ResolveAccount returns any account registered under the given account identity.
 	ResolveAccount(ctx scope.Context, namespace, id string) (Account, error)
 }

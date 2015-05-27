@@ -8,16 +8,18 @@ import (
 	"euphoria.io/heim/backend/cluster"
 	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/security"
+	"euphoria.io/heim/proto/snowflake"
 	"euphoria.io/scope"
 )
 
 type TestBackend struct {
 	sync.Mutex
-	agentBans map[string]time.Time
-	ipBans    map[string]time.Time
-	rooms     map[string]proto.Room
-	accounts  map[string]proto.Account
-	version   string
+	agentBans  map[string]time.Time
+	ipBans     map[string]time.Time
+	rooms      map[string]proto.Room
+	accounts   map[string]proto.Account
+	accountIDs map[string]string
+	version    string
 }
 
 func (b *TestBackend) Close() {}
@@ -98,7 +100,7 @@ func (b *TestBackend) RegisterAccount(
 	defer b.Unlock()
 
 	key := fmt.Sprintf("%s:%s", namespace, id)
-	if _, ok := b.accounts[key]; ok {
+	if _, ok := b.accountIDs[key]; ok {
 		return nil, proto.ErrAccountIdentityInUse
 	}
 
@@ -108,10 +110,17 @@ func (b *TestBackend) RegisterAccount(
 	}
 
 	if b.accounts == nil {
-		b.accounts = map[string]proto.Account{key: account}
+		b.accounts = map[string]proto.Account{account.ID().String(): account}
 	} else {
-		b.accounts[key] = account
+		b.accounts[account.ID().String()] = account
 	}
+
+	if b.accountIDs == nil {
+		b.accountIDs = map[string]string{key: account.ID().String()}
+	} else {
+		b.accountIDs[key] = account.ID().String()
+	}
+
 	return account, nil
 }
 
@@ -120,7 +129,18 @@ func (b *TestBackend) ResolveAccount(ctx scope.Context, namespace, id string) (p
 	defer b.Unlock()
 
 	key := fmt.Sprintf("%s:%s", namespace, id)
-	account, ok := b.accounts[key]
+	accountID, ok := b.accountIDs[key]
+	if !ok {
+		return nil, proto.ErrAccountNotFound
+	}
+	return b.accounts[accountID], nil
+}
+
+func (b *TestBackend) GetAccount(ctx scope.Context, id snowflake.Snowflake) (proto.Account, error) {
+	b.Lock()
+	defer b.Unlock()
+
+	account, ok := b.accounts[id.String()]
 	if !ok {
 		return nil, proto.ErrAccountNotFound
 	}

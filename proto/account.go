@@ -20,6 +20,7 @@ type AccountIdentity interface {
 type Account interface {
 	ID() snowflake.Snowflake
 	KeyFromPassword(password string) *security.ManagedKey
+	KeyPair() security.ManagedKeyPair
 	Unlock(clientKey *security.ManagedKey) (*security.ManagedKeyPair, error)
 }
 

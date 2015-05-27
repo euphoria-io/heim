@@ -35,6 +35,8 @@ func (a *memAccount) KeyFromPassword(password string) *security.ManagedKey {
 	return security.KeyFromPasscode([]byte(password), a.sec.Nonce, a.sec.UserKek.KeyType)
 }
 
+func (a *memAccount) KeyPair() security.ManagedKeyPair { return a.sec.KeyPair.Clone() }
+
 func (a *memAccount) Unlock(clientKey *security.ManagedKey) (*security.ManagedKeyPair, error) {
 	return a.sec.Unlock(clientKey)
 }
