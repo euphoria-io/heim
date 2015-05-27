@@ -61,7 +61,7 @@ func setDeleted(ctx scope.Context, c *console, args []string, deleted bool) erro
 			return err
 		}
 
-		room, err := c.backend.GetRoom(roomName, false)
+		room, err := c.backend.GetRoom(ctx, roomName)
 		if err != nil {
 			return fmt.Errorf("%s: %s", arg, err)
 		}

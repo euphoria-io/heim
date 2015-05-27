@@ -115,7 +115,7 @@ func (s *Server) handleStatic(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleRoomStatic(w http.ResponseWriter, r *http.Request) {
 	if !s.allowRoomCreation {
 		roomName := mux.Vars(r)["room"]
-		_, err := s.b.GetRoom(roomName, false)
+		_, err := s.b.GetRoom(scope.New(), roomName)
 		if err != nil {
 			if err.Error() == "no such room" {
 				http.Error(w, "404 page not found", http.StatusNotFound)
@@ -235,8 +235,9 @@ func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
 	logger := Logger(ctx)
 
 	// Resolve the room.
+	// TODO: support room creation?
 	roomName := mux.Vars(r)["room"]
-	room, err := s.b.GetRoom(roomName, s.allowRoomCreation)
+	room, err := s.b.GetRoom(ctx, roomName)
 	if err != nil {
 		if err.Error() == "no such room" {
 			http.Error(w, "404 page not found", http.StatusNotFound)

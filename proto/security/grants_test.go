@@ -26,7 +26,7 @@ func TestGrants(t *testing.T) {
 		client := &proto.Client{}
 		client.FromRequest(ctx, &http.Request{})
 		backend := &mock.TestBackend{}
-		room, err := backend.GetRoom("test", true)
+		room, err := backend.CreateRoom(ctx, kms, "test")
 		So(err, ShouldBeNil)
 		rkey, err := room.GenerateMasterKey(ctx, kms)
 		So(err, ShouldBeNil)

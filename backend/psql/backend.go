@@ -263,25 +263,35 @@ func (b *Backend) background(wg *sync.WaitGroup) {
 	}
 }
 
-func (b *Backend) GetRoom(name string, create bool) (proto.Room, error) {
+func (b *Backend) GetRoom(ctx scope.Context, name string) (proto.Room, error) {
 	obj, err := b.DbMap.Get(Room{}, name)
 	if err != nil {
 		return nil, err
 	}
-
-	var room *Room
 	if obj == nil {
-		if !create {
-			return nil, fmt.Errorf("no such room")
-		}
-		room = &Room{
-			Name: name,
-		}
-		if err := b.DbMap.Insert(room); err != nil {
-			return nil, err
-		}
-	} else {
-		room = obj.(*Room)
+		return nil, proto.ErrRoomNotFound
+	}
+	return obj.(*Room).Bind(b), nil
+}
+
+func (b *Backend) CreateRoom(ctx scope.Context, kms security.KMS, name string) (proto.Room, error) {
+	sec, err := proto.NewRoomSecurity(kms, name)
+	if err != nil {
+		return nil, err
+	}
+
+	room := &Room{
+		Name:                name,
+		IV:                  sec.KeyPair.IV,
+		MAC:                 sec.MAC,
+		EncryptedKek:        sec.KeyEncryptingKey.Ciphertext,
+		EncryptedPrivateKey: sec.KeyPair.EncryptedPrivateKey,
+		PublicKey:           sec.KeyPair.PublicKey,
+	}
+	backend.Logger(ctx).Printf("creating room: %s", name)
+	if err := b.DbMap.Insert(room); err != nil {
+		backend.Logger(ctx).Printf("room creation error on %s: %s", name, err)
+		return nil, err
 	}
 
 	return room.Bind(b), nil

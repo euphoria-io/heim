@@ -26,23 +26,32 @@ func (b *TestBackend) Close() {}
 
 func (b *TestBackend) Version() string { return b.version }
 
-func (b *TestBackend) GetRoom(name string, create bool) (proto.Room, error) {
+func (b *TestBackend) GetRoom(ctx scope.Context, name string) (proto.Room, error) {
 	b.Lock()
 	defer b.Unlock()
 
-	if room, ok := b.rooms[name]; ok {
-		return room, nil
+	room, ok := b.rooms[name]
+	if !ok {
+		return nil, proto.ErrRoomNotFound
 	}
+	return room, nil
+}
 
-	if !create {
-		return nil, fmt.Errorf("no such room")
-	}
+func (b *TestBackend) CreateRoom(ctx scope.Context, kms security.KMS, name string) (
+	proto.Room, error) {
+
+	b.Lock()
+	defer b.Unlock()
 
 	if b.rooms == nil {
 		b.rooms = map[string]proto.Room{}
 	}
 
-	room := newMemRoom(name, b.version)
+	room, err := NewRoom(kms, name, b.version)
+	if err != nil {
+		return nil, err
+	}
+
 	b.rooms[name] = room
 	return room, nil
 }

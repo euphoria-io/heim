@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"euphoria.io/heim/proto"
+	"euphoria.io/heim/proto/security"
 	"euphoria.io/scope"
 
 	. "github.com/smartystreets/goconvey/convey"
@@ -16,9 +17,18 @@ func TestRoomPresence(t *testing.T) {
 	userB := newSession("B")
 
 	ctx := scope.New()
+	kms := security.LocalKMS()
+	kms.SetMasterKey(make([]byte, security.AES256.KeySize()))
+
+	roomp, err := NewRoom(kms, "test", "testver")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	room := roomp.(*memRoom)
+
 	client := &proto.Client{}
 	client.FromRequest(ctx, &http.Request{})
-	room := newMemRoom("test", "testver")
 
 	Convey("First join", t, func() {
 		So(room.Join(ctx, userA), ShouldBeNil)
@@ -61,10 +71,17 @@ func TestRoomBroadcast(t *testing.T) {
 	userC := newSession("C")
 
 	ctx := scope.New()
+	kms := security.LocalKMS()
+	kms.SetMasterKey(make([]byte, security.AES256.KeySize()))
+
+	roomp, err := NewRoom(kms, "test", "testver")
+	if err != nil {
+		t.Fatal(err)
+	}
+	room := roomp.(*memRoom)
+
 	client := &proto.Client{}
 	client.FromRequest(ctx, &http.Request{})
-
-	room := newMemRoom("test", "testver")
 
 	Convey("Setup", t, func() {
 		So(room.Join(ctx, userA), ShouldBeNil)

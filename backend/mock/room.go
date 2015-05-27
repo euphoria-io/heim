@@ -14,7 +14,7 @@ import (
 )
 
 type memRoom struct {
-	sync.Mutex
+	m sync.Mutex
 
 	name         string
 	version      string
@@ -25,21 +25,35 @@ type memRoom struct {
 	live         map[string][]proto.Session
 	capabilities map[string]security.Capability
 
+	sec *proto.RoomSecurity
 	key *roomKey
 }
 
-func newMemRoom(name, version string) *memRoom {
-	return &memRoom{
+func NewRoom(kms security.KMS, name, version string) (proto.Room, error) {
+	sec, err := proto.NewRoomSecurity(kms, name)
+	if err != nil {
+		return nil, err
+	}
+
+	room := &memRoom{
 		name:         name,
 		version:      version,
 		log:          newMemLog(),
 		agentBans:    map[string]time.Time{},
 		ipBans:       map[string]time.Time{},
 		capabilities: map[string]security.Capability{},
+		sec:          sec,
 	}
+	return room, nil
 }
 
 func (r *memRoom) Version() string { return r.version }
+
+func (r *memRoom) KeyPair() security.ManagedKeyPair { return r.sec.KeyPair }
+
+func (r *memRoom) Unlock(ownerKey *security.ManagedKey) (*security.ManagedKeyPair, error) {
+	return r.sec.Unlock(ownerKey)
+}
 
 func (r *memRoom) GetMessage(ctx scope.Context, id snowflake.Snowflake) (*proto.Message, error) {
 	return r.log.GetMessage(ctx, id)
@@ -55,8 +69,8 @@ func (r *memRoom) Join(ctx scope.Context, session proto.Session) error {
 		return fmt.Errorf("client data not found in scope")
 	}
 
-	r.Lock()
-	defer r.Unlock()
+	r.m.Lock()
+	defer r.m.Unlock()
 
 	if r.identities == nil {
 		r.identities = map[string]proto.Identity{}
@@ -86,8 +100,8 @@ func (r *memRoom) Join(ctx scope.Context, session proto.Session) error {
 }
 
 func (r *memRoom) Part(ctx scope.Context, session proto.Session) error {
-	r.Lock()
-	defer r.Unlock()
+	r.m.Lock()
+	defer r.m.Unlock()
 
 	ident := session.Identity()
 	id := ident.ID()
@@ -109,8 +123,8 @@ func (r *memRoom) Part(ctx scope.Context, session proto.Session) error {
 func (r *memRoom) Send(ctx scope.Context, session proto.Session, message proto.Message) (
 	proto.Message, error) {
 
-	r.Lock()
-	defer r.Unlock()
+	r.m.Lock()
+	defer r.m.Unlock()
 
 	msg := proto.Message{
 		ID:       message.ID,
@@ -224,9 +238,9 @@ func (r *memRoom) GenerateMasterKey(ctx scope.Context, kms security.KMS) (proto.
 }
 
 func (r *memRoom) SaveCapability(ctx scope.Context, capability security.Capability) error {
-	r.Lock()
+	r.m.Lock()
 	r.capabilities[capability.CapabilityID()] = capability
-	r.Unlock()
+	r.m.Unlock()
 	return nil
 }
 
@@ -235,34 +249,34 @@ func (r *memRoom) GetCapability(ctx scope.Context, id string) (security.Capabili
 }
 
 func (r *memRoom) BanAgent(ctx scope.Context, agentID string, until time.Time) error {
-	r.Lock()
+	r.m.Lock()
 	r.agentBans[agentID] = until
-	r.Unlock()
+	r.m.Unlock()
 	return nil
 }
 
 func (r *memRoom) UnbanAgent(ctx scope.Context, agentID string) error {
-	r.Lock()
+	r.m.Lock()
 	if _, ok := r.agentBans[agentID]; ok {
 		delete(r.agentBans, agentID)
 	}
-	r.Unlock()
+	r.m.Unlock()
 	return nil
 }
 
 func (r *memRoom) BanIP(ctx scope.Context, ip string, until time.Time) error {
-	r.Lock()
+	r.m.Lock()
 	r.ipBans[ip] = until
-	r.Unlock()
+	r.m.Unlock()
 	return nil
 }
 
 func (r *memRoom) UnbanIP(ctx scope.Context, ip string) error {
-	r.Lock()
+	r.m.Lock()
 	if _, ok := r.ipBans[ip]; ok {
 		delete(r.ipBans, ip)
 	}
-	r.Unlock()
+	r.m.Unlock()
 	return nil
 }
 
@@ -275,10 +289,13 @@ type roomKey struct {
 	id        string
 	timestamp time.Time
 	nonce     []byte
+	mac       []byte
 	key       security.ManagedKey
+	keyPair   security.ManagedKeyPair
 }
 
-func (k *roomKey) KeyID() string                   { return k.id }
-func (k *roomKey) Timestamp() time.Time            { return k.timestamp }
-func (k *roomKey) Nonce() []byte                   { return k.nonce }
-func (k *roomKey) ManagedKey() security.ManagedKey { return k.key.Clone() }
+func (k *roomKey) KeyID() string                           { return k.id }
+func (k *roomKey) Timestamp() time.Time                    { return k.timestamp }
+func (k *roomKey) Nonce() []byte                           { return k.nonce }
+func (k *roomKey) ManagedKey() security.ManagedKey         { return k.key.Clone() }
+func (k *roomKey) ManagedKeyPair() security.ManagedKeyPair { return k.keyPair.Clone() }

@@ -26,7 +26,7 @@ func (setRoomPasscode) run(ctx scope.Context, c *console, args []string) error {
 		return err
 	}
 
-	room, err := c.backend.GetRoom(args[0], false)
+	room, err := c.backend.GetRoom(ctx, args[0])
 	if err != nil {
 		return fmt.Errorf("room lookup error: %s", err)
 	}
@@ -78,7 +78,7 @@ func (lockRoom) run(ctx scope.Context, c *console, args []string) error {
 
 	roomName := c.Arg(0)
 
-	room, err := c.backend.GetRoom(roomName, true)
+	room, err := c.backend.GetRoom(ctx, roomName)
 	if err != nil {
 		return err
 	}

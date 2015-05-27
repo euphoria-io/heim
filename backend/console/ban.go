@@ -50,7 +50,7 @@ func (ban) run(ctx scope.Context, c *console, args []string) error {
 			c.Printf("agent %s banned globally %s\n", *agent, untilStr)
 			return nil
 		default:
-			room, err := c.backend.GetRoom(*roomName, false)
+			room, err := c.backend.GetRoom(ctx, *roomName)
 			if err != nil {
 				return err
 			}
@@ -69,7 +69,7 @@ func (ban) run(ctx scope.Context, c *console, args []string) error {
 			c.Printf("ip %s banned globally %s\n", *ip, untilStr)
 			return nil
 		default:
-			room, err := c.backend.GetRoom(*roomName, false)
+			room, err := c.backend.GetRoom(ctx, *roomName)
 			if err != nil {
 				return err
 			}
@@ -110,7 +110,7 @@ func (unban) run(ctx scope.Context, c *console, args []string) error {
 			c.Printf("global ban of agent %s lifted\n", *agent)
 			return nil
 		default:
-			room, err := c.backend.GetRoom(*roomName, false)
+			room, err := c.backend.GetRoom(ctx, *roomName)
 			if err != nil {
 				return err
 			}
@@ -129,7 +129,7 @@ func (unban) run(ctx scope.Context, c *console, args []string) error {
 			c.Printf("global ban of ip %s lifted\n", *ip)
 			return nil
 		default:
-			room, err := c.backend.GetRoom(*roomName, false)
+			room, err := c.backend.GetRoom(ctx, *roomName)
 			if err != nil {
 				return err
 			}

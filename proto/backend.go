@@ -27,9 +27,11 @@ type Backend interface {
 
 	Close()
 
-	// Gets a Room by name. If the Room doesn't already exist and create is
-	// true, a new room will be created and returned.
-	GetRoom(name string, create bool) (Room, error)
+	// Creates a new room.
+	CreateRoom(ctx scope.Context, kms security.KMS, name string) (Room, error)
+
+	// Gets an existing Room by name.
+	GetRoom(ctx scope.Context, name string) (Room, error)
 
 	// Peers returns a snapshot of known peers in this backend's cluster.
 	Peers() []cluster.PeerDesc

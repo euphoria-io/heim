@@ -79,6 +79,11 @@ func (s *serverUnderTest) Close() {
 }
 
 func (s *serverUnderTest) Connect(roomName string) *testConn {
+	if _, err := s.backend.GetRoom(scope.New(), roomName); err == proto.ErrRoomNotFound {
+		_, err = s.backend.CreateRoom(scope.New(), s.app.kms, roomName)
+		So(err, ShouldBeNil)
+	}
+
 	url := strings.Replace(s.server.URL, "http:", "ws:", 1) + "/room/" + roomName + "/ws"
 	conn, _, err := websocket.DefaultDialer.Dial(url, nil)
 	So(err, ShouldBeNil)
@@ -541,12 +546,16 @@ func testPresence(factory func() proto.Backend) {
 }
 
 func testAuthentication(s *serverUnderTest) {
-	room, err := s.backend.GetRoom("private", true)
-	So(err, ShouldBeNil)
-
 	ctx := scope.New()
 	kms := security.LocalKMS()
 	kms.SetMasterKey(make([]byte, security.AES256.KeySize()))
+
+	room, err := s.backend.GetRoom(ctx, "private")
+	if err == proto.ErrRoomNotFound {
+		room, err = s.backend.CreateRoom(ctx, kms, "private")
+	}
+	So(err, ShouldBeNil)
+
 	rkey, err := room.GenerateMasterKey(ctx, kms)
 	So(err, ShouldBeNil)
 	mkey := rkey.ManagedKey()
@@ -622,7 +631,8 @@ func testDeletion(s *serverUnderTest) {
 			`{"log":[{"id":"%s","time":1,"sender":{"session_id":"%s","id":"%s",%s},"content":"@#$!"}]}`,
 			sf, id.SessionID, id.ID, server)
 
-		room, err := s.backend.GetRoom("deletion", false)
+		ctx := scope.New()
+		room, err := s.backend.GetRoom(ctx, "deletion")
 		So(err, ShouldBeNil)
 
 		cmd := proto.EditMessageCommand{

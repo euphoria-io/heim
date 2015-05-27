@@ -28,7 +28,7 @@ func TestSetRoomPasscode(t *testing.T) {
 		}
 		term := &testTerm{}
 		runCommand(ctx, ctrl, "set-room-passcode", term, []string{"test"})
-		So(term.String(), ShouldEqual, "error: room lookup error: no such room\r\n")
+		So(term.String(), ShouldEqual, "error: room lookup error: room not found\r\n")
 	})
 
 	Convey("Set passcode on room", t, func() {
@@ -38,10 +38,8 @@ func TestSetRoomPasscode(t *testing.T) {
 		}
 
 		term := &testTerm{}
-		runCommand(ctx, ctrl, "lock-room", term, []string{"test"})
-		So(term.String(), ShouldStartWith, "Room test locked with new key")
 
-		room, err := ctrl.backend.GetRoom("test", true)
+		room, err := ctrl.backend.CreateRoom(ctx, kms, "test")
 		So(err, ShouldBeNil)
 		rkey, err := room.GenerateMasterKey(ctx, kms)
 		So(err, ShouldBeNil)
@@ -100,7 +98,7 @@ func TestLockRoom(t *testing.T) {
 			kms:     kms,
 		}
 
-		room, err := ctrl.backend.GetRoom("test", true)
+		room, err := ctrl.backend.CreateRoom(ctx, kms, "test")
 		So(err, ShouldBeNil)
 		orig, err := room.GenerateMasterKey(ctx, kms)
 		So(err, ShouldBeNil)

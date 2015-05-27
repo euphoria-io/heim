@@ -19,9 +19,14 @@ var notImpl = fmt.Errorf("not implemented")
 var logger = backend.Logger
 
 type Room struct {
-	Name          string
-	FoundedBy     string `db:"founded_by"`
-	RetentionDays int    `db:"retention_days"`
+	Name                string
+	FoundedBy           string `db:"founded_by"`
+	RetentionDays       int    `db:"retention_days"`
+	MAC                 []byte `db:"pk_mac"`
+	IV                  []byte `db:"pk_iv"`
+	EncryptedKek        []byte `db:"encrypted_kek"`
+	EncryptedPrivateKey []byte `db:"encrypted_private_key"`
+	PublicKey           []byte `db:"public_key"`
 }
 
 func (r *Room) Bind(b *Backend) *RoomBinding {
@@ -436,4 +441,27 @@ func (rb *RoomBinding) UnbanIP(ctx scope.Context, ip string) error {
 	_, err := rb.DbMap.Exec(
 		"DELETE FROM banned_ip WHERE ip = $1 AND room = $2", ip, rb.Name)
 	return err
+}
+
+func (rb *RoomBinding) KeyPair() security.ManagedKeyPair {
+	return security.ManagedKeyPair{
+		KeyPairType:         security.Curve25519,
+		IV:                  rb.Room.IV,
+		EncryptedPrivateKey: rb.Room.EncryptedPrivateKey,
+		PublicKey:           rb.Room.PublicKey,
+	}
+}
+
+func (rb *RoomBinding) Unlock(ownerKey *security.ManagedKey) (*security.ManagedKeyPair, error) {
+	sec := &proto.RoomSecurity{
+		MAC: rb.Room.MAC,
+		KeyEncryptingKey: security.ManagedKey{
+			KeyType:      security.AES256,
+			Ciphertext:   rb.Room.EncryptedKek,
+			ContextKey:   "room",
+			ContextValue: rb.Room.Name,
+		},
+		KeyPair: rb.KeyPair(),
+	}
+	return sec.Unlock(ownerKey)
 }
