@@ -387,7 +387,7 @@ func (b *Backend) RegisterAccount(ctx scope.Context, kms security.KMS, namespace
 	return account.Bind(b), nil
 }
 
-func (b *Backend) GetAccount(ctx scope.Context, namespace, id string) (proto.Account, error) {
+func (b *Backend) ResolveAccount(ctx scope.Context, namespace, id string) (proto.Account, error) {
 	var acc Account
 	err := b.DbMap.SelectOne(
 		&acc,

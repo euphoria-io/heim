@@ -115,7 +115,7 @@ func (b *TestBackend) RegisterAccount(
 	return account, nil
 }
 
-func (b *TestBackend) GetAccount(ctx scope.Context, namespace, id string) (proto.Account, error) {
+func (b *TestBackend) ResolveAccount(ctx scope.Context, namespace, id string) (proto.Account, error) {
 	b.Lock()
 	defer b.Unlock()
 

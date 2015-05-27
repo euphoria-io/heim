@@ -674,14 +674,14 @@ func testAccounts(s *serverUnderTest) {
 	Convey("Account lookup", func() {
 		ctx := scope.New()
 
-		account, err := b.GetAccount(ctx, "email", "max@euphoria.io")
+		account, err := b.ResolveAccount(ctx, "email", "max@euphoria.io")
 		So(err, ShouldEqual, proto.ErrAccountNotFound)
 		So(account, ShouldBeNil)
 
 		_, err = b.RegisterAccount(ctx, kms, "email", "max@euphoria.io", "hunter2")
 		So(err, ShouldBeNil)
 
-		account, err = b.GetAccount(ctx, "email", "max@euphoria.io")
+		account, err = b.ResolveAccount(ctx, "email", "max@euphoria.io")
 		So(err, ShouldBeNil)
 
 		kp, err := account.Unlock(account.KeyFromPassword(""))
