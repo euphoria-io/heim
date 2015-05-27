@@ -136,3 +136,31 @@ func (sec *AccountSecurity) Unlock(clientKey *security.ManagedKey) (*security.Ma
 
 	return &kp, nil
 }
+
+func (sec *AccountSecurity) ResetPassword(kms security.KMS, password string) (*AccountSecurity, error) {
+	kek := sec.SystemKek.Clone()
+	if err := kms.DecryptKey(&kek); err != nil {
+		return nil, fmt.Errorf("key decryption error: %s", err)
+	}
+
+	clientKey := security.KeyFromPasscode([]byte(password), sec.Nonce, sec.UserKek.KeyType)
+	if err := kek.Encrypt(clientKey); err != nil {
+		return nil, fmt.Errorf("key encryption error: %s", err)
+	}
+
+	var (
+		mac [16]byte
+		key [32]byte
+	)
+	copy(key[:], clientKey.Plaintext)
+	poly1305.Sum(&mac, sec.Nonce, &key)
+
+	nsec := &AccountSecurity{
+		Nonce:     sec.Nonce,
+		MAC:       mac[:],
+		SystemKek: sec.SystemKek,
+		UserKek:   kek,
+		KeyPair:   sec.KeyPair,
+	}
+	return nsec, nil
+}
