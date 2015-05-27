@@ -42,9 +42,9 @@ func TestBackend(t *testing.T) {
 	}
 
 	// Drop all tables.
-	for k, _ := range schema {
-		if _, err := db.Exec("DROP TABLE IF EXISTS " + k); err != nil {
-			t.Fatalf("failed to drpo table %s: %s", k, err)
+	for _, item := range schema {
+		if _, err := db.Exec("DROP TABLE IF EXISTS " + item.Name); err != nil {
+			t.Fatalf("failed to drop table %s: %s", item.Name, err)
 		}
 	}
 	if _, err := db.Exec("DROP TABLE IF EXISTS gorp_migrations"); err != nil {

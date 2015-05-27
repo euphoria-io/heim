@@ -16,6 +16,7 @@ import (
 	"euphoria.io/heim/backend"
 	"euphoria.io/heim/backend/cluster"
 	"euphoria.io/heim/proto"
+	"euphoria.io/heim/proto/security"
 	"euphoria.io/heim/proto/snowflake"
 	"euphoria.io/scope"
 
@@ -25,32 +26,37 @@ import (
 
 var ErrPsqlConnectionLost = errors.New("postgres connection lost")
 
-var schema = map[string]struct {
+var schema = []struct {
+	Name       string
 	Table      interface{}
 	PrimaryKey []string
 }{
 	// Keys and capabilities.
-	"master_key": {MasterKey{}, []string{"ID"}},
-	"capability": {Capability{}, []string{"ID"}},
+	{"master_key", MasterKey{}, []string{"ID"}},
+	{"capability", Capability{}, []string{"ID"}},
 
 	// Rooms.
-	"room":            {Room{}, []string{"Name"}},
-	"room_master_key": {RoomMasterKey{}, []string{"Room", "KeyID"}},
-	"room_capability": {RoomCapability{}, []string{"Room", "CapabilityID"}},
+	{"room", Room{}, []string{"Name"}},
+	{"room_master_key", RoomMasterKey{}, []string{"Room", "KeyID"}},
+	{"room_capability", RoomCapability{}, []string{"Room", "CapabilityID"}},
 
 	// Presence.
-	"presence": {Presence{}, []string{"Room", "Topic", "ServerID", "ServerEra", "SessionID"}},
+	{"presence", Presence{}, []string{"Room", "Topic", "ServerID", "ServerEra", "SessionID"}},
 
 	// Bans.
-	"banned_agent": {BannedAgent{}, []string{"AgentID", "Room"}},
-	"banned_ip":    {BannedIP{}, []string{"IP", "Room"}},
+	{"banned_agent", BannedAgent{}, []string{"AgentID", "Room"}},
+	{"banned_ip", BannedIP{}, []string{"IP", "Room"}},
 
 	// Messages.
-	"message":          {Message{}, []string{"Room", "ID"}},
-	"message_edit_log": {MessageEditLog{}, []string{"EditID"}},
+	{"message", Message{}, []string{"Room", "ID"}},
+	{"message_edit_log", MessageEditLog{}, []string{"EditID"}},
 
 	// Sessions.
-	"session_log": {SessionLog{}, []string{"SessionID"}},
+	{"session_log", SessionLog{}, []string{"SessionID"}},
+
+	// Accounts.
+	{"account_identity", AccountIdentity{}, []string{"Namespace", "ID"}},
+	{"account", Account{}, []string{"ID"}},
 }
 
 type Backend struct {
@@ -128,8 +134,8 @@ func (b *Backend) start() error {
 	// TODO: make debug configurable
 	b.DbMap.TraceOn("[gorp]", log.New(os.Stdout, "", log.LstdFlags))
 
-	for name, item := range schema {
-		b.DbMap.AddTableWithName(item.Table, name).SetKeys(false, item.PrimaryKey...)
+	for _, item := range schema {
+		b.DbMap.AddTableWithName(item.Table, item.Name).SetKeys(false, item.PrimaryKey...)
 	}
 
 	if b.desc != nil {
@@ -153,6 +159,8 @@ func (b *Backend) Version() string { return b.version }
 func (b *Backend) Close() {
 	b.cancel()
 	b.cluster.Part()
+	b.ctx.WaitGroup().Wait()
+	b.DbMap.Db.Close()
 }
 
 func (b *Backend) background(wg *sync.WaitGroup) {
@@ -325,6 +333,78 @@ func (b *Backend) UnbanIP(ctx scope.Context, ip string) error {
 	return err
 }
 
+func (b *Backend) RegisterAccount(ctx scope.Context, kms security.KMS, namespace, id, password string) (
+	proto.Account, error) {
+
+	// Generate ID for new account.
+	accountID, err := snowflake.New()
+	if err != nil {
+		return nil, err
+	}
+
+	// Generate credentials in advance of working in DB transaction.
+	sec, err := proto.NewAccountSecurity(kms, password)
+	if err != nil {
+		return nil, err
+	}
+
+	// Begin transaction to check on identity availability and store new account data.
+	t, err := b.DbMap.Begin()
+	if err != nil {
+		return nil, err
+	}
+
+	// Insert new rows.
+	account := &Account{
+		ID:                  accountID.String(),
+		Nonce:               sec.Nonce,
+		MAC:                 sec.MAC,
+		EncryptedSystemKek:  sec.SystemKek.Ciphertext,
+		EncryptedUserKek:    sec.UserKek.Ciphertext,
+		EncryptedPrivateKey: sec.KeyPair.EncryptedPrivateKey,
+		PublicKey:           sec.KeyPair.PublicKey,
+	}
+	accountIdentity := &AccountIdentity{
+		Namespace: namespace,
+		ID:        id,
+		AccountID: accountID.String(),
+	}
+	if err := t.Insert(account, accountIdentity); err != nil {
+		if rerr := t.Rollback(); rerr != nil {
+			backend.Logger(ctx).Printf("rollback error: %s", rerr)
+		}
+		if strings.HasPrefix(err.Error(), "pq: duplicate key value") {
+			return nil, proto.ErrAccountIdentityInUse
+		}
+		return nil, err
+	}
+
+	if err := t.Commit(); err != nil {
+		return nil, err
+	}
+
+	backend.Logger(ctx).Printf("registered new account %s for %s:%s", account.ID, namespace, id)
+	return account.Bind(b), nil
+}
+
+func (b *Backend) GetAccount(ctx scope.Context, namespace, id string) (proto.Account, error) {
+	var acc Account
+	err := b.DbMap.SelectOne(
+		&acc,
+		"SELECT a.id, a.nonce, a.mac, a.encrypted_system_kek, a.encrypted_user_kek,"+
+			" a.encrypted_private_key, a.public_key"+
+			" FROM account a, account_identity i"+
+			" WHERE i.namespace = $1 AND i.id = $2 AND i.account_id = a.id",
+		namespace, id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, proto.ErrAccountNotFound
+		}
+		return nil, err
+	}
+	return acc.Bind(b), nil
+}
+
 func (b *Backend) sendMessageToRoom(
 	ctx scope.Context, room *Room, msg proto.Message, exclude ...proto.Session) (proto.Message, error) {
 
@@ -425,13 +505,13 @@ func (b *Backend) join(ctx scope.Context, room *Room, session proto.Session) err
 		return err
 	}
 	if _, err := t.Delete(entry); err != nil {
-		if rerr := t.Rollback(); err != nil {
+		if rerr := t.Rollback(); rerr != nil {
 			backend.Logger(ctx).Printf("rollback error: %s", rerr)
 		}
 		return err
 	}
 	if err := t.Insert(entry); err != nil {
-		if rerr := t.Rollback(); err != nil {
+		if rerr := t.Rollback(); rerr != nil {
 			backend.Logger(ctx).Printf("rollback error: %s", rerr)
 		}
 		return err

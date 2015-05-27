@@ -19,10 +19,8 @@ type AccountIdentity interface {
 
 type Account interface {
 	ID() snowflake.Snowflake
-	KeyEncryptingKey() security.ManagedKey
-	KeyPair() security.ManagedKeyPair
-	Nonce() []byte
-	Verified() bool
+	KeyFromPassword(password string) *security.ManagedKey
+	Unlock(clientKey *security.ManagedKey) (*security.ManagedKeyPair, error)
 }
 
 // NewAccountSecurity initializes the nonce and account secrets for a new account

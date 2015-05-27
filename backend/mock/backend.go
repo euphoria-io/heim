@@ -7,6 +7,7 @@ import (
 
 	"euphoria.io/heim/backend/cluster"
 	"euphoria.io/heim/proto"
+	"euphoria.io/heim/proto/security"
 	"euphoria.io/scope"
 )
 
@@ -15,6 +16,7 @@ type TestBackend struct {
 	agentBans map[string]time.Time
 	ipBans    map[string]time.Time
 	rooms     map[string]proto.Room
+	accounts  map[string]proto.Account
 	version   string
 }
 
@@ -87,4 +89,40 @@ func (b *TestBackend) UnbanIP(ctx scope.Context, ip string) error {
 		delete(b.ipBans, ip)
 	}
 	return nil
+}
+
+func (b *TestBackend) RegisterAccount(
+	ctx scope.Context, kms security.KMS, namespace, id, password string) (proto.Account, error) {
+
+	b.Lock()
+	defer b.Unlock()
+
+	key := fmt.Sprintf("%s:%s", namespace, id)
+	if _, ok := b.accounts[key]; ok {
+		return nil, proto.ErrAccountIdentityInUse
+	}
+
+	account, err := NewAccount(kms, password)
+	if err != nil {
+		return nil, err
+	}
+
+	if b.accounts == nil {
+		b.accounts = map[string]proto.Account{key: account}
+	} else {
+		b.accounts[key] = account
+	}
+	return account, nil
+}
+
+func (b *TestBackend) GetAccount(ctx scope.Context, namespace, id string) (proto.Account, error) {
+	b.Lock()
+	defer b.Unlock()
+
+	key := fmt.Sprintf("%s:%s", namespace, id)
+	account, ok := b.accounts[key]
+	if !ok {
+		return nil, proto.ErrAccountNotFound
+	}
+	return account, nil
 }

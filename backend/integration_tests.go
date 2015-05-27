@@ -232,11 +232,14 @@ func IntegrationTest(factory func() proto.Backend) {
 
 	runTestWithFactory := func(test factoryTestSuite) { test(factory) }
 
+	// Internal API tests
+	runTest(testAccounts)
+
+	// Websocket tests
 	runTest(testLurker)
 	runTest(testBroadcast)
 	runTest(testThreading)
 	runTest(testAuthentication)
-
 	runTestWithFactory(testPresence)
 	runTest(testDeletion)
 }
@@ -642,5 +645,51 @@ func testDeletion(s *serverUnderTest) {
 			s.backend.Version(),
 			[]string{fmt.Sprintf(`{"session_id":"%s","id":"%s",%s}`, conn.sessionID, id.ID, server)},
 			nil)
+	})
+}
+
+func testAccounts(s *serverUnderTest) {
+	b := s.backend
+	kms := s.app.kms
+
+	Convey("Account registration", func() {
+		ctx := scope.New()
+		account, err := b.RegisterAccount(ctx, kms, "email", "logan@euphoria.io", "hunter2")
+		So(err, ShouldBeNil)
+		So(account, ShouldNotBeNil)
+
+		kp, err := account.Unlock(account.KeyFromPassword(""))
+		So(err, ShouldEqual, proto.ErrAccessDenied)
+		So(kp, ShouldBeNil)
+
+		kp, err = account.Unlock(account.KeyFromPassword("hunter2"))
+		So(err, ShouldBeNil)
+		So(kp, ShouldNotBeNil)
+
+		dup, err := b.RegisterAccount(ctx, kms, "email", "logan@euphoria.io", "hunter2")
+		So(err, ShouldEqual, proto.ErrAccountIdentityInUse)
+		So(dup, ShouldBeNil)
+	})
+
+	Convey("Account lookup", func() {
+		ctx := scope.New()
+
+		account, err := b.GetAccount(ctx, "email", "max@euphoria.io")
+		So(err, ShouldEqual, proto.ErrAccountNotFound)
+		So(account, ShouldBeNil)
+
+		_, err = b.RegisterAccount(ctx, kms, "email", "max@euphoria.io", "hunter2")
+		So(err, ShouldBeNil)
+
+		account, err = b.GetAccount(ctx, "email", "max@euphoria.io")
+		So(err, ShouldBeNil)
+
+		kp, err := account.Unlock(account.KeyFromPassword(""))
+		So(err, ShouldEqual, proto.ErrAccessDenied)
+		So(kp, ShouldBeNil)
+
+		kp, err = account.Unlock(account.KeyFromPassword("hunter2"))
+		So(err, ShouldBeNil)
+		So(kp, ShouldNotBeNil)
 	})
 }
