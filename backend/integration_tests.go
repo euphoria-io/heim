@@ -548,7 +548,7 @@ func testAuthentication(s *serverUnderTest) {
 	So(err, ShouldBeNil)
 	mkey := rkey.ManagedKey()
 	So(kms.DecryptKey(&mkey), ShouldBeNil)
-	clientKey := security.KeyFromPasscode([]byte("hunter2"), rkey.Nonce(), security.AES128.KeySize())
+	clientKey := security.KeyFromPasscode([]byte("hunter2"), rkey.Nonce(), security.AES128)
 	capability, err := security.GrantSharedSecretCapability(clientKey, rkey.Nonce(), nil, mkey.Plaintext)
 	So(err, ShouldBeNil)
 

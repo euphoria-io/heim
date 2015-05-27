@@ -178,8 +178,9 @@ func (k *ManagedKey) Decrypt(keyKey *ManagedKey) error {
 	return nil
 }
 
-func KeyFromPasscode(passcode, salt []byte, keySize int) *ManagedKey {
+func KeyFromPasscode(passcode, salt []byte, keyType KeyType) *ManagedKey {
 	return &ManagedKey{
-		Plaintext: pbkdf2.Key(passcode, salt, keyDerivationIterations, keySize, sha256.New),
+		KeyType:   keyType,
+		Plaintext: pbkdf2.Key(passcode, salt, keyDerivationIterations, keyType.KeySize(), sha256.New),
 	}
 }

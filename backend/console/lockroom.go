@@ -44,7 +44,7 @@ func (setRoomPasscode) run(ctx scope.Context, c *console, args []string) error {
 		return fmt.Errorf("room key decryption error: %s", err)
 	}
 
-	ckey := security.KeyFromPasscode([]byte(passcode), rkey.Nonce(), security.AES128.KeySize())
+	ckey := security.KeyFromPasscode([]byte(passcode), rkey.Nonce(), security.AES128)
 
 	capability, err := security.GrantSharedSecretCapability(ckey, rkey.Nonce(), nil, mkey.Plaintext)
 	if err != nil {

@@ -3,6 +3,7 @@ package security
 import (
 	"errors"
 	"fmt"
+	"io"
 	"strconv"
 
 	"golang.org/x/crypto/nacl/box"
@@ -116,6 +117,24 @@ func (t KeyPairType) Open(message, nonce, peersPublicKey, privateKey []byte) ([]
 			return nil, ErrMessageIntegrityFailed
 		}
 		return out, nil
+	default:
+		return nil, ErrInvalidKey
+	}
+}
+
+func (t KeyPairType) Generate(randomReader io.Reader) (*ManagedKeyPair, error) {
+	switch t {
+	case Curve25519:
+		publicKey, privateKey, err := box.GenerateKey(randomReader)
+		if err != nil {
+			return nil, err
+		}
+		key := &ManagedKeyPair{
+			KeyPairType: t,
+			PrivateKey:  privateKey[:],
+			PublicKey:   publicKey[:],
+		}
+		return key, nil
 	default:
 		return nil, ErrInvalidKey
 	}

@@ -43,7 +43,7 @@ func authenticateWithPasscode(ctx scope.Context, room Room, passcode string) (
 		return &Authentication{}, nil
 	}
 
-	holderKey := security.KeyFromPasscode([]byte(passcode), mkey.Nonce(), security.AES128.KeySize())
+	holderKey := security.KeyFromPasscode([]byte(passcode), mkey.Nonce(), security.AES128)
 
 	capabilityID, err := security.SharedSecretCapabilityID(holderKey, mkey.Nonce())
 	if err != nil {

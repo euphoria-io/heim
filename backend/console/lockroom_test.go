@@ -56,7 +56,7 @@ func TestSetRoomPasscode(t *testing.T) {
 		mkey := rkey.ManagedKey()
 		So(kms.DecryptKey(&mkey), ShouldBeNil)
 
-		ckey := security.KeyFromPasscode([]byte("hunter2"), rkey.Nonce(), security.AES128.KeySize())
+		ckey := security.KeyFromPasscode([]byte("hunter2"), rkey.Nonce(), security.AES128)
 		capabilityID, err := security.SharedSecretCapabilityID(ckey, rkey.Nonce())
 		So(err, ShouldBeNil)
 
