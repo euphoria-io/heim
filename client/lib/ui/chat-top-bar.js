@@ -3,7 +3,7 @@ var React = require('react/addons')
 var update = require('../stores/update')
 var FastButton = require('./fast-button')
 var UserList = require('./user-list')
-var Bubble = require('./bubble')
+var ToggleBubble = require('./toggle-bubble')
 var RoomTitle = require('./room-title')
 
 
@@ -34,12 +34,12 @@ module.exports = React.createClass({
             {this.props.joined && <FastButton fastTouch className="user-count" onClick={this.showUserList}>{userCount}</FastButton>}
           </div>
         </div>
-        <Bubble ref="userList" className="users" rightOffset={this.props.scrollbarWidth + 1}>
+        <ToggleBubble ref="userList" className="users" rightOffset={this.props.scrollbarWidth + 1}>
           {userCount > 0 ? <UserList users={this.props.who} /> : <div className="nick">nobody here :(</div>}
-        </Bubble>
-        <Bubble ref="updateBubble" className="update" rightOffset={this.props.scrollbarWidth + 1}>
+        </ToggleBubble>
+        <ToggleBubble ref="updateBubble" className="update" rightOffset={this.props.scrollbarWidth + 1}>
           <FastButton className="update-button" onClick={update.perform}><p>update ready<em>{Heim.isTouch ? 'tap' : 'click'} to reload</em></p></FastButton>
-        </Bubble>
+        </ToggleBubble>
       </div>
     )
   },
