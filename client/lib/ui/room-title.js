@@ -1,7 +1,7 @@
 var React = require('react/addons')
 
 var FastButton = require('./fast-button')
-var Bubble = require('./bubble')
+var ToggleBubble = require('./toggle-bubble')
 
 
 module.exports = React.createClass({
@@ -36,9 +36,9 @@ module.exports = React.createClass({
           <a className="name" href={'/room/' + this.props.name} onClick={ev => ev.preventDefault()}>&amp;{this.props.name}</a>
           <FastButton fastTouch className={'privacy-level ' + privacyLevel} onClick={this.showPrivacyInfo}>{privacyLevel}</FastButton>
         </span>
-        <Bubble ref="privacyInfo" className="small-text privacy-info" rightOffset={this.props.rightOffset}>
+        <ToggleBubble ref="privacyInfo" className="small-text privacy-info" rightOffset={this.props.rightOffset}>
           {privacyMsg}
-        </Bubble>
+        </ToggleBubble>
       </span>
     )
   },
