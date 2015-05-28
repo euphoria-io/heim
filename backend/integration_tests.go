@@ -677,7 +677,7 @@ func testAccounts(s *serverUnderTest) {
 		So(kp, ShouldNotBeNil)
 
 		dup, err := b.RegisterAccount(ctx, kms, "email", "logan@euphoria.io", "hunter2")
-		So(err, ShouldEqual, proto.ErrAccountIdentityInUse)
+		So(err, ShouldEqual, proto.ErrPersonalIdentityInUse)
 		So(dup, ShouldBeNil)
 	})
 

@@ -110,7 +110,7 @@ func (b *TestBackend) RegisterAccount(
 
 	key := fmt.Sprintf("%s:%s", namespace, id)
 	if _, ok := b.accountIDs[key]; ok {
-		return nil, proto.ErrAccountIdentityInUse
+		return nil, proto.ErrPersonalIdentityInUse
 	}
 
 	account, err := NewAccount(kms, password)

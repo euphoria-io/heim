@@ -11,7 +11,7 @@ CREATE TABLE account (
     public_key bytea NOT NULL
 );
 
-CREATE TABLE account_identity (
+CREATE TABLE personal_identity (
     namespace text NOT NULL,
     id text NOT NULL,
     account_id text NOT NULL REFERENCES account(id) ON DELETE CASCADE,
@@ -21,5 +21,5 @@ CREATE TABLE account_identity (
 -- +migrate Down
 -- drop new tables
 
-DROP TABLE account_identity;
+DROP TABLE personal_identity;
 DROP TABLE account;

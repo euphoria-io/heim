@@ -55,7 +55,7 @@ var schema = []struct {
 	{"session_log", SessionLog{}, []string{"SessionID"}},
 
 	// Accounts.
-	{"account_identity", AccountIdentity{}, []string{"Namespace", "ID"}},
+	{"personal_identity", PersonalIdentity{}, []string{"Namespace", "ID"}},
 	{"account", Account{}, []string{"ID"}},
 }
 
@@ -374,17 +374,17 @@ func (b *Backend) RegisterAccount(ctx scope.Context, kms security.KMS, namespace
 		EncryptedPrivateKey: sec.KeyPair.EncryptedPrivateKey,
 		PublicKey:           sec.KeyPair.PublicKey,
 	}
-	accountIdentity := &AccountIdentity{
+	personalIdentity := &PersonalIdentity{
 		Namespace: namespace,
 		ID:        id,
 		AccountID: accountID.String(),
 	}
-	if err := t.Insert(account, accountIdentity); err != nil {
+	if err := t.Insert(account, personalIdentity); err != nil {
 		if rerr := t.Rollback(); rerr != nil {
 			backend.Logger(ctx).Printf("rollback error: %s", rerr)
 		}
 		if strings.HasPrefix(err.Error(), "pq: duplicate key value") {
-			return nil, proto.ErrAccountIdentityInUse
+			return nil, proto.ErrPersonalIdentityInUse
 		}
 		return nil, err
 	}
@@ -403,7 +403,7 @@ func (b *Backend) ResolveAccount(ctx scope.Context, namespace, id string) (proto
 		&acc,
 		"SELECT a.id, a.nonce, a.mac, a.encrypted_system_kek, a.encrypted_user_kek,"+
 			" a.encrypted_private_key, a.public_key"+
-			" FROM account a, account_identity i"+
+			" FROM account a, personal_identity i"+
 			" WHERE i.namespace = $1 AND i.id = $2 AND i.account_id = a.id",
 		namespace, id)
 	if err != nil {

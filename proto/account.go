@@ -12,7 +12,7 @@ import (
 	"euphoria.io/heim/proto/snowflake"
 )
 
-type AccountIdentity interface {
+type PersonalIdentity interface {
 	Namespace() string
 	ID() string
 }

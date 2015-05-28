@@ -25,7 +25,7 @@ func (a *Account) Bind(b *Backend) *AccountBinding {
 	}
 }
 
-type AccountIdentity struct {
+type PersonalIdentity struct {
 	Namespace string
 	ID        string
 	AccountID string `db:"account_id"`
