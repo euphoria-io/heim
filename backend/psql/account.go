@@ -12,8 +12,8 @@ type Account struct {
 	ID                  string
 	Nonce               []byte
 	MAC                 []byte
-	EncryptedSystemKek  []byte `db:"encrypted_system_kek"`
-	EncryptedUserKek    []byte `db:"encrypted_user_kek"`
+	EncryptedSystemKey  []byte `db:"encrypted_system_key"`
+	EncryptedUserKey    []byte `db:"encrypted_user_key"`
 	EncryptedPrivateKey []byte `db:"encrypted_private_key"`
 	PublicKey           []byte `db:"public_key"`
 }
@@ -65,17 +65,17 @@ func (ab *AccountBinding) Unlock(clientKey *security.ManagedKey) (*security.Mana
 	sec := &proto.AccountSecurity{
 		Nonce: ab.Account.Nonce,
 		MAC:   ab.Account.MAC,
-		SystemKek: security.ManagedKey{
+		SystemKey: security.ManagedKey{
 			KeyType:      security.AES256,
 			IV:           iv,
-			Ciphertext:   ab.Account.EncryptedSystemKek,
+			Ciphertext:   ab.Account.EncryptedSystemKey,
 			ContextKey:   "nonce",
 			ContextValue: base64.URLEncoding.EncodeToString(ab.Account.Nonce),
 		},
-		UserKek: security.ManagedKey{
+		UserKey: security.ManagedKey{
 			KeyType:      security.AES256,
 			IV:           iv,
-			Ciphertext:   ab.Account.EncryptedUserKek,
+			Ciphertext:   ab.Account.EncryptedUserKey,
 			ContextKey:   "nonce",
 			ContextValue: base64.URLEncoding.EncodeToString(ab.Account.Nonce),
 		},

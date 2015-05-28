@@ -32,7 +32,7 @@ type memAccount struct {
 func (a *memAccount) ID() snowflake.Snowflake { return a.id }
 
 func (a *memAccount) KeyFromPassword(password string) *security.ManagedKey {
-	return security.KeyFromPasscode([]byte(password), a.sec.Nonce, a.sec.UserKek.KeyType)
+	return security.KeyFromPasscode([]byte(password), a.sec.Nonce, a.sec.UserKey.KeyType)
 }
 
 func (a *memAccount) KeyPair() security.ManagedKeyPair { return a.sec.KeyPair.Clone() }

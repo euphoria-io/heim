@@ -369,8 +369,8 @@ func (b *Backend) RegisterAccount(ctx scope.Context, kms security.KMS, namespace
 		ID:                  accountID.String(),
 		Nonce:               sec.Nonce,
 		MAC:                 sec.MAC,
-		EncryptedSystemKek:  sec.SystemKek.Ciphertext,
-		EncryptedUserKek:    sec.UserKek.Ciphertext,
+		EncryptedSystemKey:  sec.SystemKey.Ciphertext,
+		EncryptedUserKey:    sec.UserKey.Ciphertext,
 		EncryptedPrivateKey: sec.KeyPair.EncryptedPrivateKey,
 		PublicKey:           sec.KeyPair.PublicKey,
 	}
@@ -401,7 +401,7 @@ func (b *Backend) ResolveAccount(ctx scope.Context, namespace, id string) (proto
 	var acc Account
 	err := b.DbMap.SelectOne(
 		&acc,
-		"SELECT a.id, a.nonce, a.mac, a.encrypted_system_kek, a.encrypted_user_kek,"+
+		"SELECT a.id, a.nonce, a.mac, a.encrypted_system_key, a.encrypted_user_key,"+
 			" a.encrypted_private_key, a.public_key"+
 			" FROM account a, personal_identity i"+
 			" WHERE i.namespace = $1 AND i.id = $2 AND i.account_id = a.id",
@@ -419,7 +419,7 @@ func (b *Backend) GetAccount(ctx scope.Context, id snowflake.Snowflake) (proto.A
 	var acc Account
 	err := b.DbMap.SelectOne(
 		&acc,
-		"SELECT id, nonce, mac, encrypted_system_kek, encrypted_user_kek, encrypted_private_key,"+
+		"SELECT id, nonce, mac, encrypted_system_key, encrypted_user_key, encrypted_private_key,"+
 			" public_key"+
 			" FROM account WHERE id = $1",
 		id.String())

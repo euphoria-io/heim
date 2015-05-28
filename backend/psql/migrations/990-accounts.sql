@@ -5,8 +5,8 @@ CREATE TABLE account (
     id text NOT NULL PRIMARY KEY,
     nonce bytea NOT NULL,
     mac bytea NOT NULL,
-    encrypted_system_kek bytea NOT NULL,
-    encrypted_user_kek bytea NOT NULL,
+    encrypted_system_key bytea NOT NULL,
+    encrypted_user_key bytea NOT NULL,
     encrypted_private_key bytea NOT NULL,
     public_key bytea NOT NULL
 );

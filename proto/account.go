@@ -51,7 +51,7 @@ func NewAccountSecurity(kms security.KMS, password string) (*AccountSecurity, er
 	// Generate key-encrypting-key using KMS. This will be returned encrypted,
 	// using the base64 encoding of the nonce as its context.
 	nonceBase64 := base64.URLEncoding.EncodeToString(nonce)
-	systemKek, err := kms.GenerateEncryptedKey(kType, "nonce", nonceBase64)
+	systemKey, err := kms.GenerateEncryptedKey(kType, "nonce", nonceBase64)
 	if err != nil {
 		return nil, fmt.Errorf("key generation error: %s", err)
 	}
@@ -64,7 +64,7 @@ func NewAccountSecurity(kms security.KMS, password string) (*AccountSecurity, er
 
 	// Decrypt key-encrypting-key so we can encrypt keypair, and so we can re-encrypt
 	// it using the user's key.
-	kek := systemKek.Clone()
+	kek := systemKey.Clone()
 	if err = kms.DecryptKey(&kek); err != nil {
 		return nil, fmt.Errorf("key decryption error: %s", err)
 	}
@@ -77,8 +77,8 @@ func NewAccountSecurity(kms security.KMS, password string) (*AccountSecurity, er
 
 	// Clone key-encrypting-key and encrypt with client key.
 	clientKey := security.KeyFromPasscode([]byte(password), nonce, kType)
-	userKek := kek.Clone()
-	if err := userKek.Encrypt(clientKey); err != nil {
+	userKey := kek.Clone()
+	if err := userKey.Encrypt(clientKey); err != nil {
 		return nil, fmt.Errorf("key encryption error: %s", err)
 	}
 
@@ -93,8 +93,8 @@ func NewAccountSecurity(kms security.KMS, password string) (*AccountSecurity, er
 	sec := &AccountSecurity{
 		Nonce:     nonce,
 		MAC:       mac[:],
-		SystemKek: *systemKek,
-		UserKek:   userKek,
+		SystemKey: *systemKey,
+		UserKey:   userKey,
 		KeyPair:   *keyPair,
 	}
 	return sec, nil
@@ -103,8 +103,8 @@ func NewAccountSecurity(kms security.KMS, password string) (*AccountSecurity, er
 type AccountSecurity struct {
 	Nonce     []byte
 	MAC       []byte
-	SystemKek security.ManagedKey
-	UserKek   security.ManagedKey
+	SystemKey security.ManagedKey
+	UserKey   security.ManagedKey
 	KeyPair   security.ManagedKeyPair
 }
 
@@ -123,7 +123,7 @@ func (sec *AccountSecurity) Unlock(clientKey *security.ManagedKey) (*security.Ma
 		return nil, ErrAccessDenied
 	}
 
-	kek := sec.UserKek.Clone()
+	kek := sec.UserKey.Clone()
 	if err := kek.Decrypt(clientKey); err != nil {
 		return nil, err
 	}
@@ -137,12 +137,12 @@ func (sec *AccountSecurity) Unlock(clientKey *security.ManagedKey) (*security.Ma
 }
 
 func (sec *AccountSecurity) ResetPassword(kms security.KMS, password string) (*AccountSecurity, error) {
-	kek := sec.SystemKek.Clone()
+	kek := sec.SystemKey.Clone()
 	if err := kms.DecryptKey(&kek); err != nil {
 		return nil, fmt.Errorf("key decryption error: %s", err)
 	}
 
-	clientKey := security.KeyFromPasscode([]byte(password), sec.Nonce, sec.UserKek.KeyType)
+	clientKey := security.KeyFromPasscode([]byte(password), sec.Nonce, sec.UserKey.KeyType)
 	if err := kek.Encrypt(clientKey); err != nil {
 		return nil, fmt.Errorf("key encryption error: %s", err)
 	}
@@ -157,8 +157,8 @@ func (sec *AccountSecurity) ResetPassword(kms security.KMS, password string) (*A
 	nsec := &AccountSecurity{
 		Nonce:     sec.Nonce,
 		MAC:       mac[:],
-		SystemKek: sec.SystemKek,
-		UserKek:   kek,
+		SystemKey: sec.SystemKey,
+		UserKey:   kek,
 		KeyPair:   sec.KeyPair,
 	}
 	return nsec, nil

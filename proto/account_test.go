@@ -13,18 +13,18 @@ func TestNewAccountSecurity(t *testing.T) {
 	kms.SetMasterKey(make([]byte, security.AES256.KeySize()))
 
 	unlock := func(sec *AccountSecurity, password string) (*security.ManagedKeyPair, error) {
-		return sec.Unlock(security.KeyFromPasscode([]byte(password), sec.Nonce, sec.UserKek.KeyType))
+		return sec.Unlock(security.KeyFromPasscode([]byte(password), sec.Nonce, sec.UserKey.KeyType))
 	}
 
 	Convey("Encryption and decryption of generated keys", t, func() {
 		sec, err := NewAccountSecurity(kms, "hunter2")
 		So(err, ShouldBeNil)
-		So(sec.SystemKek.Encrypted(), ShouldBeTrue)
-		So(sec.UserKek.Encrypted(), ShouldBeTrue)
+		So(sec.SystemKey.Encrypted(), ShouldBeTrue)
+		So(sec.UserKey.Encrypted(), ShouldBeTrue)
 		So(sec.KeyPair.Encrypted(), ShouldBeTrue)
 		So(len(sec.Nonce), ShouldEqual, sec.KeyPair.NonceSize())
 
-		kek := sec.SystemKek.Clone()
+		kek := sec.SystemKey.Clone()
 		So(kms.DecryptKey(&kek), ShouldBeNil)
 
 		skp := sec.KeyPair.Clone()
