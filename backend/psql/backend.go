@@ -281,12 +281,12 @@ func (b *Backend) CreateRoom(ctx scope.Context, kms security.KMS, name string) (
 	}
 
 	room := &Room{
-		Name:                name,
-		IV:                  sec.KeyPair.IV,
-		MAC:                 sec.MAC,
-		EncryptedKek:        sec.KeyEncryptingKey.Ciphertext,
-		EncryptedPrivateKey: sec.KeyPair.EncryptedPrivateKey,
-		PublicKey:           sec.KeyPair.PublicKey,
+		Name: name,
+		IV:   sec.KeyPair.IV,
+		MAC:  sec.MAC,
+		EncryptedManagementKey: sec.KeyEncryptingKey.Ciphertext,
+		EncryptedPrivateKey:    sec.KeyPair.EncryptedPrivateKey,
+		PublicKey:              sec.KeyPair.PublicKey,
 	}
 	backend.Logger(ctx).Printf("creating room: %s", name)
 	if err := b.DbMap.Insert(room); err != nil {

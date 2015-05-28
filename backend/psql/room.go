@@ -19,14 +19,14 @@ var notImpl = fmt.Errorf("not implemented")
 var logger = backend.Logger
 
 type Room struct {
-	Name                string
-	FoundedBy           string `db:"founded_by"`
-	RetentionDays       int    `db:"retention_days"`
-	MAC                 []byte `db:"pk_mac"`
-	IV                  []byte `db:"pk_iv"`
-	EncryptedKek        []byte `db:"encrypted_kek"`
-	EncryptedPrivateKey []byte `db:"encrypted_private_key"`
-	PublicKey           []byte `db:"public_key"`
+	Name                   string
+	FoundedBy              string `db:"founded_by"`
+	RetentionDays          int    `db:"retention_days"`
+	MAC                    []byte `db:"pk_mac"`
+	IV                     []byte `db:"pk_iv"`
+	EncryptedManagementKey []byte `db:"encrypted_management_key"`
+	EncryptedPrivateKey    []byte `db:"encrypted_private_key"`
+	PublicKey              []byte `db:"public_key"`
 }
 
 func (r *Room) Bind(b *Backend) *RoomBinding {
@@ -457,7 +457,7 @@ func (rb *RoomBinding) Unlock(managerKey *security.ManagedKey) (*security.Manage
 		MAC: rb.Room.MAC,
 		KeyEncryptingKey: security.ManagedKey{
 			KeyType:      security.AES256,
-			Ciphertext:   rb.Room.EncryptedKek,
+			Ciphertext:   rb.Room.EncryptedManagementKey,
 			ContextKey:   "room",
 			ContextValue: rb.Room.Name,
 		},
