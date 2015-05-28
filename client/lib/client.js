@@ -139,7 +139,7 @@ if (!window.frameElement) {
     }, false)
 
     Heim.addEventListener(uidocument.body, 'keypress', function(ev) {
-      if (!uiwindow.getSelection().isCollapsed){
+      if (!uiwindow.getSelection().isCollapsed) {
         return
       }
 
