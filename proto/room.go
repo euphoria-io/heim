@@ -93,7 +93,7 @@ type Room interface {
 	KeyPair() security.ManagedKeyPair
 
 	// Unlock decrypts the room's ManagedKeyPair with the given key and returns it.
-	Unlock(ownerKey *security.ManagedKey) (*security.ManagedKeyPair, error)
+	Unlock(managerKey *security.ManagedKey) (*security.ManagedKeyPair, error)
 }
 
 type RoomKey interface {
@@ -176,8 +176,8 @@ type RoomSecurity struct {
 	KeyPair          security.ManagedKeyPair
 }
 
-func (sec *RoomSecurity) Unlock(ownerKey *security.ManagedKey) (*security.ManagedKeyPair, error) {
-	if ownerKey.Encrypted() {
+func (sec *RoomSecurity) Unlock(managerKey *security.ManagedKey) (*security.ManagedKeyPair, error) {
+	if managerKey.Encrypted() {
 		return nil, security.ErrKeyMustBeDecrypted
 	}
 
@@ -186,13 +186,13 @@ func (sec *RoomSecurity) Unlock(ownerKey *security.ManagedKey) (*security.Manage
 		key [32]byte
 	)
 	copy(mac[:], sec.MAC)
-	copy(key[:], ownerKey.Plaintext)
+	copy(key[:], managerKey.Plaintext)
 	if !poly1305.Verify(&mac, sec.KeyPair.IV, &key) {
 		return nil, ErrAccessDenied
 	}
 
 	kek := sec.KeyEncryptingKey.Clone()
-	if err := kek.Decrypt(ownerKey); err != nil {
+	if err := kek.Decrypt(managerKey); err != nil {
 		return nil, err
 	}
 

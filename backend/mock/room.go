@@ -51,8 +51,8 @@ func (r *memRoom) Version() string { return r.version }
 
 func (r *memRoom) KeyPair() security.ManagedKeyPair { return r.sec.KeyPair }
 
-func (r *memRoom) Unlock(ownerKey *security.ManagedKey) (*security.ManagedKeyPair, error) {
-	return r.sec.Unlock(ownerKey)
+func (r *memRoom) Unlock(managerKey *security.ManagedKey) (*security.ManagedKeyPair, error) {
+	return r.sec.Unlock(managerKey)
 }
 
 func (r *memRoom) GetMessage(ctx scope.Context, id snowflake.Snowflake) (*proto.Message, error) {

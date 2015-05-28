@@ -452,7 +452,7 @@ func (rb *RoomBinding) KeyPair() security.ManagedKeyPair {
 	}
 }
 
-func (rb *RoomBinding) Unlock(ownerKey *security.ManagedKey) (*security.ManagedKeyPair, error) {
+func (rb *RoomBinding) Unlock(managerKey *security.ManagedKey) (*security.ManagedKeyPair, error) {
 	sec := &proto.RoomSecurity{
 		MAC: rb.Room.MAC,
 		KeyEncryptingKey: security.ManagedKey{
@@ -463,5 +463,5 @@ func (rb *RoomBinding) Unlock(ownerKey *security.ManagedKey) (*security.ManagedK
 		},
 		KeyPair: rb.KeyPair(),
 	}
-	return sec.Unlock(ownerKey)
+	return sec.Unlock(managerKey)
 }
