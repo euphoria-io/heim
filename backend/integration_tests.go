@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"sync/atomic"
+	"testing"
 	"time"
 
 	"euphoria.io/heim/backend/cluster"
@@ -214,39 +215,46 @@ func snowflakes(n int) []snowflake.Snowflake {
 	return snowflakes
 }
 
-func IntegrationTest(factory func() proto.Backend) {
+func IntegrationTest(t *testing.T, factory func() proto.Backend) {
 	agentIDCounter := 0
 
-	runTest := func(test testSuite) {
-		backend := factory()
-		defer backend.Close()
-		kms := security.LocalKMS()
-		kms.SetMasterKey(make([]byte, security.AES256.KeySize()))
-		app, err := NewServer(scope.New(), backend, &cluster.TestCluster{}, kms, "test1", "era1", "")
-		So(err, ShouldBeNil)
-		app.AllowRoomCreation(true)
-		app.agentIDGenerator = func() ([]byte, error) {
-			agentIDCounter++
-			return []byte(fmt.Sprintf("%d", agentIDCounter)), nil
-		}
-		server := httptest.NewServer(app)
-		defer server.Close()
-		defer server.CloseClientConnections()
-		test(&serverUnderTest{backend, app, server})
+	runTest := func(name string, test testSuite) {
+		Convey(name, t, func() {
+			backend := factory()
+			defer backend.Close()
+
+			kms := security.LocalKMS()
+			kms.SetMasterKey(make([]byte, security.AES256.KeySize()))
+			app, err := NewServer(scope.New(), backend, &cluster.TestCluster{}, kms, "test1", "era1", "")
+			So(err, ShouldBeNil)
+			app.AllowRoomCreation(true)
+			app.agentIDGenerator = func() ([]byte, error) {
+				agentIDCounter++
+				return []byte(fmt.Sprintf("%d", agentIDCounter)), nil
+			}
+
+			server := httptest.NewServer(app)
+			defer server.Close()
+			defer server.CloseClientConnections()
+
+			test(&serverUnderTest{backend, app, server})
+		})
 	}
 
-	runTestWithFactory := func(test factoryTestSuite) { test(factory) }
+	runTestWithFactory := func(name string, test factoryTestSuite) {
+		Convey(name, t, func() { test(factory) })
+	}
 
 	// Internal API tests
-	runTest(testAccounts)
+	runTest("Accounts", testAccounts)
 
 	// Websocket tests
-	runTest(testLurker)
-	runTest(testBroadcast)
-	runTest(testThreading)
-	runTest(testAuthentication)
-	runTestWithFactory(testPresence)
-	runTest(testDeletion)
+	runTest("Lurker", testLurker)
+	runTest("Broadcast", testBroadcast)
+	runTest("Threading", testThreading)
+	runTest("Authentication", testAuthentication)
+	runTestWithFactory("Presence", testPresence)
+	runTest("Deletion", testDeletion)
 }
 
 func testLurker(s *serverUnderTest) {

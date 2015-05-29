@@ -14,8 +14,6 @@ import (
 	"euphoria.io/scope"
 
 	"github.com/rubenv/sql-migrate"
-
-	. "github.com/smartystreets/goconvey/convey"
 )
 
 var dsn = flag.String("dsn", "postgres://heimtest:heimtest@localhost/heimtest", "")
@@ -74,8 +72,6 @@ func TestBackend(t *testing.T) {
 		return b
 	}
 
-	Convey("Integration test suite", t, func() {
-		// Run test suite.
-		backend.IntegrationTest(factory)
-	})
+	// Run test suite.
+	backend.IntegrationTest(t, factory)
 }

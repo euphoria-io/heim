@@ -6,11 +6,9 @@ import (
 	"euphoria.io/heim/backend"
 	"euphoria.io/heim/proto"
 
-	. "github.com/smartystreets/goconvey/convey"
+	//. "github.com/smartystreets/goconvey/convey"
 )
 
 func TestTestBackend(t *testing.T) {
-	Convey("Integration test suite", t, func() {
-		backend.IntegrationTest(func() proto.Backend { return &TestBackend{} })
-	})
+	backend.IntegrationTest(t, func() proto.Backend { return &TestBackend{} })
 }
