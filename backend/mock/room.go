@@ -210,14 +210,14 @@ func (r *memRoom) RenameUser(
 	return payload, r.broadcast(ctx, proto.NickType, payload, session)
 }
 
-func (r *memRoom) MasterKey(ctx scope.Context) (proto.RoomKey, error) {
+func (r *memRoom) MessageKey(ctx scope.Context) (proto.RoomMessageKey, error) {
 	if r.key == nil {
 		return nil, nil
 	}
 	return r.key, nil
 }
 
-func (r *memRoom) GenerateMasterKey(ctx scope.Context, kms security.KMS) (proto.RoomKey, error) {
+func (r *memRoom) GenerateMessageKey(ctx scope.Context, kms security.KMS) (proto.RoomMessageKey, error) {
 	nonce, err := kms.GenerateNonce(security.AES128.KeySize())
 	if err != nil {
 		return nil, err

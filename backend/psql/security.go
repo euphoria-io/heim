@@ -1,6 +1,6 @@
 package psql
 
-type MasterKey struct {
+type MessageKey struct {
 	ID           string
 	EncryptedKey []byte `db:"encrypted_key"`
 	IV           []byte

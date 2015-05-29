@@ -253,7 +253,7 @@ func (rb *RoomBinding) RenameUser(ctx scope.Context, session proto.Session, form
 	return event, rb.Backend.broadcast(ctx, rb.Room, proto.NickEventType, event, session)
 }
 
-func (rb *RoomBinding) GenerateMasterKey(ctx scope.Context, kms security.KMS) (proto.RoomKey, error) {
+func (rb *RoomBinding) GenerateMessageKey(ctx scope.Context, kms security.KMS) (proto.RoomMessageKey, error) {
 
 	// Generate unique ID for storing new key in DB.
 	keyID, err := snowflake.New()
@@ -279,7 +279,7 @@ func (rb *RoomBinding) GenerateMasterKey(ctx scope.Context, kms security.KMS) (p
 	}
 
 	rmkb := &RoomMasterKeyBinding{
-		MasterKey: MasterKey{
+		MessageKey: MessageKey{
 			ID:           keyID.String(),
 			EncryptedKey: mkey.Ciphertext,
 			IV:           mkey.IV,
@@ -291,7 +291,7 @@ func (rb *RoomBinding) GenerateMasterKey(ctx scope.Context, kms security.KMS) (p
 			Activated: time.Now(),
 		},
 	}
-	if err := transaction.Insert(&rmkb.MasterKey); err != nil {
+	if err := transaction.Insert(&rmkb.MessageKey); err != nil {
 		if rerr := transaction.Rollback(); rerr != nil {
 			backend.Logger(ctx).Printf("rollback error: %s", rerr)
 		}
@@ -312,7 +312,7 @@ func (rb *RoomBinding) GenerateMasterKey(ctx scope.Context, kms security.KMS) (p
 	return rmkb, nil
 }
 
-func (rb *RoomBinding) MasterKey(ctx scope.Context) (proto.RoomKey, error) {
+func (rb *RoomBinding) MessageKey(ctx scope.Context) (proto.RoomMessageKey, error) {
 	rmkb := &RoomMasterKeyBinding{}
 	err := rb.DbMap.SelectOne(
 		rmkb,

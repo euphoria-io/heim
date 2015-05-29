@@ -28,7 +28,7 @@ func TestGrants(t *testing.T) {
 		backend := &mock.TestBackend{}
 		room, err := backend.CreateRoom(ctx, kms, "test")
 		So(err, ShouldBeNil)
-		rkey, err := room.GenerateMasterKey(ctx, kms)
+		rkey, err := room.GenerateMessageKey(ctx, kms)
 		So(err, ShouldBeNil)
 		mkey := rkey.ManagedKey()
 		So(kms.DecryptKey(&mkey), ShouldBeNil)

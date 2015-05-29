@@ -31,7 +31,7 @@ func (setRoomPasscode) run(ctx scope.Context, c *console, args []string) error {
 		return fmt.Errorf("room lookup error: %s", err)
 	}
 
-	rkey, err := room.MasterKey(ctx)
+	rkey, err := room.MessageKey(ctx)
 	if err != nil {
 		return fmt.Errorf("room key error: %s", err)
 	}
@@ -84,7 +84,7 @@ func (lockRoom) run(ctx scope.Context, c *console, args []string) error {
 	}
 
 	// Check for existing key.
-	mkey, err := room.MasterKey(ctx)
+	mkey, err := room.MessageKey(ctx)
 	if err != nil {
 		return err
 	}
@@ -96,7 +96,7 @@ func (lockRoom) run(ctx scope.Context, c *console, args []string) error {
 		c.Printf("Overwriting existing key.\n")
 	}
 
-	_, err = room.GenerateMasterKey(ctx, c.kms)
+	_, err = room.GenerateMessageKey(ctx, c.kms)
 	if err != nil {
 		return err
 	}

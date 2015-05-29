@@ -564,7 +564,7 @@ func testAuthentication(s *serverUnderTest) {
 	}
 	So(err, ShouldBeNil)
 
-	rkey, err := room.GenerateMasterKey(ctx, kms)
+	rkey, err := room.GenerateMessageKey(ctx, kms)
 	So(err, ShouldBeNil)
 	mkey := rkey.ManagedKey()
 	So(kms.DecryptKey(&mkey), ShouldBeNil)

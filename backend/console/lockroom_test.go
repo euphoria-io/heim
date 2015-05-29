@@ -41,14 +41,14 @@ func TestSetRoomPasscode(t *testing.T) {
 
 		room, err := ctrl.backend.CreateRoom(ctx, kms, "test")
 		So(err, ShouldBeNil)
-		rkey, err := room.GenerateMasterKey(ctx, kms)
+		rkey, err := room.GenerateMessageKey(ctx, kms)
 		So(err, ShouldBeNil)
 
 		term = &testTerm{password: "hunter2"}
 		runCommand(ctx, ctrl, "set-room-passcode", term, []string{"test"})
 		So(term.String(), ShouldStartWith, "Passcode added to test: ")
 
-		rkey, err = room.MasterKey(ctx)
+		rkey, err = room.MessageKey(ctx)
 		So(err, ShouldBeNil)
 
 		mkey := rkey.ManagedKey()
@@ -100,7 +100,7 @@ func TestLockRoom(t *testing.T) {
 
 		room, err := ctrl.backend.CreateRoom(ctx, kms, "test")
 		So(err, ShouldBeNil)
-		orig, err := room.GenerateMasterKey(ctx, kms)
+		orig, err := room.GenerateMessageKey(ctx, kms)
 		So(err, ShouldBeNil)
 
 		Convey("Requires --force", func() {
@@ -116,7 +116,7 @@ func TestLockRoom(t *testing.T) {
 			runCommand(ctx, ctrl, "lock-room", term, []string{"--force", "test"})
 			So(term.String(), ShouldStartWith,
 				"Overwriting existing key.\r\nRoom test locked with new key")
-			rk, err := room.MasterKey(ctx)
+			rk, err := room.MessageKey(ctx)
 			So(err, ShouldBeNil)
 			So(rk, ShouldNotResemble, orig)
 		})

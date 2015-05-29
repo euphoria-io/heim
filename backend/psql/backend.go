@@ -32,7 +32,7 @@ var schema = []struct {
 	PrimaryKey []string
 }{
 	// Keys and capabilities.
-	{"master_key", MasterKey{}, []string{"ID"}},
+	{"master_key", MessageKey{}, []string{"ID"}},
 	{"capability", Capability{}, []string{"ID"}},
 
 	// Rooms.

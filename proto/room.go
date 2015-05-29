@@ -74,13 +74,14 @@ type Room interface {
 	// Version returns the version of the server hosting this Room.
 	Version() string
 
-	// GenerateMasterKey generates and stores a new key and nonce
-	// for the room. This invalidates all grants made with the
-	// previous key.
-	GenerateMasterKey(ctx scope.Context, kms security.KMS) (RoomKey, error)
+	// GenerateMessageKey generates and stores a new key and nonce
+	// for encrypting messages in the room. This invalidates all grants made with
+	// the previous key.
+	GenerateMessageKey(ctx scope.Context, kms security.KMS) (RoomMessageKey, error)
 
-	// MasterKey returns the room's current key, or nil if the room is unlocked.
-	MasterKey(ctx scope.Context) (RoomKey, error)
+	// MessageKey returns the room's current message key, or nil if the room is
+	// unencrypted.
+	MessageKey(ctx scope.Context) (RoomMessageKey, error)
 
 	// SaveCapability saves the given capability.
 	SaveCapability(ctx scope.Context, capability security.Capability) error
@@ -96,7 +97,7 @@ type Room interface {
 	Unlock(managerKey *security.ManagedKey) (*security.ManagedKeyPair, error)
 }
 
-type RoomKey interface {
+type RoomMessageKey interface {
 	// ID returns a unique identifier for the key.
 	KeyID() string
 

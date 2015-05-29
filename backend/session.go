@@ -189,7 +189,7 @@ func (s *session) serve() error {
 	}
 
 	// TODO: check room auth
-	key, err := s.room.MasterKey(s.ctx)
+	key, err := s.room.MessageKey(s.ctx)
 	if err != nil {
 		return err
 	}

@@ -34,7 +34,7 @@ func Authenticate(ctx scope.Context, room Room, cmd *AuthCommand) (*Authenticati
 func authenticateWithPasscode(ctx scope.Context, room Room, passcode string) (
 	*Authentication, error) {
 
-	mkey, err := room.MasterKey(ctx)
+	mkey, err := room.MessageKey(ctx)
 	if err != nil {
 		return nil, err
 	}

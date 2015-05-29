@@ -22,13 +22,13 @@ type RoomCapability struct {
 }
 
 type RoomMasterKeyBinding struct {
-	MasterKey
+	MessageKey
 	RoomMasterKey
 }
 
 func (rmkb *RoomMasterKeyBinding) KeyID() string        { return rmkb.RoomMasterKey.KeyID }
 func (rmkb *RoomMasterKeyBinding) Timestamp() time.Time { return rmkb.RoomMasterKey.Activated }
-func (rmkb *RoomMasterKeyBinding) Nonce() []byte        { return rmkb.MasterKey.Nonce }
+func (rmkb *RoomMasterKeyBinding) Nonce() []byte        { return rmkb.MessageKey.Nonce }
 
 func (rmkb *RoomMasterKeyBinding) ManagedKey() security.ManagedKey {
 	dup := func(v []byte) []byte {
@@ -39,8 +39,8 @@ func (rmkb *RoomMasterKeyBinding) ManagedKey() security.ManagedKey {
 
 	mkey := security.ManagedKey{
 		KeyType:      security.AES128,
-		IV:           dup(rmkb.MasterKey.IV),
-		Ciphertext:   dup(rmkb.MasterKey.EncryptedKey),
+		IV:           dup(rmkb.MessageKey.IV),
+		Ciphertext:   dup(rmkb.MessageKey.EncryptedKey),
 		ContextKey:   "room",
 		ContextValue: rmkb.RoomMasterKey.Room,
 	}
