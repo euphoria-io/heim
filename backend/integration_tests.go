@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http/httptest"
+	"sort"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -247,6 +248,7 @@ func IntegrationTest(t *testing.T, factory func() proto.Backend) {
 
 	// Internal API tests
 	runTest("Accounts", testAccounts)
+	runTest("Managers", testManagers)
 
 	// Websocket tests
 	runTest("Lurker", testLurker)
@@ -720,5 +722,103 @@ func testAccounts(s *serverUnderTest) {
 		So(err, ShouldBeNil)
 		So(dup, ShouldNotBeNil)
 		So(dup.KeyPair().PublicKey, ShouldResemble, kp.PublicKey)
+	})
+}
+
+func testManagers(s *serverUnderTest) {
+	b := s.backend
+	ctx := scope.New()
+	kms := s.app.kms
+
+	// Create test accounts.
+	nonce := fmt.Sprintf("%s", time.Now())
+
+	alice, err := b.RegisterAccount(ctx, kms, "email", "alice"+nonce, "alicepass")
+	So(err, ShouldBeNil)
+	aliceKey := alice.KeyFromPassword("alicepass")
+
+	bob, err := b.RegisterAccount(ctx, kms, "email", "bob"+nonce, "bobpass")
+	So(err, ShouldBeNil)
+	bobKey := bob.KeyFromPassword("bobpass")
+
+	carol, err := b.RegisterAccount(ctx, kms, "email", "carol"+nonce, "carolpass")
+	So(err, ShouldBeNil)
+	carolKey := carol.KeyFromPassword("carolpass")
+
+	names := map[string]string{
+		alice.ID().String(): "alice",
+		bob.ID().String():   "bob",
+		carol.ID().String(): "carol",
+	}
+
+	// Create room owned by alice and bob.
+	room, err := b.CreateRoom(ctx, kms, "management"+nonce, alice, bob)
+	So(err, ShouldBeNil)
+
+	shouldComprise := func(actual interface{}, expected ...interface{}) string {
+		expectedNames := make([]string, len(expected))
+		for i, v := range expected {
+			expectedNames[i] = v.(string)
+		}
+		managers := actual.([]proto.Account)
+		actualNames := make([]string, len(managers))
+		for i, manager := range managers {
+			actualNames[i] = names[manager.ID().String()]
+		}
+		sort.Strings(actualNames)
+		sort.Strings(expectedNames)
+		return ShouldResemble(actualNames, expectedNames)
+	}
+
+	Convey("GetManagers should return initial managers from room creation", func() {
+		managers, err := room.Managers(ctx)
+		So(err, ShouldBeNil)
+		So(managers, shouldComprise, "alice", "bob")
+	})
+
+	Convey("Non-manager should be unable to add or remove manager", func() {
+		So(room.AddManager(ctx, kms, carol, carolKey, carol), ShouldEqual, proto.ErrAccessDenied)
+		So(room.RemoveManager(ctx, carol, carolKey, carol), ShouldEqual, proto.ErrAccessDenied)
+		So(room.RemoveManager(ctx, carol, carolKey, alice), ShouldEqual, proto.ErrAccessDenied)
+	})
+
+	Convey("Manager should be able to add new manager", func() {
+		fmt.Printf("ADD NEW MANAGER --v\n")
+		So(room.AddManager(ctx, kms, alice, aliceKey, carol), ShouldBeNil)
+		fmt.Printf("^--- ADD NEW MANAGER\n")
+		managers, err := room.Managers(ctx)
+		So(err, ShouldBeNil)
+		So(managers, shouldComprise, "alice", "bob", "carol")
+	})
+
+	Convey("New manager should be able to remove other manager", func() {
+		So(room.AddManager(ctx, kms, bob, bobKey, carol), ShouldBeNil)
+		So(room.RemoveManager(ctx, carol, carolKey, bob), ShouldBeNil)
+		managers, err := room.Managers(ctx)
+		So(err, ShouldBeNil)
+		So(managers, shouldComprise, "alice", "carol")
+	})
+
+	Convey("Manager should be able to remove self", func() {
+		So(room.RemoveManager(ctx, alice, aliceKey, alice), ShouldBeNil)
+		managers, err := room.Managers(ctx)
+		So(err, ShouldBeNil)
+		So(managers, shouldComprise, "bob")
+
+		So(room.AddManager(ctx, kms, alice, aliceKey, alice), ShouldEqual, proto.ErrAccessDenied)
+		So(room.RemoveManager(ctx, alice, aliceKey, bob), ShouldEqual, proto.ErrAccessDenied)
+	})
+
+	Convey("Redundant manager addition should be a no-op", func() {
+		So(room.AddManager(ctx, kms, alice, aliceKey, bob), ShouldBeNil)
+		managers, err := room.Managers(ctx)
+		So(err, ShouldBeNil)
+		So(managers, shouldComprise, "alice", "bob")
+		So(room.AddManager(ctx, kms, carol, carolKey, bob), ShouldEqual, proto.ErrAccessDenied)
+	})
+
+	Convey("Redundant manager removal should be an error", func() {
+		So(room.RemoveManager(ctx, alice, aliceKey, bob), ShouldBeNil)
+		So(room.RemoveManager(ctx, alice, aliceKey, bob), ShouldEqual, proto.ErrManagerNotFound)
 	})
 }

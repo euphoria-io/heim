@@ -31,14 +31,15 @@ var schema = []struct {
 	Table      interface{}
 	PrimaryKey []string
 }{
+	// Rooms.
+	{"room", Room{}, []string{"Name"}},
+	{"room_manager", RoomManager{}, []string{"Room", "AccountID"}},
+	{"room_master_key", RoomMessageKey{}, []string{"Room", "KeyID"}},
+	{"room_capability", RoomCapability{}, []string{"Room", "CapabilityID"}},
+
 	// Keys and capabilities.
 	{"master_key", MessageKey{}, []string{"ID"}},
 	{"capability", Capability{}, []string{"ID"}},
-
-	// Rooms.
-	{"room", Room{}, []string{"Name"}},
-	{"room_master_key", RoomMessageKey{}, []string{"Room", "KeyID"}},
-	{"room_capability", RoomCapability{}, []string{"Room", "CapabilityID"}},
 
 	// Presence.
 	{"presence", Presence{}, []string{"Room", "Topic", "ServerID", "ServerEra", "SessionID"}},
@@ -274,12 +275,46 @@ func (b *Backend) GetRoom(ctx scope.Context, name string) (proto.Room, error) {
 	return obj.(*Room).Bind(b), nil
 }
 
-func (b *Backend) CreateRoom(ctx scope.Context, kms security.KMS, name string) (proto.Room, error) {
+func (b *Backend) CreateRoom(
+	ctx scope.Context, kms security.KMS, name string, managers ...proto.Account) (proto.Room, error) {
+
 	sec, err := proto.NewRoomSecurity(kms, name)
 	if err != nil {
 		return nil, err
 	}
 
+	// Generate manager capabilities.
+	managerKey := sec.KeyEncryptingKey.Clone()
+	if err := kms.DecryptKey(&managerKey); err != nil {
+		return nil, fmt.Errorf("manager key decrypt error: %s", err)
+	}
+	roomKeyPair, err := sec.Unlock(&managerKey)
+	if err != nil {
+		return nil, fmt.Errorf("room security unlock error: %s", err)
+	}
+	caps := make([]*security.PublicKeyCapability, len(managers))
+	for i, manager := range managers {
+		kp := manager.KeyPair()
+		c, err := security.GrantPublicKeyCapability(kms, roomKeyPair, &kp, nil, managerKey.Plaintext)
+		if err != nil {
+			return nil, fmt.Errorf("manager grant error: %s", err)
+		}
+		caps[i] = c
+	}
+
+	// Insert data.
+	t, err := b.DbMap.Begin()
+	if err != nil {
+		return nil, err
+	}
+
+	rollback := func() {
+		if err := t.Rollback(); err != nil {
+			backend.Logger(ctx).Printf("rollback error: %s", err)
+		}
+	}
+
+	backend.Logger(ctx).Printf("creating room: %s", name)
 	room := &Room{
 		Name: name,
 		IV:   sec.KeyPair.IV,
@@ -288,9 +323,38 @@ func (b *Backend) CreateRoom(ctx scope.Context, kms security.KMS, name string) (
 		EncryptedPrivateKey:    sec.KeyPair.EncryptedPrivateKey,
 		PublicKey:              sec.KeyPair.PublicKey,
 	}
-	backend.Logger(ctx).Printf("creating room: %s", name)
-	if err := b.DbMap.Insert(room); err != nil {
+	if err := t.Insert(room); err != nil {
 		backend.Logger(ctx).Printf("room creation error on %s: %s", name, err)
+		rollback()
+		return nil, err
+	}
+
+	for i, capability := range caps {
+		c := &Capability{
+			ID:                   capability.CapabilityID(),
+			EncryptedPrivateData: capability.EncryptedPayload(),
+			PublicData:           capability.PublicPayload(),
+		}
+		rc := &RoomCapability{
+			Room:         name,
+			CapabilityID: capability.CapabilityID(),
+			Granted:      time.Now(),
+		}
+		rm := &RoomManager{
+			Room:         name,
+			AccountID:    managers[i].ID().String(),
+			CapabilityID: capability.CapabilityID(),
+		}
+		if err := t.Insert(c, rc, rm); err != nil {
+			backend.Logger(ctx).Printf(
+				"room creation error on %s (manager %s): %s", name, managers[i].ID().String(), err)
+			rollback()
+			return nil, err
+		}
+	}
+
+	if err := t.Commit(); err != nil {
+		backend.Logger(ctx).Printf("room creation error on %s (commit): %s", name, err)
 		return nil, err
 	}
 

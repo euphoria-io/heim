@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"encoding/json"
+
 	"euphoria.io/heim/backend"
 	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/security"
@@ -446,4 +448,208 @@ func (rb *RoomBinding) UnbanIP(ctx scope.Context, ip string) error {
 	_, err := rb.DbMap.Exec(
 		"DELETE FROM banned_ip WHERE ip = $1 AND room = $2", ip, rb.Name)
 	return err
+}
+
+func (rb *RoomBinding) Managers(ctx scope.Context) ([]proto.Account, error) {
+	type RoomManagerAccount struct {
+		Account
+	}
+
+	rows, err := rb.Select(
+		Account{},
+		"SELECT a.id, a.nonce, a.mac, a.encrypted_system_key, a.encrypted_user_key,"+
+			" a.encrypted_private_key, a.public_key"+
+			" FROM account a, room_manager m"+
+			" WHERE m.room = $1 AND m.account_id = a.id",
+		rb.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	accounts := make([]proto.Account, 0, len(rows))
+	for _, row := range rows {
+		account, ok := row.(*Account)
+		if !ok {
+			return nil, fmt.Errorf("expected row of type *Account, got %T", row)
+		}
+		accounts = append(accounts, account.Bind(rb.Backend))
+	}
+	return accounts, nil
+}
+
+func (rb *RoomBinding) getManagerCapability(account proto.Account) (
+	*security.PublicKeyCapability, error) {
+
+	var c Capability
+	err := rb.SelectOne(
+		&c,
+		"SELECT c.id, c.encrypted_private_data, c.public_data"+
+			" FROM capability c, room_capability rc, room_manager rm"+
+			" WHERE rm.room = $1 AND rm.account_id = $2 AND rm.capability_id = rc.capability_id"+
+			" AND rc.revoked < rc.granted AND c.id = rc.capability_id",
+		rb.Name, account.ID().String())
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, proto.ErrAccessDenied
+		}
+	}
+	return &security.PublicKeyCapability{&c}, nil
+}
+
+func (rb *RoomBinding) AddManager(
+	ctx scope.Context, kms security.KMS, actor proto.Account, actorKey *security.ManagedKey,
+	newManager proto.Account) error {
+
+	// Get the actor's manager capability.
+	pkCap, err := rb.getManagerCapability(actor)
+	if err != nil {
+		return err
+	}
+
+	// Extract the manager key from the actor's capability.
+	rmkb := &RoomManagerKeyBinding{rb.Room}
+	subjectKeyPair := rmkb.KeyPair()
+	actorKeyPair, err := actor.Unlock(actorKey)
+	if err != nil {
+		return err
+	}
+	secretJSON, err := pkCap.DecryptPayload(&subjectKeyPair, actorKeyPair)
+	if err != nil {
+		return err
+	}
+	managerKey := &security.ManagedKey{
+		KeyType: security.AES128,
+	}
+	if err := json.Unmarshal(secretJSON, &managerKey.Plaintext); err != nil {
+		return err
+	}
+
+	// Verify manager key is correct.
+	unlockedSubjectKeyPair, err := rmkb.Unlock(managerKey)
+	if err != nil {
+		return fmt.Errorf("room security unlock error: %s", err)
+	}
+
+	// Grant capability for new manager.
+	newManagerKeyPair := newManager.KeyPair()
+	capability, err := security.GrantPublicKeyCapability(
+		kms, unlockedSubjectKeyPair, &newManagerKeyPair, nil, managerKey.Plaintext)
+	if err != nil {
+		return err
+	}
+
+	// Save the results.
+	c := &Capability{
+		ID:                   capability.CapabilityID(),
+		EncryptedPrivateData: capability.EncryptedPayload(),
+		PublicData:           capability.PublicPayload(),
+	}
+	rc := &RoomCapability{
+		Room:         rb.Name,
+		CapabilityID: capability.CapabilityID(),
+		Granted:      time.Now(),
+	}
+	rm := &RoomManager{
+		Room:         rb.Name,
+		AccountID:    newManager.ID().String(),
+		CapabilityID: capability.CapabilityID(),
+	}
+	t, err := rb.DbMap.Begin()
+	if err != nil {
+		return err
+	}
+	if err := t.Insert(c, rc, rm); err != nil {
+		if rerr := t.Rollback(); rerr != nil {
+			backend.Logger(ctx).Printf("rollback error: %s", rerr)
+		}
+		if strings.HasPrefix(err.Error(), "pq: duplicate key value") {
+			return nil
+		}
+		return err
+	}
+	if err := t.Commit(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (rb *RoomBinding) RemoveManager(
+	ctx scope.Context, actor proto.Account, actorKey *security.ManagedKey,
+	formerManager proto.Account) error {
+
+	// Get the actor's manager capability.
+	pkCap, err := rb.getManagerCapability(actor)
+	if err != nil {
+		return err
+	}
+
+	// Extract the manager key from the actor's capability.
+	rmkb := &RoomManagerKeyBinding{rb.Room}
+	subjectKeyPair := rmkb.KeyPair()
+	actorKeyPair, err := actor.Unlock(actorKey)
+	if err != nil {
+		return err
+	}
+	secretJSON, err := pkCap.DecryptPayload(&subjectKeyPair, actorKeyPair)
+	if err != nil {
+		return fmt.Errorf("public key capability error: %s", err)
+	}
+	managerKey := &security.ManagedKey{
+		KeyType: security.AES128,
+	}
+	if err := json.Unmarshal(secretJSON, &managerKey.Plaintext); err != nil {
+		return err
+	}
+
+	// Verify manager key is correct.
+	if _, err = rmkb.Unlock(managerKey); err != nil {
+		return fmt.Errorf("room security unlock error: %s", err)
+	}
+
+	// Look up and remove the target capability.
+	t, err := rb.DbMap.Begin()
+	if err != nil {
+		return err
+	}
+
+	rollback := func() {
+		if err := t.Rollback(); err != nil {
+			backend.Logger(ctx).Printf("rollback error: %s", err)
+		}
+	}
+
+	var rm RoomManager
+	err = t.SelectOne(
+		&rm,
+		"SELECT room, account_id, capability_id FROM room_manager WHERE room = $1 AND account_id = $2",
+		rb.Name, formerManager.ID().String())
+	if err != nil {
+		rollback()
+		if err == sql.ErrNoRows {
+			return proto.ErrManagerNotFound
+		}
+		return err
+	}
+
+	result, err := t.Exec("DELETE FROM capability WHERE id = $1", rm.CapabilityID)
+	if err != nil {
+		rollback()
+		return err
+	}
+
+	n, err := result.RowsAffected()
+	if err != nil {
+		rollback()
+		return fmt.Errorf("unable to determine number of affected rows: %s", err)
+	}
+	if n < 1 {
+		rollback()
+		return fmt.Errorf("no rows were affected")
+	}
+
+	if err := t.Commit(); err != nil {
+		return err
+	}
+
+	return nil
 }

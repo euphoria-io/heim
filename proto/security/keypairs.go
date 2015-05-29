@@ -205,14 +205,14 @@ func (k *ManagedKeyPair) Decrypt(keyKey *ManagedKey) error {
 	}
 
 	buf := k.EncryptedPrivateKey
-	if k.PrivateKeySize()%keyKey.BlockSize() != 0 {
-		buf = keyKey.Unpad(buf)
-	}
 
 	if err := keyKey.BlockCrypt(k.IV, keyKey.Plaintext, buf, false); err != nil {
 		return err
 	}
 
+	if k.PrivateKeySize()%keyKey.BlockSize() != 0 {
+		buf = keyKey.Unpad(buf)
+	}
 	k.PrivateKey = buf
 	k.EncryptedPrivateKey = nil
 	return nil

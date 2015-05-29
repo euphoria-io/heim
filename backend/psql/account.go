@@ -67,17 +67,14 @@ func (ab *AccountBinding) Unlock(clientKey *security.ManagedKey) (*security.Mana
 		MAC:   ab.Account.MAC,
 		SystemKey: security.ManagedKey{
 			KeyType:      security.AES256,
-			IV:           iv,
 			Ciphertext:   ab.Account.EncryptedSystemKey,
 			ContextKey:   "nonce",
 			ContextValue: base64.URLEncoding.EncodeToString(ab.Account.Nonce),
 		},
 		UserKey: security.ManagedKey{
-			KeyType:      security.AES256,
-			IV:           iv,
-			Ciphertext:   ab.Account.EncryptedUserKey,
-			ContextKey:   "nonce",
-			ContextValue: base64.URLEncoding.EncodeToString(ab.Account.Nonce),
+			KeyType:    security.AES256,
+			IV:         iv,
+			Ciphertext: ab.Account.EncryptedUserKey,
 		},
 		KeyPair: security.ManagedKeyPair{
 			KeyPairType:         security.Curve25519,

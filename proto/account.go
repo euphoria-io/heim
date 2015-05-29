@@ -78,6 +78,7 @@ func NewAccountSecurity(kms security.KMS, password string) (*AccountSecurity, er
 	// Clone key-encrypting-key and encrypt with client key.
 	clientKey := security.KeyFromPasscode([]byte(password), nonce, kType)
 	userKey := kek.Clone()
+	userKey.IV = iv
 	if err := userKey.Encrypt(clientKey); err != nil {
 		return nil, fmt.Errorf("key encryption error: %s", err)
 	}

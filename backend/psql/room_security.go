@@ -83,3 +83,9 @@ func (rmkb *RoomManagerKeyBinding) Unlock(
 	}
 	return sec.Unlock(managerKey)
 }
+
+type RoomManager struct {
+	Room         string
+	AccountID    string `db:"account_id"`
+	CapabilityID string `db:"capability_id"`
+}

@@ -37,8 +37,8 @@ func (b *TestBackend) GetRoom(ctx scope.Context, name string) (proto.Room, error
 	return room, nil
 }
 
-func (b *TestBackend) CreateRoom(ctx scope.Context, kms security.KMS, name string) (
-	proto.Room, error) {
+func (b *TestBackend) CreateRoom(
+	ctx scope.Context, kms security.KMS, name string, managers ...proto.Account) (proto.Room, error) {
 
 	b.Lock()
 	defer b.Unlock()
@@ -47,7 +47,7 @@ func (b *TestBackend) CreateRoom(ctx scope.Context, kms security.KMS, name strin
 		b.rooms = map[string]proto.Room{}
 	}
 
-	room, err := NewRoom(kms, name, b.version)
+	room, err := NewRoom(kms, name, b.version, managers...)
 	if err != nil {
 		return nil, err
 	}

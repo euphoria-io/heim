@@ -92,6 +92,22 @@ type Room interface {
 	// GetCapability retrieves the capability under the given ID, or
 	// returns nil if it doesn't exist.
 	GetCapability(ctx scope.Context, id string) (security.Capability, error)
+
+	// Managers returns the list of accounts managing the room.
+	Managers(ctx scope.Context) ([]Account, error)
+
+	// AddManager adds an account as a manager of the room. An unencrypted
+	// client key and corresponding account are needed from the user taking
+	// this action.
+	AddManager(
+		ctx scope.Context, kms security.KMS,
+		actor Account, actorKey *security.ManagedKey,
+		newManager Account) error
+
+	// RemoveManager removes an account as manager. An unencrypted client key
+	// and corresponding account are needed from the user taking this action.
+	RemoveManager(
+		ctx scope.Context, actor Account, actorKey *security.ManagedKey, formerManager Account) error
 }
 
 type RoomMessageKey interface {
@@ -197,13 +213,8 @@ func (sec *RoomSecurity) Unlock(managerKey *security.ManagedKey) (*security.Mana
 		return nil, ErrAccessDenied
 	}
 
-	kek := sec.KeyEncryptingKey.Clone()
-	if err := kek.Decrypt(managerKey); err != nil {
-		return nil, err
-	}
-
 	kp := sec.KeyPair.Clone()
-	if err := kp.Decrypt(&kek); err != nil {
+	if err := kp.Decrypt(managerKey); err != nil {
 		return nil, err
 	}
 

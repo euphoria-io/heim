@@ -24,18 +24,8 @@ type Capability interface {
 	EncryptedPayload() []byte
 }
 
-type SharedSecretCapability interface {
-	Capability
-	DecryptPayload(*ManagedKey) ([]byte, error)
-}
-
-type PublicKeyCapability interface {
-	Capability
-	DecryptPayload(subjectKey, holderKey *ManagedKeyPair) ([]byte, error)
-}
-
 func GrantSharedSecretCapability(key *ManagedKey, nonce []byte, publicData, privateData interface{}) (
-	SharedSecretCapability, error) {
+	*SharedSecretCapability, error) {
 
 	if key.Encrypted() {
 		return nil, ErrKeyMustBeDecrypted
@@ -64,8 +54,8 @@ func GrantSharedSecretCapability(key *ManagedKey, nonce []byte, publicData, priv
 		return nil, fmt.Errorf("payload encryption error: %s", err)
 	}
 
-	grant := &sharedSecretCapability{
-		capability: capability{
+	grant := &SharedSecretCapability{
+		Capability: &capability{
 			IDString:         base64.URLEncoding.EncodeToString(id),
 			Public:           publicPayload,
 			EncryptedPrivate: encryptedPrivatePayload,
@@ -74,9 +64,9 @@ func GrantSharedSecretCapability(key *ManagedKey, nonce []byte, publicData, priv
 	return grant, nil
 }
 
-func OfferPublicKeyCapability(
-	subjectKey, holderKey *ManagedKeyPair, nonce []byte, publicData, privateData interface{}) (
-	PublicKeyCapability, error) {
+func GrantPublicKeyCapability(
+	kms KMS, subjectKey, holderKey *ManagedKeyPair, publicData, privateData interface{}) (
+	*PublicKeyCapability, error) {
 
 	if subjectKey.KeyPairType != holderKey.KeyPairType {
 		err := fmt.Errorf("key of type %s cannot grant to key of type %s",
@@ -88,74 +78,44 @@ func OfferPublicKeyCapability(
 		return nil, ErrKeyMustBeDecrypted
 	}
 
-	fullNonce := make([]byte, subjectKey.NonceSize())
-	copy(fullNonce, nonce)
-
-	seal := func(message []byte) ([]byte, error) {
-		return subjectKey.Seal(message, fullNonce, holderKey.PublicKey, subjectKey.PrivateKey)
-	}
-
-	id, err := seal(nonce)
+	// Generate nonce for secure transmission of private data to holder.
+	// It's imperative that this nonce is unique for this subject-holder pair.
+	nonce, err := kms.GenerateNonce(subjectKey.NonceSize())
 	if err != nil {
 		return nil, err
 	}
 
+	// Generate a unique identifier from the subject's public key and the nonce.
+	idBytes := make([]byte, len(subjectKey.PublicKey)+len(nonce))
+	copy(idBytes, subjectKey.PublicKey)
+	copy(idBytes[len(subjectKey.PublicKey):], nonce)
+
+	// Encode the payloads as JSON.
 	publicPayload, err := json.Marshal(publicData)
 	if err != nil {
 		return nil, err
 	}
-
 	privatePayload, err := json.Marshal(privateData)
 	if err != nil {
 		return nil, err
 	}
 
-	encryptedPrivatePayload, err := seal(privatePayload)
+	// Encrypt the private payload JSON.
+	encryptedPrivatePayload, err := subjectKey.Seal(
+		privatePayload, nonce, holderKey.PublicKey, subjectKey.PrivateKey)
 	if err != nil {
 		return nil, err
 	}
 
-	offer := &publicKeyCapability{
-		capability: capability{
-			IDString:         base64.URLEncoding.EncodeToString(id),
+	// Construct the capability and return.
+	offer := &PublicKeyCapability{
+		Capability: &capability{
+			IDString:         base64.URLEncoding.EncodeToString(idBytes),
 			Public:           publicPayload,
 			EncryptedPrivate: encryptedPrivatePayload,
 		},
 	}
 	return offer, nil
-}
-
-func AcceptPublicKeyCapability(
-	subjectKey, holderKey *ManagedKeyPair, nonce []byte, offer Capability) (
-	PublicKeyCapability, error) {
-
-	if holderKey.Encrypted() {
-		return nil, ErrKeyMustBeDecrypted
-	}
-
-	// Verify that holder can decrypt the offer.
-	fullNonce := make([]byte, subjectKey.NonceSize())
-	copy(fullNonce, nonce)
-	_, err := holderKey.Open(
-		offer.EncryptedPayload(), fullNonce, subjectKey.PublicKey, holderKey.PrivateKey)
-	if err != nil {
-		return nil, err
-	}
-
-	// Return clone with new id.
-	id, err := subjectKey.Seal(nonce, fullNonce, subjectKey.PublicKey, holderKey.PrivateKey)
-	if err != nil {
-		return nil, err
-	}
-
-	grant := &publicKeyCapability{
-		capability: capability{
-			IDString:         base64.URLEncoding.EncodeToString(id),
-			Public:           offer.PublicPayload(),
-			EncryptedPrivate: offer.EncryptedPayload(),
-		},
-	}
-	return grant, nil
 }
 
 type capability struct {
@@ -173,22 +133,22 @@ func (c *capability) EncryptedPayload() []byte {
 	return dup
 }
 
-type sharedSecretCapability struct {
-	capability
+type SharedSecretCapability struct {
+	Capability
 }
 
-func (c *sharedSecretCapability) DecryptPayload(key *ManagedKey) ([]byte, error) {
+func (c *SharedSecretCapability) DecryptPayload(key *ManagedKey) ([]byte, error) {
 	if key.Encrypted() {
 		return nil, ErrKeyMustBeDecrypted
 	}
 
-	nonce, err := base64.URLEncoding.DecodeString(c.IDString)
+	nonce, err := base64.URLEncoding.DecodeString(c.CapabilityID())
 	if err != nil {
 		return nil, err
 	}
 
-	payload := make([]byte, len(c.EncryptedPrivate))
-	copy(payload, c.EncryptedPrivate)
+	payload := make([]byte, len(c.EncryptedPayload()))
+	copy(payload, c.EncryptedPayload())
 	if err := key.BlockCrypt(nonce, key.Plaintext, payload, false); err != nil {
 		return nil, err
 	}
@@ -196,25 +156,28 @@ func (c *sharedSecretCapability) DecryptPayload(key *ManagedKey) ([]byte, error)
 	return key.Unpad(payload), nil
 }
 
-type publicKeyCapability struct {
-	capability
+type PublicKeyCapability struct {
+	Capability
 }
 
-func (c *publicKeyCapability) DecryptPayload(subjectKey, holderKey *ManagedKeyPair) ([]byte, error) {
+func (c *PublicKeyCapability) DecryptPayload(subjectKey, holderKey *ManagedKeyPair) ([]byte, error) {
 	if holderKey.Encrypted() {
 		return nil, ErrKeyMustBeDecrypted
 	}
 
-	nonce, err := base64.URLEncoding.DecodeString(c.IDString)
+	idBytes, err := base64.URLEncoding.DecodeString(c.CapabilityID())
 	if err != nil {
 		return nil, err
 	}
 
-	fullNonce := make([]byte, subjectKey.NonceSize())
-	copy(fullNonce, nonce)
+	if len(idBytes) != len(subjectKey.PublicKey)+subjectKey.NonceSize() {
+		return nil, fmt.Errorf("invalid capability ID")
+	}
+
+	nonce := idBytes[len(subjectKey.PublicKey):]
 
 	payload, err := holderKey.Open(
-		c.EncryptedPrivate, fullNonce, subjectKey.PublicKey, holderKey.PrivateKey)
+		c.EncryptedPayload(), nonce, subjectKey.PublicKey, holderKey.PrivateKey)
 	if err != nil {
 		return nil, err
 	}

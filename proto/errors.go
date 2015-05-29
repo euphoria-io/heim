@@ -6,6 +6,7 @@ var (
 	ErrAccessDenied          = fmt.Errorf("access denied")
 	ErrAccountIdentityInUse  = fmt.Errorf("account identity already in use")
 	ErrAccountNotFound       = fmt.Errorf("account not found")
+	ErrManagerNotFound       = fmt.Errorf("manager not found")
 	ErrPersonalIdentityInUse = fmt.Errorf("personal identity already in use")
 	ErrRoomNotFound          = fmt.Errorf("room not found")
 	ErrInvalidNick           = fmt.Errorf("invalid nick")
