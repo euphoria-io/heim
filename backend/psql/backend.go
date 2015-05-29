@@ -37,7 +37,7 @@ var schema = []struct {
 
 	// Rooms.
 	{"room", Room{}, []string{"Name"}},
-	{"room_master_key", RoomMasterKey{}, []string{"Room", "KeyID"}},
+	{"room_master_key", RoomMessageKey{}, []string{"Room", "KeyID"}},
 	{"room_capability", RoomCapability{}, []string{"Room", "CapabilityID"}},
 
 	// Presence.

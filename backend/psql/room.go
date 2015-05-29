@@ -253,7 +253,8 @@ func (rb *RoomBinding) RenameUser(ctx scope.Context, session proto.Session, form
 	return event, rb.Backend.broadcast(ctx, rb.Room, proto.NickEventType, event, session)
 }
 
-func (rb *RoomBinding) GenerateMessageKey(ctx scope.Context, kms security.KMS) (proto.RoomMessageKey, error) {
+func (rb *RoomBinding) GenerateMessageKey(ctx scope.Context, kms security.KMS) (
+	proto.RoomMessageKey, error) {
 
 	// Generate unique ID for storing new key in DB.
 	keyID, err := snowflake.New()
@@ -278,14 +279,14 @@ func (rb *RoomBinding) GenerateMessageKey(ctx scope.Context, kms security.KMS) (
 		return nil, err
 	}
 
-	rmkb := &RoomMasterKeyBinding{
+	rmkb := &RoomMessageKeyBinding{
 		MessageKey: MessageKey{
 			ID:           keyID.String(),
 			EncryptedKey: mkey.Ciphertext,
 			IV:           mkey.IV,
 			Nonce:        nonce,
 		},
-		RoomMasterKey: RoomMasterKey{
+		RoomMessageKey: RoomMessageKey{
 			Room:      rb.Name,
 			KeyID:     keyID.String(),
 			Activated: time.Now(),
@@ -298,7 +299,7 @@ func (rb *RoomBinding) GenerateMessageKey(ctx scope.Context, kms security.KMS) (
 		return nil, err
 	}
 
-	if err := transaction.Insert(&rmkb.RoomMasterKey); err != nil {
+	if err := transaction.Insert(&rmkb.RoomMessageKey); err != nil {
 		if rerr := transaction.Rollback(); rerr != nil {
 			backend.Logger(ctx).Printf("rollback error: %s", rerr)
 		}
@@ -313,7 +314,7 @@ func (rb *RoomBinding) GenerateMessageKey(ctx scope.Context, kms security.KMS) (
 }
 
 func (rb *RoomBinding) MessageKey(ctx scope.Context) (proto.RoomMessageKey, error) {
-	rmkb := &RoomMasterKeyBinding{}
+	rmkb := &RoomMessageKeyBinding{}
 	err := rb.DbMap.SelectOne(
 		rmkb,
 		"SELECT mk.id, mk.encrypted_key, mk.iv, mk.nonce,"+
@@ -329,6 +330,10 @@ func (rb *RoomBinding) MessageKey(ctx scope.Context) (proto.RoomMessageKey, erro
 		return nil, err
 	}
 	return rmkb, nil
+}
+
+func (rb *RoomBinding) ManagerKey(ctx scope.Context) (proto.RoomManagerKey, error) {
+	return &RoomManagerKeyBinding{rb.Room}, nil
 }
 
 func (rb *RoomBinding) SaveCapability(ctx scope.Context, capability security.Capability) error {
@@ -441,27 +446,4 @@ func (rb *RoomBinding) UnbanIP(ctx scope.Context, ip string) error {
 	_, err := rb.DbMap.Exec(
 		"DELETE FROM banned_ip WHERE ip = $1 AND room = $2", ip, rb.Name)
 	return err
-}
-
-func (rb *RoomBinding) KeyPair() security.ManagedKeyPair {
-	return security.ManagedKeyPair{
-		KeyPairType:         security.Curve25519,
-		IV:                  rb.Room.IV,
-		EncryptedPrivateKey: rb.Room.EncryptedPrivateKey,
-		PublicKey:           rb.Room.PublicKey,
-	}
-}
-
-func (rb *RoomBinding) Unlock(managerKey *security.ManagedKey) (*security.ManagedKeyPair, error) {
-	sec := &proto.RoomSecurity{
-		MAC: rb.Room.MAC,
-		KeyEncryptingKey: security.ManagedKey{
-			KeyType:      security.AES256,
-			Ciphertext:   rb.Room.EncryptedManagementKey,
-			ContextKey:   "room",
-			ContextValue: rb.Room.Name,
-		},
-		KeyPair: rb.KeyPair(),
-	}
-	return sec.Unlock(managerKey)
 }

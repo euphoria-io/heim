@@ -83,18 +83,15 @@ type Room interface {
 	// unencrypted.
 	MessageKey(ctx scope.Context) (RoomMessageKey, error)
 
+	// ManagerKey returns a handle to the room's manager key.
+	ManagerKey(ctx scope.Context) (RoomManagerKey, error)
+
 	// SaveCapability saves the given capability.
 	SaveCapability(ctx scope.Context, capability security.Capability) error
 
 	// GetCapability retrieves the capability under the given ID, or
 	// returns nil if it doesn't exist.
 	GetCapability(ctx scope.Context, id string) (security.Capability, error)
-
-	// KeyPair returns the current encrypted ManagedKeyPair for the room.
-	KeyPair() security.ManagedKeyPair
-
-	// Unlock decrypts the room's ManagedKeyPair with the given key and returns it.
-	Unlock(managerKey *security.ManagedKey) (*security.ManagedKeyPair, error)
 }
 
 type RoomMessageKey interface {
@@ -109,6 +106,14 @@ type RoomMessageKey interface {
 
 	// ManagedKey returns the current encrypted ManagedKey for the room.
 	ManagedKey() security.ManagedKey
+}
+
+type RoomManagerKey interface {
+	// KeyPair returns the current encrypted ManagedKeyPair for the room.
+	KeyPair() security.ManagedKeyPair
+
+	// Unlock decrypts the room's ManagedKeyPair with the given key and returns it.
+	Unlock(managerKey *security.ManagedKey) (*security.ManagedKeyPair, error)
 }
 
 func NewRoomSecurity(kms security.KMS, roomName string) (*RoomSecurity, error) {

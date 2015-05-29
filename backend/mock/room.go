@@ -25,8 +25,9 @@ type memRoom struct {
 	live         map[string][]proto.Session
 	capabilities map[string]security.Capability
 
-	sec *proto.RoomSecurity
-	key *roomKey
+	sec        *proto.RoomSecurity
+	messageKey *roomMessageKey
+	managerKey *roomManagerKey
 }
 
 func NewRoom(kms security.KMS, name, version string) (proto.Room, error) {
@@ -48,12 +49,6 @@ func NewRoom(kms security.KMS, name, version string) (proto.Room, error) {
 }
 
 func (r *memRoom) Version() string { return r.version }
-
-func (r *memRoom) KeyPair() security.ManagedKeyPair { return r.sec.KeyPair }
-
-func (r *memRoom) Unlock(managerKey *security.ManagedKey) (*security.ManagedKeyPair, error) {
-	return r.sec.Unlock(managerKey)
-}
 
 func (r *memRoom) GetMessage(ctx scope.Context, id snowflake.Snowflake) (*proto.Message, error) {
 	return r.log.GetMessage(ctx, id)
@@ -211,10 +206,14 @@ func (r *memRoom) RenameUser(
 }
 
 func (r *memRoom) MessageKey(ctx scope.Context) (proto.RoomMessageKey, error) {
-	if r.key == nil {
+	if r.messageKey == nil {
 		return nil, nil
 	}
-	return r.key, nil
+	return r.messageKey, nil
+}
+
+func (r *memRoom) ManagerKey(ctx scope.Context) (proto.RoomManagerKey, error) {
+	return &roomManagerKey{r.sec}, nil
 }
 
 func (r *memRoom) GenerateMessageKey(ctx scope.Context, kms security.KMS) (proto.RoomMessageKey, error) {
@@ -228,13 +227,13 @@ func (r *memRoom) GenerateMessageKey(ctx scope.Context, kms security.KMS) (proto
 		return nil, err
 	}
 
-	r.key = &roomKey{
+	r.messageKey = &roomMessageKey{
 		timestamp: time.Now(),
 		nonce:     nonce,
 		key:       *mkey,
 	}
-	r.key.id = fmt.Sprintf("%s", r.key.timestamp)
-	return r.key, nil
+	r.messageKey.id = fmt.Sprintf("%s", r.messageKey.timestamp)
+	return r.messageKey, nil
 }
 
 func (r *memRoom) SaveCapability(ctx scope.Context, capability security.Capability) error {
@@ -285,17 +284,20 @@ func (r *memRoom) IsValidParent(id snowflake.Snowflake) (bool, error) {
 	return true, nil
 }
 
-type roomKey struct {
+type roomMessageKey struct {
 	id        string
 	timestamp time.Time
 	nonce     []byte
-	mac       []byte
 	key       security.ManagedKey
-	keyPair   security.ManagedKeyPair
 }
 
-func (k *roomKey) KeyID() string                           { return k.id }
-func (k *roomKey) Timestamp() time.Time                    { return k.timestamp }
-func (k *roomKey) Nonce() []byte                           { return k.nonce }
-func (k *roomKey) ManagedKey() security.ManagedKey         { return k.key.Clone() }
-func (k *roomKey) ManagedKeyPair() security.ManagedKeyPair { return k.keyPair.Clone() }
+func (k *roomMessageKey) KeyID() string                   { return k.id }
+func (k *roomMessageKey) Timestamp() time.Time            { return k.timestamp }
+func (k *roomMessageKey) Nonce() []byte                   { return k.nonce }
+func (k *roomMessageKey) ManagedKey() security.ManagedKey { return k.key.Clone() }
+
+type roomManagerKey struct {
+	*proto.RoomSecurity
+}
+
+func (r *roomManagerKey) KeyPair() security.ManagedKeyPair { return r.RoomSecurity.KeyPair }

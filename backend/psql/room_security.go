@@ -3,10 +3,11 @@ package psql
 import (
 	"time"
 
+	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/security"
 )
 
-type RoomMasterKey struct {
+type RoomMessageKey struct {
 	Room      string
 	KeyID     string `db:"key_id"`
 	Activated time.Time
@@ -21,16 +22,16 @@ type RoomCapability struct {
 	Revoked      time.Time
 }
 
-type RoomMasterKeyBinding struct {
+type RoomMessageKeyBinding struct {
 	MessageKey
-	RoomMasterKey
+	RoomMessageKey
 }
 
-func (rmkb *RoomMasterKeyBinding) KeyID() string        { return rmkb.RoomMasterKey.KeyID }
-func (rmkb *RoomMasterKeyBinding) Timestamp() time.Time { return rmkb.RoomMasterKey.Activated }
-func (rmkb *RoomMasterKeyBinding) Nonce() []byte        { return rmkb.MessageKey.Nonce }
+func (rmkb *RoomMessageKeyBinding) KeyID() string        { return rmkb.RoomMessageKey.KeyID }
+func (rmkb *RoomMessageKeyBinding) Timestamp() time.Time { return rmkb.RoomMessageKey.Activated }
+func (rmkb *RoomMessageKeyBinding) Nonce() []byte        { return rmkb.MessageKey.Nonce }
 
-func (rmkb *RoomMasterKeyBinding) ManagedKey() security.ManagedKey {
+func (rmkb *RoomMessageKeyBinding) ManagedKey() security.ManagedKey {
 	dup := func(v []byte) []byte {
 		w := make([]byte, len(v))
 		copy(w, v)
@@ -42,7 +43,7 @@ func (rmkb *RoomMasterKeyBinding) ManagedKey() security.ManagedKey {
 		IV:           dup(rmkb.MessageKey.IV),
 		Ciphertext:   dup(rmkb.MessageKey.EncryptedKey),
 		ContextKey:   "room",
-		ContextValue: rmkb.RoomMasterKey.Room,
+		ContextValue: rmkb.RoomMessageKey.Room,
 	}
 	return mkey
 }
@@ -53,3 +54,32 @@ type RoomCapabilityBinding struct {
 }
 
 func (rcb *RoomCapabilityBinding) CapabilityID() string { return rcb.Capability.CapabilityID() }
+
+type RoomManagerKeyBinding struct {
+	*Room
+}
+
+func (rmkb *RoomManagerKeyBinding) KeyPair() security.ManagedKeyPair {
+	return security.ManagedKeyPair{
+		KeyPairType:         security.Curve25519,
+		IV:                  rmkb.Room.IV,
+		EncryptedPrivateKey: rmkb.Room.EncryptedPrivateKey,
+		PublicKey:           rmkb.Room.PublicKey,
+	}
+}
+
+func (rmkb *RoomManagerKeyBinding) Unlock(
+	managerKey *security.ManagedKey) (*security.ManagedKeyPair, error) {
+
+	sec := &proto.RoomSecurity{
+		MAC: rmkb.Room.MAC,
+		KeyEncryptingKey: security.ManagedKey{
+			KeyType:      security.AES256,
+			Ciphertext:   rmkb.Room.EncryptedManagementKey,
+			ContextKey:   "room",
+			ContextValue: rmkb.Room.Name,
+		},
+		KeyPair: rmkb.KeyPair(),
+	}
+	return sec.Unlock(managerKey)
+}
