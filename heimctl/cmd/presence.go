@@ -65,6 +65,7 @@ func (cmd *presenceCmd) run(ctx scope.Context, args []string) error {
 	go presence.Serve(ctx, cmd.addr)
 
 	// Start scanner.
+	ctx.WaitGroup().Add(1)
 	presence.ScanLoop(ctx, c, b, cmd.interval)
 
 	return nil
