@@ -63,6 +63,7 @@ func (cmd *activityCmd) run(ctx scope.Context, args []string) error {
 	go activity.Serve(ctx, cmd.addr)
 
 	// Start scanner.
+	ctx.WaitGroup().Add(1)
 	activity.ScanLoop(ctx, listener)
 
 	return nil
