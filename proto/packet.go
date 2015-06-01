@@ -206,6 +206,9 @@ type Packet struct {
 	Type  PacketType      `json:"type"`
 	Data  json.RawMessage `json:"data,omitempty"`
 	Error string          `json:"error,omitempty"`
+
+	Throttled       bool   `json:"throttled,omitempty"`
+	ThrottledReason string `json:"throttled_reason,omitempty"`
 }
 
 func (cmd *Packet) Payload() (interface{}, error) {
@@ -227,10 +230,17 @@ func (cmd *Packet) Payload() (interface{}, error) {
 
 func (cmd *Packet) Encode() ([]byte, error) { return json.Marshal(cmd) }
 
-func MakeResponse(refID string, msgType PacketType, payload interface{}) (*Packet, error) {
+func MakeResponse(
+	refID string, msgType PacketType, payload interface{}, throttled bool) (*Packet, error) {
+
 	packet := &Packet{
 		ID:   refID,
 		Type: msgType.Reply(),
+	}
+
+	if throttled {
+		packet.Throttled = true
+		packet.ThrottledReason = "woah, slow down there"
 	}
 
 	if err, ok := payload.(error); ok {

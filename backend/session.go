@@ -19,8 +19,9 @@ import (
 )
 
 const (
-	MaxKeepAliveMisses = 3
-	MaxAuthFailures    = 5
+	MaxKeepAliveMisses      = 3
+	MaxAuthFailures         = 5
+	MaxConsecutiveThrottled = 10
 )
 
 var (
@@ -29,6 +30,7 @@ var (
 
 	ErrUnresponsive = fmt.Errorf("connection unresponsive")
 	ErrReplaced     = fmt.Errorf("connection replaced")
+	ErrFlooding     = fmt.Errorf("connection flooding")
 
 	sessionIDCounter uint64
 
@@ -66,6 +68,11 @@ func init() {
 
 type cmdState func(*proto.Packet) (interface{}, error)
 
+type incomingPacket struct {
+	*proto.Packet
+	flooding bool
+}
+
 type session struct {
 	id        string
 	ctx       scope.Context
@@ -81,7 +88,7 @@ type session struct {
 	keyID   string
 	onClose func()
 
-	incoming     chan *proto.Packet
+	incoming     chan incomingPacket
 	outgoing     chan *proto.Packet
 	floodLimiter *ratelimit.Bucket
 
@@ -114,7 +121,7 @@ func newSession(
 		roomName:  roomName,
 		room:      room,
 
-		incoming:     make(chan *proto.Packet),
+		incoming:     make(chan incomingPacket),
 		outgoing:     make(chan *proto.Packet, 100),
 		floodLimiter: ratelimit.NewBucket(time.Second, 5),
 	}
@@ -202,6 +209,8 @@ func (s *session) serve() error {
 	keepalive := time.NewTicker(KeepAlive)
 	defer keepalive.Stop()
 
+	consecutiveThrottled := 0
+
 	for {
 		select {
 		case <-s.ctx.Done():
@@ -217,7 +226,17 @@ func (s *session) serve() error {
 			if err := s.sendPing(); err != nil {
 				return err
 			}
-		case cmd := <-s.incoming:
+		case incomingCmd := <-s.incoming:
+			cmd := incomingCmd.Packet
+
+			if incomingCmd.flooding {
+				if consecutiveThrottled++; consecutiveThrottled > MaxConsecutiveThrottled {
+					return ErrFlooding
+				}
+			} else {
+				consecutiveThrottled = 0
+			}
+
 			reply, err := s.state(cmd)
 			if err != nil {
 				logger.Printf("error: %v: %s", s.state, err)
@@ -228,7 +247,7 @@ func (s *session) serve() error {
 			}
 
 			// Write the response back over the socket.
-			resp, err := proto.MakeResponse(cmd.ID, cmd.Type, reply)
+			resp, err := proto.MakeResponse(cmd.ID, cmd.Type, reply, incomingCmd.flooding)
 			if err != nil {
 				logger.Printf("error: Response: %s", err)
 				return err
@@ -284,9 +303,14 @@ func (s *session) readMessages() {
 			}
 
 			// Flood protection.
-			s.floodLimiter.Wait(1)
-
-			s.incoming <- cmd
+			incomingCmd := incomingPacket{Packet: cmd}
+			if s.floodLimiter.TakeAvailable(1) != 1 {
+				incomingCmd.flooding = true
+			}
+			s.incoming <- incomingCmd
+			if incomingCmd.flooding {
+				s.floodLimiter.Wait(1)
+			}
 		default:
 			logger.Printf("error: unsupported message type: %v", messageType)
 			return
