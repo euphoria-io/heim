@@ -6,17 +6,18 @@ import (
 	"euphoria.io/heim/proto/security"
 
 	"github.com/awslabs/aws-sdk-go/aws"
-	"github.com/awslabs/aws-sdk-go/gen/kms"
+	"github.com/awslabs/aws-sdk-go/aws/awserr"
+	"github.com/awslabs/aws-sdk-go/aws/credentials"
+	"github.com/awslabs/aws-sdk-go/service/kms"
 )
 
 func New(region, keyID string) (*KMS, error) {
-	creds, err := aws.EnvCreds()
-	if err != nil {
-		return nil, fmt.Errorf("aws kms: %s", err)
+	config := &aws.Config{
+		Credentials: credentials.NewEnvCredentials(),
+		Region:      region,
 	}
-
 	kms := &KMS{
-		kms:   kms.New(creds, region, nil),
+		kms:   kms.New(config),
 		keyID: keyID,
 	}
 	return kms, nil
@@ -28,7 +29,8 @@ type KMS struct {
 }
 
 func (k *KMS) GenerateNonce(bytes int) ([]byte, error) {
-	resp, err := k.kms.GenerateRandom(&kms.GenerateRandomRequest{NumberOfBytes: &bytes})
+	bytes64 := int64(bytes)
+	resp, err := k.kms.GenerateRandom(&kms.GenerateRandomInput{NumberOfBytes: &bytes64})
 	if err != nil {
 		return nil, fmt.Errorf("aws kms: error generating nonce of %d bytes: %s", bytes, err)
 	}
@@ -41,17 +43,18 @@ func (k *KMS) GenerateEncryptedKey(keyType security.KeyType, ctxKey, ctxVal stri
 	var keySpec string
 	switch keyType {
 	case security.AES128:
-		keySpec = kms.DataKeySpecAES128
+		keySpec = "AES_128"
 	case security.AES256:
-		keySpec = kms.DataKeySpecAES256
+		keySpec = "AES_256"
 	default:
 		return nil, fmt.Errorf("aws kms: key type %s not supported", keyType)
 	}
 
-	req := &kms.GenerateDataKeyWithoutPlaintextRequest{
+	ctx := map[string]*string{ctxKey: &ctxVal}
+	req := &kms.GenerateDataKeyWithoutPlaintextInput{
 		KeyID:             &k.keyID,
 		KeySpec:           &keySpec,
-		EncryptionContext: map[string]string{ctxKey: ctxVal},
+		EncryptionContext: &ctx,
 	}
 
 	resp, err := k.kms.GenerateDataKeyWithoutPlaintext(req)
@@ -71,15 +74,15 @@ func (k *KMS) DecryptKey(key *security.ManagedKey) error {
 	if !key.Encrypted() {
 		return fmt.Errorf("aws kms: key is already decrypted")
 	}
-	req := &kms.DecryptRequest{
+	ctx := map[string]*string{key.ContextKey: &key.ContextValue}
+	req := &kms.DecryptInput{
 		CiphertextBlob:    key.Ciphertext,
-		EncryptionContext: map[string]string{key.ContextKey: key.ContextValue},
+		EncryptionContext: &ctx,
 	}
 	resp, err := k.kms.Decrypt(req)
 	if err != nil {
-		if apiErr, ok := err.(aws.APIError); ok && apiErr.Message == "" {
-			apiErr.Message = apiErr.Type
-			err = fmt.Errorf("%s", apiErr.Type)
+		if apiErr, ok := err.(awserr.Error); ok && apiErr.Message() == "" {
+			err = fmt.Errorf("%s", apiErr.Code())
 		}
 		return fmt.Errorf("aws kms: error decrypting data key: %s", err)
 	}
