@@ -14,6 +14,7 @@ import (
 	"euphoria.io/scope"
 
 	"github.com/gorilla/websocket"
+	"github.com/juju/ratelimit"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -80,8 +81,9 @@ type session struct {
 	keyID   string
 	onClose func()
 
-	incoming chan *proto.Packet
-	outgoing chan *proto.Packet
+	incoming     chan *proto.Packet
+	outgoing     chan *proto.Packet
+	floodLimiter *ratelimit.Bucket
 
 	authFailCount int
 
@@ -112,8 +114,9 @@ func newSession(
 		roomName:  roomName,
 		room:      room,
 
-		incoming: make(chan *proto.Packet),
-		outgoing: make(chan *proto.Packet, 100),
+		incoming:     make(chan *proto.Packet),
+		outgoing:     make(chan *proto.Packet, 100),
+		floodLimiter: ratelimit.NewBucket(time.Second, 5),
 	}
 
 	return session
@@ -279,6 +282,10 @@ func (s *session) readMessages() {
 				logger.Printf("error: ParseRequest: %s", err)
 				return
 			}
+
+			// Flood protection.
+			s.floodLimiter.Wait(1)
+
 			s.incoming <- cmd
 		default:
 			logger.Printf("error: unsupported message type: %v", messageType)
