@@ -23,10 +23,10 @@ _.extend(Tree.prototype, {
     }
 
     var changed = false
+    var newId = entry.id
     var newNode = this._node(entry)
-    var newId = newNode.get('id')
 
-    var parentId = newNode.get('parent')
+    var parentId = entry.parent
     var parentNode = this.index[parentId]
     if (parentNode) {
       parentNode = this.index[parentId] = parentNode.mergeIn(['children'], [newId])
