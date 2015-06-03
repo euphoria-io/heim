@@ -44,7 +44,7 @@ func (ban) run(ctx scope.Context, c *console, args []string) error {
 	case *agent != "":
 		switch *roomName {
 		case "":
-			if err := c.backend.BanAgent(ctx, *agent, until); err != nil {
+			if err := c.backend.AgentTracker().BanAgent(ctx, *agent, until); err != nil {
 				return err
 			}
 			c.Printf("agent %s banned globally %s\n", *agent, untilStr)
@@ -104,7 +104,7 @@ func (unban) run(ctx scope.Context, c *console, args []string) error {
 	case *agent != "":
 		switch *roomName {
 		case "":
-			if err := c.backend.UnbanAgent(ctx, *agent); err != nil {
+			if err := c.backend.AgentTracker().UnbanAgent(ctx, *agent); err != nil {
 				return err
 			}
 			c.Printf("global ban of agent %s lifted\n", *agent)

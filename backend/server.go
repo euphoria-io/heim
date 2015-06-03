@@ -1,14 +1,12 @@
 package backend
 
 import (
-	"crypto/rand"
 	"fmt"
 	"mime"
 	"net/http"
 	"path"
 	"strings"
 	"sync"
-	"time"
 
 	"euphoria.io/heim/backend/cluster"
 	"euphoria.io/heim/proto"
@@ -22,12 +20,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-const (
-	cookieKeySize = 32
-	agentIDSize   = 8
-
-	agentCookie = "a"
-)
+const cookieKeySize = 32
 
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
@@ -185,51 +178,6 @@ func (s *Server) serveGzippedFile(w http.ResponseWriter, r *http.Request, filena
 	http.ServeContent(w, r, name, d.ModTime(), f)
 }
 
-func (s *Server) generateAgentID() ([]byte, error) {
-	if s.agentIDGenerator != nil {
-		return s.agentIDGenerator()
-	}
-
-	agentID := make([]byte, agentIDSize)
-	if _, err := rand.Read(agentID); err != nil {
-		return nil, err
-	}
-	return agentID, nil
-}
-
-func (s *Server) setAgentID(w http.ResponseWriter) ([]byte, *http.Cookie, error) {
-	agentID, err := s.generateAgentID()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	encoded, err := s.sc.Encode(agentCookie, agentID)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	cookie := &http.Cookie{
-		Name:     agentCookie,
-		Value:    encoded,
-		Path:     "/",
-		Expires:  time.Now().Add(365 * 24 * time.Hour),
-		HttpOnly: true,
-	}
-	return agentID, cookie, nil
-}
-
-func (s *Server) getAgentID(w http.ResponseWriter, r *http.Request) ([]byte, *http.Cookie, error) {
-	agentID := []byte{}
-	cookie, err := r.Cookie(agentCookie)
-	if err != nil {
-		return s.setAgentID(w)
-	}
-	if err := s.sc.Decode(agentCookie, cookie.Value, &agentID); err != nil {
-		return s.setAgentID(w)
-	}
-	return agentID, nil, nil
-}
-
 func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
 	ctx := s.rootCtx.Fork()
 	logger := Logger(ctx)
@@ -249,17 +197,17 @@ func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Tag the agent. We use an authenticated but un-encrypted cookie.
-	agentID, cookie, err := s.getAgentID(w, r)
+	agent, cookie, _, err := getAgent(ctx, s, r)
 	if err != nil {
 		logger.Printf("get agent id: %s", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	client := &proto.Client{AgentID: fmt.Sprintf("%x", agentID)}
+	client := &proto.Client{AgentID: agent.IDString()}
 	client.FromRequest(ctx, r)
 
-	// Upgrade to a websocket.
+	// Upgrade to a websocket and set cookie.
 	headers := http.Header{}
 	if cookie != nil {
 		headers.Add("Set-Cookie", cookie.String())
@@ -272,7 +220,7 @@ func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
 	defer conn.Close()
 
 	// Serve the session.
-	session := newSession(ctx, conn, s.ID, s.Era, roomName, room, agentID)
+	session := newSession(ctx, conn, s.ID, s.Era, roomName, room, agent.ID)
 	if err = session.serve(); err != nil {
 		// TODO: error handling
 		return

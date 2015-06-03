@@ -14,6 +14,7 @@ import (
 
 type TestBackend struct {
 	sync.Mutex
+	agents     map[string]*proto.Agent
 	agentBans  map[string]time.Time
 	ipBans     map[string]time.Time
 	rooms      map[string]proto.Room
@@ -21,6 +22,8 @@ type TestBackend struct {
 	accountIDs map[string]string
 	version    string
 }
+
+func (b *TestBackend) AgentTracker() proto.AgentTracker { return &agentTracker{b} }
 
 func (b *TestBackend) Close() {}
 

@@ -24,6 +24,8 @@ import (
 	"github.com/smartystreets/goconvey/convey/reporting"
 )
 
+var agentIDCounter int
+
 // TODO: move time mocking to snowflake_test?
 type testClock struct {
 	secs            int64
@@ -217,7 +219,6 @@ func snowflakes(n int) []snowflake.Snowflake {
 }
 
 func IntegrationTest(t *testing.T, factory func() proto.Backend) {
-	agentIDCounter := 0
 
 	runTest := func(name string, test testSuite) {
 		Convey(name, t, func() {
@@ -440,7 +441,6 @@ func testPresence(factory func() proto.Backend) {
 	app, err := NewServer(scope.New(), backend, &cluster.TestCluster{}, kms, "test1", "era1", "")
 	So(err, ShouldBeNil)
 	app.AllowRoomCreation(true)
-	agentIDCounter := 0
 	app.agentIDGenerator = func() ([]byte, error) {
 		agentIDCounter++
 		return []byte(fmt.Sprintf("%d", agentIDCounter)), nil

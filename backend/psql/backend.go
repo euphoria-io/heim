@@ -56,6 +56,7 @@ var schema = []struct {
 	{"session_log", SessionLog{}, []string{"SessionID"}},
 
 	// Accounts.
+	{"agent", Agent{}, []string{"ID"}},
 	{"personal_identity", PersonalIdentity{}, []string{"Namespace", "ID"}},
 	{"account", Account{}, []string{"ID"}},
 }
@@ -359,29 +360,6 @@ func (b *Backend) CreateRoom(
 	}
 
 	return room.Bind(b), nil
-}
-
-func (b *Backend) BanAgent(ctx scope.Context, agentID string, until time.Time) error {
-	ban := &BannedAgent{
-		AgentID: agentID,
-		Created: time.Now(),
-		Expires: gorp.NullTime{
-			Time:  until,
-			Valid: !until.IsZero(),
-		},
-	}
-
-	if err := b.DbMap.Insert(ban); err != nil {
-		return err
-	}
-
-	bounceEvent := &proto.BounceEvent{Reason: "banned", AgentID: agentID}
-	return b.broadcast(ctx, nil, proto.BounceEventType, bounceEvent)
-}
-
-func (b *Backend) UnbanAgent(ctx scope.Context, agentID string) error {
-	_, err := b.DbMap.Exec("DELETE FROM banned_agent WHERE agent_id = $1 AND room IS NULL", agentID)
-	return err
 }
 
 func (b *Backend) BanIP(ctx scope.Context, ip string, until time.Time) error {
@@ -782,6 +760,8 @@ func (b *Backend) invalidatePeer(ctx scope.Context, id, era string) {
 }
 
 func (b *Backend) Peers() []cluster.PeerDesc { return b.cluster.Peers() }
+
+func (b *Backend) AgentTracker() proto.AgentTracker { return &AgentTrackerBinding{b} }
 
 type BroadcastMessage struct {
 	Room    string
