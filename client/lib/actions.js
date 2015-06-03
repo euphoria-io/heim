@@ -9,7 +9,6 @@ module.exports = Reflux.createActions([
   'scrollToEntry',
   'keydownOnEntry',
   'loadMoreLogs',
-  'showSettings',
   'setNick',
   'tryRoomPasscode',
   'connect',

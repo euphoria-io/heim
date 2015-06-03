@@ -24,9 +24,6 @@ module.exports = React.createClass({
     ev.preventDefault()
 
     actions.setNick(this.state.value)
-    setTimeout(function() {
-      actions.showSettings()
-    }, 250)
   },
 
   render: function() {

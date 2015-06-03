@@ -1,8 +1,6 @@
 var React = require('react/addons')
 var ReactCSSTransitionGroup = React.addons.CSSTransitionGroup
-var Reflux = require('reflux')
 
-var actions = require('../actions')
 var update = require('../stores/update')
 var UserList = require('./user-list')
 var Settings = require('./settings')
@@ -17,7 +15,6 @@ module.exports = React.createClass({
   mixins: [
     require('./hooks-mixin'),
     require('react-immutable-render-mixin'),
-    Reflux.listenTo(actions.showSettings, 'showSettings'),
   ],
 
   getInitialState: function() {
@@ -29,10 +26,6 @@ module.exports = React.createClass({
 
   toggleSettings: function() {
     this.setState({settingsOpen: !this.state.settingsOpen})
-  },
-
-  showSettings: function() {
-    this.setState({settingsOpen: true})
   },
 
   expandUserList: function() {
