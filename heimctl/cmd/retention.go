@@ -64,7 +64,11 @@ func (cmd *retentionCmd) run(ctx scope.Context, args []string) error {
 
 	// start metrics scanner
 	ctx.WaitGroup().Add(1)
-	retention.ExpiredScanLoop(ctx, c, b, cmd.interval)
+	go retention.ExpiredScanLoop(ctx, c, b, cmd.interval)
+
+	// start delete scanner
+	ctx.WaitGroup().Add(1)
+	retention.DeleteScanLoop(ctx, c, b, cmd.interval)
 
 	return nil
 }

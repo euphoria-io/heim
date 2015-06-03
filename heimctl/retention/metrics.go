@@ -14,9 +14,16 @@ var (
 		Subsystem: "retention",
 		Help:      "The last Unix time the expired message scanner loop completed.",
 	})
+
+	lastDeleteScan = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name:      "last_delete_scan",
+		Subsystem: "retention",
+		Help:      "The last Unix time the delete message scanner loop completed.",
+	})
 )
 
 func init() {
 	prometheus.MustRegister(roomHasExpiredMsg)
 	prometheus.MustRegister(lastExpiredScan)
+	prometheus.MustRegister(lastDeleteScan)
 }
