@@ -58,6 +58,11 @@ module.exports = React.createClass({
     Heim.removeEventListener(uiwindow, 'resize', this.onResize)
   },
 
+  componentWillUnmount: function() {
+    this._onScroll.cancel()
+    this._checkScroll.cancel()
+  },
+
   _chromeRAFHack: function(id, callback) {
     if (Heim.isChrome && Heim.isTouch) {
       uiwindow.cancelAnimationFrame(this._animationFrames[id])
