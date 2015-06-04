@@ -546,15 +546,35 @@ func (b *Backend) latest(ctx scope.Context, room *Room, n int, before snowflake.
 	var query string
 	args := []interface{}{room.Name, n}
 
-	if before.IsZero() {
-		query = ("SELECT room, id, previous_edit_id, parent, posted, edited, deleted," +
-			" session_id, sender_id, sender_name, server_id, server_era, content, encryption_key_id" +
-			" FROM message WHERE room = $1 AND deleted IS NULL ORDER BY id DESC LIMIT $2")
+	// Get the time before which messages will be expired
+	nDays, err := b.DbMap.SelectInt("SELECT retention_days FROM room WHERE name = $1", room.Name)
+	if err != nil {
+		return nil, err
+	}
+	if nDays == 0 {
+		if before.IsZero() {
+			query = ("SELECT room, id, previous_edit_id, parent, posted, edited, deleted," +
+				" session_id, sender_id, sender_name, server_id, server_era, content, encryption_key_id" +
+				" FROM message WHERE room = $1 AND deleted IS NULL ORDER BY id DESC LIMIT $2")
+		} else {
+			query = ("SELECT room, id, previous_edit_id, parent, posted, edited, deleted," +
+				" session_id, sender_id, sender_name, server_id, server_era, content, encryption_key_id" +
+				" FROM message WHERE room = $1 AND id < $3 AND deleted IS NULL ORDER BY id DESC LIMIT $2")
+			args = append(args, before.String())
+		}
 	} else {
-		query = ("SELECT room, id, previous_edit_id, parent, posted, edited, deleted," +
-			" session_id, sender_id, sender_name, server_id, server_era, content, encryption_key_id" +
-			" FROM message WHERE room = $1 AND id < $3 AND deleted IS NULL ORDER BY id DESC LIMIT $2")
-		args = append(args, before.String())
+		threshold := time.Now().Add(time.Duration(-nDays) * 24 * time.Hour)
+		if before.IsZero() {
+			query = ("SELECT room, id, previous_edit_id, parent, posted, edited, deleted," +
+				" session_id, sender_id, sender_name, server_id, server_era, content, encryption_key_id" +
+				" FROM message WHERE room = $1 AND posted > $3 AND deleted IS NULL ORDER BY id DESC LIMIT $2")
+		} else {
+			query = ("SELECT room, id, previous_edit_id, parent, posted, edited, deleted," +
+				" session_id, sender_id, sender_name, server_id, server_era, content, encryption_key_id" +
+				" FROM message WHERE room = $1 AND id < $3 AND deleted IS NULL AND posted > $4 ORDER BY id DESC LIMIT $2")
+			args = append(args, before.String())
+		}
+		args = append(args, threshold)
 	}
 
 	msgs, err := b.DbMap.Select(Message{}, query, args...)
