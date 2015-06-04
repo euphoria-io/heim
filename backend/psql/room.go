@@ -38,7 +38,13 @@ type RoomBinding struct {
 
 func (rb *RoomBinding) GetMessage(ctx scope.Context, id snowflake.Snowflake) (*proto.Message, error) {
 	var msg Message
-	err := rb.DbMap.SelectOne(
+
+	nDays, err := rb.DbMap.SelectInt("SELECT retention_days FROM room WHERE room = $1", rb.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	err = rb.DbMap.SelectOne(
 		&msg,
 		"SELECT room, id, previous_edit_id, parent, posted, edited, deleted,"+
 			" session_id, sender_id, sender_name, server_id, server_era, content, encryption_key_id"+
@@ -49,6 +55,12 @@ func (rb *RoomBinding) GetMessage(ctx scope.Context, id snowflake.Snowflake) (*p
 			return nil, proto.ErrMessageNotFound
 		}
 		return nil, err
+	}
+	if nDays > 0 {
+		threshold := time.Now().Add(time.Duration(-nDays) * 24 * time.Hour)
+		if msg.Posted.Before(threshold) {
+			return nil, proto.ErrMessageNotFound
+		}
 	}
 	m := msg.ToBackend()
 	return &m, nil
