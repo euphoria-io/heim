@@ -6,22 +6,22 @@ import (
 	"euphoria.io/heim/proto/snowflake"
 )
 
-func NewAccount(kms security.KMS, password string) (proto.Account, error) {
+func NewAccount(kms security.KMS, password string) (proto.Account, *security.ManagedKey, error) {
 	id, err := snowflake.New()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	sec, err := proto.NewAccountSecurity(kms, password)
+	sec, clientKey, err := proto.NewAccountSecurity(kms, password)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	account := &memAccount{
 		id:  id,
 		sec: *sec,
 	}
-	return account, nil
+	return account, clientKey, nil
 }
 
 type memAccount struct {

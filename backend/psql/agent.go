@@ -2,11 +2,13 @@ package psql
 
 import (
 	"database/sql"
+	"fmt"
 	"strings"
 	"time"
 
 	"encoding/base64"
 
+	"euphoria.io/heim/backend"
 	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/security"
 	"euphoria.io/scope"
@@ -67,16 +69,17 @@ func (atb *AgentTrackerBinding) Register(ctx scope.Context, agent *proto.Agent) 
 		return err
 	}
 
+	backend.Logger(ctx).Printf("registered agent %s", agent.IDString())
 	return nil
 }
 
-func (atb *AgentTrackerBinding) Get(ctx scope.Context, agentID string) (*proto.Agent, error) {
+func (atb *AgentTrackerBinding) getFromDB(agentID string, db gorp.SqlExecutor) (*proto.Agent, error) {
 	idBytes, err := base64.URLEncoding.DecodeString(agentID)
 	if err != nil {
-		return nil, proto.ErrAgentNotFound
+		return nil, fmt.Errorf("invalid agent id %s: %s", agentID, err)
 	}
 
-	row, err := atb.Backend.DbMap.Get(Agent{}, agentID)
+	row, err := db.Get(Agent{}, agentID)
 	if err != nil {
 		return nil, err
 	}
@@ -97,8 +100,46 @@ func (atb *AgentTrackerBinding) Get(ctx scope.Context, agentID string) (*proto.A
 	return agent, nil
 }
 
+func (atb *AgentTrackerBinding) Get(ctx scope.Context, agentID string) (*proto.Agent, error) {
+	return atb.getFromDB(agentID, atb.Backend.DbMap)
+}
+
+func (atb *AgentTrackerBinding) setClientKeyInDB(
+	agentID string, keyBytes []byte, db gorp.SqlExecutor) error {
+
+	_, err := db.Exec("UPDATE agent SET encrypted_client_key = $2 WHERE id = $1", agentID, keyBytes)
+	return err
+}
+
 func (atb *AgentTrackerBinding) SetClientKey(
 	ctx scope.Context, agentID string, accessKey, clientKey *security.ManagedKey) error {
 
-	return notImpl
+	t, err := atb.Backend.DbMap.Begin()
+	if err != nil {
+		return err
+	}
+
+	rollback := func() {
+		if err := t.Rollback(); err != nil {
+			backend.Logger(ctx).Printf("rollback error: %s", err)
+		}
+	}
+
+	agent, err := atb.getFromDB(agentID, atb.Backend.DbMap)
+	if err != nil {
+		rollback()
+		return err
+	}
+
+	if err := agent.SetClientKey(accessKey, clientKey); err != nil {
+		rollback()
+		return err
+	}
+
+	if err := atb.setClientKeyInDB(agentID, agent.EncryptedClientKey.Ciphertext, t); err != nil {
+		rollback()
+		return err
+	}
+
+	return nil
 }

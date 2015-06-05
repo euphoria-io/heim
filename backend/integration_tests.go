@@ -672,11 +672,29 @@ func testAccounts(s *serverUnderTest) {
 	b := s.backend
 	kms := s.app.kms
 
+	ctx := scope.New()
+	at := b.AgentTracker()
+	agentKey := &security.ManagedKey{
+		KeyType:   proto.AgentKeyType,
+		Plaintext: make([]byte, proto.AgentKeyType.KeySize()),
+	}
+	nonce := fmt.Sprintf("%s", time.Now())
+
+	loganAgent, err := proto.NewAgent([]byte("logan"+nonce), agentKey)
+	So(err, ShouldBeNil)
+	So(at.Register(ctx, loganAgent), ShouldBeNil)
+
+	maxAgent, err := proto.NewAgent([]byte("max"+nonce), agentKey)
+	So(err, ShouldBeNil)
+	So(at.Register(ctx, maxAgent), ShouldBeNil)
+
 	Convey("Account registration", func() {
-		ctx := scope.New()
-		account, err := b.RegisterAccount(ctx, kms, "email", "logan@euphoria.io", "hunter2")
+		account, key, err := b.RegisterAccount(
+			ctx, kms, "email", "logan@euphoria.io", "hunter2", loganAgent.IDString(), agentKey)
 		So(err, ShouldBeNil)
 		So(account, ShouldNotBeNil)
+		So(key, ShouldNotBeNil)
+		So(key.Encrypted(), ShouldBeFalse)
 
 		kp, err := account.Unlock(account.KeyFromPassword(""))
 		So(err, ShouldEqual, proto.ErrAccessDenied)
@@ -686,14 +704,17 @@ func testAccounts(s *serverUnderTest) {
 		So(err, ShouldBeNil)
 		So(kp, ShouldNotBeNil)
 
-		dup, err := b.RegisterAccount(ctx, kms, "email", "logan@euphoria.io", "hunter2")
+		kp, err = account.Unlock(key)
+		So(err, ShouldBeNil)
+		So(kp, ShouldNotBeNil)
+
+		dup, _, err := b.RegisterAccount(
+			ctx, kms, "email", "logan@euphoria.io", "hunter2", loganAgent.IDString(), agentKey)
 		So(err, ShouldEqual, proto.ErrPersonalIdentityInUse)
 		So(dup, ShouldBeNil)
 	})
 
 	Convey("Account lookup", func() {
-		ctx := scope.New()
-
 		var badID snowflake.Snowflake
 		badID.FromString("nosuchaccount")
 		account, err := b.GetAccount(ctx, badID)
@@ -704,7 +725,8 @@ func testAccounts(s *serverUnderTest) {
 		So(err, ShouldEqual, proto.ErrAccountNotFound)
 		So(account, ShouldBeNil)
 
-		_, err = b.RegisterAccount(ctx, kms, "email", "max@euphoria.io", "hunter2")
+		_, _, err = b.RegisterAccount(
+			ctx, kms, "email", "max@euphoria.io", "hunter2", maxAgent.IDString(), agentKey)
 		So(err, ShouldBeNil)
 
 		account, err = b.ResolveAccount(ctx, "email", "max@euphoria.io")
@@ -729,21 +751,35 @@ func testManagers(s *serverUnderTest) {
 	b := s.backend
 	ctx := scope.New()
 	kms := s.app.kms
+	at := b.AgentTracker()
+	agentKey := &security.ManagedKey{
+		KeyType:   proto.AgentKeyType,
+		Plaintext: make([]byte, proto.AgentKeyType.KeySize()),
+	}
 
 	// Create test accounts.
 	nonce := fmt.Sprintf("%s", time.Now())
 
-	alice, err := b.RegisterAccount(ctx, kms, "email", "alice"+nonce, "alicepass")
+	aliceAgent, err := proto.NewAgent([]byte("alice"+nonce), agentKey)
 	So(err, ShouldBeNil)
-	aliceKey := alice.KeyFromPassword("alicepass")
+	So(at.Register(ctx, aliceAgent), ShouldBeNil)
+	alice, aliceKey, err := b.RegisterAccount(
+		ctx, kms, "email", "alice"+nonce, "alicepass", aliceAgent.IDString(), agentKey)
+	So(err, ShouldBeNil)
 
-	bob, err := b.RegisterAccount(ctx, kms, "email", "bob"+nonce, "bobpass")
+	bobAgent, err := proto.NewAgent([]byte("bob"+nonce), agentKey)
 	So(err, ShouldBeNil)
-	bobKey := bob.KeyFromPassword("bobpass")
+	So(at.Register(ctx, bobAgent), ShouldBeNil)
+	bob, bobKey, err := b.RegisterAccount(
+		ctx, kms, "email", "bob"+nonce, "bobpass", bobAgent.IDString(), agentKey)
+	So(err, ShouldBeNil)
 
-	carol, err := b.RegisterAccount(ctx, kms, "email", "carol"+nonce, "carolpass")
+	carolAgent, err := proto.NewAgent([]byte("carol"+nonce), agentKey)
 	So(err, ShouldBeNil)
-	carolKey := carol.KeyFromPassword("carolpass")
+	So(at.Register(ctx, carolAgent), ShouldBeNil)
+	carol, carolKey, err := b.RegisterAccount(
+		ctx, kms, "email", "carol"+nonce, "carolpass", carolAgent.IDString(), agentKey)
+	So(err, ShouldBeNil)
 
 	names := map[string]string{
 		alice.ID().String(): "alice",

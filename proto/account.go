@@ -12,9 +12,29 @@ import (
 	"euphoria.io/heim/proto/snowflake"
 )
 
+const (
+	MinPasswordLength = 6
+)
+
 type PersonalIdentity interface {
 	Namespace() string
 	ID() string
+}
+
+func ValidatePersonalIdentity(namespace, id string) (bool, string) {
+	switch namespace {
+	case "email":
+		return true, ""
+	default:
+		return false, fmt.Sprintf("invalid namespace: %s", namespace)
+	}
+}
+
+func ValidateAccountPassword(password string) (bool, string) {
+	if len(password) < MinPasswordLength {
+		return false, fmt.Sprintf("password must be at least %d characters long", MinPasswordLength)
+	}
+	return true, ""
 }
 
 type Account interface {
@@ -27,7 +47,9 @@ type Account interface {
 // NewAccountSecurity initializes the nonce and account secrets for a new account
 // with the given password. Returns an encrypted key-encrypting-key, encrypted
 // key-pair, nonce, and error.
-func NewAccountSecurity(kms security.KMS, password string) (*AccountSecurity, error) {
+func NewAccountSecurity(
+	kms security.KMS, password string) (*AccountSecurity, *security.ManagedKey, error) {
+
 	kType := security.AES256
 	kpType := security.Curve25519
 
@@ -36,14 +58,14 @@ func NewAccountSecurity(kms security.KMS, password string) (*AccountSecurity, er
 	//   - private key
 	randomData, err := kms.GenerateNonce(kpType.NonceSize() + kpType.PrivateKeySize())
 	if err != nil {
-		return nil, fmt.Errorf("rng error: %s", err)
+		return nil, nil, fmt.Errorf("rng error: %s", err)
 	}
 	randomReader := bytes.NewReader(randomData)
 
 	// Generate nonce with random data. Use to populate IV.
 	nonce := make([]byte, kpType.NonceSize())
 	if _, err := io.ReadFull(randomReader, nonce); err != nil {
-		return nil, fmt.Errorf("rng error: %s", err)
+		return nil, nil, fmt.Errorf("rng error: %s", err)
 	}
 	iv := make([]byte, kType.BlockSize())
 	copy(iv, nonce)
@@ -53,26 +75,26 @@ func NewAccountSecurity(kms security.KMS, password string) (*AccountSecurity, er
 	nonceBase64 := base64.URLEncoding.EncodeToString(nonce)
 	systemKey, err := kms.GenerateEncryptedKey(kType, "nonce", nonceBase64)
 	if err != nil {
-		return nil, fmt.Errorf("key generation error: %s", err)
+		return nil, nil, fmt.Errorf("key generation error: %s", err)
 	}
 
 	// Generate private key using randomReader.
 	keyPair, err := kpType.Generate(randomReader)
 	if err != nil {
-		return nil, fmt.Errorf("keypair generation error: %s", err)
+		return nil, nil, fmt.Errorf("keypair generation error: %s", err)
 	}
 
 	// Decrypt key-encrypting-key so we can encrypt keypair, and so we can re-encrypt
 	// it using the user's key.
 	kek := systemKey.Clone()
 	if err = kms.DecryptKey(&kek); err != nil {
-		return nil, fmt.Errorf("key decryption error: %s", err)
+		return nil, nil, fmt.Errorf("key decryption error: %s", err)
 	}
 
 	// Encrypt private key.
 	keyPair.IV = iv
 	if err = keyPair.Encrypt(&kek); err != nil {
-		return nil, fmt.Errorf("keypair encryption error: %s", err)
+		return nil, nil, fmt.Errorf("keypair encryption error: %s", err)
 	}
 
 	// Clone key-encrypting-key and encrypt with client key.
@@ -80,7 +102,7 @@ func NewAccountSecurity(kms security.KMS, password string) (*AccountSecurity, er
 	userKey := kek.Clone()
 	userKey.IV = iv
 	if err := userKey.Encrypt(clientKey); err != nil {
-		return nil, fmt.Errorf("key encryption error: %s", err)
+		return nil, nil, fmt.Errorf("key encryption error: %s", err)
 	}
 
 	// Generate message authentication code, for verifying passwords.
@@ -98,7 +120,7 @@ func NewAccountSecurity(kms security.KMS, password string) (*AccountSecurity, er
 		UserKey:   userKey,
 		KeyPair:   *keyPair,
 	}
-	return sec, nil
+	return sec, clientKey, nil
 }
 
 type AccountSecurity struct {

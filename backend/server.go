@@ -197,12 +197,14 @@ func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Tag the agent. We use an authenticated but un-encrypted cookie.
-	agent, cookie, _, err := getAgent(ctx, s, r)
+	agent, cookie, agentKey, err := getAgent(ctx, s, r)
 	if err != nil {
 		logger.Printf("get agent id: %s", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	// need to look up account associated with agent
 
 	client := &proto.Client{AgentID: agent.IDString()}
 	client.FromRequest(ctx, r)
@@ -220,7 +222,7 @@ func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
 	defer conn.Close()
 
 	// Serve the session.
-	session := newSession(ctx, conn, s.ID, s.Era, roomName, room, agent.ID)
+	session := newSession(ctx, conn, agent, agentKey, s.ID, s.Era, s.b, s.kms, roomName, room)
 	if err = session.serve(); err != nil {
 		// TODO: error handling
 		return

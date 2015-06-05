@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"euphoria.io/heim/backend"
 	"euphoria.io/heim/backend/cluster"
 	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/security"
@@ -106,19 +107,21 @@ func (b *TestBackend) UnbanIP(ctx scope.Context, ip string) error {
 }
 
 func (b *TestBackend) RegisterAccount(
-	ctx scope.Context, kms security.KMS, namespace, id, password string) (proto.Account, error) {
+	ctx scope.Context, kms security.KMS, namespace, id, password string,
+	agentID string, agentKey *security.ManagedKey) (
+	proto.Account, *security.ManagedKey, error) {
 
 	b.Lock()
 	defer b.Unlock()
 
 	key := fmt.Sprintf("%s:%s", namespace, id)
 	if _, ok := b.accountIDs[key]; ok {
-		return nil, proto.ErrPersonalIdentityInUse
+		return nil, nil, proto.ErrPersonalIdentityInUse
 	}
 
-	account, err := NewAccount(kms, password)
+	account, clientKey, err := NewAccount(kms, password)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if b.accounts == nil {
@@ -133,7 +136,18 @@ func (b *TestBackend) RegisterAccount(
 		b.accountIDs[key] = account.ID().String()
 	}
 
-	return account, nil
+	agent, err := b.AgentTracker().Get(ctx, agentID)
+	if err != nil {
+		backend.Logger(ctx).Printf(
+			"error locating agent %s for new account %s:%s: %s", agentID, namespace, id, err)
+	} else {
+		if err := agent.SetClientKey(agentKey, clientKey); err != nil {
+			backend.Logger(ctx).Printf(
+				"error associating agent %s with new account %s:%s: %s", agentID, namespace, id, err)
+		}
+	}
+
+	return account, clientKey, nil
 }
 
 func (b *TestBackend) ResolveAccount(ctx scope.Context, namespace, id string) (proto.Account, error) {

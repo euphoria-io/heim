@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"euphoria.io/heim/proto"
+	"euphoria.io/heim/proto/security"
 	"euphoria.io/heim/proto/snowflake"
 	"euphoria.io/scope"
 
@@ -40,6 +41,12 @@ var (
 		Help:      "Cumulative number of sessions served by this backend",
 	}, []string{"room"})
 
+	accountRegistrations = prometheus.NewCounter(prometheus.CounterOpts{
+		Name:      "registrations",
+		Subsystem: "account",
+		Help:      "Counter of successful account registrations",
+	})
+
 	authAttempts = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Name:      "attempts",
 		Subsystem: "auth",
@@ -61,6 +68,7 @@ var (
 
 func init() {
 	prometheus.MustRegister(sessionCount)
+	prometheus.MustRegister(accountRegistrations)
 	prometheus.MustRegister(authAttempts)
 	prometheus.MustRegister(authFailures)
 	prometheus.MustRegister(authTerminations)
@@ -83,11 +91,16 @@ type session struct {
 	serverEra string
 	roomName  string
 	room      proto.Room
+	backend   proto.Backend
+	kms       security.KMS
 
-	state   cmdState
-	auth    map[string]*proto.Authentication
-	keyID   string
-	onClose func()
+	state    cmdState
+	account  proto.Account
+	agent    *proto.Agent
+	agentKey *security.ManagedKey
+	auth     map[string]*proto.Authentication
+	keyID    string
+	onClose  func()
 
 	incoming     chan *proto.Packet
 	outgoing     chan *proto.Packet
@@ -104,23 +117,27 @@ type session struct {
 }
 
 func newSession(
-	ctx scope.Context, conn *websocket.Conn, serverID, serverEra, roomName string, room proto.Room,
-	agentID []byte) *session {
+	ctx scope.Context, conn *websocket.Conn, agent *proto.Agent, agentKey *security.ManagedKey,
+	serverID, serverEra string, backend proto.Backend, kms security.KMS,
+	roomName string, room proto.Room) *session {
 
 	nextID := atomic.AddUint64(&sessionIDCounter, 1)
 	sessionCount.WithLabelValues(roomName).Set(float64(nextID))
-	sessionID := fmt.Sprintf("%x-%08x", agentID, nextID)
+	sessionID := fmt.Sprintf("%x-%08x", agent.ID, nextID)
 	ctx = LoggingContext(ctx, fmt.Sprintf("[%s] ", sessionID))
 
 	session := &session{
 		id:        sessionID,
 		ctx:       ctx,
 		conn:      conn,
-		identity:  newMemIdentity(fmt.Sprintf("agent:%08x", agentID), serverID, serverEra),
+		identity:  newMemIdentity(fmt.Sprintf("agent:%08x", agent.ID), serverID, serverEra),
+		agent:     agent,
+		agentKey:  agentKey,
 		serverID:  serverID,
 		serverEra: serverEra,
 		roomName:  roomName,
 		room:      room,
+		backend:   backend,
 
 		incoming:     make(chan *proto.Packet),
 		outgoing:     make(chan *proto.Packet, 100),
@@ -379,6 +396,8 @@ func (s *session) handleAuth(cmd *proto.Packet) *response {
 		return &response{packet: &proto.AuthReply{Success: true}}
 	case *proto.PingCommand, *proto.PingReply:
 		return s.handleCommand(cmd)
+	case *proto.RegisterAccountCommand:
+		return s.handleCommand(cmd)
 	default:
 		return &response{err: fmt.Errorf("access denied, please authenticate")}
 	}
@@ -435,6 +454,8 @@ func (s *session) handleCommand(cmd *proto.Packet) *response {
 			return &response{err: err}
 		}
 		return &response{packet: &proto.WhoReply{Listing: listing}}
+	case *proto.RegisterAccountCommand:
+		return s.handleRegisterAccountCommand(msg)
 	default:
 		return &response{err: fmt.Errorf("command type %T not implemented", payload)}
 	}
@@ -552,6 +573,45 @@ func (s *session) handleSendCommand(cmd *proto.SendCommand) *response {
 		err:    err,
 		cost:   10,
 	}
+}
+
+func (s *session) handleRegisterAccountCommand(cmd *proto.RegisterAccountCommand) *response {
+	if s.account != nil {
+		return &response{packet: &proto.RegisterAccountReply{Reason: "already logged in"}}
+	}
+
+	if ok, reason := proto.ValidatePersonalIdentity(cmd.Namespace, cmd.ID); !ok {
+		return &response{packet: &proto.RegisterAccountReply{Reason: reason}}
+	}
+
+	if ok, reason := proto.ValidateAccountPassword(cmd.Password); !ok {
+		return &response{packet: &proto.RegisterAccountReply{Reason: reason}}
+	}
+
+	account, clientKey, err := s.backend.RegisterAccount(
+		s.ctx, s.kms, cmd.Namespace, cmd.ID, cmd.Password, s.agent.IDString(), s.agentKey)
+	if err != nil {
+		switch err {
+		case proto.ErrPersonalIdentityInUse:
+			return &response{packet: &proto.RegisterAccountReply{Reason: err.Error()}}
+		default:
+			return &response{err: err}
+		}
+	}
+
+	err = s.backend.AgentTracker().SetClientKey(s.ctx, s.agent.IDString(), s.agentKey, clientKey)
+	if err != nil {
+		return &response{err: err}
+	}
+
+	s.account = account
+	s.identity.id = fmt.Sprintf("account:%s", account.ID())
+
+	reply := &proto.RegisterAccountReply{
+		Success:   true,
+		AccountID: account.ID(),
+	}
+	return &response{packet: reply}
 }
 
 func (s *session) sendPing() error {

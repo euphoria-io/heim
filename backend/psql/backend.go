@@ -385,28 +385,36 @@ func (b *Backend) UnbanIP(ctx scope.Context, ip string) error {
 	return err
 }
 
-func (b *Backend) RegisterAccount(ctx scope.Context, kms security.KMS, namespace, id, password string) (
-	proto.Account, error) {
+func (b *Backend) RegisterAccount(
+	ctx scope.Context, kms security.KMS, namespace, id, password string,
+	agentID string, agentKey *security.ManagedKey) (
+	proto.Account, *security.ManagedKey, error) {
 
 	// Generate ID for new account.
 	accountID, err := snowflake.New()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// Generate credentials in advance of working in DB transaction.
-	sec, err := proto.NewAccountSecurity(kms, password)
+	sec, clientKey, err := proto.NewAccountSecurity(kms, password)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// Begin transaction to check on identity availability and store new account data.
 	t, err := b.DbMap.Begin()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	// Insert new rows.
+	rollback := func() {
+		if err := t.Rollback(); err != nil {
+			backend.Logger(ctx).Printf("rollback error: %s", err)
+		}
+	}
+
+	// Insert new rows for account.
 	account := &Account{
 		ID:                  accountID.String(),
 		Nonce:               sec.Nonce,
@@ -422,21 +430,36 @@ func (b *Backend) RegisterAccount(ctx scope.Context, kms security.KMS, namespace
 		AccountID: accountID.String(),
 	}
 	if err := t.Insert(account, personalIdentity); err != nil {
-		if rerr := t.Rollback(); rerr != nil {
-			backend.Logger(ctx).Printf("rollback error: %s", rerr)
-		}
+		rollback()
 		if strings.HasPrefix(err.Error(), "pq: duplicate key value") {
-			return nil, proto.ErrPersonalIdentityInUse
+			return nil, nil, proto.ErrPersonalIdentityInUse
 		}
-		return nil, err
+		return nil, nil, err
 	}
 
+	// Look up the associated agent.
+	atb := &AgentTrackerBinding{b}
+	agent, err := atb.getFromDB(agentID, t)
+	if err != nil {
+		rollback()
+		return nil, nil, err
+	}
+	if err := agent.SetClientKey(agentKey, clientKey); err != nil {
+		rollback()
+		return nil, nil, err
+	}
+	if err := atb.setClientKeyInDB(agentID, agent.EncryptedClientKey.Ciphertext, t); err != nil {
+		rollback()
+		return nil, nil, err
+	}
+
+	// Commit the transaction.
 	if err := t.Commit(); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-
 	backend.Logger(ctx).Printf("registered new account %s for %s:%s", account.ID, namespace, id)
-	return account.Bind(b), nil
+
+	return account.Bind(b), clientKey, nil
 }
 
 func (b *Backend) ResolveAccount(ctx scope.Context, namespace, id string) (proto.Account, error) {

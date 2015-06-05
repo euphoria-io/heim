@@ -18,14 +18,14 @@ const (
 	agentCookieDuration = 365 * 24 * time.Hour
 )
 
-func newAgentCredentials(agent *proto.Agent, accessKey *security.ManagedKey) (*agentCredentials, error) {
-	if accessKey.Encrypted() {
+func newAgentCredentials(agent *proto.Agent, agentKey *security.ManagedKey) (*agentCredentials, error) {
+	if agentKey.Encrypted() {
 		return nil, security.ErrKeyMustBeDecrypted
 	}
 
 	ac := &agentCredentials{
 		ID:  agent.IDString(),
-		Key: accessKey.Plaintext,
+		Key: agentKey.Plaintext,
 	}
 	return ac, nil
 }
@@ -57,11 +57,11 @@ func (ac *agentCredentials) Cookie(sc *securecookie.SecureCookie) (*http.Cookie,
 }
 
 func assignAgent(ctx scope.Context, s *Server) (*proto.Agent, *http.Cookie, *security.ManagedKey, error) {
-	accessKey := &security.ManagedKey{
+	agentKey := &security.ManagedKey{
 		KeyType:   proto.AgentKeyType,
 		Plaintext: make([]byte, proto.AgentKeyType.KeySize()),
 	}
-	_, err := rand.Read(accessKey.Plaintext)
+	_, err := rand.Read(agentKey.Plaintext)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("agent generation error: %s", err)
 	}
@@ -74,7 +74,7 @@ func assignAgent(ctx scope.Context, s *Server) (*proto.Agent, *http.Cookie, *sec
 		}
 	}
 
-	agent, err := proto.NewAgent(agentID, accessKey)
+	agent, err := proto.NewAgent(agentID, agentKey)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("agent generation error: %s", err)
 	}
@@ -83,7 +83,7 @@ func assignAgent(ctx scope.Context, s *Server) (*proto.Agent, *http.Cookie, *sec
 		return nil, nil, nil, fmt.Errorf("agent generation error: %s", err)
 	}
 
-	ac, err := newAgentCredentials(agent, accessKey)
+	ac, err := newAgentCredentials(agent, agentKey)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("agent generation error: %s", err)
 	}
@@ -93,7 +93,7 @@ func assignAgent(ctx scope.Context, s *Server) (*proto.Agent, *http.Cookie, *sec
 		return nil, nil, nil, fmt.Errorf("agent generation error: %s", err)
 	}
 
-	return agent, cookie, nil, nil
+	return agent, cookie, agentKey, nil
 }
 
 func getAgent(
@@ -120,19 +120,15 @@ func getAgent(
 		return assignAgent(ctx, s)
 	}
 
-	accessKey := &security.ManagedKey{
-		KeyType:   proto.AgentKeyType,
-		Plaintext: ac.Key,
-	}
-	clientKey, err := agent.Unlock(accessKey)
-	if err != nil && err != proto.ErrClientKeyNotFound {
-		return assignAgent(ctx, s)
-	}
-
 	cookie, err = ac.Cookie(s.sc)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
-	return agent, cookie, clientKey, nil
+	agentKey := &security.ManagedKey{
+		KeyType:   proto.AgentKeyType,
+		Plaintext: ac.Key,
+	}
+
+	return agent, cookie, agentKey, nil
 }

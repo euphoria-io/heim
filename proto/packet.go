@@ -43,6 +43,9 @@ var (
 	PingEventType = PingType.Event()
 	PingReplyType = PingType.Reply()
 
+	RegisterAccountType      = PacketType("register-account")
+	RegisterAccountReplyType = RegisterAccountType.Reply()
+
 	WhoType      = PacketType("who")
 	WhoEventType = WhoType.Event()
 	WhoReplyType = WhoType.Reply()
@@ -84,6 +87,9 @@ var (
 		BounceEventType:   reflect.TypeOf(BounceEvent{}),
 		NetworkEventType:  reflect.TypeOf(NetworkEvent{}),
 		SnapshotEventType: reflect.TypeOf(SnapshotEvent{}),
+
+		RegisterAccountType:      reflect.TypeOf(RegisterAccountCommand{}),
+		RegisterAccountReplyType: reflect.TypeOf(RegisterAccountReply{}),
 
 		WhoType:      reflect.TypeOf(WhoCommand{}),
 		WhoEventType: reflect.TypeOf(WhoEvent{}),
@@ -191,6 +197,18 @@ type NetworkEvent struct {
 	Type      string `json:"type"` // for now, always "partition"
 	ServerID  string `json:"server_id"`
 	ServerEra string `json:"server_era"`
+}
+
+type RegisterAccountCommand struct {
+	Namespace string `json:"namespace"`
+	ID        string `json:"id"`
+	Password  string `json:"password"`
+}
+
+type RegisterAccountReply struct {
+	Success   bool                `json:"success"`
+	Reason    string              `json:"reason"`
+	AccountID snowflake.Snowflake `json:"account_id"`
 }
 
 type WhoCommand struct{}

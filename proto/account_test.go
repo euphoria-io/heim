@@ -17,12 +17,13 @@ func TestNewAccountSecurity(t *testing.T) {
 	}
 
 	Convey("Encryption and decryption of generated keys", t, func() {
-		sec, err := NewAccountSecurity(kms, "hunter2")
+		sec, clientKey, err := NewAccountSecurity(kms, "hunter2")
 		So(err, ShouldBeNil)
 		So(sec.SystemKey.Encrypted(), ShouldBeTrue)
 		So(sec.UserKey.Encrypted(), ShouldBeTrue)
 		So(sec.KeyPair.Encrypted(), ShouldBeTrue)
 		So(len(sec.Nonce), ShouldEqual, sec.KeyPair.NonceSize())
+		So(clientKey.Encrypted(), ShouldBeFalse)
 
 		kek := sec.SystemKey.Clone()
 		So(kms.DecryptKey(&kek), ShouldBeNil)
@@ -40,7 +41,7 @@ func TestNewAccountSecurity(t *testing.T) {
 	})
 
 	Convey("Password resets", t, func() {
-		sec, err := NewAccountSecurity(kms, "hunter2")
+		sec, _, err := NewAccountSecurity(kms, "hunter2")
 		So(err, ShouldBeNil)
 
 		nsec, err := sec.ResetPassword(kms, "hunter3")
