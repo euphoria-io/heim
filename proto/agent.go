@@ -9,6 +9,7 @@ import (
 	"encoding/base64"
 
 	"euphoria.io/heim/proto/security"
+	"euphoria.io/heim/proto/snowflake"
 	"euphoria.io/scope"
 )
 
@@ -27,7 +28,9 @@ type AgentTracker interface {
 
 	// SetClientKey encrypts the given clientKey with accessKey and saves it
 	// under the given agentID. Both keys must be unencrypted.
-	SetClientKey(ctx scope.Context, agentID string, accessKey, clientKey *security.ManagedKey) error
+	SetClientKey(
+		ctx scope.Context, agentID string, accessKey *security.ManagedKey,
+		accountID snowflake.Snowflake, clientKey *security.ManagedKey) error
 
 	// BanAgent globally bans an agent. A zero value for until indicates a
 	// permanent ban.
@@ -74,6 +77,7 @@ type Agent struct {
 	IV                 []byte
 	MAC                []byte
 	EncryptedClientKey *security.ManagedKey
+	AccountID          string
 }
 
 func (a *Agent) IDString() string { return base64.URLEncoding.EncodeToString(a.ID) }

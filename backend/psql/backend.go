@@ -397,6 +397,7 @@ func (b *Backend) RegisterAccount(
 	}
 
 	// Generate credentials in advance of working in DB transaction.
+	backend.Logger(ctx).Printf("NewAccountSecurity: kms=%#v", kms)
 	sec, clientKey, err := proto.NewAccountSecurity(kms, password)
 	if err != nil {
 		return nil, nil, err
@@ -448,7 +449,8 @@ func (b *Backend) RegisterAccount(
 		rollback()
 		return nil, nil, err
 	}
-	if err := atb.setClientKeyInDB(agentID, agent.EncryptedClientKey.Ciphertext, t); err != nil {
+	err = atb.setClientKeyInDB(agentID, accountID.String(), agent.EncryptedClientKey.Ciphertext, t)
+	if err != nil {
 		rollback()
 		return nil, nil, err
 	}

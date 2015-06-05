@@ -11,6 +11,7 @@ import (
 	"euphoria.io/heim/backend"
 	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/security"
+	"euphoria.io/heim/proto/snowflake"
 	"euphoria.io/scope"
 
 	"github.com/go-gorp/gorp"
@@ -105,14 +106,17 @@ func (atb *AgentTrackerBinding) Get(ctx scope.Context, agentID string) (*proto.A
 }
 
 func (atb *AgentTrackerBinding) setClientKeyInDB(
-	agentID string, keyBytes []byte, db gorp.SqlExecutor) error {
+	agentID, accountID string, keyBytes []byte, db gorp.SqlExecutor) error {
 
-	_, err := db.Exec("UPDATE agent SET encrypted_client_key = $2 WHERE id = $1", agentID, keyBytes)
+	_, err := db.Exec(
+		"UPDATE agent SET account_id = $2, encrypted_client_key = $3 WHERE id = $1",
+		agentID, accountID, keyBytes)
 	return err
 }
 
 func (atb *AgentTrackerBinding) SetClientKey(
-	ctx scope.Context, agentID string, accessKey, clientKey *security.ManagedKey) error {
+	ctx scope.Context, agentID string, accessKey *security.ManagedKey,
+	accountID snowflake.Snowflake, clientKey *security.ManagedKey) error {
 
 	t, err := atb.Backend.DbMap.Begin()
 	if err != nil {
@@ -136,7 +140,9 @@ func (atb *AgentTrackerBinding) SetClientKey(
 		return err
 	}
 
-	if err := atb.setClientKeyInDB(agentID, agent.EncryptedClientKey.Ciphertext, t); err != nil {
+	err = atb.setClientKeyInDB(
+		agentID, accountID.String(), agent.EncryptedClientKey.Ciphertext, t)
+	if err != nil {
 		rollback()
 		return err
 	}

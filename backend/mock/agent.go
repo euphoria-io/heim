@@ -5,6 +5,7 @@ import (
 
 	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/security"
+	"euphoria.io/heim/proto/snowflake"
 	"euphoria.io/scope"
 )
 
@@ -44,7 +45,8 @@ func (t *agentTracker) Get(ctx scope.Context, agentID string) (*proto.Agent, err
 }
 
 func (t *agentTracker) SetClientKey(
-	ctx scope.Context, agentID string, accessKey, clientKey *security.ManagedKey) error {
+	ctx scope.Context, agentID string, accessKey *security.ManagedKey,
+	accountID snowflake.Snowflake, clientKey *security.ManagedKey) error {
 
 	t.b.Lock()
 	defer t.b.Unlock()

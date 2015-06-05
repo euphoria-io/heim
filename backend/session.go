@@ -138,6 +138,7 @@ func newSession(
 		roomName:  roomName,
 		room:      room,
 		backend:   backend,
+		kms:       kms,
 
 		incoming:     make(chan *proto.Packet),
 		outgoing:     make(chan *proto.Packet, 100),
@@ -599,7 +600,8 @@ func (s *session) handleRegisterAccountCommand(cmd *proto.RegisterAccountCommand
 		}
 	}
 
-	err = s.backend.AgentTracker().SetClientKey(s.ctx, s.agent.IDString(), s.agentKey, clientKey)
+	err = s.backend.AgentTracker().SetClientKey(
+		s.ctx, s.agent.IDString(), s.agentKey, account.ID(), clientKey)
 	if err != nil {
 		return &response{err: err}
 	}
