@@ -7,3 +7,9 @@ script:
   - ci/test.sh build
 services:
   - postgres
+notify:
+  webhook:
+    urls:
+      - http://52.10.123.209:8082/dronehook
+    on_success: true
+    on_failure: true
