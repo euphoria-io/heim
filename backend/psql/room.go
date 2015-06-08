@@ -58,8 +58,10 @@ func (rb *RoomBinding) IsValidParent(id snowflake.Snowflake) (bool, error) {
 	if id.String() == "" || rb.RetentionDays == 0 {
 		return true, nil
 	}
-	var parentTime time.Time
-	err := rb.DbMap.SelectOne(&parentTime,
+	var row struct {
+		Posted time.Time
+	}
+	err := rb.DbMap.SelectOne(&row,
 		"SELECT posted FROM message WHERE room = $1 AND id = $2",
 		rb.Name, id.String())
 	if err != nil {
@@ -70,7 +72,7 @@ func (rb *RoomBinding) IsValidParent(id snowflake.Snowflake) (bool, error) {
 		return false, err
 	}
 	threshold := time.Now().Add(time.Duration(-rb.RetentionDays) * 24 * time.Hour)
-	if parentTime.Before(threshold) {
+	if row.Posted.Before(threshold) {
 		return false, nil
 	}
 	return true, nil
