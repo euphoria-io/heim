@@ -98,7 +98,7 @@ type session struct {
 	account  proto.Account
 	agent    *proto.Agent
 	agentKey *security.ManagedKey
-	auth     map[string]*proto.Authentication
+	auth     *proto.Authorization
 	keyID    string
 	onClose  func()
 
@@ -359,42 +359,7 @@ func (s *session) handleAuth(cmd *proto.Packet) *response {
 
 	switch msg := payload.(type) {
 	case *proto.AuthCommand:
-		if s.authFailCount > 0 {
-			buf := []byte{0}
-			if _, err := rand.Read(buf); err != nil {
-				return &response{err: err}
-			}
-			jitter := 4 * time.Duration(int(buf[0])-128) * time.Millisecond
-			time.Sleep(2*time.Second + jitter)
-		}
-
-		authAttempts.WithLabelValues(s.roomName).Inc()
-		auth, err := proto.Authenticate(s.ctx, s.room, msg)
-		if err != nil {
-			return &response{err: err}
-		}
-		if auth.FailureReason != "" {
-			authFailures.WithLabelValues(s.roomName).Inc()
-			s.authFailCount++
-			if s.authFailCount >= MaxAuthFailures {
-				Logger(s.ctx).Printf(
-					"max authentication failures on room %s by %s", s.roomName, s.Identity().ID())
-				authTerminations.WithLabelValues(s.roomName).Inc()
-				s.state = s.ignore
-			}
-			return &response{packet: &proto.AuthReply{Reason: auth.FailureReason}}
-		}
-
-		// TODO: support holding multiple keys
-		s.auth = map[string]*proto.Authentication{auth.KeyID: auth}
-		s.keyID = auth.KeyID
-		s.state = s.handleCommand
-		if err := s.join(); err != nil {
-			s.keyID = ""
-			s.state = s.handleAuth
-			return &response{err: err}
-		}
-		return &response{packet: &proto.AuthReply{Success: true}}
+		return s.handleAuthCommand(msg)
 	case *proto.PingCommand, *proto.PingReply:
 		return s.handleCommand(cmd)
 	case *proto.RegisterAccountCommand:
@@ -411,6 +376,8 @@ func (s *session) handleCommand(cmd *proto.Packet) *response {
 	}
 
 	switch msg := payload.(type) {
+	case *proto.AuthCommand:
+		return s.handleAuthCommand(msg)
 	case *proto.SendCommand:
 		return s.handleSendCommand(msg)
 	case *proto.LogCommand:
@@ -465,7 +432,7 @@ func (s *session) handleCommand(cmd *proto.Packet) *response {
 func (s *session) sendSnapshot(msgs []proto.Message, listing proto.Listing) error {
 	for i, msg := range msgs {
 		if msg.EncryptionKeyID != "" {
-			dmsg, err := proto.DecryptMessage(msg, s.auth)
+			dmsg, err := proto.DecryptMessage(msg, s.auth.MessageKeys)
 			if err != nil {
 				continue
 			}
@@ -558,7 +525,7 @@ func (s *session) handleSendCommand(cmd *proto.SendCommand) *response {
 	}
 
 	if s.keyID != "" {
-		if err := proto.EncryptMessage(&msg, s.keyID, s.auth[s.keyID].Key); err != nil {
+		if err := proto.EncryptMessage(&msg, s.keyID, s.auth.MessageKeys[s.keyID]); err != nil {
 			return &response{err: err}
 		}
 	}
@@ -614,6 +581,43 @@ func (s *session) handleRegisterAccountCommand(cmd *proto.RegisterAccountCommand
 		AccountID: account.ID(),
 	}
 	return &response{packet: reply}
+}
+
+func (s *session) handleAuthCommand(msg *proto.AuthCommand) *response {
+	if s.authFailCount > 0 {
+		buf := []byte{0}
+		if _, err := rand.Read(buf); err != nil {
+			return &response{err: err}
+		}
+		jitter := 4 * time.Duration(int(buf[0])-128) * time.Millisecond
+		time.Sleep(2*time.Second + jitter)
+	}
+
+	authAttempts.WithLabelValues(s.roomName).Inc()
+	authResult, err := proto.Authenticate(s.ctx, s.backend, s.room, msg)
+	if err != nil {
+		return &response{err: err}
+	}
+	if authResult.FailureReason != "" {
+		authFailures.WithLabelValues(s.roomName).Inc()
+		s.authFailCount++
+		if s.authFailCount >= MaxAuthFailures {
+			Logger(s.ctx).Printf(
+				"max authentication failures on room %s by %s", s.roomName, s.Identity().ID())
+			authTerminations.WithLabelValues(s.roomName).Inc()
+			s.state = s.ignore
+		}
+		return &response{packet: &proto.AuthReply{Reason: authResult.FailureReason}}
+	}
+
+	s.auth = &authResult.Authorization
+	s.state = s.handleCommand
+	if err := s.join(); err != nil {
+		s.keyID = ""
+		s.state = s.handleAuth
+		return &response{err: err}
+	}
+	return &response{packet: &proto.AuthReply{Success: true}}
 }
 
 func (s *session) sendPing() error {

@@ -12,27 +12,82 @@ import (
 type AuthOption string
 
 const (
+	AuthAccount  = AuthOption("account")
 	AuthPasscode = AuthOption("passcode")
 )
 
-type Authentication struct {
-	Capability    security.Capability
-	KeyID         string
-	Key           *security.ManagedKey
+type Authorization struct {
+	Account        Account
+	ClientKey      *security.ManagedKey
+	HasManagerKey  bool
+	ManagerKeyPair *security.ManagedKeyPair
+	MessageKeys    map[string]*security.ManagedKey
+}
+
+type AuthorizationResult struct {
+	Authorization
 	FailureReason string
 }
 
-func Authenticate(ctx scope.Context, room Room, cmd *AuthCommand) (*Authentication, error) {
+type Authentication struct {
+	Capability     security.Capability
+	KeyID          string
+	Key            *security.ManagedKey
+	AccountKeyPair *security.ManagedKeyPair
+	FailureReason  string
+}
+
+func authorizationFailure(reason string) (*AuthorizationResult, error) {
+	return &AuthorizationResult{FailureReason: reason}, nil
+}
+
+func Authenticate(
+	ctx scope.Context, backend Backend, room Room, cmd *AuthCommand) (*AuthorizationResult, error) {
+
 	switch cmd.Type {
+	case AuthAccount:
+		c := cmd.Account
+		auth, err := authenticateAccount(ctx, backend, room, c.Namespace, c.ID, c.Password)
+		switch err {
+		case ErrAccountNotFound, ErrAccessDenied:
+			return authorizationFailure(err.Error())
+		default:
+			return auth, err
+		}
 	case AuthPasscode:
 		return authenticateWithPasscode(ctx, room, cmd.Passcode)
 	default:
-		return &Authentication{FailureReason: fmt.Sprintf("auth type not supported: %s", cmd.Type)}, nil
+		return authorizationFailure(fmt.Sprintf("auth type not supported: %s", cmd.Type))
 	}
 }
 
+func authenticateAccount(
+	ctx scope.Context, backend Backend, room Room, namespace, id, password string) (
+	*AuthorizationResult, error) {
+
+	account, err := backend.ResolveAccount(ctx, namespace, id)
+	if err != nil {
+		return nil, err
+	}
+
+	clientKey := account.KeyFromPassword(password)
+
+	_, err = account.Unlock(clientKey)
+	if err != nil {
+		return nil, err
+	}
+
+	auth := &AuthorizationResult{
+		Authorization: Authorization{
+			Account:   account,
+			ClientKey: clientKey,
+		},
+	}
+	return auth, nil
+}
+
 func authenticateWithPasscode(ctx scope.Context, room Room, passcode string) (
-	*Authentication, error) {
+	*AuthorizationResult, error) {
 
 	mkey, err := room.MessageKey(ctx)
 	if err != nil {
@@ -40,7 +95,7 @@ func authenticateWithPasscode(ctx scope.Context, room Room, passcode string) (
 	}
 
 	if mkey == nil {
-		return &Authentication{}, nil
+		return &AuthorizationResult{}, nil
 	}
 
 	holderKey := security.KeyFromPasscode([]byte(passcode), mkey.Nonce(), security.AES128)
@@ -56,7 +111,7 @@ func authenticateWithPasscode(ctx scope.Context, room Room, passcode string) (
 	}
 
 	if capability == nil {
-		return &Authentication{FailureReason: "passcode incorrect"}, nil
+		return authorizationFailure("passcode incorrect")
 	}
 
 	roomKey, err := decryptRoomKey(holderKey, capability)
@@ -64,10 +119,11 @@ func authenticateWithPasscode(ctx scope.Context, room Room, passcode string) (
 		return nil, err
 	}
 
-	auth := &Authentication{
-		Capability: capability,
-		KeyID:      mkey.KeyID(),
-		Key:        roomKey,
+	// TODO: load and return all keys
+	auth := &AuthorizationResult{
+		Authorization: Authorization{
+			MessageKeys: map[string]*security.ManagedKey{mkey.KeyID(): roomKey},
+		},
 	}
 	return auth, nil
 }

@@ -169,6 +169,11 @@ type PingReply struct {
 type AuthCommand struct {
 	Type     AuthOption `json:"type"`
 	Passcode string     `json:"passcode,omitempty"`
+	Account  struct {
+		Namespace string `json:"namespace"`
+		ID        string `json:"id"`
+		Password  string `json:"password"`
+	} `json:"account,omitempty"`
 }
 
 type AuthReply struct {

@@ -9,18 +9,22 @@ import (
 	"euphoria.io/heim/proto/security"
 )
 
-func DecryptPayload(payload interface{}, auth map[string]*Authentication) (interface{}, error) {
+func DecryptPayload(payload interface{}, auth *Authorization) (interface{}, error) {
+	var messageKeys map[string]*security.ManagedKey
+	if auth != nil {
+		messageKeys = auth.MessageKeys
+	}
 	switch msg := payload.(type) {
 	case Message:
-		return DecryptMessage(msg, auth)
+		return DecryptMessage(msg, messageKeys)
 	case SendReply:
-		dm, err := DecryptMessage(Message(msg), auth)
+		dm, err := DecryptMessage(Message(msg), messageKeys)
 		if err != nil {
 			return nil, err
 		}
 		return SendReply(dm), nil
 	case *SendEvent:
-		dm, err := DecryptMessage(Message(*msg), auth)
+		dm, err := DecryptMessage(Message(*msg), messageKeys)
 		if err != nil {
 			return nil, err
 		}
@@ -77,7 +81,7 @@ func EncryptMessage(msg *Message, keyID string, key *security.ManagedKey) error 
 	return nil
 }
 
-func DecryptMessage(msg Message, auths map[string]*Authentication) (Message, error) {
+func DecryptMessage(msg Message, auths map[string]*security.ManagedKey) (Message, error) {
 	if msg.EncryptionKeyID == "" {
 		return msg, nil
 	}
@@ -94,7 +98,7 @@ func DecryptMessage(msg Message, auths map[string]*Authentication) (Message, err
 		return msg, nil
 	}
 
-	if auth.Key.Encrypted() {
+	if auth.Encrypted() {
 		return msg, security.ErrKeyMustBeDecrypted
 	}
 
@@ -115,7 +119,7 @@ func DecryptMessage(msg Message, auths map[string]*Authentication) (Message, err
 	}
 
 	plaintext, err := security.DecryptGCM(
-		auth.Key, []byte(msg.ID.String()), digest, ciphertext, []byte(msg.Sender.ID))
+		auth, []byte(msg.ID.String()), digest, ciphertext, []byte(msg.Sender.ID))
 	if err != nil {
 		return msg, fmt.Errorf("message decrypt: %s", err)
 	}
