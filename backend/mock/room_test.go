@@ -27,7 +27,7 @@ func TestRoomPresence(t *testing.T) {
 
 	room := roomp.(*memRoom)
 
-	client := &proto.Client{}
+	client := &proto.Client{Agent: &proto.Agent{}}
 	client.FromRequest(ctx, &http.Request{})
 
 	Convey("First join", t, func() {
@@ -80,7 +80,7 @@ func TestRoomBroadcast(t *testing.T) {
 	}
 	room := roomp.(*memRoom)
 
-	client := &proto.Client{}
+	client := &proto.Client{Agent: &proto.Agent{}}
 	client.FromRequest(ctx, &http.Request{})
 
 	Convey("Setup", t, func() {

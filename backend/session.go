@@ -95,10 +95,8 @@ type session struct {
 	kms       security.KMS
 
 	state    cmdState
-	account  proto.Account
-	agent    *proto.Agent
+	client   *proto.Client
 	agentKey *security.ManagedKey
-	auth     *proto.Authorization
 	keyID    string
 	onClose  func()
 
@@ -117,21 +115,21 @@ type session struct {
 }
 
 func newSession(
-	ctx scope.Context, conn *websocket.Conn, agent *proto.Agent, agentKey *security.ManagedKey,
+	ctx scope.Context, conn *websocket.Conn, client *proto.Client, agentKey *security.ManagedKey,
 	serverID, serverEra string, backend proto.Backend, kms security.KMS,
 	roomName string, room proto.Room) *session {
 
 	nextID := atomic.AddUint64(&sessionIDCounter, 1)
 	sessionCount.WithLabelValues(roomName).Set(float64(nextID))
-	sessionID := fmt.Sprintf("%x-%08x", agent.ID, nextID)
+	sessionID := fmt.Sprintf("%x-%08x", client.Agent.IDString(), nextID)
 	ctx = LoggingContext(ctx, fmt.Sprintf("[%s] ", sessionID))
 
 	session := &session{
 		id:        sessionID,
 		ctx:       ctx,
 		conn:      conn,
-		identity:  newMemIdentity(fmt.Sprintf("agent:%08x", agent.ID), serverID, serverEra),
-		agent:     agent,
+		identity:  newMemIdentity(client.UserID(), serverID, serverEra),
+		client:    client,
 		agentKey:  agentKey,
 		serverID:  serverID,
 		serverEra: serverEra,
@@ -169,7 +167,7 @@ func (s *session) View() *proto.SessionView {
 
 func (s *session) Send(ctx scope.Context, cmdType proto.PacketType, payload interface{}) error {
 	var err error
-	payload, err = proto.DecryptPayload(payload, s.auth)
+	payload, err = proto.DecryptPayload(payload, &s.client.Authorization)
 	if err != nil {
 		return err
 	}
@@ -385,7 +383,8 @@ func (s *session) handleCommand(cmd *proto.Packet) *response {
 		if err != nil {
 			return &response{err: err}
 		}
-		packet, err := proto.DecryptPayload(proto.LogReply{Log: msgs, Before: msg.Before}, s.auth)
+		packet, err := proto.DecryptPayload(
+			proto.LogReply{Log: msgs, Before: msg.Before}, &s.client.Authorization)
 		return &response{
 			packet: packet,
 			err:    err,
@@ -432,7 +431,7 @@ func (s *session) handleCommand(cmd *proto.Packet) *response {
 func (s *session) sendSnapshot(msgs []proto.Message, listing proto.Listing) error {
 	for i, msg := range msgs {
 		if msg.EncryptionKeyID != "" {
-			dmsg, err := proto.DecryptMessage(msg, s.auth.MessageKeys)
+			dmsg, err := proto.DecryptMessage(msg, s.client.Authorization.MessageKeys)
 			if err != nil {
 				continue
 			}
@@ -525,7 +524,8 @@ func (s *session) handleSendCommand(cmd *proto.SendCommand) *response {
 	}
 
 	if s.keyID != "" {
-		if err := proto.EncryptMessage(&msg, s.keyID, s.auth.MessageKeys[s.keyID]); err != nil {
+		key := s.client.Authorization.MessageKeys[s.keyID]
+		if err := proto.EncryptMessage(&msg, s.keyID, key); err != nil {
 			return &response{err: err}
 		}
 	}
@@ -535,7 +535,7 @@ func (s *session) handleSendCommand(cmd *proto.SendCommand) *response {
 		return &response{err: err}
 	}
 
-	packet, err := proto.DecryptPayload(proto.SendReply(sent), s.auth)
+	packet, err := proto.DecryptPayload(proto.SendReply(sent), &s.client.Authorization)
 	return &response{
 		packet: packet,
 		err:    err,
@@ -544,7 +544,7 @@ func (s *session) handleSendCommand(cmd *proto.SendCommand) *response {
 }
 
 func (s *session) handleRegisterAccountCommand(cmd *proto.RegisterAccountCommand) *response {
-	if s.account != nil {
+	if s.client.Account != nil {
 		return &response{packet: &proto.RegisterAccountReply{Reason: "already logged in"}}
 	}
 
@@ -557,7 +557,7 @@ func (s *session) handleRegisterAccountCommand(cmd *proto.RegisterAccountCommand
 	}
 
 	account, clientKey, err := s.backend.RegisterAccount(
-		s.ctx, s.kms, cmd.Namespace, cmd.ID, cmd.Password, s.agent.IDString(), s.agentKey)
+		s.ctx, s.kms, cmd.Namespace, cmd.ID, cmd.Password, s.client.Agent.IDString(), s.agentKey)
 	if err != nil {
 		switch err {
 		case proto.ErrPersonalIdentityInUse:
@@ -568,12 +568,13 @@ func (s *session) handleRegisterAccountCommand(cmd *proto.RegisterAccountCommand
 	}
 
 	err = s.backend.AgentTracker().SetClientKey(
-		s.ctx, s.agent.IDString(), s.agentKey, account.ID(), clientKey)
+		s.ctx, s.client.Agent.IDString(), s.agentKey, account.ID(), clientKey)
 	if err != nil {
 		return &response{err: err}
 	}
 
-	s.account = account
+	// TODO: just bounce
+	s.client.Account = account
 	s.identity.id = fmt.Sprintf("account:%s", account.ID())
 
 	reply := &proto.RegisterAccountReply{
@@ -594,11 +595,21 @@ func (s *session) handleAuthCommand(msg *proto.AuthCommand) *response {
 	}
 
 	authAttempts.WithLabelValues(s.roomName).Inc()
-	authResult, err := proto.Authenticate(s.ctx, s.backend, s.room, msg)
+
+	var (
+		failureReason string
+		err           error
+	)
+	switch msg.Type {
+	case proto.AuthPasscode:
+		failureReason, err = s.client.AuthenticateWithPasscode(s.ctx, s.room, msg.Passcode)
+	default:
+		failureReason = fmt.Sprintf("auth type not supported: %s", msg.Type)
+	}
 	if err != nil {
 		return &response{err: err}
 	}
-	if authResult.FailureReason != "" {
+	if failureReason != "" {
 		authFailures.WithLabelValues(s.roomName).Inc()
 		s.authFailCount++
 		if s.authFailCount >= MaxAuthFailures {
@@ -607,10 +618,9 @@ func (s *session) handleAuthCommand(msg *proto.AuthCommand) *response {
 			authTerminations.WithLabelValues(s.roomName).Inc()
 			s.state = s.ignore
 		}
-		return &response{packet: &proto.AuthReply{Reason: authResult.FailureReason}}
+		return &response{packet: &proto.AuthReply{Reason: failureReason}}
 	}
 
-	s.auth = &authResult.Authorization
 	s.state = s.handleCommand
 	if err := s.join(); err != nil {
 		s.keyID = ""

@@ -562,12 +562,12 @@ func (b *Backend) join(ctx scope.Context, room *Room, session proto.Session) err
 			" FROM banned_agent"+
 			" WHERE agent_id = $1 AND (room IS NULL OR room = $2)"+
 			" AND (expires IS NULL OR expires > NOW())",
-		client.AgentID, room.Name)
+		client.Agent.IDString(), room.Name)
 	if err != nil {
 		return err
 	}
 	if len(agentBans) > 0 {
-		backend.Logger(ctx).Printf("access denied to %s: %#v", client.AgentID, agentBans)
+		backend.Logger(ctx).Printf("access denied to %s: %#v", client.Agent.IDString(), agentBans)
 		return proto.ErrAccessDenied
 	}
 

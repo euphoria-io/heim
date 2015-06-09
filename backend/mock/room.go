@@ -104,7 +104,7 @@ func (r *memRoom) Join(ctx scope.Context, session proto.Session) error {
 	ident := session.Identity()
 	id := ident.ID()
 
-	if banned, ok := r.agentBans[client.AgentID]; ok && banned.After(time.Now()) {
+	if banned, ok := r.agentBans[client.Agent.IDString()]; ok && banned.After(time.Now()) {
 		return proto.ErrAccessDenied
 	}
 

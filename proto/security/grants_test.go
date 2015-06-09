@@ -23,7 +23,7 @@ func TestGrants(t *testing.T) {
 		kms := security.LocalKMS()
 		kms.SetMasterKey(make([]byte, security.AES256.KeySize()))
 		ctx := scope.New()
-		client := &proto.Client{}
+		client := &proto.Client{Agent: &proto.Agent{}}
 		client.FromRequest(ctx, &http.Request{})
 		backend := &mock.TestBackend{}
 		room, err := backend.CreateRoom(ctx, kms, "test")

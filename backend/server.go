@@ -11,6 +11,7 @@ import (
 	"euphoria.io/heim/backend/cluster"
 	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/security"
+	"euphoria.io/heim/proto/snowflake"
 	"euphoria.io/scope"
 
 	gorillactx "github.com/gorilla/context"
@@ -204,10 +205,19 @@ func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// need to look up account associated with agent
-
-	client := &proto.Client{AgentID: agent.IDString()}
+	client := &proto.Client{Agent: agent}
 	client.FromRequest(ctx, r)
+
+	// Look up account associated with agent.
+	var accountID snowflake.Snowflake
+	if err := accountID.FromString(agent.AccountID); agent.AccountID != "" && err == nil {
+		logger.Printf("looking up account %s", accountID)
+		client.Account, err = s.b.GetAccount(ctx, accountID)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
 
 	// Upgrade to a websocket and set cookie.
 	headers := http.Header{}
@@ -222,7 +232,7 @@ func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
 	defer conn.Close()
 
 	// Serve the session.
-	session := newSession(ctx, conn, agent, agentKey, s.ID, s.Era, s.b, s.kms, roomName, room)
+	session := newSession(ctx, conn, client, agentKey, s.ID, s.Era, s.b, s.kms, roomName, room)
 	if err = session.serve(); err != nil {
 		// TODO: error handling
 		return

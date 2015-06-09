@@ -24,6 +24,14 @@ type Authorization struct {
 	MessageKeys    map[string]*security.ManagedKey
 }
 
+func (a *Authorization) AddMessageKey(keyID string, key *security.ManagedKey) {
+	if a.MessageKeys == nil {
+		a.MessageKeys = map[string]*security.ManagedKey{keyID: key}
+	} else {
+		a.MessageKeys[keyID] = key
+	}
+}
+
 type AuthorizationResult struct {
 	Authorization
 	FailureReason string
@@ -83,6 +91,17 @@ func authenticateAccount(
 			ClientKey: clientKey,
 		},
 	}
+
+	// TODO: check if account is manager
+
+	// TODO: Look for message key grants to this account.
+	/*
+		mkey, err := room.MessageKey(ctx)
+		if err != nil {
+			return nil, err
+		}
+	*/
+
 	return auth, nil
 }
 
