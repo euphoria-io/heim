@@ -6,7 +6,7 @@ var Embed = require('./ui/embed')
 
 
 module.exports = function(roomName) {
-  if (roomName == 'thedrawingroom' || roomName == 'lovenest') {
+  if (roomName == 'thedrawingroom' || roomName == 'lovenest' || roomName == 'has') {
     Heim.hook('page-bottom', function() {
       return (
         <style key="drawingroom-style" dangerouslySetInnerHTML={{__html:`
