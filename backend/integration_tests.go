@@ -897,7 +897,7 @@ func testAccountRegistration(s *serverUnderTest) {
 		// Upgrade to account.
 		sfs := snowflakes(1)
 		conn.send("1", "register-account",
-			`{"namespace":"email","id":"logan@euphoria.io","password":"hunter2"}`)
+			`{"namespace":"email","id":"registration@euphoria.io","password":"hunter2"}`)
 		conn.expect("1", "register-account-reply", `{"success":true,"account_id":"%s"}`, sfs[0])
 		conn.expect("", "bounce-event", `{"reason":"authentication changed"}`)
 		conn.Close()
