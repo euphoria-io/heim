@@ -66,12 +66,13 @@ func init() {
 	prometheus.MustRegister(authTerminations)
 }
 
-type cmdState func(*proto.Packet) (interface{}, error)
-
-type incomingPacket struct {
-	*proto.Packet
-	flooding bool
+type response struct {
+	packet interface{}
+	err    error
+	cost   int64
 }
+
+type cmdState func(*proto.Packet) *response
 
 type session struct {
 	id        string
@@ -88,7 +89,7 @@ type session struct {
 	keyID   string
 	onClose func()
 
-	incoming     chan incomingPacket
+	incoming     chan *proto.Packet
 	outgoing     chan *proto.Packet
 	floodLimiter *ratelimit.Bucket
 
@@ -121,9 +122,9 @@ func newSession(
 		roomName:  roomName,
 		room:      room,
 
-		incoming:     make(chan incomingPacket),
+		incoming:     make(chan *proto.Packet),
 		outgoing:     make(chan *proto.Packet, 100),
-		floodLimiter: ratelimit.NewBucket(time.Second, 5),
+		floodLimiter: ratelimit.NewBucketWithQuantum(time.Second, 50, 10),
 	}
 
 	return session
@@ -226,28 +227,38 @@ func (s *session) serve() error {
 			if err := s.sendPing(); err != nil {
 				return err
 			}
-		case incomingCmd := <-s.incoming:
-			cmd := incomingCmd.Packet
+		case cmd := <-s.incoming:
+			reply := s.state(cmd)
 
-			if incomingCmd.flooding {
-				if consecutiveThrottled++; consecutiveThrottled > MaxConsecutiveThrottled {
+			flooding := false
+			shouldKickForFlooding := false
+			if reply.cost > 0 {
+				taken := s.floodLimiter.TakeAvailable(reply.cost)
+				if taken < reply.cost {
+					flooding = true
+					if consecutiveThrottled++; consecutiveThrottled > MaxConsecutiveThrottled {
+						shouldKickForFlooding = true
+					}
+					s.floodLimiter.Wait(reply.cost - taken)
+				} else {
+					consecutiveThrottled = 0
+				}
+			}
+
+			if reply.err != nil {
+				logger.Printf("error: %v: %s", s.state, reply.err)
+				reply.packet = reply.err
+			}
+
+			if reply.packet == nil {
+				if shouldKickForFlooding {
 					return ErrFlooding
 				}
-			} else {
-				consecutiveThrottled = 0
-			}
-
-			reply, err := s.state(cmd)
-			if err != nil {
-				logger.Printf("error: %v: %s", s.state, err)
-				reply = err
-			}
-			if reply == nil {
 				continue
 			}
 
 			// Write the response back over the socket.
-			resp, err := proto.MakeResponse(cmd.ID, cmd.Type, reply, incomingCmd.flooding)
+			resp, err := proto.MakeResponse(cmd.ID, cmd.Type, reply.packet, flooding)
 			if err != nil {
 				logger.Printf("error: Response: %s", err)
 				return err
@@ -262,6 +273,10 @@ func (s *session) serve() error {
 			if err := s.conn.WriteMessage(websocket.TextMessage, data); err != nil {
 				logger.Printf("error: write message: %s", err)
 				return err
+			}
+
+			if shouldKickForFlooding {
+				return ErrFlooding
 			}
 		case cmd := <-s.outgoing:
 			data, err := cmd.Encode()
@@ -301,16 +316,7 @@ func (s *session) readMessages() {
 				logger.Printf("error: ParseRequest: %s", err)
 				return
 			}
-
-			// Flood protection.
-			incomingCmd := incomingPacket{Packet: cmd}
-			if s.floodLimiter.TakeAvailable(1) != 1 {
-				incomingCmd.flooding = true
-			}
-			s.incoming <- incomingCmd
-			if incomingCmd.flooding {
-				s.floodLimiter.Wait(1)
-			}
+			s.incoming <- cmd
 		default:
 			logger.Printf("error: unsupported message type: %v", messageType)
 			return
@@ -318,19 +324,19 @@ func (s *session) readMessages() {
 	}
 }
 
-func (s *session) ignore(cmd *proto.Packet) (interface{}, error) {
+func (s *session) ignore(cmd *proto.Packet) *response {
 	switch cmd.Type {
 	case proto.PingType, proto.PingReplyType:
 		return s.handleCommand(cmd)
 	default:
-		return nil, nil
+		return &response{}
 	}
 }
 
-func (s *session) handleAuth(cmd *proto.Packet) (interface{}, error) {
+func (s *session) handleAuth(cmd *proto.Packet) *response {
 	payload, err := cmd.Payload()
 	if err != nil {
-		return nil, fmt.Errorf("payload: %s", err)
+		return &response{err: fmt.Errorf("payload: %s", err)}
 	}
 
 	switch msg := payload.(type) {
@@ -338,7 +344,7 @@ func (s *session) handleAuth(cmd *proto.Packet) (interface{}, error) {
 		if s.authFailCount > 0 {
 			buf := []byte{0}
 			if _, err := rand.Read(buf); err != nil {
-				return nil, err
+				return &response{err: err}
 			}
 			jitter := 4 * time.Duration(int(buf[0])-128) * time.Millisecond
 			time.Sleep(2*time.Second + jitter)
@@ -347,7 +353,7 @@ func (s *session) handleAuth(cmd *proto.Packet) (interface{}, error) {
 		authAttempts.WithLabelValues(s.roomName).Inc()
 		auth, err := proto.Authenticate(s.ctx, s.room, msg)
 		if err != nil {
-			return nil, err
+			return &response{err: err}
 		}
 		if auth.FailureReason != "" {
 			authFailures.WithLabelValues(s.roomName).Inc()
@@ -358,7 +364,7 @@ func (s *session) handleAuth(cmd *proto.Packet) (interface{}, error) {
 				authTerminations.WithLabelValues(s.roomName).Inc()
 				s.state = s.ignore
 			}
-			return &proto.AuthReply{Reason: auth.FailureReason}, nil
+			return &response{packet: &proto.AuthReply{Reason: auth.FailureReason}}
 		}
 
 		// TODO: support holding multiple keys
@@ -368,20 +374,20 @@ func (s *session) handleAuth(cmd *proto.Packet) (interface{}, error) {
 		if err := s.join(); err != nil {
 			s.keyID = ""
 			s.state = s.handleAuth
-			return nil, err
+			return &response{err: err}
 		}
-		return &proto.AuthReply{Success: true}, nil
+		return &response{packet: &proto.AuthReply{Success: true}}
 	case *proto.PingCommand, *proto.PingReply:
 		return s.handleCommand(cmd)
 	default:
-		return nil, fmt.Errorf("access denied, please authenticate")
+		return &response{err: fmt.Errorf("access denied, please authenticate")}
 	}
 }
 
-func (s *session) handleCommand(cmd *proto.Packet) (interface{}, error) {
+func (s *session) handleCommand(cmd *proto.Packet) *response {
 	payload, err := cmd.Payload()
 	if err != nil {
-		return nil, fmt.Errorf("payload: %s", err)
+		return &response{err: fmt.Errorf("payload: %s", err)}
 	}
 
 	switch msg := payload.(type) {
@@ -390,23 +396,31 @@ func (s *session) handleCommand(cmd *proto.Packet) (interface{}, error) {
 	case *proto.LogCommand:
 		msgs, err := s.room.Latest(s.ctx, msg.N, msg.Before)
 		if err != nil {
-			return nil, err
+			return &response{err: err}
 		}
-		return proto.DecryptPayload(proto.LogReply{Log: msgs, Before: msg.Before}, s.auth)
+		packet, err := proto.DecryptPayload(proto.LogReply{Log: msgs, Before: msg.Before}, s.auth)
+		return &response{
+			packet: packet,
+			err:    err,
+			cost:   1,
+		}
 	case *proto.NickCommand:
 		nick, err := proto.NormalizeNick(msg.Name)
 		if err != nil {
-			return nil, err
+			return &response{err: err}
 		}
 		formerName := s.identity.Name()
 		s.identity.name = nick
 		event, err := s.room.RenameUser(s.ctx, s, formerName)
 		if err != nil {
-			return nil, err
+			return &response{err: err}
 		}
-		return proto.NickReply(*event), nil
+		return &response{
+			packet: proto.NickReply(*event),
+			cost:   1,
+		}
 	case *proto.PingCommand:
-		return &proto.PingReply{UnixTime: msg.UnixTime}, nil
+		return &response{packet: &proto.PingReply{UnixTime: msg.UnixTime}}
 	case *proto.PingReply:
 		s.finishFastKeepalive()
 		if msg.UnixTime == s.expectedPingReply {
@@ -414,15 +428,15 @@ func (s *session) handleCommand(cmd *proto.Packet) (interface{}, error) {
 		} else if s.outstandingPings > 1 {
 			s.outstandingPings--
 		}
-		return nil, nil
+		return &response{}
 	case *proto.WhoCommand:
 		listing, err := s.room.Listing(s.ctx)
 		if err != nil {
-			return nil, err
+			return &response{err: err}
 		}
-		return &proto.WhoReply{Listing: listing}, nil
+		return &response{packet: &proto.WhoReply{Listing: listing}}
 	default:
-		return nil, fmt.Errorf("command type %T not implemented", payload)
+		return &response{err: fmt.Errorf("command type %T not implemented", payload)}
 	}
 }
 
@@ -497,22 +511,22 @@ func (s *session) join() error {
 	return nil
 }
 
-func (s *session) handleSendCommand(cmd *proto.SendCommand) (interface{}, error) {
+func (s *session) handleSendCommand(cmd *proto.SendCommand) *response {
 	if s.Identity().Name() == "" {
-		return nil, fmt.Errorf("you must choose a name before you may begin chatting")
+		return &response{err: fmt.Errorf("you must choose a name before you may begin chatting")}
 	}
 
 	msgID, err := snowflake.New()
 	if err != nil {
-		return nil, err
+		return &response{err: err}
 	}
 
 	isValidParent, err := s.room.IsValidParent(cmd.Parent)
 	if err != nil {
-		return nil, err
+		return &response{err: err}
 	}
 	if !isValidParent {
-		return nil, proto.ErrInvalidParent
+		return &response{err: proto.ErrInvalidParent}
 	}
 	msg := proto.Message{
 		ID:      msgID,
@@ -523,16 +537,21 @@ func (s *session) handleSendCommand(cmd *proto.SendCommand) (interface{}, error)
 
 	if s.keyID != "" {
 		if err := proto.EncryptMessage(&msg, s.keyID, s.auth[s.keyID].Key); err != nil {
-			return nil, err
+			return &response{err: err}
 		}
 	}
 
 	sent, err := s.room.Send(s.ctx, s, msg)
 	if err != nil {
-		return nil, err
+		return &response{err: err}
 	}
 
-	return proto.DecryptPayload(proto.SendReply(sent), s.auth)
+	packet, err := proto.DecryptPayload(proto.SendReply(sent), s.auth)
+	return &response{
+		packet: packet,
+		err:    err,
+		cost:   10,
+	}
 }
 
 func (s *session) sendPing() error {
