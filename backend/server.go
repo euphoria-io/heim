@@ -209,9 +209,10 @@ func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
 	client.FromRequest(ctx, r)
 
 	// Look up account associated with agent.
+	logger.Printf("got agent: %#v", agent)
 	var accountID snowflake.Snowflake
 	if err := accountID.FromString(agent.AccountID); agent.AccountID != "" && err == nil {
-		logger.Printf("looking up account %s", accountID)
+		logger.Printf("get account: %s", accountID)
 		client.Account, err = s.b.GetAccount(ctx, accountID)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)

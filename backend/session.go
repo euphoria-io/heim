@@ -217,7 +217,7 @@ func (s *session) serve() error {
 		}
 		s.state = s.handleCommand
 	default:
-		s.sendBounce()
+		s.sendBounce("authentication required")
 		s.state = s.handleAuth
 	}
 
@@ -293,6 +293,14 @@ func (s *session) serve() error {
 
 			if shouldKickForFlooding {
 				return ErrFlooding
+			}
+
+			// Some responses trigger bounces.
+			switch msg := reply.packet.(type) {
+			case *proto.RegisterAccountReply:
+				if msg.Success {
+					s.sendBounce("authentication changed")
+				}
 			}
 		case cmd := <-s.outgoing:
 			data, err := cmd.Encode()
@@ -455,9 +463,9 @@ func (s *session) sendSnapshot(msgs []proto.Message, listing proto.Listing) erro
 	return nil
 }
 
-func (s *session) sendBounce() error {
+func (s *session) sendBounce(reason string) error {
 	bounce := &proto.BounceEvent{
-		Reason: "authentication required",
+		Reason: reason,
 		// TODO: fill in AuthOptions
 	}
 	event, err := proto.MakeEvent(bounce)
@@ -572,10 +580,6 @@ func (s *session) handleRegisterAccountCommand(cmd *proto.RegisterAccountCommand
 	if err != nil {
 		return &response{err: err}
 	}
-
-	// TODO: just bounce
-	s.client.Account = account
-	s.identity.id = fmt.Sprintf("account:%s", account.ID())
 
 	reply := &proto.RegisterAccountReply{
 		Success:   true,

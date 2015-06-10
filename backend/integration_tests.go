@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"net/http/httptest"
 	"sort"
 	"strings"
@@ -82,20 +83,24 @@ func (s *serverUnderTest) Close() {
 	s.backend.Close()
 }
 
-func (s *serverUnderTest) Connect(roomName string) *testConn {
+func (s *serverUnderTest) Connect(roomName string, cookies ...*http.Cookie) *testConn {
 	if _, err := s.backend.GetRoom(scope.New(), roomName); err == proto.ErrRoomNotFound {
 		_, err = s.backend.CreateRoom(scope.New(), s.app.kms, roomName)
 		So(err, ShouldBeNil)
 	}
-
+	headers := http.Header{}
+	for _, cookie := range cookies {
+		headers.Add("Cookie", cookie.String())
+	}
 	url := strings.Replace(s.server.URL, "http:", "ws:", 1) + "/room/" + roomName + "/ws"
-	conn, _, err := websocket.DefaultDialer.Dial(url, nil)
+	conn, resp, err := websocket.DefaultDialer.Dial(url, headers)
 	So(err, ShouldBeNil)
-	return &testConn{Conn: conn}
+	return &testConn{Conn: conn, cookies: resp.Cookies()}
 }
 
 type testConn struct {
 	*websocket.Conn
+	cookies   []*http.Cookie
 	sessionID string
 	userID    string
 }
@@ -258,6 +263,7 @@ func IntegrationTest(t *testing.T, factory func() proto.Backend) {
 	runTest("Authentication", testAuthentication)
 	runTestWithFactory("Presence", testPresence)
 	runTest("Deletion", testDeletion)
+	runTest("Account registration", testAccountRegistration)
 }
 
 func testLurker(s *serverUnderTest) {
@@ -856,5 +862,60 @@ func testManagersLowLevel(s *serverUnderTest) {
 	Convey("Redundant manager removal should be an error", func() {
 		So(room.RemoveManager(ctx, alice, aliceKey, bob), ShouldBeNil)
 		So(room.RemoveManager(ctx, alice, aliceKey, bob), ShouldEqual, proto.ErrManagerNotFound)
+	})
+}
+
+func testAccountRegistration(s *serverUnderTest) {
+	Convey("Agent upgrades to account", func() {
+		tc := NewTestClock()
+		defer tc.Close()
+
+		// Add observer for timing control.
+		observer := s.Connect("registration")
+		defer observer.Close()
+
+		observer.expectPing()
+		observer.expectSnapshot(s.backend.Version(), nil, nil)
+
+		// Connect as test user.
+		conn := s.Connect("registration")
+		defer conn.Close()
+
+		conn.expectPing()
+		conn.expectSnapshot(
+			s.backend.Version(),
+			[]string{
+				fmt.Sprintf(`{"session_id":"%s","id":"%s","server_id":"test1","server_era":"era1"}`,
+					observer.sessionID, observer.userID)},
+			nil)
+		So(conn.userID, ShouldStartWith, "agent:")
+
+		observer.expect("", "join-event",
+			`{"session_id":"%s","id":"%s","server_id":"test1","server_era":"era1"}`,
+			conn.sessionID, conn.userID)
+
+		// Upgrade to account.
+		sfs := snowflakes(1)
+		conn.send("1", "register-account",
+			`{"namespace":"email","id":"logan@euphoria.io","password":"hunter2"}`)
+		conn.expect("1", "register-account-reply", `{"success":true,"account_id":"%s"}`, sfs[0])
+		conn.expect("", "bounce-event", `{"reason":"authentication changed"}`)
+		conn.Close()
+
+		// Wait for part.
+		observer.expect("", "part-event",
+			`{"session_id":"%s","id":"%s","server_id":"test1","server_era":"era1"}`,
+			conn.sessionID, conn.userID)
+
+		// Verify logged in on reconnect.
+		conn = s.Connect("registration", conn.cookies...)
+		conn.expectPing()
+		conn.expectSnapshot(
+			s.backend.Version(),
+			[]string{
+				fmt.Sprintf(`{"session_id":"%s","id":"%s","server_id":"test1","server_era":"era1"}`,
+					observer.sessionID, observer.userID)},
+			nil)
+		So(conn.userID, ShouldEqual, fmt.Sprintf("account:%s", sfs[0]))
 	})
 }
