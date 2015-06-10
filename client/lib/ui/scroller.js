@@ -91,6 +91,15 @@ module.exports = React.createClass({
     }
   },
 
+  onFocusCapture: function() {
+    // browser bugs and other difficult to account for shenanigans can cause
+    // unwanted scrolls when inputs get focus. :( FIGHT BACK!
+    // see https://code.google.com/p/chromium/issues/detail?id=437025
+    setImmediate(() => {
+      this.scroll({ignoreScrollDelta: true})
+    })
+  },
+
   onUpdate: function() {
     this.scroll()
     this.updateAnchorPos()
@@ -167,13 +176,13 @@ module.exports = React.createClass({
     }
   },
 
-  scroll: function(forceTargetInView) {
+  scroll: function(options) {
     // Scroll so our point of interest (target or anchor) is in the right place.
     //
     // Desired behavior:
     //
-    // If forceTargetInView is set, ensure that the target is onscreen. If it
-    // is not, move it within edgeSpace of the top or bottom.
+    // If options.forceTargetInView is set, ensure that the target is onscreen.
+    // If it is not, move it within edgeSpace of the top or bottom.
     //
     // If the target was previously in view, we want to ensure it still is. If
     // we're at the bottom of the page, new content should be able to push the
@@ -189,6 +198,7 @@ module.exports = React.createClass({
     // scrollTop doesn't happen promptly during inertial scrolling. It turns
     // out that setting scrollTop inside a requestAnimationFrame callback
     // circumvents this issue.
+    options = options || {}
     this._chromeRAFHack('scroll', () => {
       var node = this.getDOMNode()
       var nodeBox = dimensions(node)
@@ -200,7 +210,7 @@ module.exports = React.createClass({
       var edgeSpace = Math.min(this.props.edgeSpace, viewHeight / 2)
 
       var posRef, oldPos
-      if (target && (forceTargetInView || this._targetInView)) {
+      if (target && (options.forceTargetInView || this._targetInView)) {
         var viewShrunk = viewHeight < this._lastViewHeight
         var hasGrown = scrollHeight > this._lastScrollHeight
         var fromBottom = scrollHeight - (node.scrollTop + viewHeight)
@@ -222,7 +232,7 @@ module.exports = React.createClass({
         if (this._targetInView && shouldHoldPos && !shouldScrollBottom) {
           oldPos = this._anchorPos
         } else {
-          if (forceTargetInView && !this._targetInView || shouldScrollBottom || jumping) {
+          if (options.forceTargetInView && !this._targetInView || shouldScrollBottom || jumping) {
             oldPos = clampedPos
           }
         }
@@ -235,7 +245,7 @@ module.exports = React.createClass({
 
       var delta = dimensions(posRef, 'bottom') - oldPos
       if (delta && canScroll) {
-        var scrollDelta = node.scrollTop - this._lastScrollTop
+        var scrollDelta = options.ignoreScrollDelta ? 0 : node.scrollTop - this._lastScrollTop
         this._lastScrollTop = node.scrollTop += delta + scrollDelta
       }
       this.updateAnchorPos()
@@ -244,7 +254,7 @@ module.exports = React.createClass({
   },
 
   scrollToTarget: function() {
-    this.scroll(true)
+    this.scroll({forceTargetInView: true})
   },
 
   onTouchStart: function() {
@@ -274,7 +284,7 @@ module.exports = React.createClass({
 
   render: function() {
     return (
-      <div onScroll={this._onScroll} onTouchStart={this.onTouchStart} onTouchEnd={this.onTouchEnd} className={this.props.className}>
+      <div onScroll={this._onScroll} onFocusCapture={this.onFocusCapture} onTouchStart={this.onTouchStart} onTouchEnd={this.onTouchEnd} className={this.props.className}>
         {this.props.children}
       </div>
     )
