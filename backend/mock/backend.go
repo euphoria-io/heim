@@ -145,6 +145,7 @@ func (b *TestBackend) RegisterAccount(
 			backend.Logger(ctx).Printf(
 				"error associating agent %s with new account %s:%s: %s", agentID, namespace, id, err)
 		}
+		agent.AccountID = account.ID().String()
 	}
 
 	return account, clientKey, nil

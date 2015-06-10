@@ -97,6 +97,7 @@ func (atb *AgentTrackerBinding) getFromDB(agentID string, db gorp.SqlExecutor) (
 			IV:         agentRow.IV,
 			Ciphertext: agentRow.EncryptedClientKey,
 		},
+		AccountID: agentRow.AccountID.String,
 	}
 	return agent, nil
 }
@@ -111,7 +112,11 @@ func (atb *AgentTrackerBinding) setClientKeyInDB(
 	_, err := db.Exec(
 		"UPDATE agent SET account_id = $2, encrypted_client_key = $3 WHERE id = $1",
 		agentID, accountID, keyBytes)
-	return err
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (atb *AgentTrackerBinding) SetClientKey(
@@ -144,6 +149,10 @@ func (atb *AgentTrackerBinding) SetClientKey(
 		agentID, accountID.String(), agent.EncryptedClientKey.Ciphertext, t)
 	if err != nil {
 		rollback()
+		return err
+	}
+
+	if err := t.Commit(); err != nil {
 		return err
 	}
 
