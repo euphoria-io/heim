@@ -248,8 +248,8 @@ func IntegrationTest(t *testing.T, factory func() proto.Backend) {
 	}
 
 	// Internal API tests
-	runTest("Accounts", testAccounts)
-	runTest("Managers", testManagers)
+	runTest("Accounts low-level API", testAccountsLowLevel)
+	runTest("Managers low-level API", testManagersLowLevel)
 
 	// Websocket tests
 	runTest("Lurker", testLurker)
@@ -668,7 +668,7 @@ func testDeletion(s *serverUnderTest) {
 	})
 }
 
-func testAccounts(s *serverUnderTest) {
+func testAccountsLowLevel(s *serverUnderTest) {
 	b := s.backend
 	kms := s.app.kms
 
@@ -747,7 +747,7 @@ func testAccounts(s *serverUnderTest) {
 	})
 }
 
-func testManagers(s *serverUnderTest) {
+func testManagersLowLevel(s *serverUnderTest) {
 	b := s.backend
 	ctx := scope.New()
 	kms := s.app.kms
