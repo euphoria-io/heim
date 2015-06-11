@@ -35,6 +35,9 @@ var (
 	LogEventType = LogType.Event()
 	LogReplyType = LogType.Reply()
 
+	LoginType      = PacketType("login")
+	LoginReplyType = LoginType.Reply()
+
 	NickType      = PacketType("nick")
 	NickEventType = NickType.Event()
 	NickReplyType = NickType.Reply()
@@ -87,6 +90,9 @@ var (
 		BounceEventType:   reflect.TypeOf(BounceEvent{}),
 		NetworkEventType:  reflect.TypeOf(NetworkEvent{}),
 		SnapshotEventType: reflect.TypeOf(SnapshotEvent{}),
+
+		LoginType:      reflect.TypeOf(LoginCommand{}),
+		LoginReplyType: reflect.TypeOf(LoginReply{}),
 
 		RegisterAccountType:      reflect.TypeOf(RegisterAccountCommand{}),
 		RegisterAccountReplyType: reflect.TypeOf(RegisterAccountReply{}),
@@ -204,17 +210,20 @@ type NetworkEvent struct {
 	ServerEra string `json:"server_era"`
 }
 
-type RegisterAccountCommand struct {
+type LoginCommand struct {
 	Namespace string `json:"namespace"`
 	ID        string `json:"id"`
 	Password  string `json:"password"`
 }
 
-type RegisterAccountReply struct {
+type LoginReply struct {
 	Success   bool                `json:"success"`
 	Reason    string              `json:"reason"`
 	AccountID snowflake.Snowflake `json:"account_id"`
 }
+
+type RegisterAccountCommand LoginCommand
+type RegisterAccountReply LoginReply
 
 type WhoCommand struct{}
 

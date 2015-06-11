@@ -55,5 +55,11 @@ func (t *agentTracker) SetClientKey(
 	if err != nil {
 		return err
 	}
-	return agent.SetClientKey(accessKey, clientKey)
+
+	if err := agent.SetClientKey(accessKey, clientKey); err != nil {
+		return err
+	}
+
+	agent.AccountID = accountID.String()
+	return nil
 }

@@ -263,6 +263,7 @@ func IntegrationTest(t *testing.T, factory func() proto.Backend) {
 	runTest("Authentication", testAuthentication)
 	runTestWithFactory("Presence", testPresence)
 	runTest("Deletion", testDeletion)
+	runTest("Account login", testAccountLogin)
 	runTest("Account registration", testAccountRegistration)
 }
 
@@ -865,6 +866,87 @@ func testManagersLowLevel(s *serverUnderTest) {
 	})
 }
 
+func testAccountLogin(s *serverUnderTest) {
+	b := s.backend
+	at := b.AgentTracker()
+	ctx := scope.New()
+	kms := s.app.kms
+	nonce := fmt.Sprintf("%s", time.Now())
+	agentKey := &security.ManagedKey{
+		KeyType:   proto.AgentKeyType,
+		Plaintext: make([]byte, proto.AgentKeyType.KeySize()),
+	}
+	loganAgent, err := proto.NewAgent([]byte("logan"+nonce), agentKey)
+	So(err, ShouldBeNil)
+	So(at.Register(ctx, loganAgent), ShouldBeNil)
+	logan, _, err := b.RegisterAccount(
+		ctx, kms, "email", "logan"+nonce, "loganpass", loganAgent.IDString(), agentKey)
+	So(err, ShouldBeNil)
+
+	Convey("Agent logs into account", func() {
+		tc := NewTestClock()
+		defer tc.Close()
+
+		// Add observer for timing control.
+		observer := s.Connect("login")
+		defer observer.Close()
+
+		observer.expectPing()
+		observer.expectSnapshot(s.backend.Version(), nil, nil)
+
+		// Connect as test user.
+		conn := s.Connect("login")
+		defer conn.Close()
+
+		conn.expectPing()
+		conn.expectSnapshot(
+			s.backend.Version(),
+			[]string{
+				fmt.Sprintf(`{"session_id":"%s","id":"%s","server_id":"test1","server_era":"era1"}`,
+					observer.sessionID, observer.userID)},
+			nil)
+		So(conn.userID, ShouldStartWith, "agent:")
+
+		observer.expect("", "join-event",
+			`{"session_id":"%s","id":"%s","server_id":"test1","server_era":"era1"}`,
+			conn.sessionID, conn.userID)
+
+		// Log in.
+		conn.send("1", "login",
+			`{"namespace":"email","id":"logan%s","password":"loganpass"}`, nonce)
+		conn.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, logan.ID())
+		conn.expect("", "bounce-event", `{"reason":"authentication changed"}`)
+		conn.Close()
+
+		// Wait for part.
+		observer.expect("", "part-event",
+			`{"session_id":"%s","id":"%s","server_id":"test1","server_era":"era1"}`,
+			conn.sessionID, conn.userID)
+
+		// Verify logged in on reconnect.
+		conn = s.Connect("login", conn.cookies...)
+		conn.expectPing()
+		conn.expectSnapshot(
+			s.backend.Version(),
+			[]string{
+				fmt.Sprintf(`{"session_id":"%s","id":"%s","server_id":"test1","server_era":"era1"}`,
+					observer.sessionID, observer.userID)},
+			nil)
+		So(conn.userID, ShouldEqual, fmt.Sprintf("account:%s", logan.ID()))
+
+		// Wait for join.
+		observer.expect("", "join-event",
+			`{"session_id":"%s","id":"%s","server_id":"test1","server_era":"era1"}`,
+			conn.sessionID, conn.userID)
+
+		// Observer should fail to log in with incorrect identity or password.
+		observer.send("1", "login", `{"namespace":"email","id":"wrongid","password":"wrongpass"}`)
+		observer.expect("1", "login-reply", `{"success":false,"reason":"account not found"}`)
+		observer.send("2", "login", `{"namespace":"email","id":"logan%s","password":"wrongpass"}`, nonce)
+		observer.expect("2", "login-reply", `{"success":false,"reason":"access denied"}`)
+	})
+}
+
 func testAccountRegistration(s *serverUnderTest) {
 	Convey("Agent upgrades to account", func() {
 		tc := NewTestClock()
@@ -917,5 +999,16 @@ func testAccountRegistration(s *serverUnderTest) {
 					observer.sessionID, observer.userID)},
 			nil)
 		So(conn.userID, ShouldEqual, fmt.Sprintf("account:%s", sfs[0]))
+
+		// Wait for join.
+		observer.expect("", "join-event",
+			`{"session_id":"%s","id":"%s","server_id":"test1","server_era":"era1"}`,
+			conn.sessionID, conn.userID)
+
+		// Observer should fail to register the same personal identity.
+		observer.send("1", "register-account",
+			`{"namespace":"email","id":"registration@euphoria.io","password":"hunter2"}`)
+		observer.expect("1", "register-account-reply",
+			`{"success":false,"reason":"personal identity already in use"}`)
 	})
 }

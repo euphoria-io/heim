@@ -297,6 +297,10 @@ func (s *session) serve() error {
 
 			// Some responses trigger bounces.
 			switch msg := reply.packet.(type) {
+			case *proto.LoginReply:
+				if msg.Success {
+					s.sendBounce("authentication changed")
+				}
 			case *proto.RegisterAccountReply:
 				if msg.Success {
 					s.sendBounce("authentication changed")
@@ -370,6 +374,8 @@ func (s *session) handleAuth(cmd *proto.Packet) *response {
 		return s.handleCommand(cmd)
 	case *proto.RegisterAccountCommand:
 		return s.handleCommand(cmd)
+	case *proto.LoginCommand:
+		return s.handleCommand(cmd)
 	default:
 		return &response{err: fmt.Errorf("access denied, please authenticate")}
 	}
@@ -429,6 +435,8 @@ func (s *session) handleCommand(cmd *proto.Packet) *response {
 			return &response{err: err}
 		}
 		return &response{packet: &proto.WhoReply{Listing: listing}}
+	case *proto.LoginCommand:
+		return s.handleLoginCommand(msg)
 	case *proto.RegisterAccountCommand:
 		return s.handleRegisterAccountCommand(msg)
 	default:
@@ -549,6 +557,41 @@ func (s *session) handleSendCommand(cmd *proto.SendCommand) *response {
 		err:    err,
 		cost:   10,
 	}
+}
+
+func (s *session) handleLoginCommand(cmd *proto.LoginCommand) *response {
+	account, err := s.backend.ResolveAccount(s.ctx, cmd.Namespace, cmd.ID)
+	if err != nil {
+		switch err {
+		case proto.ErrAccountNotFound:
+			return &response{packet: &proto.LoginReply{Reason: err.Error()}}
+		default:
+			return &response{err: err}
+		}
+	}
+
+	clientKey := account.KeyFromPassword(cmd.Password)
+
+	if _, err = account.Unlock(clientKey); err != nil {
+		switch err {
+		case proto.ErrAccessDenied:
+			return &response{packet: &proto.LoginReply{Reason: err.Error()}}
+		default:
+			return &response{err: err}
+		}
+	}
+
+	err = s.backend.AgentTracker().SetClientKey(
+		s.ctx, s.client.Agent.IDString(), s.agentKey, account.ID(), clientKey)
+	if err != nil {
+		return &response{err: err}
+	}
+
+	reply := &proto.LoginReply{
+		Success:   true,
+		AccountID: account.ID(),
+	}
+	return &response{packet: reply}
 }
 
 func (s *session) handleRegisterAccountCommand(cmd *proto.RegisterAccountCommand) *response {
