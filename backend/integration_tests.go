@@ -255,6 +255,7 @@ func IntegrationTest(t *testing.T, factory func() proto.Backend) {
 	// Internal API tests
 	runTest("Accounts low-level API", testAccountsLowLevel)
 	runTest("Managers low-level API", testManagersLowLevel)
+	runTest("Staff low-level API", testStaffLowLevel)
 
 	// Websocket tests
 	runTest("Lurker", testLurker)
@@ -751,6 +752,44 @@ func testAccountsLowLevel(s *serverUnderTest) {
 		So(err, ShouldBeNil)
 		So(dup, ShouldNotBeNil)
 		So(dup.KeyPair().PublicKey, ShouldResemble, kp.PublicKey)
+	})
+}
+
+func testStaffLowLevel(s *serverUnderTest) {
+	Convey("Setting and checking staff bit", func() {
+		b := s.backend
+		ctx := scope.New()
+		kms := s.app.kms
+		at := b.AgentTracker()
+		agentKey := &security.ManagedKey{
+			KeyType:   proto.AgentKeyType,
+			Plaintext: make([]byte, proto.AgentKeyType.KeySize()),
+		}
+
+		// Create test account.
+		nonce := fmt.Sprintf("%s", time.Now())
+		loganAgent, err := proto.NewAgent([]byte("logan"+nonce), agentKey)
+		So(err, ShouldBeNil)
+		So(at.Register(ctx, loganAgent), ShouldBeNil)
+		logan, _, err := b.RegisterAccount(
+			ctx, kms, "email", "logan"+nonce, "loganpass", loganAgent.IDString(), agentKey)
+		So(err, ShouldBeNil)
+		So(logan.IsStaff(), ShouldBeFalse)
+
+		// Enable staff
+		So(b.SetStaff(ctx, logan.ID(), true), ShouldBeNil)
+		logan, err = b.GetAccount(ctx, logan.ID())
+		So(err, ShouldBeNil)
+		So(logan.IsStaff(), ShouldBeTrue)
+
+		// Enable staff
+		So(b.SetStaff(ctx, logan.ID(), false), ShouldBeNil)
+		logan, err = b.GetAccount(ctx, logan.ID())
+		So(err, ShouldBeNil)
+		So(logan.IsStaff(), ShouldBeFalse)
+
+		// Account not found error
+		So(b.SetStaff(ctx, 0, true), ShouldEqual, proto.ErrAccountNotFound)
 	})
 }
 

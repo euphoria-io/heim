@@ -46,4 +46,7 @@ type Backend interface {
 
 	// ResolveAccount returns any account registered under the given account identity.
 	ResolveAccount(ctx scope.Context, namespace, id string) (Account, error)
+
+	// SetStaff marks the given account as staff or not staff.
+	SetStaff(ctx scope.Context, accountID snowflake.Snowflake, isStaff bool) error
 }

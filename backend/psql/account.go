@@ -16,6 +16,7 @@ type Account struct {
 	EncryptedUserKey    []byte `db:"encrypted_user_key"`
 	EncryptedPrivateKey []byte `db:"encrypted_private_key"`
 	PublicKey           []byte `db:"public_key"`
+	Staff               bool
 }
 
 func (a *Account) Bind(b *Backend) *AccountBinding {
@@ -85,3 +86,5 @@ func (ab *AccountBinding) Unlock(clientKey *security.ManagedKey) (*security.Mana
 	}
 	return sec.Unlock(clientKey)
 }
+
+func (ab *AccountBinding) IsStaff() bool { return ab.Staff }

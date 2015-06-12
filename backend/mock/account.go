@@ -25,8 +25,9 @@ func NewAccount(kms security.KMS, password string) (proto.Account, *security.Man
 }
 
 type memAccount struct {
-	id  snowflake.Snowflake
-	sec proto.AccountSecurity
+	id    snowflake.Snowflake
+	sec   proto.AccountSecurity
+	staff bool
 }
 
 func (a *memAccount) ID() snowflake.Snowflake { return a.id }
@@ -40,3 +41,5 @@ func (a *memAccount) KeyPair() security.ManagedKeyPair { return a.sec.KeyPair.Cl
 func (a *memAccount) Unlock(clientKey *security.ManagedKey) (*security.ManagedKeyPair, error) {
 	return a.sec.Unlock(clientKey)
 }
+
+func (a *memAccount) IsStaff() bool { return a.staff }

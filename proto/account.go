@@ -42,6 +42,7 @@ type Account interface {
 	KeyFromPassword(password string) *security.ManagedKey
 	KeyPair() security.ManagedKeyPair
 	Unlock(clientKey *security.ManagedKey) (*security.ManagedKeyPair, error)
+	IsStaff() bool
 }
 
 // NewAccountSecurity initializes the nonce and account secrets for a new account

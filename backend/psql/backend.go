@@ -483,20 +483,30 @@ func (b *Backend) ResolveAccount(ctx scope.Context, namespace, id string) (proto
 }
 
 func (b *Backend) GetAccount(ctx scope.Context, id snowflake.Snowflake) (proto.Account, error) {
-	var acc Account
-	err := b.DbMap.SelectOne(
-		&acc,
-		"SELECT id, nonce, mac, encrypted_system_key, encrypted_user_key, encrypted_private_key,"+
-			" public_key"+
-			" FROM account WHERE id = $1",
-		id.String())
+	row, err := b.DbMap.Get(Account{}, id.String())
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, proto.ErrAccountNotFound
-		}
 		return nil, err
 	}
-	return acc.Bind(b), nil
+	if row == nil {
+		return nil, proto.ErrAccountNotFound
+	}
+	return row.(*Account).Bind(b), nil
+}
+
+func (b *Backend) SetStaff(ctx scope.Context, accountID snowflake.Snowflake, isStaff bool) error {
+	result, err := b.DbMap.Exec(
+		"UPDATE account SET staff = $2 WHERE id = $1", accountID.String(), isStaff)
+	if err != nil {
+		return err
+	}
+	n, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n != 1 {
+		return proto.ErrAccountNotFound
+	}
+	return nil
 }
 
 func (b *Backend) sendMessageToRoom(

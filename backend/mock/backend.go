@@ -173,3 +173,16 @@ func (b *TestBackend) GetAccount(ctx scope.Context, id snowflake.Snowflake) (pro
 	}
 	return account, nil
 }
+
+func (b *TestBackend) SetStaff(ctx scope.Context, accountID snowflake.Snowflake, isStaff bool) error {
+	b.Lock()
+	defer b.Unlock()
+
+	account, ok := b.accounts[accountID.String()]
+	if !ok {
+		return proto.ErrAccountNotFound
+	}
+	memAcc := account.(*memAccount)
+	memAcc.staff = isStaff
+	return nil
+}

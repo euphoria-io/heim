@@ -8,7 +8,8 @@ CREATE TABLE account (
     encrypted_system_key bytea NOT NULL,
     encrypted_user_key bytea NOT NULL,
     encrypted_private_key bytea NOT NULL,
-    public_key bytea NOT NULL
+    public_key bytea NOT NULL,
+    staff bool DEFAULT false
 );
 
 CREATE TABLE personal_identity (
