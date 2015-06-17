@@ -39,7 +39,7 @@ type RoomBinding struct {
 func (rb *RoomBinding) GetMessage(ctx scope.Context, id snowflake.Snowflake) (*proto.Message, error) {
 	var msg Message
 
-	nDays, err := rb.DbMap.SelectInt("SELECT retention_days FROM room WHERE room = $1", rb.Name)
+	nDays, err := rb.DbMap.SelectInt("SELECT retention_days FROM room WHERE name = $1", rb.Name)
 	if err != nil {
 		return nil, err
 	}
