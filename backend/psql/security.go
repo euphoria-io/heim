@@ -9,10 +9,12 @@ type MessageKey struct {
 
 type Capability struct {
 	ID                   string
+	NonceBytes           []byte `db:"nonce"`
 	EncryptedPrivateData []byte `db:"encrypted_private_data"`
 	PublicData           []byte `db:"public_data"`
 }
 
 func (c *Capability) CapabilityID() string     { return c.ID }
+func (c *Capability) Nonce() []byte            { return c.NonceBytes }
 func (c *Capability) PublicPayload() []byte    { return c.PublicData }
 func (c *Capability) EncryptedPayload() []byte { return c.EncryptedPrivateData }

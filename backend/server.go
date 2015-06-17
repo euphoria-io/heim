@@ -181,7 +181,6 @@ func (s *Server) serveGzippedFile(w http.ResponseWriter, r *http.Request, filena
 
 func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
 	ctx := s.rootCtx.Fork()
-	logger := Logger(ctx)
 
 	// Resolve the room.
 	// TODO: support room creation?
@@ -192,7 +191,6 @@ func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "404 page not found", http.StatusNotFound)
 			return
 		}
-		logger.Printf("get room %s: %s", roomName, err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -200,7 +198,6 @@ func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
 	// Tag the agent. We use an authenticated but un-encrypted cookie.
 	agent, cookie, agentKey, err := getAgent(ctx, s, r)
 	if err != nil {
-		logger.Printf("get agent id: %s", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -209,13 +206,15 @@ func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
 	client.FromRequest(ctx, r)
 
 	// Look up account associated with agent.
-	logger.Printf("got agent: %#v", agent)
 	var accountID snowflake.Snowflake
 	if err := accountID.FromString(agent.AccountID); agent.AccountID != "" && err == nil {
-		logger.Printf("get account: %s", accountID)
-		client.Account, err = s.b.GetAccount(ctx, accountID)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+		if err := client.AuthenticateWithAgent(ctx, s.b, room, agent, agentKey); err != nil {
+			switch err {
+			case proto.ErrAccessDenied:
+				http.Error(w, err.Error(), http.StatusForbidden)
+			default:
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			}
 			return
 		}
 	}

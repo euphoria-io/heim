@@ -277,11 +277,39 @@ func (b *Backend) GetRoom(ctx scope.Context, name string) (proto.Room, error) {
 }
 
 func (b *Backend) CreateRoom(
-	ctx scope.Context, kms security.KMS, name string, managers ...proto.Account) (proto.Room, error) {
+	ctx scope.Context, kms security.KMS, private bool, name string, managers ...proto.Account) (
+	proto.Room, error) {
 
 	sec, err := proto.NewRoomSecurity(kms, name)
 	if err != nil {
 		return nil, err
+	}
+
+	backend.Logger(ctx).Printf("creating room: %s", name)
+	room := &Room{
+		Name:  name,
+		IV:    sec.KeyPair.IV,
+		MAC:   sec.MAC,
+		Nonce: sec.Nonce,
+		EncryptedManagementKey: sec.KeyEncryptingKey.Ciphertext,
+		EncryptedPrivateKey:    sec.KeyPair.EncryptedPrivateKey,
+		PublicKey:              sec.KeyPair.PublicKey,
+	}
+
+	var (
+		rmkb   *RoomMessageKeyBinding
+		msgKey security.ManagedKey
+	)
+	if private {
+		rmkb, err = room.generateMessageKey(kms)
+		if err != nil {
+			return nil, err
+		}
+
+		msgKey = rmkb.ManagedKey()
+		if err := kms.DecryptKey(&msgKey); err != nil {
+			return nil, err
+		}
 	}
 
 	// Generate manager capabilities.
@@ -293,14 +321,29 @@ func (b *Backend) CreateRoom(
 	if err != nil {
 		return nil, fmt.Errorf("room security unlock error: %s", err)
 	}
-	caps := make([]*security.PublicKeyCapability, len(managers))
+	managerCaps := make([]*security.PublicKeyCapability, len(managers))
 	for i, manager := range managers {
 		kp := manager.KeyPair()
-		c, err := security.GrantPublicKeyCapability(kms, roomKeyPair, &kp, nil, managerKey.Plaintext)
+		c, err := security.GrantPublicKeyCapability(
+			kms, sec.Nonce, roomKeyPair, &kp, nil, managerKey.Plaintext)
 		if err != nil {
 			return nil, fmt.Errorf("manager grant error: %s", err)
 		}
-		caps[i] = c
+		managerCaps[i] = c
+	}
+
+	accessCaps := []*security.PublicKeyCapability{}
+	if private {
+		accessCaps = make([]*security.PublicKeyCapability, len(managers))
+		for i, manager := range managers {
+			kp := manager.KeyPair()
+			c, err := security.GrantPublicKeyCapability(
+				kms, rmkb.Nonce(), roomKeyPair, &kp, nil, msgKey.Plaintext)
+			if err != nil {
+				return nil, fmt.Errorf("access grant error: %s", err)
+			}
+			accessCaps[i] = c
+		}
 	}
 
 	// Insert data.
@@ -315,24 +358,26 @@ func (b *Backend) CreateRoom(
 		}
 	}
 
-	backend.Logger(ctx).Printf("creating room: %s", name)
-	room := &Room{
-		Name: name,
-		IV:   sec.KeyPair.IV,
-		MAC:  sec.MAC,
-		EncryptedManagementKey: sec.KeyEncryptingKey.Ciphertext,
-		EncryptedPrivateKey:    sec.KeyPair.EncryptedPrivateKey,
-		PublicKey:              sec.KeyPair.PublicKey,
-	}
 	if err := t.Insert(room); err != nil {
 		backend.Logger(ctx).Printf("room creation error on %s: %s", name, err)
 		rollback()
 		return nil, err
 	}
 
-	for i, capability := range caps {
+	if rmkb != nil {
+		if err := t.Insert(&rmkb.MessageKey, &rmkb.RoomMessageKey); err != nil {
+			backend.Logger(ctx).Printf("room creation error on %s (message key): %s", name, err)
+			rollback()
+			return nil, err
+		}
+
+		// TODO: generate access capabilities for managers
+	}
+
+	for i, capability := range managerCaps {
 		c := &Capability{
 			ID:                   capability.CapabilityID(),
+			NonceBytes:           capability.Nonce(),
 			EncryptedPrivateData: capability.EncryptedPayload(),
 			PublicData:           capability.PublicPayload(),
 		}
@@ -349,6 +394,26 @@ func (b *Backend) CreateRoom(
 		if err := t.Insert(c, rc, rm); err != nil {
 			backend.Logger(ctx).Printf(
 				"room creation error on %s (manager %s): %s", name, managers[i].ID().String(), err)
+			rollback()
+			return nil, err
+		}
+	}
+
+	for _, capability := range accessCaps {
+		c := &Capability{
+			ID:                   capability.CapabilityID(),
+			NonceBytes:           capability.Nonce(),
+			EncryptedPrivateData: capability.EncryptedPayload(),
+			PublicData:           capability.PublicPayload(),
+		}
+		rc := &RoomCapability{
+			Room:         name,
+			CapabilityID: capability.CapabilityID(),
+			Granted:      time.Now(),
+		}
+		if err := t.Insert(c, rc); err != nil {
+			backend.Logger(ctx).Printf(
+				"room creation error on %s (access capability): %s", name, err)
 			rollback()
 			return nil, err
 		}

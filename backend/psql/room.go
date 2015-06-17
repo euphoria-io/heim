@@ -24,6 +24,7 @@ type Room struct {
 	Name                   string
 	FoundedBy              string `db:"founded_by"`
 	RetentionDays          int    `db:"retention_days"`
+	Nonce                  []byte `db:"pk_nonce"`
 	MAC                    []byte `db:"pk_mac"`
 	IV                     []byte `db:"pk_iv"`
 	EncryptedManagementKey []byte `db:"encrypted_management_key"`
@@ -36,6 +37,40 @@ func (r *Room) Bind(b *Backend) *RoomBinding {
 		Backend: b,
 		Room:    r,
 	}
+}
+
+func (r *Room) generateMessageKey(kms security.KMS) (*RoomMessageKeyBinding, error) {
+	// Generate unique ID for storing new key in DB.
+	keyID, err := snowflake.New()
+	if err != nil {
+		return nil, err
+	}
+
+	// Use KMS to generate nonce and key.
+	nonce, err := kms.GenerateNonce(security.AES128.KeySize())
+	if err != nil {
+		return nil, err
+	}
+
+	mkey, err := kms.GenerateEncryptedKey(security.AES128, "room", r.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	rmkb := &RoomMessageKeyBinding{
+		MessageKey: MessageKey{
+			ID:           keyID.String(),
+			EncryptedKey: mkey.Ciphertext,
+			IV:           mkey.IV,
+			Nonce:        nonce,
+		},
+		RoomMessageKey: RoomMessageKey{
+			Room:      r.Name,
+			KeyID:     keyID.String(),
+			Activated: time.Now(),
+		},
+	}
+	return rmkb, nil
 }
 
 type RoomBinding struct {
@@ -258,19 +293,7 @@ func (rb *RoomBinding) RenameUser(ctx scope.Context, session proto.Session, form
 func (rb *RoomBinding) GenerateMessageKey(ctx scope.Context, kms security.KMS) (
 	proto.RoomMessageKey, error) {
 
-	// Generate unique ID for storing new key in DB.
-	keyID, err := snowflake.New()
-	if err != nil {
-		return nil, err
-	}
-
-	// Use KMS to generate nonce and key.
-	nonce, err := kms.GenerateNonce(security.AES128.KeySize())
-	if err != nil {
-		return nil, err
-	}
-
-	mkey, err := kms.GenerateEncryptedKey(security.AES128, "room", rb.Name)
+	rmkb, err := rb.Room.generateMessageKey(kms)
 	if err != nil {
 		return nil, err
 	}
@@ -281,19 +304,6 @@ func (rb *RoomBinding) GenerateMessageKey(ctx scope.Context, kms security.KMS) (
 		return nil, err
 	}
 
-	rmkb := &RoomMessageKeyBinding{
-		MessageKey: MessageKey{
-			ID:           keyID.String(),
-			EncryptedKey: mkey.Ciphertext,
-			IV:           mkey.IV,
-			Nonce:        nonce,
-		},
-		RoomMessageKey: RoomMessageKey{
-			Room:      rb.Name,
-			KeyID:     keyID.String(),
-			Activated: time.Now(),
-		},
-	}
 	if err := transaction.Insert(&rmkb.MessageKey); err != nil {
 		if rerr := transaction.Rollback(); rerr != nil {
 			backend.Logger(ctx).Printf("rollback error: %s", rerr)
@@ -378,7 +388,7 @@ func (rb *RoomBinding) GetCapability(ctx scope.Context, id string) (security.Cap
 	backend.Logger(ctx).Printf("looking up capability %s in room %s", id, rb.Name)
 	err := rb.DbMap.SelectOne(
 		rcb,
-		"SELECT c.id, c.encrypted_private_data, c.public_data,"+
+		"SELECT c.id, c.nonce, c.encrypted_private_data, c.public_data,"+
 			" r.room, r.capability_id, r.granted, r.revoked"+
 			" FROM capability c, room_capability r"+
 			" WHERE r.room = $1 AND r.capability_id = $2 AND c.id = $2 AND r.revoked < r.granted",
@@ -483,7 +493,7 @@ func (rb *RoomBinding) getManagerCapability(account proto.Account) (
 	var c Capability
 	err := rb.SelectOne(
 		&c,
-		"SELECT c.id, c.encrypted_private_data, c.public_data"+
+		"SELECT c.id, c.nonce, c.encrypted_private_data, c.public_data"+
 			" FROM capability c, room_capability rc, room_manager rm"+
 			" WHERE rm.room = $1 AND rm.account_id = $2 AND rm.capability_id = rc.capability_id"+
 			" AND rc.revoked < rc.granted AND c.id = rc.capability_id",
@@ -533,7 +543,7 @@ func (rb *RoomBinding) AddManager(
 	// Grant capability for new manager.
 	newManagerKeyPair := newManager.KeyPair()
 	capability, err := security.GrantPublicKeyCapability(
-		kms, unlockedSubjectKeyPair, &newManagerKeyPair, nil, managerKey.Plaintext)
+		kms, rb.Room.Nonce, unlockedSubjectKeyPair, &newManagerKeyPair, nil, managerKey.Plaintext)
 	if err != nil {
 		return err
 	}
@@ -541,6 +551,7 @@ func (rb *RoomBinding) AddManager(
 	// Save the results.
 	c := &Capability{
 		ID:                   capability.CapabilityID(),
+		NonceBytes:           capability.Nonce(),
 		EncryptedPrivateData: capability.EncryptedPayload(),
 		PublicData:           capability.PublicPayload(),
 	}

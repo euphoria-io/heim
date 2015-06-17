@@ -217,8 +217,16 @@ func (s *session) serve() error {
 		}
 		s.state = s.handleCommand
 	default:
-		s.sendBounce("authentication required")
-		s.state = s.handleAuth
+		if _, ok := s.client.Authorization.MessageKeys[key.KeyID()]; ok {
+			if err := s.join(); err != nil {
+				// TODO: send an error packet
+				return err
+			}
+			s.state = s.handleCommand
+		} else {
+			s.sendBounce("authentication required")
+			s.state = s.handleAuth
+		}
 	}
 
 	go s.readMessages()
@@ -439,6 +447,8 @@ func (s *session) handleCommand(cmd *proto.Packet) *response {
 		return s.handleLoginCommand(msg)
 	case *proto.RegisterAccountCommand:
 		return s.handleRegisterAccountCommand(msg)
+	case *proto.CreateRoomCommand:
+		return s.handleCreateRoomCommand(msg)
 	default:
 		return &response{err: fmt.Errorf("command type %T not implemented", payload)}
 	}
@@ -675,6 +685,46 @@ func (s *session) handleAuthCommand(msg *proto.AuthCommand) *response {
 		return &response{err: err}
 	}
 	return &response{packet: &proto.AuthReply{Success: true}}
+}
+
+func (s *session) handleCreateRoomCommand(cmd *proto.CreateRoomCommand) *response {
+	rejection := func(reason string) *response {
+		return &response{packet: &proto.CreateRoomReply{FailureReason: reason}}
+	}
+
+	failure := func(err error) *response { return &response{err: err} }
+
+	if s.client.Account == nil || !s.client.Account.IsStaff() {
+		return rejection("access denied")
+	}
+
+	if len(cmd.Managers) == 0 {
+		return rejection("at least one manager is required")
+	}
+
+	managers := make([]proto.Account, len(cmd.Managers))
+	for i, accountID := range cmd.Managers {
+		account, err := s.backend.GetAccount(s.ctx, accountID)
+		if err != nil {
+			switch err {
+			case proto.ErrAccountNotFound:
+				return rejection(err.Error())
+			default:
+				return failure(err)
+			}
+		}
+		managers[i] = account
+	}
+
+	// TODO: validate room name
+	// TODO: support unnamed rooms
+
+	_, err := s.backend.CreateRoom(s.ctx, s.kms, cmd.Private, cmd.Name, managers...)
+	if err != nil {
+		return failure(err)
+	}
+
+	return &response{packet: &proto.CreateRoomReply{Success: true}}
 }
 
 func (s *session) sendPing() error {

@@ -26,9 +26,10 @@ func TestGrants(t *testing.T) {
 		client := &proto.Client{Agent: &proto.Agent{}}
 		client.FromRequest(ctx, &http.Request{})
 		backend := &mock.TestBackend{}
-		room, err := backend.CreateRoom(ctx, kms, "test")
+		room, err := backend.CreateRoom(ctx, kms, true, "test")
 		So(err, ShouldBeNil)
-		rkey, err := room.GenerateMessageKey(ctx, kms)
+
+		rkey, err := room.MessageKey(ctx)
 		So(err, ShouldBeNil)
 		mkey := rkey.ManagedKey()
 		So(kms.DecryptKey(&mkey), ShouldBeNil)

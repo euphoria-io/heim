@@ -13,6 +13,11 @@ type Capability interface {
 	// with the recipient.
 	CapabilityID() string
 
+	// Nonce() returns the random nonce associated with the capability.
+	// This is an optional feature (used for public-key based grants).
+	// If there is no nonce, nil is returned.
+	Nonce() []byte
+
 	// PublicPayload returns the publicly exposed data associated
 	// with the capability.
 	PublicPayload() []byte
@@ -56,16 +61,17 @@ func GrantSharedSecretCapability(key *ManagedKey, nonce []byte, publicData, priv
 
 	grant := &SharedSecretCapability{
 		Capability: &capability{
-			IDString:         base64.URLEncoding.EncodeToString(id),
-			Public:           publicPayload,
-			EncryptedPrivate: encryptedPrivatePayload,
+			idString:         base64.URLEncoding.EncodeToString(id),
+			public:           publicPayload,
+			encryptedPrivate: encryptedPrivatePayload,
 		},
 	}
 	return grant, nil
 }
 
 func GrantPublicKeyCapability(
-	kms KMS, subjectKey, holderKey *ManagedKeyPair, publicData, privateData interface{}) (
+	kms KMS, nonce []byte, subjectKey, holderKey *ManagedKeyPair,
+	publicData, privateData interface{}) (
 	*PublicKeyCapability, error) {
 
 	if subjectKey.KeyPairType != holderKey.KeyPairType {
@@ -78,17 +84,17 @@ func GrantPublicKeyCapability(
 		return nil, ErrKeyMustBeDecrypted
 	}
 
-	// Generate nonce for secure transmission of private data to holder.
+	// Extend nonce for secure transmission of private data to holder.
 	// It's imperative that this nonce is unique for this subject-holder pair.
-	nonce, err := kms.GenerateNonce(subjectKey.NonceSize())
-	if err != nil {
-		return nil, err
+	pkNonce := make([]byte, subjectKey.NonceSize())
+	n := copy(pkNonce, nonce)
+	if n < len(pkNonce) {
+		fill, err := kms.GenerateNonce(len(pkNonce) - n)
+		if err != nil {
+			return nil, err
+		}
+		copy(pkNonce[n:], fill)
 	}
-
-	// Generate a unique identifier from the subject's public key and the nonce.
-	idBytes := make([]byte, len(subjectKey.PublicKey)+len(nonce))
-	copy(idBytes, subjectKey.PublicKey)
-	copy(idBytes[len(subjectKey.PublicKey):], nonce)
 
 	// Encode the payloads as JSON.
 	publicPayload, err := json.Marshal(publicData)
@@ -102,7 +108,7 @@ func GrantPublicKeyCapability(
 
 	// Encrypt the private payload JSON.
 	encryptedPrivatePayload, err := subjectKey.Seal(
-		privatePayload, nonce, holderKey.PublicKey, subjectKey.PrivateKey)
+		privatePayload, pkNonce, holderKey.PublicKey, subjectKey.PrivateKey)
 	if err != nil {
 		return nil, err
 	}
@@ -110,26 +116,29 @@ func GrantPublicKeyCapability(
 	// Construct the capability and return.
 	offer := &PublicKeyCapability{
 		Capability: &capability{
-			IDString:         base64.URLEncoding.EncodeToString(idBytes),
-			Public:           publicPayload,
-			EncryptedPrivate: encryptedPrivatePayload,
+			idString:         PublicKeyCapabilityID(subjectKey, holderKey, nonce),
+			public:           publicPayload,
+			encryptedPrivate: encryptedPrivatePayload,
+			nonce:            pkNonce,
 		},
 	}
 	return offer, nil
 }
 
 type capability struct {
-	IDString         string
-	Public           []byte
-	EncryptedPrivate []byte
+	idString         string
+	nonce            []byte
+	public           []byte
+	encryptedPrivate []byte
 }
 
-func (c *capability) CapabilityID() string  { return c.IDString }
-func (c *capability) PublicPayload() []byte { return c.Public }
+func (c *capability) CapabilityID() string  { return c.idString }
+func (c *capability) Nonce() []byte         { return c.nonce }
+func (c *capability) PublicPayload() []byte { return c.public }
 
 func (c *capability) EncryptedPayload() []byte {
-	dup := make([]byte, len(c.EncryptedPrivate))
-	copy(dup, c.EncryptedPrivate)
+	dup := make([]byte, len(c.encryptedPrivate))
+	copy(dup, c.encryptedPrivate)
 	return dup
 }
 
@@ -165,19 +174,8 @@ func (c *PublicKeyCapability) DecryptPayload(subjectKey, holderKey *ManagedKeyPa
 		return nil, ErrKeyMustBeDecrypted
 	}
 
-	idBytes, err := base64.URLEncoding.DecodeString(c.CapabilityID())
-	if err != nil {
-		return nil, err
-	}
-
-	if len(idBytes) != len(subjectKey.PublicKey)+subjectKey.NonceSize() {
-		return nil, fmt.Errorf("invalid capability ID")
-	}
-
-	nonce := idBytes[len(subjectKey.PublicKey):]
-
 	payload, err := holderKey.Open(
-		c.EncryptedPayload(), nonce, subjectKey.PublicKey, holderKey.PrivateKey)
+		c.EncryptedPayload(), c.Nonce(), subjectKey.PublicKey, holderKey.PrivateKey)
 	if err != nil {
 		return nil, err
 	}
@@ -197,4 +195,12 @@ func SharedSecretCapabilityID(key *ManagedKey, nonce []byte) (string, error) {
 	}
 
 	return base64.URLEncoding.EncodeToString(id), nil
+}
+
+func PublicKeyCapabilityID(subjectKey, holderKey *ManagedKeyPair, nonce []byte) string {
+	idBytes := make([]byte, len(subjectKey.PublicKey)+len(holderKey.PublicKey)+len(nonce))
+	n := copy(idBytes, subjectKey.PublicKey)
+	n += copy(idBytes[n:], holderKey.PublicKey)
+	copy(idBytes[n:], nonce)
+	return base64.URLEncoding.EncodeToString(idBytes)
 }

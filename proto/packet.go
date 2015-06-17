@@ -18,6 +18,9 @@ var (
 	AuthEventType = AuthType.Event()
 	AuthReplyType = AuthType.Reply()
 
+	CreateRoomType      = PacketType("create-room")
+	CreateRoomReplyType = CreateRoomType.Reply()
+
 	SendType      = PacketType("send")
 	SendEventType = SendType.Event()
 	SendReplyType = SendType.Reply()
@@ -60,6 +63,9 @@ var (
 	ErrorReplyType = PacketType("error").Reply()
 
 	payloadMap = map[PacketType]reflect.Type{
+		CreateRoomType:      reflect.TypeOf(CreateRoomCommand{}),
+		CreateRoomReplyType: reflect.TypeOf(CreateRoomReply{}),
+
 		SendType:      reflect.TypeOf(SendCommand{}),
 		SendReplyType: reflect.TypeOf(SendReply{}),
 		SendEventType: reflect.TypeOf(SendEvent{}),
@@ -114,6 +120,17 @@ type SendCommand struct {
 
 type SendEvent Message
 type SendReply SendEvent
+
+type CreateRoomCommand struct {
+	Name     string                `json:"name"`
+	Managers []snowflake.Snowflake `json:"managers"`
+	Private  bool                  `json:"private,omitempty"`
+}
+
+type CreateRoomReply struct {
+	Success       bool   `json:"success"`
+	FailureReason string `json:"failure_reason"`
+}
 
 type EditMessageCommand struct {
 	ID             snowflake.Snowflake `json:"id"`
@@ -175,11 +192,6 @@ type PingReply struct {
 type AuthCommand struct {
 	Type     AuthOption `json:"type"`
 	Passcode string     `json:"passcode,omitempty"`
-	Account  struct {
-		Namespace string `json:"namespace"`
-		ID        string `json:"id"`
-		Password  string `json:"password"`
-	} `json:"account,omitempty"`
 }
 
 type AuthReply struct {

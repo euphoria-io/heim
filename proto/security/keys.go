@@ -24,7 +24,7 @@ var (
 type KeyType byte
 
 const (
-	AES128 KeyType = iota
+	AES128 KeyType = iota + 1
 	AES256
 )
 

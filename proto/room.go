@@ -130,6 +130,9 @@ type RoomManagerKey interface {
 
 	// Unlock decrypts the room's ManagedKeyPair with the given key and returns it.
 	Unlock(managerKey *security.ManagedKey) (*security.ManagedKeyPair, error)
+
+	// Nonce returns the current 128-bit nonce for the room.
+	Nonce() []byte
 }
 
 func NewRoomSecurity(kms security.KMS, roomName string) (*RoomSecurity, error) {
@@ -138,8 +141,9 @@ func NewRoomSecurity(kms security.KMS, roomName string) (*RoomSecurity, error) {
 
 	// Use one KMS request to obtain all the randomness we need:
 	//   - key-encrypting-key IV
-	//   - private key for account grants
-	randomData, err := kms.GenerateNonce(kType.BlockSize() + kpType.PrivateKeySize())
+	//   - private key for grants to accounts
+	//   - nonce for manager grants to accounts
+	randomData, err := kms.GenerateNonce(kType.BlockSize() + kpType.PrivateKeySize() + kpType.NonceSize())
 	if err != nil {
 		return nil, fmt.Errorf("rng error: %s", err)
 	}
@@ -155,6 +159,12 @@ func NewRoomSecurity(kms security.KMS, roomName string) (*RoomSecurity, error) {
 	keyPair, err := kpType.Generate(randomReader)
 	if err != nil {
 		return nil, fmt.Errorf("keypair generation error: %s", err)
+	}
+
+	// Generate nonce with random data.
+	nonce := make([]byte, kpType.NonceSize())
+	if _, err := io.ReadFull(randomReader, nonce); err != nil {
+		return nil, fmt.Errorf("rng error: %s", err)
 	}
 
 	// Generate key-encrypting-key. This will be returned encrypted, using the
@@ -185,6 +195,7 @@ func NewRoomSecurity(kms security.KMS, roomName string) (*RoomSecurity, error) {
 	poly1305.Sum(&mac, iv, &key)
 
 	sec := &RoomSecurity{
+		Nonce:            nonce,
 		MAC:              mac[:],
 		KeyEncryptingKey: *encryptedKek,
 		KeyPair:          *keyPair,
@@ -193,6 +204,7 @@ func NewRoomSecurity(kms security.KMS, roomName string) (*RoomSecurity, error) {
 }
 
 type RoomSecurity struct {
+	Nonce            []byte
 	MAC              []byte
 	KeyEncryptingKey security.ManagedKey
 	KeyPair          security.ManagedKeyPair

@@ -22,8 +22,9 @@ type Backend interface {
 
 	Close()
 
-	// Creates a new room.
-	CreateRoom(ctx scope.Context, kms security.KMS, name string, managers ...Account) (Room, error)
+	// Create creates a new room.
+	CreateRoom(
+		ctx scope.Context, kms security.KMS, private bool, name string, managers ...Account) (Room, error)
 
 	// Gets an existing Room by name.
 	GetRoom(ctx scope.Context, name string) (Room, error)

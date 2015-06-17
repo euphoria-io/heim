@@ -20,7 +20,7 @@ func TestRoomPresence(t *testing.T) {
 	kms := security.LocalKMS()
 	kms.SetMasterKey(make([]byte, security.AES256.KeySize()))
 
-	roomp, err := NewRoom(kms, "test", "testver")
+	roomp, err := NewRoom(ctx, kms, false, "test", "testver")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -74,7 +74,7 @@ func TestRoomBroadcast(t *testing.T) {
 	kms := security.LocalKMS()
 	kms.SetMasterKey(make([]byte, security.AES256.KeySize()))
 
-	roomp, err := NewRoom(kms, "test", "testver")
+	roomp, err := NewRoom(ctx, kms, false, "test", "testver")
 	if err != nil {
 		t.Fatal(err)
 	}

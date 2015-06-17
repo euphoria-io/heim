@@ -12,12 +12,10 @@ import (
 type AuthOption string
 
 const (
-	AuthAccount  = AuthOption("account")
 	AuthPasscode = AuthOption("passcode")
 )
 
 type Authorization struct {
-	Account        Account
 	ClientKey      *security.ManagedKey
 	HasManagerKey  bool
 	ManagerKeyPair *security.ManagedKeyPair
@@ -53,56 +51,11 @@ func Authenticate(
 	ctx scope.Context, backend Backend, room Room, cmd *AuthCommand) (*AuthorizationResult, error) {
 
 	switch cmd.Type {
-	case AuthAccount:
-		c := cmd.Account
-		auth, err := authenticateAccount(ctx, backend, room, c.Namespace, c.ID, c.Password)
-		switch err {
-		case ErrAccountNotFound, ErrAccessDenied:
-			return authorizationFailure(err.Error())
-		default:
-			return auth, err
-		}
 	case AuthPasscode:
 		return authenticateWithPasscode(ctx, room, cmd.Passcode)
 	default:
 		return authorizationFailure(fmt.Sprintf("auth type not supported: %s", cmd.Type))
 	}
-}
-
-func authenticateAccount(
-	ctx scope.Context, backend Backend, room Room, namespace, id, password string) (
-	*AuthorizationResult, error) {
-
-	account, err := backend.ResolveAccount(ctx, namespace, id)
-	if err != nil {
-		return nil, err
-	}
-
-	clientKey := account.KeyFromPassword(password)
-
-	_, err = account.Unlock(clientKey)
-	if err != nil {
-		return nil, err
-	}
-
-	auth := &AuthorizationResult{
-		Authorization: Authorization{
-			Account:   account,
-			ClientKey: clientKey,
-		},
-	}
-
-	// TODO: check if account is manager
-
-	// TODO: Look for message key grants to this account.
-	/*
-		mkey, err := room.MessageKey(ctx)
-		if err != nil {
-			return nil, err
-		}
-	*/
-
-	return auth, nil
 }
 
 func authenticateWithPasscode(ctx scope.Context, room Room, passcode string) (

@@ -39,9 +39,9 @@ func TestSetRoomPasscode(t *testing.T) {
 
 		term := &testTerm{}
 
-		room, err := ctrl.backend.CreateRoom(ctx, kms, "test")
+		room, err := ctrl.backend.CreateRoom(ctx, kms, true, "test")
 		So(err, ShouldBeNil)
-		rkey, err := room.GenerateMessageKey(ctx, kms)
+		rkey, err := room.MessageKey(ctx)
 		So(err, ShouldBeNil)
 
 		term = &testTerm{password: "hunter2"}
@@ -98,9 +98,9 @@ func TestLockRoom(t *testing.T) {
 			kms:     kms,
 		}
 
-		room, err := ctrl.backend.CreateRoom(ctx, kms, "test")
+		room, err := ctrl.backend.CreateRoom(ctx, kms, true, "test")
 		So(err, ShouldBeNil)
-		orig, err := room.GenerateMessageKey(ctx, kms)
+		orig, err := room.MessageKey(ctx)
 		So(err, ShouldBeNil)
 
 		Convey("Requires --force", func() {

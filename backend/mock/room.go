@@ -34,7 +34,10 @@ type memRoom struct {
 	managerKey *roomManagerKey
 }
 
-func NewRoom(kms security.KMS, name, version string, managers ...proto.Account) (proto.Room, error) {
+func NewRoom(
+	ctx scope.Context, kms security.KMS, private bool, name, version string, managers ...proto.Account) (
+	proto.Room, error) {
+
 	sec, err := proto.NewRoomSecurity(kms, name)
 	if err != nil {
 		return nil, err
@@ -61,15 +64,41 @@ func NewRoom(kms security.KMS, name, version string, managers ...proto.Account) 
 		sec:             sec,
 	}
 
+	var (
+		roomMsgKey proto.RoomMessageKey
+		msgKey     security.ManagedKey
+	)
+	if private {
+		roomMsgKey, err = room.GenerateMessageKey(ctx, kms)
+		if err != nil {
+			return nil, err
+		}
+
+		msgKey = roomMsgKey.ManagedKey()
+		if err := kms.DecryptKey(&msgKey); err != nil {
+			return nil, err
+		}
+	}
+
 	for _, manager := range managers {
 		kp := manager.KeyPair()
-		c, err := security.GrantPublicKeyCapability(kms, roomKeyPair, &kp, nil, managerKey.Plaintext)
+		c, err := security.GrantPublicKeyCapability(
+			kms, sec.Nonce, roomKeyPair, &kp, nil, managerKey.Plaintext)
 		if err != nil {
 			return nil, err
 		}
 		room.capabilities[c.CapabilityID()] = c
 		room.managers[manager.ID().String()] = c.CapabilityID()
 		room.managerAccounts[manager.ID().String()] = manager
+
+		if private {
+			c, err = security.GrantPublicKeyCapability(
+				kms, roomMsgKey.Nonce(), roomKeyPair, &kp, nil, msgKey.Plaintext)
+			if err != nil {
+				return nil, err
+			}
+			room.capabilities[c.CapabilityID()] = c
+		}
 	}
 
 	return room, nil
@@ -385,7 +414,7 @@ func (r *memRoom) AddManager(
 	newManagerKeyPair := newManager.KeyPair()
 
 	nc, err := security.GrantPublicKeyCapability(
-		kms, unlockedSubjectKeyPair, &newManagerKeyPair, nil, secret)
+		kms, r.sec.Nonce, unlockedSubjectKeyPair, &newManagerKeyPair, nil, secret)
 	if err != nil {
 		return err
 	}
@@ -439,4 +468,5 @@ type roomManagerKey struct {
 	*proto.RoomSecurity
 }
 
+func (r *roomManagerKey) Nonce() []byte                    { return r.RoomSecurity.Nonce }
 func (r *roomManagerKey) KeyPair() security.ManagedKeyPair { return r.RoomSecurity.KeyPair }

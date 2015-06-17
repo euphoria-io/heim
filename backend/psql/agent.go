@@ -94,6 +94,7 @@ func (atb *AgentTrackerBinding) getFromDB(agentID string, db gorp.SqlExecutor) (
 		IV:  agentRow.IV,
 		MAC: agentRow.MAC,
 		EncryptedClientKey: &security.ManagedKey{
+			KeyType:    security.AES256,
 			IV:         agentRow.IV,
 			Ciphertext: agentRow.EncryptedClientKey,
 		},

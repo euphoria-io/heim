@@ -59,6 +59,8 @@ type RoomManagerKeyBinding struct {
 	*Room
 }
 
+func (rmkb *RoomManagerKeyBinding) Nonce() []byte { return rmkb.Room.Nonce }
+
 func (rmkb *RoomManagerKeyBinding) KeyPair() security.ManagedKeyPair {
 	return security.ManagedKeyPair{
 		KeyPairType:         security.Curve25519,

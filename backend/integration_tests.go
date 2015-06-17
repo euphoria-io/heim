@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"sort"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -71,10 +72,23 @@ func (tc *testClock) clock() time.Time {
 type factoryTestSuite func(factory func() proto.Backend)
 type testSuite func(*serverUnderTest)
 
+func newServerUnderTest(backend proto.Backend, app *Server, server *httptest.Server) *serverUnderTest {
+	return &serverUnderTest{
+		backend:  backend,
+		app:      app,
+		server:   server,
+		accounts: map[string]proto.Account{},
+		rooms:    map[string]proto.Room{},
+	}
+}
+
 type serverUnderTest struct {
-	backend proto.Backend
-	app     *Server
-	server  *httptest.Server
+	backend  proto.Backend
+	app      *Server
+	server   *httptest.Server
+	once     sync.Once
+	accounts map[string]proto.Account
+	rooms    map[string]proto.Room
 }
 
 func (s *serverUnderTest) Close() {
@@ -85,7 +99,7 @@ func (s *serverUnderTest) Close() {
 
 func (s *serverUnderTest) Connect(roomName string, cookies ...*http.Cookie) *testConn {
 	if _, err := s.backend.GetRoom(scope.New(), roomName); err == proto.ErrRoomNotFound {
-		_, err = s.backend.CreateRoom(scope.New(), s.app.kms, roomName)
+		_, err = s.backend.CreateRoom(scope.New(), s.app.kms, false, roomName)
 		So(err, ShouldBeNil)
 	}
 	headers := http.Header{}
@@ -96,6 +110,55 @@ func (s *serverUnderTest) Connect(roomName string, cookies ...*http.Cookie) *tes
 	conn, resp, err := websocket.DefaultDialer.Dial(url, headers)
 	So(err, ShouldBeNil)
 	return &testConn{Conn: conn, cookies: resp.Cookies()}
+}
+
+func (s *serverUnderTest) Account(
+	ctx scope.Context, kms security.KMS, namespace, id, password string) (proto.Account, error) {
+
+	key := fmt.Sprintf("%s:%s", namespace, id)
+	if account, ok := s.accounts[key]; ok {
+		return account, nil
+	}
+
+	b := s.backend
+	at := b.AgentTracker()
+	agentKey := &security.ManagedKey{
+		KeyType:   proto.AgentKeyType,
+		Plaintext: make([]byte, proto.AgentKeyType.KeySize()),
+	}
+	agent, err := proto.NewAgent([]byte(id), agentKey)
+	if err != nil {
+		return nil, err
+	}
+	if err := at.Register(ctx, agent); err != nil {
+		return nil, err
+	}
+
+	account, _, err := b.RegisterAccount(
+		ctx, kms, namespace, id, password, agent.IDString(), agentKey)
+	if err != nil {
+		return nil, err
+	}
+
+	s.accounts[key] = account
+	return account, nil
+}
+
+func (s *serverUnderTest) Room(
+	ctx scope.Context, kms security.KMS, private bool, name string, managers ...proto.Account) (
+	proto.Room, error) {
+
+	if room, ok := s.rooms[name]; ok {
+		return room, nil
+	}
+
+	room, err := s.backend.CreateRoom(ctx, kms, private, name, managers...)
+	if err != nil {
+		return nil, err
+	}
+
+	s.rooms[name] = room
+	return room, nil
 }
 
 type testConn struct {
@@ -224,33 +287,35 @@ func snowflakes(n int) []snowflake.Snowflake {
 }
 
 func IntegrationTest(t *testing.T, factory func() proto.Backend) {
-
 	runTest := func(name string, test testSuite) {
-		Convey(name, t, func() {
-			backend := factory()
-			defer backend.Close()
+		backend := factory()
+		defer backend.Close()
 
-			kms := security.LocalKMS()
-			kms.SetMasterKey(make([]byte, security.AES256.KeySize()))
-			app, err := NewServer(scope.New(), backend, &cluster.TestCluster{}, kms, "test1", "era1", "")
-			So(err, ShouldBeNil)
-			app.AllowRoomCreation(true)
-			app.agentIDGenerator = func() ([]byte, error) {
-				agentIDCounter++
-				return []byte(fmt.Sprintf("%d", agentIDCounter)), nil
-			}
+		kms := security.LocalKMS()
+		kms.SetMasterKey(make([]byte, security.AES256.KeySize()))
+		app, err := NewServer(scope.New(), backend, &cluster.TestCluster{}, kms, "test1", "era1", "")
+		if err != nil {
+			t.Fatal(err)
+		}
 
-			server := httptest.NewServer(app)
-			defer server.Close()
-			defer server.CloseClientConnections()
+		app.AllowRoomCreation(true)
+		app.agentIDGenerator = func() ([]byte, error) {
+			agentIDCounter++
+			return []byte(fmt.Sprintf("%d", agentIDCounter)), nil
+		}
 
-			test(&serverUnderTest{backend, app, server})
-		})
+		server := httptest.NewServer(app)
+		defer server.Close()
+		defer server.CloseClientConnections()
+
+		s := newServerUnderTest(backend, app, server)
+		Convey(name, t, func() { test(s) })
 	}
 
 	runTestWithFactory := func(name string, test factoryTestSuite) {
 		Convey(name, t, func() { test(factory) })
 	}
+	_ = runTestWithFactory
 
 	// Internal API tests
 	runTest("Accounts low-level API", testAccountsLowLevel)
@@ -456,7 +521,7 @@ func testPresence(factory func() proto.Backend) {
 	server := httptest.NewServer(app)
 	defer server.Close()
 	defer server.CloseClientConnections()
-	s := &serverUnderTest{backend, app, server}
+	s := newServerUnderTest(backend, app, server)
 
 	Convey("Other party joins then parts", func() {
 		self := s.Connect("presence")
@@ -568,21 +633,26 @@ func testAuthentication(s *serverUnderTest) {
 	kms := security.LocalKMS()
 	kms.SetMasterKey(make([]byte, security.AES256.KeySize()))
 
-	room, err := s.backend.GetRoom(ctx, "private")
-	if err == proto.ErrRoomNotFound {
-		room, err = s.backend.CreateRoom(ctx, kms, "private")
-	}
+	logan, err := s.Account(ctx, kms, "email", "logan-private", "loganpass")
 	So(err, ShouldBeNil)
 
-	rkey, err := room.GenerateMessageKey(ctx, kms)
-	So(err, ShouldBeNil)
-	mkey := rkey.ManagedKey()
-	So(kms.DecryptKey(&mkey), ShouldBeNil)
-	clientKey := security.KeyFromPasscode([]byte("hunter2"), rkey.Nonce(), security.AES128)
-	capability, err := security.GrantSharedSecretCapability(clientKey, rkey.Nonce(), nil, mkey.Plaintext)
+	room, err := s.Room(ctx, kms, true, "private", logan)
 	So(err, ShouldBeNil)
 
-	So(room.SaveCapability(ctx, capability), ShouldBeNil)
+	s.once.Do(func() {
+		rkey, err := room.MessageKey(ctx)
+		So(err, ShouldBeNil)
+
+		mkey := rkey.ManagedKey()
+		So(kms.DecryptKey(&mkey), ShouldBeNil)
+
+		clientKey := security.KeyFromPasscode([]byte("hunter2"), rkey.Nonce(), security.AES128)
+		capability, err := security.GrantSharedSecretCapability(
+			clientKey, rkey.Nonce(), nil, mkey.Plaintext)
+		So(err, ShouldBeNil)
+
+		So(room.SaveCapability(ctx, capability), ShouldBeNil)
+	})
 
 	Convey("Access denied", func() {
 		conn := s.Connect("private")
@@ -603,7 +673,7 @@ func testAuthentication(s *serverUnderTest) {
 		conn.expectError("1", "who-reply", "access denied, please authenticate")
 	})
 
-	Convey("Access granted", func() {
+	Convey("Access granted to passcode", func() {
 		conn := s.Connect("private")
 		defer conn.Close()
 		conn.expectPing()
@@ -611,6 +681,24 @@ func testAuthentication(s *serverUnderTest) {
 
 		conn.send("1", "auth", `{"type":"passcode","passcode":"hunter2"}`)
 		conn.expect("1", "auth-reply", `{"success":true}`)
+	})
+
+	Convey("Access granted to account", func() {
+		// Authenticate in new session.
+		conn := s.Connect("private")
+		defer conn.Close()
+		conn.expectPing()
+		conn.expect("", "bounce-event", `{"reason":"authentication required"}`)
+		conn.send("1", "login",
+			`{"namespace":"email","id":"logan-private","password":"loganpass"}`)
+		conn.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, logan.ID())
+		conn.expect("", "bounce-event", `{"reason":"authentication changed"}`)
+		conn.Close()
+
+		// Reconnect with authentication.
+		conn = s.Connect("private", conn.cookies...)
+		conn.expectPing()
+		conn.expectSnapshot(s.backend.Version(), nil, nil)
 	})
 }
 
@@ -834,7 +922,7 @@ func testManagersLowLevel(s *serverUnderTest) {
 	}
 
 	// Create room owned by alice and bob.
-	room, err := b.CreateRoom(ctx, kms, "management"+nonce, alice, bob)
+	room, err := b.CreateRoom(ctx, kms, false, "management"+nonce, alice, bob)
 	So(err, ShouldBeNil)
 
 	shouldComprise := func(actual interface{}, expected ...interface{}) string {
