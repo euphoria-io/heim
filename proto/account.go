@@ -14,6 +14,7 @@ import (
 
 const (
 	MinPasswordLength = 6
+	ClientKeyType     = security.AES128
 )
 
 type PersonalIdentity interface {
@@ -51,7 +52,6 @@ type Account interface {
 func NewAccountSecurity(
 	kms security.KMS, password string) (*AccountSecurity, *security.ManagedKey, error) {
 
-	kType := security.AES256
 	kpType := security.Curve25519
 
 	// Use one KMS request to obtain all the randomness we need:
@@ -68,13 +68,13 @@ func NewAccountSecurity(
 	if _, err := io.ReadFull(randomReader, nonce); err != nil {
 		return nil, nil, fmt.Errorf("rng error: %s", err)
 	}
-	iv := make([]byte, kType.BlockSize())
+	iv := make([]byte, ClientKeyType.BlockSize())
 	copy(iv, nonce)
 
 	// Generate key-encrypting-key using KMS. This will be returned encrypted,
 	// using the base64 encoding of the nonce as its context.
 	nonceBase64 := base64.URLEncoding.EncodeToString(nonce)
-	systemKey, err := kms.GenerateEncryptedKey(kType, "nonce", nonceBase64)
+	systemKey, err := kms.GenerateEncryptedKey(ClientKeyType, "nonce", nonceBase64)
 	if err != nil {
 		return nil, nil, fmt.Errorf("key generation error: %s", err)
 	}
@@ -99,7 +99,7 @@ func NewAccountSecurity(
 	}
 
 	// Clone key-encrypting-key and encrypt with client key.
-	clientKey := security.KeyFromPasscode([]byte(password), nonce, kType)
+	clientKey := security.KeyFromPasscode([]byte(password), nonce, ClientKeyType)
 	userKey := kek.Clone()
 	userKey.IV = iv
 	if err := userKey.Encrypt(clientKey); err != nil {

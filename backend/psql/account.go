@@ -44,11 +44,11 @@ func (ab *AccountBinding) ID() snowflake.Snowflake {
 }
 
 func (ab *AccountBinding) KeyFromPassword(password string) *security.ManagedKey {
-	return security.KeyFromPasscode([]byte(password), ab.Account.Nonce, security.AES256)
+	return security.KeyFromPasscode([]byte(password), ab.Account.Nonce, proto.ClientKeyType)
 }
 
 func (ab *AccountBinding) KeyPair() security.ManagedKeyPair {
-	iv := make([]byte, security.AES256.BlockSize())
+	iv := make([]byte, proto.ClientKeyType.BlockSize())
 	copy(iv, ab.Account.Nonce)
 
 	return security.ManagedKeyPair{
@@ -60,20 +60,20 @@ func (ab *AccountBinding) KeyPair() security.ManagedKeyPair {
 }
 
 func (ab *AccountBinding) Unlock(clientKey *security.ManagedKey) (*security.ManagedKeyPair, error) {
-	iv := make([]byte, security.AES256.BlockSize())
+	iv := make([]byte, proto.ClientKeyType.BlockSize())
 	copy(iv, ab.Account.Nonce)
 
 	sec := &proto.AccountSecurity{
 		Nonce: ab.Account.Nonce,
 		MAC:   ab.Account.MAC,
 		SystemKey: security.ManagedKey{
-			KeyType:      security.AES256,
+			KeyType:      proto.ClientKeyType,
 			Ciphertext:   ab.Account.EncryptedSystemKey,
 			ContextKey:   "nonce",
 			ContextValue: base64.URLEncoding.EncodeToString(ab.Account.Nonce),
 		},
 		UserKey: security.ManagedKey{
-			KeyType:    security.AES256,
+			KeyType:    proto.ClientKeyType,
 			IV:         iv,
 			Ciphertext: ab.Account.EncryptedUserKey,
 		},
