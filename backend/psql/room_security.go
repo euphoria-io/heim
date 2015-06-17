@@ -39,7 +39,7 @@ func (rmkb *RoomMessageKeyBinding) ManagedKey() security.ManagedKey {
 	}
 
 	mkey := security.ManagedKey{
-		KeyType:      security.AES128,
+		KeyType:      proto.RoomMessageKeyType,
 		IV:           dup(rmkb.MessageKey.IV),
 		Ciphertext:   dup(rmkb.MessageKey.EncryptedKey),
 		ContextKey:   "room",
@@ -76,7 +76,7 @@ func (rmkb *RoomManagerKeyBinding) Unlock(
 	sec := &proto.RoomSecurity{
 		MAC: rmkb.Room.MAC,
 		KeyEncryptingKey: security.ManagedKey{
-			KeyType:      security.AES256,
+			KeyType:      proto.RoomManagerKeyType,
 			Ciphertext:   rmkb.Room.EncryptedManagementKey,
 			ContextKey:   "room",
 			ContextValue: rmkb.Room.Name,

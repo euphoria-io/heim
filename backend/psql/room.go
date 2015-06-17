@@ -47,12 +47,12 @@ func (r *Room) generateMessageKey(kms security.KMS) (*RoomMessageKeyBinding, err
 	}
 
 	// Use KMS to generate nonce and key.
-	nonce, err := kms.GenerateNonce(security.AES128.KeySize())
+	nonce, err := kms.GenerateNonce(proto.RoomManagerKeyType.KeySize())
 	if err != nil {
 		return nil, err
 	}
 
-	mkey, err := kms.GenerateEncryptedKey(security.AES128, "room", r.Name)
+	mkey, err := kms.GenerateEncryptedKey(proto.RoomManagerKeyType, "room", r.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -528,7 +528,7 @@ func (rb *RoomBinding) AddManager(
 		return err
 	}
 	managerKey := &security.ManagedKey{
-		KeyType: security.AES128,
+		KeyType: proto.RoomManagerKeyType,
 	}
 	if err := json.Unmarshal(secretJSON, &managerKey.Plaintext); err != nil {
 		return err
@@ -606,7 +606,7 @@ func (rb *RoomBinding) RemoveManager(
 		return fmt.Errorf("public key capability error: %s", err)
 	}
 	managerKey := &security.ManagedKey{
-		KeyType: security.AES128,
+		KeyType: proto.RoomManagerKeyType,
 	}
 	if err := json.Unmarshal(secretJSON, &managerKey.Plaintext); err != nil {
 		return err

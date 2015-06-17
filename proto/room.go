@@ -13,6 +13,11 @@ import (
 	"euphoria.io/scope"
 )
 
+const (
+	RoomManagerKeyType = security.AES128
+	RoomMessageKeyType = security.AES128
+)
+
 // A Listing is a sortable list of Identitys present in a Room.
 // TODO: these should be Sessions
 type Listing []SessionView
@@ -136,21 +141,21 @@ type RoomManagerKey interface {
 }
 
 func NewRoomSecurity(kms security.KMS, roomName string) (*RoomSecurity, error) {
-	kType := security.AES128
 	kpType := security.Curve25519
 
 	// Use one KMS request to obtain all the randomness we need:
 	//   - key-encrypting-key IV
 	//   - private key for grants to accounts
 	//   - nonce for manager grants to accounts
-	randomData, err := kms.GenerateNonce(kType.BlockSize() + kpType.PrivateKeySize() + kpType.NonceSize())
+	randomData, err := kms.GenerateNonce(
+		RoomManagerKeyType.BlockSize() + kpType.PrivateKeySize() + kpType.NonceSize())
 	if err != nil {
 		return nil, fmt.Errorf("rng error: %s", err)
 	}
 	randomReader := bytes.NewReader(randomData)
 
 	// Generate IV with random data.
-	iv := make([]byte, kType.BlockSize())
+	iv := make([]byte, RoomManagerKeyType.BlockSize())
 	if _, err := io.ReadFull(randomReader, iv); err != nil {
 		return nil, fmt.Errorf("rng error: %s", err)
 	}
@@ -169,7 +174,7 @@ func NewRoomSecurity(kms security.KMS, roomName string) (*RoomSecurity, error) {
 
 	// Generate key-encrypting-key. This will be returned encrypted, using the
 	// name of the room as its context.
-	encryptedKek, err := kms.GenerateEncryptedKey(kType, "room", roomName)
+	encryptedKek, err := kms.GenerateEncryptedKey(RoomManagerKeyType, "room", roomName)
 	if err != nil {
 		return nil, fmt.Errorf("key generation error: %s", err)
 	}
