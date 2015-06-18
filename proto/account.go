@@ -10,12 +10,31 @@ import (
 
 	"euphoria.io/heim/proto/security"
 	"euphoria.io/heim/proto/snowflake"
+	"euphoria.io/scope"
 )
 
 const (
 	MinPasswordLength = 6
 	ClientKeyType     = security.AES128
 )
+
+type AccountManager interface {
+	// GetAccount returns the account with the given ID.
+	Get(ctx scope.Context, id snowflake.Snowflake) (Account, error)
+
+	// RegisterAccount creates and returns a new, unverified account, along with
+	// its (unencrypted) client key.
+	Register(
+		ctx scope.Context, kms security.KMS, namespace, id, password string,
+		agentID string, agentKey *security.ManagedKey) (
+		Account, *security.ManagedKey, error)
+
+	// ResolveAccount returns any account registered under the given account identity.
+	Resolve(ctx scope.Context, namespace, id string) (Account, error)
+
+	// SetStaff marks the given account as staff or not staff.
+	SetStaff(ctx scope.Context, accountID snowflake.Snowflake, isStaff bool) error
+}
 
 type PersonalIdentity interface {
 	Namespace() string

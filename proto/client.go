@@ -63,7 +63,7 @@ func (c *Client) AuthenticateWithAgent(
 		return err
 	}
 
-	account, err := backend.GetAccount(ctx, accountID)
+	account, err := backend.AccountManager().Get(ctx, accountID)
 	if err != nil {
 		if err == ErrAccountNotFound {
 			return nil

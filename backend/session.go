@@ -570,7 +570,7 @@ func (s *session) handleSendCommand(cmd *proto.SendCommand) *response {
 }
 
 func (s *session) handleLoginCommand(cmd *proto.LoginCommand) *response {
-	account, err := s.backend.ResolveAccount(s.ctx, cmd.Namespace, cmd.ID)
+	account, err := s.backend.AccountManager().Resolve(s.ctx, cmd.Namespace, cmd.ID)
 	if err != nil {
 		switch err {
 		case proto.ErrAccountNotFound:
@@ -617,7 +617,7 @@ func (s *session) handleRegisterAccountCommand(cmd *proto.RegisterAccountCommand
 		return &response{packet: &proto.RegisterAccountReply{Reason: reason}}
 	}
 
-	account, clientKey, err := s.backend.RegisterAccount(
+	account, clientKey, err := s.backend.AccountManager().Register(
 		s.ctx, s.kms, cmd.Namespace, cmd.ID, cmd.Password, s.client.Agent.IDString(), s.agentKey)
 	if err != nil {
 		switch err {
@@ -704,7 +704,7 @@ func (s *session) handleCreateRoomCommand(cmd *proto.CreateRoomCommand) *respons
 
 	managers := make([]proto.Account, len(cmd.Managers))
 	for i, accountID := range cmd.Managers {
-		account, err := s.backend.GetAccount(s.ctx, accountID)
+		account, err := s.backend.AccountManager().Get(s.ctx, accountID)
 		if err != nil {
 			switch err {
 			case proto.ErrAccountNotFound:

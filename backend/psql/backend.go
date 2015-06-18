@@ -450,130 +450,6 @@ func (b *Backend) UnbanIP(ctx scope.Context, ip string) error {
 	return err
 }
 
-func (b *Backend) RegisterAccount(
-	ctx scope.Context, kms security.KMS, namespace, id, password string,
-	agentID string, agentKey *security.ManagedKey) (
-	proto.Account, *security.ManagedKey, error) {
-
-	// Generate ID for new account.
-	accountID, err := snowflake.New()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// Generate credentials in advance of working in DB transaction.
-	backend.Logger(ctx).Printf("NewAccountSecurity: kms=%#v", kms)
-	sec, clientKey, err := proto.NewAccountSecurity(kms, password)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// Begin transaction to check on identity availability and store new account data.
-	t, err := b.DbMap.Begin()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	rollback := func() {
-		if err := t.Rollback(); err != nil {
-			backend.Logger(ctx).Printf("rollback error: %s", err)
-		}
-	}
-
-	// Insert new rows for account.
-	account := &Account{
-		ID:                  accountID.String(),
-		Nonce:               sec.Nonce,
-		MAC:                 sec.MAC,
-		EncryptedSystemKey:  sec.SystemKey.Ciphertext,
-		EncryptedUserKey:    sec.UserKey.Ciphertext,
-		EncryptedPrivateKey: sec.KeyPair.EncryptedPrivateKey,
-		PublicKey:           sec.KeyPair.PublicKey,
-	}
-	personalIdentity := &PersonalIdentity{
-		Namespace: namespace,
-		ID:        id,
-		AccountID: accountID.String(),
-	}
-	if err := t.Insert(account, personalIdentity); err != nil {
-		rollback()
-		if strings.HasPrefix(err.Error(), "pq: duplicate key value") {
-			return nil, nil, proto.ErrPersonalIdentityInUse
-		}
-		return nil, nil, err
-	}
-
-	// Look up the associated agent.
-	atb := &AgentTrackerBinding{b}
-	agent, err := atb.getFromDB(agentID, t)
-	if err != nil {
-		rollback()
-		return nil, nil, err
-	}
-	if err := agent.SetClientKey(agentKey, clientKey); err != nil {
-		rollback()
-		return nil, nil, err
-	}
-	err = atb.setClientKeyInDB(agentID, accountID.String(), agent.EncryptedClientKey.Ciphertext, t)
-	if err != nil {
-		rollback()
-		return nil, nil, err
-	}
-
-	// Commit the transaction.
-	if err := t.Commit(); err != nil {
-		return nil, nil, err
-	}
-	backend.Logger(ctx).Printf("registered new account %s for %s:%s", account.ID, namespace, id)
-
-	return account.Bind(b), clientKey, nil
-}
-
-func (b *Backend) ResolveAccount(ctx scope.Context, namespace, id string) (proto.Account, error) {
-	var acc Account
-	err := b.DbMap.SelectOne(
-		&acc,
-		"SELECT a.id, a.nonce, a.mac, a.encrypted_system_key, a.encrypted_user_key,"+
-			" a.encrypted_private_key, a.public_key"+
-			" FROM account a, personal_identity i"+
-			" WHERE i.namespace = $1 AND i.id = $2 AND i.account_id = a.id",
-		namespace, id)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, proto.ErrAccountNotFound
-		}
-		return nil, err
-	}
-	return acc.Bind(b), nil
-}
-
-func (b *Backend) GetAccount(ctx scope.Context, id snowflake.Snowflake) (proto.Account, error) {
-	row, err := b.DbMap.Get(Account{}, id.String())
-	if err != nil {
-		return nil, err
-	}
-	if row == nil {
-		return nil, proto.ErrAccountNotFound
-	}
-	return row.(*Account).Bind(b), nil
-}
-
-func (b *Backend) SetStaff(ctx scope.Context, accountID snowflake.Snowflake, isStaff bool) error {
-	result, err := b.DbMap.Exec(
-		"UPDATE account SET staff = $2 WHERE id = $1", accountID.String(), isStaff)
-	if err != nil {
-		return err
-	}
-	n, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if n != 1 {
-		return proto.ErrAccountNotFound
-	}
-	return nil
-}
-
 func (b *Backend) sendMessageToRoom(
 	ctx scope.Context, room *Room, msg proto.Message, exclude ...proto.Session) (proto.Message, error) {
 
@@ -861,7 +737,8 @@ func (b *Backend) invalidatePeer(ctx scope.Context, id, era string) {
 
 func (b *Backend) Peers() []cluster.PeerDesc { return b.cluster.Peers() }
 
-func (b *Backend) AgentTracker() proto.AgentTracker { return &AgentTrackerBinding{b} }
+func (b *Backend) AccountManager() proto.AccountManager { return &AccountManagerBinding{b} }
+func (b *Backend) AgentTracker() proto.AgentTracker     { return &AgentTrackerBinding{b} }
 
 type BroadcastMessage struct {
 	Room    string

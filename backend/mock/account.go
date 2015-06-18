@@ -1,9 +1,13 @@
 package mock
 
 import (
+	"fmt"
+
+	"euphoria.io/heim/backend"
 	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/security"
 	"euphoria.io/heim/proto/snowflake"
+	"euphoria.io/scope"
 )
 
 func NewAccount(kms security.KMS, password string) (proto.Account, *security.ManagedKey, error) {
@@ -43,3 +47,88 @@ func (a *memAccount) Unlock(clientKey *security.ManagedKey) (*security.ManagedKe
 }
 
 func (a *memAccount) IsStaff() bool { return a.staff }
+
+type accountManager struct {
+	b *TestBackend
+}
+
+func (m *accountManager) Register(
+	ctx scope.Context, kms security.KMS, namespace, id, password string,
+	agentID string, agentKey *security.ManagedKey) (
+	proto.Account, *security.ManagedKey, error) {
+
+	m.b.Lock()
+	defer m.b.Unlock()
+
+	key := fmt.Sprintf("%s:%s", namespace, id)
+	if _, ok := m.b.accountIDs[key]; ok {
+		return nil, nil, proto.ErrPersonalIdentityInUse
+	}
+
+	account, clientKey, err := NewAccount(kms, password)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if m.b.accounts == nil {
+		m.b.accounts = map[string]proto.Account{account.ID().String(): account}
+	} else {
+		m.b.accounts[account.ID().String()] = account
+	}
+
+	if m.b.accountIDs == nil {
+		m.b.accountIDs = map[string]string{key: account.ID().String()}
+	} else {
+		m.b.accountIDs[key] = account.ID().String()
+	}
+
+	agent, err := m.b.AgentTracker().Get(ctx, agentID)
+	if err != nil {
+		backend.Logger(ctx).Printf(
+			"error locating agent %s for new account %s:%s: %s", agentID, namespace, id, err)
+	} else {
+		if err := agent.SetClientKey(agentKey, clientKey); err != nil {
+			backend.Logger(ctx).Printf(
+				"error associating agent %s with new account %s:%s: %s", agentID, namespace, id, err)
+		}
+		agent.AccountID = account.ID().String()
+	}
+
+	return account, clientKey, nil
+}
+
+func (m *accountManager) Resolve(ctx scope.Context, namespace, id string) (proto.Account, error) {
+	m.b.Lock()
+	defer m.b.Unlock()
+
+	key := fmt.Sprintf("%s:%s", namespace, id)
+	accountID, ok := m.b.accountIDs[key]
+	if !ok {
+		return nil, proto.ErrAccountNotFound
+	}
+	return m.b.accounts[accountID], nil
+}
+
+func (m *accountManager) Get(ctx scope.Context, id snowflake.Snowflake) (proto.Account, error) {
+	m.b.Lock()
+	defer m.b.Unlock()
+
+	account, ok := m.b.accounts[id.String()]
+	if !ok {
+		return nil, proto.ErrAccountNotFound
+	}
+	return account, nil
+}
+
+func (m *accountManager) SetStaff(ctx scope.Context, accountID snowflake.Snowflake, isStaff bool) error {
+	m.b.Lock()
+	defer m.b.Unlock()
+
+	account, ok := m.b.accounts[accountID.String()]
+	if !ok {
+		return proto.ErrAccountNotFound
+	}
+	memAcc := account.(*memAccount)
+	memAcc.staff = isStaff
+	return nil
+}

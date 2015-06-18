@@ -134,7 +134,7 @@ func (s *serverUnderTest) Account(
 		return nil, err
 	}
 
-	account, _, err := b.RegisterAccount(
+	account, _, err := b.AccountManager().Register(
 		ctx, kms, namespace, id, password, agent.IDString(), agentKey)
 	if err != nil {
 		return nil, err
@@ -785,7 +785,7 @@ func testAccountsLowLevel(s *serverUnderTest) {
 	So(at.Register(ctx, maxAgent), ShouldBeNil)
 
 	Convey("Account registration", func() {
-		account, key, err := b.RegisterAccount(
+		account, key, err := b.AccountManager().Register(
 			ctx, kms, "email", "logan@euphoria.io", "hunter2", loganAgent.IDString(), agentKey)
 		So(err, ShouldBeNil)
 		So(account, ShouldNotBeNil)
@@ -804,7 +804,7 @@ func testAccountsLowLevel(s *serverUnderTest) {
 		So(err, ShouldBeNil)
 		So(kp, ShouldNotBeNil)
 
-		dup, _, err := b.RegisterAccount(
+		dup, _, err := b.AccountManager().Register(
 			ctx, kms, "email", "logan@euphoria.io", "hunter2", loganAgent.IDString(), agentKey)
 		So(err, ShouldEqual, proto.ErrPersonalIdentityInUse)
 		So(dup, ShouldBeNil)
@@ -813,19 +813,19 @@ func testAccountsLowLevel(s *serverUnderTest) {
 	Convey("Account lookup", func() {
 		var badID snowflake.Snowflake
 		badID.FromString("nosuchaccount")
-		account, err := b.GetAccount(ctx, badID)
+		account, err := b.AccountManager().Get(ctx, badID)
 		So(err, ShouldEqual, proto.ErrAccountNotFound)
 		So(account, ShouldBeNil)
 
-		account, err = b.ResolveAccount(ctx, "email", "max@euphoria.io")
+		account, err = b.AccountManager().Resolve(ctx, "email", "max@euphoria.io")
 		So(err, ShouldEqual, proto.ErrAccountNotFound)
 		So(account, ShouldBeNil)
 
-		_, _, err = b.RegisterAccount(
+		_, _, err = b.AccountManager().Register(
 			ctx, kms, "email", "max@euphoria.io", "hunter2", maxAgent.IDString(), agentKey)
 		So(err, ShouldBeNil)
 
-		account, err = b.ResolveAccount(ctx, "email", "max@euphoria.io")
+		account, err = b.AccountManager().Resolve(ctx, "email", "max@euphoria.io")
 		So(err, ShouldBeNil)
 
 		kp, err := account.Unlock(account.KeyFromPassword(""))
@@ -836,7 +836,7 @@ func testAccountsLowLevel(s *serverUnderTest) {
 		So(err, ShouldBeNil)
 		So(kp, ShouldNotBeNil)
 
-		dup, err := b.GetAccount(ctx, account.ID())
+		dup, err := b.AccountManager().Get(ctx, account.ID())
 		So(err, ShouldBeNil)
 		So(dup, ShouldNotBeNil)
 		So(dup.KeyPair().PublicKey, ShouldResemble, kp.PublicKey)
@@ -859,25 +859,25 @@ func testStaffLowLevel(s *serverUnderTest) {
 		loganAgent, err := proto.NewAgent([]byte("logan"+nonce), agentKey)
 		So(err, ShouldBeNil)
 		So(at.Register(ctx, loganAgent), ShouldBeNil)
-		logan, _, err := b.RegisterAccount(
+		logan, _, err := b.AccountManager().Register(
 			ctx, kms, "email", "logan"+nonce, "loganpass", loganAgent.IDString(), agentKey)
 		So(err, ShouldBeNil)
 		So(logan.IsStaff(), ShouldBeFalse)
 
 		// Enable staff
-		So(b.SetStaff(ctx, logan.ID(), true), ShouldBeNil)
-		logan, err = b.GetAccount(ctx, logan.ID())
+		So(b.AccountManager().SetStaff(ctx, logan.ID(), true), ShouldBeNil)
+		logan, err = b.AccountManager().Get(ctx, logan.ID())
 		So(err, ShouldBeNil)
 		So(logan.IsStaff(), ShouldBeTrue)
 
 		// Enable staff
-		So(b.SetStaff(ctx, logan.ID(), false), ShouldBeNil)
-		logan, err = b.GetAccount(ctx, logan.ID())
+		So(b.AccountManager().SetStaff(ctx, logan.ID(), false), ShouldBeNil)
+		logan, err = b.AccountManager().Get(ctx, logan.ID())
 		So(err, ShouldBeNil)
 		So(logan.IsStaff(), ShouldBeFalse)
 
 		// Account not found error
-		So(b.SetStaff(ctx, 0, true), ShouldEqual, proto.ErrAccountNotFound)
+		So(b.AccountManager().SetStaff(ctx, 0, true), ShouldEqual, proto.ErrAccountNotFound)
 	})
 }
 
@@ -897,21 +897,21 @@ func testManagersLowLevel(s *serverUnderTest) {
 	aliceAgent, err := proto.NewAgent([]byte("alice"+nonce), agentKey)
 	So(err, ShouldBeNil)
 	So(at.Register(ctx, aliceAgent), ShouldBeNil)
-	alice, aliceKey, err := b.RegisterAccount(
+	alice, aliceKey, err := b.AccountManager().Register(
 		ctx, kms, "email", "alice"+nonce, "alicepass", aliceAgent.IDString(), agentKey)
 	So(err, ShouldBeNil)
 
 	bobAgent, err := proto.NewAgent([]byte("bob"+nonce), agentKey)
 	So(err, ShouldBeNil)
 	So(at.Register(ctx, bobAgent), ShouldBeNil)
-	bob, bobKey, err := b.RegisterAccount(
+	bob, bobKey, err := b.AccountManager().Register(
 		ctx, kms, "email", "bob"+nonce, "bobpass", bobAgent.IDString(), agentKey)
 	So(err, ShouldBeNil)
 
 	carolAgent, err := proto.NewAgent([]byte("carol"+nonce), agentKey)
 	So(err, ShouldBeNil)
 	So(at.Register(ctx, carolAgent), ShouldBeNil)
-	carol, carolKey, err := b.RegisterAccount(
+	carol, carolKey, err := b.AccountManager().Register(
 		ctx, kms, "email", "carol"+nonce, "carolpass", carolAgent.IDString(), agentKey)
 	So(err, ShouldBeNil)
 
@@ -1006,7 +1006,7 @@ func testAccountLogin(s *serverUnderTest) {
 	loganAgent, err := proto.NewAgent([]byte("logan"+nonce), agentKey)
 	So(err, ShouldBeNil)
 	So(at.Register(ctx, loganAgent), ShouldBeNil)
-	logan, _, err := b.RegisterAccount(
+	logan, _, err := b.AccountManager().Register(
 		ctx, kms, "email", "logan"+nonce, "loganpass", loganAgent.IDString(), agentKey)
 	So(err, ShouldBeNil)
 
