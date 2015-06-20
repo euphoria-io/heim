@@ -14,6 +14,7 @@ function render() {
     if (!domain || !allowedImageDomains.hasOwnProperty(domain[1])) {
       return
     }
+
     var img = document.createElement('img')
     img.src = data.url
 
@@ -21,14 +22,18 @@ function render() {
     var checkImage = function() {
       if (img.naturalWidth) {
         sendImageSize()
-        img.onload = null
-      } else {
+      } else if (!widthSent) {
         checkTimeout = setTimeout(checkImage, 100)
       }
     }
 
+    var widthSent = false
     var sendImageSize = function() {
-      clearTimeout(checkTimeout)
+      if (widthSent) {
+        return
+      }
+      widthSent = true
+
       var displayHeight = window.innerHeight
       var displayWidth
       var ratio = img.naturalWidth / img.naturalHeight
@@ -39,6 +44,7 @@ function render() {
       } else {
         displayWidth = img.naturalWidth * (displayHeight / img.naturalHeight)
       }
+
       window.top.postMessage({
         id: data.id,
         type: 'size',
@@ -48,7 +54,17 @@ function render() {
       }, process.env.HEIM_ENDPOINT)
     }
 
-    img.onload = sendImageSize
+    img.onload = function() {
+      sendImageSize()
+
+      // inspired by http://stackoverflow.com/a/4276742
+      var frozenCanvas = document.createElement('canvas')
+      var w = frozenCanvas.width = img.naturalWidth
+      var h = frozenCanvas.height = img.naturalHeight
+      frozenCanvas.getContext('2d').drawImage(img, 0, 0, w, h)
+      document.body.appendChild(frozenCanvas)
+      document.body.className = "frozen"
+    }
     document.body.appendChild(img)
     checkImage()
   } else if (data.kind == 'youtube') {
