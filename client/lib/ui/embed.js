@@ -61,6 +61,6 @@ module.exports = React.createClass({
     if (this.props.className) {
       classes[this.props.className] = true
     }
-    return <iframe ref="iframe" className={cx(classes)} style={{width: this.state.width}} src={url} />
+    return <iframe key={url} ref="iframe" className={cx(classes)} style={{width: this.state.width}} src={url} />
   },
 })
