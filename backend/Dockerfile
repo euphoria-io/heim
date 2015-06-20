@@ -1,5 +1,5 @@
 FROM golang
-MAINTAINER Logan Hanks <logan.hanks@gmail.com>
+MAINTAINER Logan Hanks <logan@euphoria.io>
 
 ENV GOPATH /godeps:/go
 

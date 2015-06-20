@@ -1,5 +1,5 @@
 FROM ubuntu:14.04
-MAINTAINER Max Goodman <c@chromakode.com>
+MAINTAINER Max Goodman <max@euphoria.io>
 
 RUN apt-get update && apt-get dist-upgrade -y
 RUN apt-get install -y nodejs nodejs-legacy npm git

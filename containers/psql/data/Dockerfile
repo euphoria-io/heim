@@ -1,5 +1,5 @@
 FROM busybox
-MAINTAINER Logan Hanks <logan.hanks@gmail.com>
+MAINTAINER Logan Hanks <logan@euphoria.io>
 
 RUN mkdir /data
 RUN chown 999 /data

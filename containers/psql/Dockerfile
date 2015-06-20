@@ -1,5 +1,5 @@
 FROM postgres:9.4
-MAINTAINER Logan Hanks <logan.hanks@gmail.com>
+MAINTAINER Logan Hanks <logan@euphoria.io>
 
 ENV POSTGRES_PASSWORD heimlich
 
