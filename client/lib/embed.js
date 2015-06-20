@@ -63,7 +63,7 @@ function render() {
       var h = frozenCanvas.height = img.naturalHeight
       frozenCanvas.getContext('2d').drawImage(img, 0, 0, w, h)
       document.body.appendChild(frozenCanvas)
-      document.body.className = "frozen"
+      document.body.classList.add('frozen')
     }
     document.body.appendChild(img)
     checkImage()
@@ -77,5 +77,15 @@ function render() {
     document.body.appendChild(embed)
   }
 }
+
+window.addEventListener('message', function(ev) {
+  if (ev.origin == process.env.HEIM_ENDPOINT) {
+    if (ev.data.type == 'freeze') {
+      document.body.classList.add('frozen')
+    } else if (ev.data.type == 'unfreeze') {
+      document.body.classList.remove('frozen')
+    }
+  }
+}, false)
 
 render()

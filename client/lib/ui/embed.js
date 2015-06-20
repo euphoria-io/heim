@@ -41,6 +41,18 @@ module.exports = React.createClass({
     }
   },
 
+  _sendMessage: function(data) {
+    this.refs.iframe.getDOMNode().contentWindow.postMessage(data, process.env.EMBED_ENDPOINT)
+  },
+
+  freeze: function() {
+    this._sendMessage({type: 'freeze'})
+  },
+
+  unfreeze: function() {
+    this._sendMessage({type: 'unfreeze'})
+  },
+
   render: function() {
     var data = _.extend({}, this.props, {id: this.embedId})
     delete data.className
@@ -49,6 +61,6 @@ module.exports = React.createClass({
     if (this.props.className) {
       classes[this.props.className] = true
     }
-    return <iframe className={cx(classes)} style={{width: this.state.width}} src={url} />
+    return <iframe ref="iframe" className={cx(classes)} style={{width: this.state.width}} src={url} />
   },
 })
