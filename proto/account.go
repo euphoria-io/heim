@@ -32,8 +32,11 @@ type AccountManager interface {
 	// ResolveAccount returns any account registered under the given account identity.
 	Resolve(ctx scope.Context, namespace, id string) (Account, error)
 
-	// SetStaff marks the given account as staff or not staff.
-	SetStaff(ctx scope.Context, accountID snowflake.Snowflake, isStaff bool) error
+	// GrantStaff adds a StaffKMS capability to the identified account.
+	GrantStaff(ctx scope.Context, accountID snowflake.Snowflake, kmsCred security.KMSCredential) error
+
+	// RevokeStaff removes a StaffKMS capability from the identified account.
+	RevokeStaff(ctx scope.Context, accountID snowflake.Snowflake) error
 }
 
 type PersonalIdentity interface {
@@ -63,6 +66,7 @@ type Account interface {
 	KeyPair() security.ManagedKeyPair
 	Unlock(clientKey *security.ManagedKey) (*security.ManagedKeyPair, error)
 	IsStaff() bool
+	UnlockStaffKMS(clientKey *security.ManagedKey) (security.KMS, error)
 }
 
 // NewAccountSecurity initializes the nonce and account secrets for a new account

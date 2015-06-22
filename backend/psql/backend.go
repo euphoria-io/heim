@@ -37,10 +37,6 @@ var schema = []struct {
 	{"room_master_key", RoomMessageKey{}, []string{"Room", "KeyID"}},
 	{"room_capability", RoomCapability{}, []string{"Room", "CapabilityID"}},
 
-	// Keys and capabilities.
-	{"master_key", MessageKey{}, []string{"ID"}},
-	{"capability", Capability{}, []string{"ID"}},
-
 	// Presence.
 	{"presence", Presence{}, []string{"Room", "Topic", "ServerID", "ServerEra", "SessionID"}},
 
@@ -59,6 +55,10 @@ var schema = []struct {
 	{"agent", Agent{}, []string{"ID"}},
 	{"personal_identity", PersonalIdentity{}, []string{"Namespace", "ID"}},
 	{"account", Account{}, []string{"ID"}},
+
+	// Keys and capabilities.
+	{"master_key", MessageKey{}, []string{"ID"}},
+	{"capability", Capability{}, []string{"ID"}},
 }
 
 type Backend struct {

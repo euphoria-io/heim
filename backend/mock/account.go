@@ -29,9 +29,9 @@ func NewAccount(kms security.KMS, password string) (proto.Account, *security.Man
 }
 
 type memAccount struct {
-	id    snowflake.Snowflake
-	sec   proto.AccountSecurity
-	staff bool
+	id       snowflake.Snowflake
+	sec      proto.AccountSecurity
+	staffKMS security.KMS
 }
 
 func (a *memAccount) ID() snowflake.Snowflake { return a.id }
@@ -46,7 +46,15 @@ func (a *memAccount) Unlock(clientKey *security.ManagedKey) (*security.ManagedKe
 	return a.sec.Unlock(clientKey)
 }
 
-func (a *memAccount) IsStaff() bool { return a.staff }
+func (a *memAccount) IsStaff() bool { return a.staffKMS != nil }
+
+func (a *memAccount) UnlockStaffKMS(key *security.ManagedKey) (security.KMS, error) {
+	// TODO: verify key
+	if a.staffKMS == nil {
+		return nil, proto.ErrAccessDenied
+	}
+	return a.staffKMS, nil
+}
 
 type accountManager struct {
 	b *TestBackend
@@ -120,7 +128,7 @@ func (m *accountManager) Get(ctx scope.Context, id snowflake.Snowflake) (proto.A
 	return account, nil
 }
 
-func (m *accountManager) SetStaff(ctx scope.Context, accountID snowflake.Snowflake, isStaff bool) error {
+func (m *accountManager) setStaffKMS(accountID snowflake.Snowflake, kms security.KMS) error {
 	m.b.Lock()
 	defer m.b.Unlock()
 
@@ -129,6 +137,16 @@ func (m *accountManager) SetStaff(ctx scope.Context, accountID snowflake.Snowfla
 		return proto.ErrAccountNotFound
 	}
 	memAcc := account.(*memAccount)
-	memAcc.staff = isStaff
+	memAcc.staffKMS = kms
 	return nil
+}
+
+func (m *accountManager) GrantStaff(
+	ctx scope.Context, accountID snowflake.Snowflake, kmsCred security.KMSCredential) error {
+
+	return m.setStaffKMS(accountID, kmsCred.KMS())
+}
+
+func (m *accountManager) RevokeStaff(ctx scope.Context, accountID snowflake.Snowflake) error {
+	return m.setStaffKMS(accountID, nil)
 }

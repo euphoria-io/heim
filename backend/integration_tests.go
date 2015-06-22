@@ -72,11 +72,13 @@ func (tc *testClock) clock() time.Time {
 type factoryTestSuite func(factory func() proto.Backend)
 type testSuite func(*serverUnderTest)
 
-func newServerUnderTest(backend proto.Backend, app *Server, server *httptest.Server) *serverUnderTest {
+func newServerUnderTest(
+	backend proto.Backend, app *Server, server *httptest.Server, kms security.MockKMS) *serverUnderTest {
 	return &serverUnderTest{
 		backend:  backend,
 		app:      app,
 		server:   server,
+		kms:      kms,
 		accounts: map[string]proto.Account{},
 		rooms:    map[string]proto.Room{},
 	}
@@ -86,6 +88,7 @@ type serverUnderTest struct {
 	backend  proto.Backend
 	app      *Server
 	server   *httptest.Server
+	kms      security.MockKMS
 	once     sync.Once
 	accounts map[string]proto.Account
 	rooms    map[string]proto.Room
@@ -308,7 +311,7 @@ func IntegrationTest(t *testing.T, factory func() proto.Backend) {
 		defer server.Close()
 		defer server.CloseClientConnections()
 
-		s := newServerUnderTest(backend, app, server)
+		s := newServerUnderTest(backend, app, server, kms)
 		Convey(name, t, func() { test(s) })
 	}
 
@@ -521,7 +524,7 @@ func testPresence(factory func() proto.Backend) {
 	server := httptest.NewServer(app)
 	defer server.Close()
 	defer server.CloseClientConnections()
-	s := newServerUnderTest(backend, app, server)
+	s := newServerUnderTest(backend, app, server, kms)
 
 	Convey("Other party joins then parts", func() {
 		self := s.Connect("presence")
@@ -865,19 +868,20 @@ func testStaffLowLevel(s *serverUnderTest) {
 		So(logan.IsStaff(), ShouldBeFalse)
 
 		// Enable staff
-		So(b.AccountManager().SetStaff(ctx, logan.ID(), true), ShouldBeNil)
+		So(b.AccountManager().GrantStaff(ctx, logan.ID(), s.kms.KMSCredential()), ShouldBeNil)
 		logan, err = b.AccountManager().Get(ctx, logan.ID())
 		So(err, ShouldBeNil)
 		So(logan.IsStaff(), ShouldBeTrue)
 
-		// Enable staff
-		So(b.AccountManager().SetStaff(ctx, logan.ID(), false), ShouldBeNil)
+		// Revoke staff
+		So(b.AccountManager().RevokeStaff(ctx, logan.ID()), ShouldBeNil)
 		logan, err = b.AccountManager().Get(ctx, logan.ID())
 		So(err, ShouldBeNil)
 		So(logan.IsStaff(), ShouldBeFalse)
 
 		// Account not found error
-		So(b.AccountManager().SetStaff(ctx, 0, true), ShouldEqual, proto.ErrAccountNotFound)
+		So(b.AccountManager().GrantStaff(ctx, 0, s.kms.KMSCredential()),
+			ShouldEqual, proto.ErrAccountNotFound)
 	})
 }
 

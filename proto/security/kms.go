@@ -2,8 +2,10 @@ package security
 
 import (
 	"crypto/hmac"
+	"crypto/md5"
 	"crypto/rand"
 	"crypto/sha256"
+	"encoding/json"
 	"errors"
 	"io"
 )
@@ -19,11 +21,18 @@ type KMS interface {
 	DecryptKey(*ManagedKey) error
 }
 
+type KMSCredential interface {
+	json.Marshaler
+	json.Unmarshaler
+	KMS() KMS
+}
+
 const mockCipher = AES256
 
 type MockKMS interface {
 	KMS
 
+	KMSCredential() KMSCredential
 	SetMasterKey([]byte)
 }
 
@@ -35,7 +44,9 @@ type localKMS struct {
 	masterKey []byte
 }
 
-func (kms *localKMS) SetMasterKey(key []byte) { kms.masterKey = key }
+func (kms *localKMS) KMS() KMS                     { return kms }
+func (kms *localKMS) KMSCredential() KMSCredential { return kms }
+func (kms *localKMS) SetMasterKey(key []byte)      { kms.masterKey = key }
 
 func (kms *localKMS) GenerateNonce(bytes int) ([]byte, error) {
 	nonce := make([]byte, bytes)
@@ -47,11 +58,6 @@ func (kms *localKMS) GenerateNonce(bytes int) ([]byte, error) {
 }
 
 func (kms *localKMS) GenerateEncryptedKey(keyType KeyType, ctxKey, ctxVal string) (*ManagedKey, error) {
-	iv, err := kms.GenerateNonce(mockCipher.BlockSize())
-	if err != nil {
-		return nil, err
-	}
-
 	key, err := kms.GenerateNonce(keyType.KeySize())
 	if err != nil {
 		return nil, err
@@ -59,7 +65,6 @@ func (kms *localKMS) GenerateEncryptedKey(keyType KeyType, ctxKey, ctxVal string
 
 	mkey := &ManagedKey{
 		KeyType:      keyType,
-		IV:           iv,
 		Plaintext:    key,
 		ContextKey:   ctxKey,
 		ContextValue: ctxVal,
@@ -83,9 +88,11 @@ func (kms *localKMS) xorKey(mkey *ManagedKey) error {
 		return ErrNoMasterKey
 	}
 
-	if len(mkey.IV) != mkey.BlockSize() {
-		return ErrInvalidKey
-	}
+	// Generate IV from md5 hash of context.
+	hash := md5.New()
+	hash.Write([]byte(mkey.ContextKey))
+	hash.Write([]byte(mkey.ContextValue))
+	iv := hash.Sum(nil)
 
 	if mkey.Encrypted() {
 		if len(mkey.Ciphertext) != mkey.KeySize()+sha256.Size {
@@ -93,7 +100,7 @@ func (kms *localKMS) xorKey(mkey *ManagedKey) error {
 		}
 		macsum := mkey.Ciphertext[:sha256.Size]
 		data := mkey.Ciphertext[sha256.Size:]
-		mockCipher.BlockCrypt(mkey.IV, kms.masterKey, data, true)
+		mockCipher.BlockCrypt(iv, kms.masterKey, data, true)
 		mac := hmac.New(sha256.New, data)
 		mac.Write([]byte(mkey.ContextKey))
 		mac.Write([]byte(mkey.ContextValue))
@@ -109,10 +116,13 @@ func (kms *localKMS) xorKey(mkey *ManagedKey) error {
 		mac.Write([]byte(mkey.ContextValue))
 		macsum := mac.Sum(nil)
 		data := mkey.Plaintext
-		mockCipher.BlockCrypt(mkey.IV, kms.masterKey, data, false)
+		mockCipher.BlockCrypt(iv, kms.masterKey, data, false)
 		mkey.Plaintext = nil
 		mkey.Ciphertext = append(macsum, data...)
 	}
 
 	return nil
 }
+
+func (kms *localKMS) MarshalJSON() ([]byte, error)    { return json.Marshal(kms.masterKey) }
+func (kms *localKMS) UnmarshalJSON(data []byte) error { return json.Unmarshal(data, &kms.masterKey) }

@@ -16,11 +16,11 @@ type Account struct {
 	ID                  string
 	Nonce               []byte
 	MAC                 []byte
-	EncryptedSystemKey  []byte `db:"encrypted_system_key"`
-	EncryptedUserKey    []byte `db:"encrypted_user_key"`
-	EncryptedPrivateKey []byte `db:"encrypted_private_key"`
-	PublicKey           []byte `db:"public_key"`
-	Staff               bool
+	EncryptedSystemKey  []byte         `db:"encrypted_system_key"`
+	EncryptedUserKey    []byte         `db:"encrypted_user_key"`
+	EncryptedPrivateKey []byte         `db:"encrypted_private_key"`
+	PublicKey           []byte         `db:"public_key"`
+	StaffCapabilityID   sql.NullString `db:"staff_capability_id"`
 }
 
 func (a *Account) Bind(b *Backend) *AccountBinding {
@@ -28,6 +28,27 @@ func (a *Account) Bind(b *Backend) *AccountBinding {
 		Backend: b,
 		Account: a,
 	}
+}
+
+type AccountWithStaffCapability struct {
+	AccountID            string         `db:"id"`
+	AccountNonce         []byte         `db:"nonce"`
+	StaffCapabilityID    sql.NullString `db:"staff_capability_id"`
+	StaffCapabilityNonce []byte         `db:"staff_capability_nonce"`
+	Account
+	Capability
+}
+
+func (awsc *AccountWithStaffCapability) Bind(b *Backend) *AccountBinding {
+	awsc.Account.ID = awsc.AccountID
+	awsc.Account.Nonce = awsc.AccountNonce
+	ab := awsc.Account.Bind(b)
+	if awsc.StaffCapabilityID.Valid {
+		awsc.Capability.ID = awsc.StaffCapabilityID.String
+		awsc.Capability.NonceBytes = awsc.StaffCapabilityNonce
+		ab.StaffCapability = &awsc.Capability
+	}
+	return ab
 }
 
 type PersonalIdentity struct {
@@ -39,6 +60,7 @@ type PersonalIdentity struct {
 type AccountBinding struct {
 	*Backend
 	*Account
+	StaffCapability *Capability
 }
 
 func (ab *AccountBinding) ID() snowflake.Snowflake {
@@ -70,12 +92,6 @@ func (ab *AccountBinding) Unlock(clientKey *security.ManagedKey) (*security.Mana
 	sec := &proto.AccountSecurity{
 		Nonce: ab.Account.Nonce,
 		MAC:   ab.Account.MAC,
-		SystemKey: security.ManagedKey{
-			KeyType:      proto.ClientKeyType,
-			Ciphertext:   ab.Account.EncryptedSystemKey,
-			ContextKey:   "nonce",
-			ContextValue: base64.URLEncoding.EncodeToString(ab.Account.Nonce),
-		},
 		UserKey: security.ManagedKey{
 			KeyType:    proto.ClientKeyType,
 			IV:         iv,
@@ -91,7 +107,11 @@ func (ab *AccountBinding) Unlock(clientKey *security.ManagedKey) (*security.Mana
 	return sec.Unlock(clientKey)
 }
 
-func (ab *AccountBinding) IsStaff() bool { return ab.Staff }
+func (ab *AccountBinding) IsStaff() bool { return ab.StaffCapability != nil }
+
+func (ab *AccountBinding) UnlockStaffKMS(clientKey *security.ManagedKey) (security.KMS, error) {
+	return nil, notImpl
+}
 
 type AccountManagerBinding struct {
 	*Backend
@@ -179,12 +199,15 @@ func (b *AccountManagerBinding) Register(
 func (b *AccountManagerBinding) Resolve(
 	ctx scope.Context, namespace, id string) (proto.Account, error) {
 
-	var acc Account
+	var row AccountWithStaffCapability
 	err := b.DbMap.SelectOne(
-		&acc,
+		&row,
 		"SELECT a.id, a.nonce, a.mac, a.encrypted_system_key, a.encrypted_user_key,"+
-			" a.encrypted_private_key, a.public_key"+
-			" FROM account a, personal_identity i"+
+			" a.encrypted_private_key, a.public_key,"+
+			" c.id AS staff_capability_id, c.nonce AS staff_capability_nonce,"+
+			" c.encrypted_private_data, c.public_data"+
+			" FROM (account a JOIN personal_identity i ON a.id = i.account_id)"+
+			" LEFT OUTER JOIN capability c ON a.staff_capability_id = c.id"+
 			" WHERE i.namespace = $1 AND i.id = $2 AND i.account_id = a.id",
 		namespace, id)
 	if err != nil {
@@ -193,36 +216,128 @@ func (b *AccountManagerBinding) Resolve(
 		}
 		return nil, err
 	}
-	return acc.Bind(b.Backend), nil
+
+	return row.Bind(b.Backend), nil
 }
 
 func (b *AccountManagerBinding) Get(
 	ctx scope.Context, id snowflake.Snowflake) (proto.Account, error) {
 
-	row, err := b.DbMap.Get(Account{}, id.String())
+	var row AccountWithStaffCapability
+	err := b.DbMap.SelectOne(
+		&row,
+		"SELECT a.id, a.nonce, a.mac, a.encrypted_system_key, a.encrypted_user_key,"+
+			" a.encrypted_private_key, a.public_key,"+
+			" c.id AS staff_capability_id, c.nonce AS staff_capability_nonce,"+
+			" c.encrypted_private_data, c.public_data"+
+			" FROM account a LEFT OUTER JOIN capability c ON a.staff_capability_id = c.id"+
+			" WHERE a.id = $1",
+		id.String())
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, proto.ErrAccountNotFound
+		}
 		return nil, err
 	}
-	if row == nil {
-		return nil, proto.ErrAccountNotFound
-	}
-	return row.(*Account).Bind(b.Backend), nil
+
+	return row.Bind(b.Backend), nil
 }
 
-func (b *AccountManagerBinding) SetStaff(
-	ctx scope.Context, accountID snowflake.Snowflake, isStaff bool) error {
+func (b *AccountManagerBinding) GrantStaff(
+	ctx scope.Context, accountID snowflake.Snowflake, kmsCred security.KMSCredential) error {
 
-	result, err := b.DbMap.Exec(
-		"UPDATE account SET staff = $2 WHERE id = $1", accountID.String(), isStaff)
+	// Look up the target account's (system) encrypted client key. This is
+	// not part of the transaction, because we want to interact with KMS
+	// before we proceed. That should be fine, since this is an infrequently
+	// used action.
+	var row struct {
+		EncryptedClientKey []byte `db:"encrypted_system_key"`
+		Nonce              []byte `db:"nonce"`
+	}
+	err := b.DbMap.SelectOne(
+		&row, "SELECT encrypted_system_key, nonce FROM account WHERE id = $1", accountID.String())
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return proto.ErrAccountNotFound
+		}
+		return err
+	}
+
+	// Use kmsCred to obtain kms and decrypt the client's key.
+	kms := kmsCred.KMS()
+	clientKey := &security.ManagedKey{
+		KeyType:      proto.ClientKeyType,
+		Ciphertext:   row.EncryptedClientKey,
+		ContextKey:   "nonce",
+		ContextValue: base64.URLEncoding.EncodeToString(row.Nonce),
+	}
+	if err := kms.DecryptKey(clientKey); err != nil {
+		return err
+	}
+
+	// Grant staff capability. This involves marshalling kmsCred to JSON and
+	// encrypting it with the client key.
+	nonce, err := kms.GenerateNonce(clientKey.KeyType.BlockSize())
+	if err != nil {
+		return err
+	}
+
+	capability, err := security.GrantSharedSecretCapability(clientKey, nonce, nil, kmsCred)
+	if err != nil {
+		return err
+	}
+
+	// Store capability and update account table.
+	t, err := b.DbMap.Begin()
+	if err != nil {
+		return err
+	}
+
+	rollback := func() {
+		if err := t.Rollback(); err != nil {
+			backend.Logger(ctx).Printf("rollback error: %s", err)
+		}
+	}
+
+	dbCap := &Capability{
+		ID:                   capability.CapabilityID(),
+		NonceBytes:           capability.Nonce(),
+		EncryptedPrivateData: capability.EncryptedPayload(),
+		PublicData:           capability.PublicPayload(),
+	}
+	if err := t.Insert(dbCap); err != nil {
+		rollback()
+		return err
+	}
+
+	result, err := t.Exec(
+		"UPDATE account SET staff_capability_id = $2 WHERE id = $1",
+		accountID.String(), capability.CapabilityID())
+	if err != nil {
+		rollback()
 		return err
 	}
 	n, err := result.RowsAffected()
 	if err != nil {
+		rollback()
 		return err
 	}
 	if n != 1 {
+		rollback()
 		return proto.ErrAccountNotFound
 	}
+
+	if err := t.Commit(); err != nil {
+		return err
+	}
+
 	return nil
+}
+
+func (b *AccountManagerBinding) RevokeStaff(ctx scope.Context, accountID snowflake.Snowflake) error {
+	_, err := b.DbMap.Exec(
+		"DELETE FROM capability USING account"+
+			" WHERE account.id = $1 AND capability.id = account.staff_capability_id",
+		accountID.String())
+	return err
 }

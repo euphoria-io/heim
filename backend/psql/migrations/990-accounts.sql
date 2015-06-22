@@ -9,7 +9,7 @@ CREATE TABLE account (
     encrypted_user_key bytea NOT NULL,
     encrypted_private_key bytea NOT NULL,
     public_key bytea NOT NULL,
-    staff bool DEFAULT false
+    staff_capability_id text REFERENCES capability(id) ON DELETE SET NULL
 );
 
 CREATE TABLE personal_identity (
