@@ -847,7 +847,7 @@ func testAccountsLowLevel(s *serverUnderTest) {
 }
 
 func testStaffLowLevel(s *serverUnderTest) {
-	Convey("Setting and checking staff bit", func() {
+	Convey("Setting and checking staff capability", func() {
 		b := s.backend
 		ctx := scope.New()
 		kms := s.app.kms
@@ -862,7 +862,7 @@ func testStaffLowLevel(s *serverUnderTest) {
 		loganAgent, err := proto.NewAgent([]byte("logan"+nonce), agentKey)
 		So(err, ShouldBeNil)
 		So(at.Register(ctx, loganAgent), ShouldBeNil)
-		logan, _, err := b.AccountManager().Register(
+		logan, loganKey, err := b.AccountManager().Register(
 			ctx, kms, "email", "logan"+nonce, "loganpass", loganAgent.IDString(), agentKey)
 		So(err, ShouldBeNil)
 		So(logan.IsStaff(), ShouldBeFalse)
@@ -872,6 +872,16 @@ func testStaffLowLevel(s *serverUnderTest) {
 		logan, err = b.AccountManager().Get(ctx, logan.ID())
 		So(err, ShouldBeNil)
 		So(logan.IsStaff(), ShouldBeTrue)
+
+		// Unlock staff KMS and verify compatibility.
+		staffKMS, err := logan.UnlockStaffKMS(loganKey)
+		So(err, ShouldBeNil)
+		testKey, err := kms.GenerateEncryptedKey(security.AES128, "test", "test")
+		So(err, ShouldBeNil)
+		clonedKey := testKey.Clone()
+		So(kms.DecryptKey(testKey), ShouldBeNil)
+		So(staffKMS.DecryptKey(&clonedKey), ShouldBeNil)
+		So(&clonedKey, ShouldResemble, testKey)
 
 		// Revoke staff
 		So(b.AccountManager().RevokeStaff(ctx, logan.ID()), ShouldBeNil)

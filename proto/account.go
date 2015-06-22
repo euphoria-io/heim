@@ -114,6 +114,7 @@ func NewAccountSecurity(
 	if err = kms.DecryptKey(&kek); err != nil {
 		return nil, nil, fmt.Errorf("key decryption error: %s", err)
 	}
+	fmt.Printf("kek: %x\n", kek.Plaintext)
 
 	// Encrypt private key.
 	keyPair.IV = iv
@@ -188,6 +189,8 @@ func (sec *AccountSecurity) ResetPassword(kms security.KMS, password string) (*A
 	if err := kms.DecryptKey(&kek); err != nil {
 		return nil, fmt.Errorf("key decryption error: %s", err)
 	}
+	kek.IV = make([]byte, ClientKeyType.BlockSize())
+	copy(kek.IV, sec.Nonce)
 
 	clientKey := security.KeyFromPasscode([]byte(password), sec.Nonce, sec.UserKey.KeyType)
 	if err := kek.Encrypt(clientKey); err != nil {

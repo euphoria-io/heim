@@ -8,23 +8,46 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"reflect"
 )
 
+const LocalKMSType = KMSType("local")
+
 var (
-	ErrNoMasterKey = errors.New("no master key")
+	ErrInvalidKMSType = errors.New("invalid KMS type")
+	ErrNoMasterKey    = errors.New("no master key")
+
+	registry = map[KMSType]KMSCredential{}
 )
+
+func RegisterKMSType(name KMSType, instance KMSCredential) {
+	registry[name] = instance
+}
+
+type KMSType string
+
+func (name KMSType) KMSCredential() (KMSCredential, error) {
+	instance, ok := registry[name]
+	if !ok {
+		return nil, ErrInvalidKMSType
+	}
+
+	val := reflect.New(reflect.TypeOf(instance).Elem())
+	return val.Interface().(KMSCredential), nil
+}
+
+type KMSCredential interface {
+	json.Marshaler
+	json.Unmarshaler
+	KMSType() KMSType
+	KMS() KMS
+}
 
 type KMS interface {
 	GenerateNonce(bytes int) ([]byte, error)
 
 	GenerateEncryptedKey(keyType KeyType, ctxKey, ctxVal string) (*ManagedKey, error)
 	DecryptKey(*ManagedKey) error
-}
-
-type KMSCredential interface {
-	json.Marshaler
-	json.Unmarshaler
-	KMS() KMS
 }
 
 const mockCipher = AES256
@@ -44,6 +67,7 @@ type localKMS struct {
 	masterKey []byte
 }
 
+func (kms *localKMS) KMSType() KMSType             { return LocalKMSType }
 func (kms *localKMS) KMS() KMS                     { return kms }
 func (kms *localKMS) KMSCredential() KMSCredential { return kms }
 func (kms *localKMS) SetMasterKey(key []byte)      { kms.masterKey = key }
@@ -126,3 +150,7 @@ func (kms *localKMS) xorKey(mkey *ManagedKey) error {
 
 func (kms *localKMS) MarshalJSON() ([]byte, error)    { return json.Marshal(kms.masterKey) }
 func (kms *localKMS) UnmarshalJSON(data []byte) error { return json.Unmarshal(data, &kms.masterKey) }
+
+func init() {
+	RegisterKMSType(LocalKMSType, &localKMS{})
+}

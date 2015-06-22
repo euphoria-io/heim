@@ -39,8 +39,9 @@ func TestLocalKMS(t *testing.T) {
 		})
 
 		Convey("Error should be checked when generating key", func() {
-			n := int64(AES128.BlockSize() + AES128.KeySize())
+			n := int64(AES128.KeySize())
 			kms := LocalKMSWithRNG(io.LimitReader(rand.Reader, n-1))
+			kms.SetMasterKey(make([]byte, mockCipher.KeySize()))
 			encKey, err := kms.GenerateEncryptedKey(AES128, "room", "test")
 			So(err, ShouldEqual, io.ErrUnexpectedEOF)
 			So(encKey, ShouldBeNil)
@@ -68,28 +69,22 @@ func TestLocalKMS(t *testing.T) {
 		})
 
 		Convey("Encrypted key can be decrypted", func() {
-			// Force generated iv and key to be particular values.
-			randomData := make([]byte, mockCipher.BlockSize()+mockCipher.KeySize())
-			randomData[0] = 1 // force iv to be 1000...
-			expectedIV := randomData[:mockCipher.BlockSize()]
-			expectedKey := randomData[mockCipher.KeySize():]
+			expectedKey := make([]byte, AES128.KeySize())
 
-			// Generate encrypted key and verify iv prefix.
-			kms := LocalKMSWithRNG(bytes.NewReader(randomData))
+			// Generate encrypted key.
+			kms := LocalKMSWithRNG(bytes.NewReader(expectedKey))
 			kms.SetMasterKey(make([]byte, mockCipher.KeySize()))
 			mkey, err := kms.GenerateEncryptedKey(AES128, "room", "test")
 			So(err, ShouldBeNil)
 			So(mkey, ShouldNotBeNil)
 			So(mkey.Encrypted(), ShouldBeTrue)
-			So(len(mkey.IV), ShouldEqual, AES128.BlockSize())
 			So(len(mkey.Ciphertext), ShouldEqual, AES128.KeySize()+sha256.Size)
 			So(mkey.ContextKey, ShouldEqual, "room")
 			So(mkey.ContextValue, ShouldEqual, "test")
 
+			// Verify decryption.
 			So(kms.DecryptKey(mkey), ShouldBeNil)
 			So(mkey.Encrypted(), ShouldBeFalse)
-			So(bytes.Equal(mkey.IV, expectedIV), ShouldBeTrue)
-			So(len(mkey.IV), ShouldEqual, AES128.BlockSize())
 			So(len(mkey.Plaintext), ShouldEqual, AES128.KeySize())
 			So(bytes.Equal(mkey.Plaintext, expectedKey), ShouldBeTrue)
 		})
@@ -109,7 +104,7 @@ func TestLocalKMS(t *testing.T) {
 		kms.SetMasterKey(make([]byte, mockCipher.KeySize()))
 		mkey, err := kms.GenerateEncryptedKey(AES128, "room", "test")
 		So(err, ShouldBeNil)
-		mkey.IV = mkey.IV[1:]
+		mkey.ContextValue = "test2"
 		So(kms.DecryptKey(mkey), ShouldEqual, ErrInvalidKey)
 	})
 

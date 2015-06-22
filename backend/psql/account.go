@@ -3,6 +3,7 @@ package psql
 import (
 	"database/sql"
 	"encoding/base64"
+	"encoding/json"
 	"strings"
 
 	"euphoria.io/heim/backend"
@@ -110,7 +111,42 @@ func (ab *AccountBinding) Unlock(clientKey *security.ManagedKey) (*security.Mana
 func (ab *AccountBinding) IsStaff() bool { return ab.StaffCapability != nil }
 
 func (ab *AccountBinding) UnlockStaffKMS(clientKey *security.ManagedKey) (security.KMS, error) {
-	return nil, notImpl
+	if ab.StaffCapability == nil {
+		return nil, proto.ErrAccessDenied
+	}
+
+	iv := make([]byte, proto.ClientKeyType.BlockSize())
+	copy(iv, ab.Account.Nonce)
+	key := &security.ManagedKey{
+		KeyType:    proto.ClientKeyType,
+		IV:         iv,
+		Ciphertext: ab.Account.EncryptedUserKey,
+	}
+	if err := key.Decrypt(clientKey); err != nil {
+		return nil, err
+	}
+
+	ssc := &security.SharedSecretCapability{Capability: ab.StaffCapability}
+	data, err := ssc.DecryptPayload(key)
+	if err != nil {
+		return nil, err
+	}
+
+	var kmsType security.KMSType
+	if err := json.Unmarshal(ssc.PublicPayload(), &kmsType); err != nil {
+		return nil, err
+	}
+
+	kmsCred, err := kmsType.KMSCredential()
+	if err != nil {
+		return nil, err
+	}
+
+	if err := kmsCred.UnmarshalJSON(data); err != nil {
+		return nil, err
+	}
+
+	return kmsCred.KMS(), nil
 }
 
 type AccountManagerBinding struct {
@@ -129,7 +165,6 @@ func (b *AccountManagerBinding) Register(
 	}
 
 	// Generate credentials in advance of working in DB transaction.
-	backend.Logger(ctx).Printf("NewAccountSecurity: kms=%#v", kms)
 	sec, clientKey, err := proto.NewAccountSecurity(kms, password)
 	if err != nil {
 		return nil, nil, err
@@ -282,7 +317,7 @@ func (b *AccountManagerBinding) GrantStaff(
 		return err
 	}
 
-	capability, err := security.GrantSharedSecretCapability(clientKey, nonce, nil, kmsCred)
+	capability, err := security.GrantSharedSecretCapability(clientKey, nonce, kmsCred.KMSType(), kmsCred)
 	if err != nil {
 		return err
 	}

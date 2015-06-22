@@ -3,6 +3,8 @@ package mock
 import (
 	"fmt"
 
+	"encoding/json"
+
 	"euphoria.io/heim/backend"
 	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/security"
@@ -29,9 +31,9 @@ func NewAccount(kms security.KMS, password string) (proto.Account, *security.Man
 }
 
 type memAccount struct {
-	id       snowflake.Snowflake
-	sec      proto.AccountSecurity
-	staffKMS security.KMS
+	id              snowflake.Snowflake
+	sec             proto.AccountSecurity
+	staffCapability security.Capability
 }
 
 func (a *memAccount) ID() snowflake.Snowflake { return a.id }
@@ -46,14 +48,39 @@ func (a *memAccount) Unlock(clientKey *security.ManagedKey) (*security.ManagedKe
 	return a.sec.Unlock(clientKey)
 }
 
-func (a *memAccount) IsStaff() bool { return a.staffKMS != nil }
+func (a *memAccount) IsStaff() bool { return a.staffCapability != nil }
 
-func (a *memAccount) UnlockStaffKMS(key *security.ManagedKey) (security.KMS, error) {
-	// TODO: verify key
-	if a.staffKMS == nil {
+func (a *memAccount) UnlockStaffKMS(clientKey *security.ManagedKey) (security.KMS, error) {
+	if a.staffCapability == nil {
 		return nil, proto.ErrAccessDenied
 	}
-	return a.staffKMS, nil
+
+	key := a.sec.UserKey.Clone()
+	if err := key.Decrypt(clientKey); err != nil {
+		return nil, err
+	}
+
+	ssc := &security.SharedSecretCapability{Capability: a.staffCapability}
+	data, err := ssc.DecryptPayload(&key)
+	if err != nil {
+		return nil, err
+	}
+
+	var kmsType security.KMSType
+	if err := json.Unmarshal(ssc.PublicPayload(), &kmsType); err != nil {
+		return nil, err
+	}
+
+	kmsCred, err := kmsType.KMSCredential()
+	if err != nil {
+		return nil, err
+	}
+
+	if err := kmsCred.UnmarshalJSON(data); err != nil {
+		return nil, err
+	}
+
+	return kmsCred.KMS(), nil
 }
 
 type accountManager struct {
@@ -128,7 +155,9 @@ func (m *accountManager) Get(ctx scope.Context, id snowflake.Snowflake) (proto.A
 	return account, nil
 }
 
-func (m *accountManager) setStaffKMS(accountID snowflake.Snowflake, kms security.KMS) error {
+func (m *accountManager) GrantStaff(
+	ctx scope.Context, accountID snowflake.Snowflake, kmsCred security.KMSCredential) error {
+
 	m.b.Lock()
 	defer m.b.Unlock()
 
@@ -137,16 +166,36 @@ func (m *accountManager) setStaffKMS(accountID snowflake.Snowflake, kms security
 		return proto.ErrAccountNotFound
 	}
 	memAcc := account.(*memAccount)
-	memAcc.staffKMS = kms
+
+	kms := kmsCred.KMS()
+	key := memAcc.sec.SystemKey.Clone()
+	if err := kms.DecryptKey(&key); err != nil {
+		return err
+	}
+
+	nonce, err := kms.GenerateNonce(key.KeyType.BlockSize())
+	if err != nil {
+		return err
+	}
+
+	capability, err := security.GrantSharedSecretCapability(&key, nonce, kmsCred.KMSType(), kmsCred)
+	if err != nil {
+		return err
+	}
+
+	memAcc.staffCapability = capability
 	return nil
 }
 
-func (m *accountManager) GrantStaff(
-	ctx scope.Context, accountID snowflake.Snowflake, kmsCred security.KMSCredential) error {
-
-	return m.setStaffKMS(accountID, kmsCred.KMS())
-}
-
 func (m *accountManager) RevokeStaff(ctx scope.Context, accountID snowflake.Snowflake) error {
-	return m.setStaffKMS(accountID, nil)
+	m.b.Lock()
+	defer m.b.Unlock()
+
+	account, ok := m.b.accounts[accountID.String()]
+	if !ok {
+		return proto.ErrAccountNotFound
+	}
+	memAcc := account.(*memAccount)
+	memAcc.staffCapability = nil
+	return nil
 }
