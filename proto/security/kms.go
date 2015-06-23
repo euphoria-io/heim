@@ -150,8 +150,12 @@ func (kms *localKMS) xorKey(mkey *ManagedKey) error {
 	return nil
 }
 
-func (kms *localKMS) MarshalJSON() ([]byte, error)    { return json.Marshal(kms.masterKey) }
-func (kms *localKMS) UnmarshalJSON(data []byte) error { return json.Unmarshal(data, &kms.masterKey) }
+func (kms *localKMS) MarshalJSON() ([]byte, error) { return json.Marshal(kms.masterKey) }
+
+func (kms *localKMS) UnmarshalJSON(data []byte) error {
+	kms.random = rand.Reader
+	return json.Unmarshal(data, &kms.masterKey)
+}
 
 func init() {
 	RegisterKMSType(LocalKMSType, &localKMS{})

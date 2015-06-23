@@ -334,6 +334,7 @@ func IntegrationTest(t *testing.T, factory func() proto.Backend) {
 	runTest("Deletion", testDeletion)
 	runTest("Account login", testAccountLogin)
 	runTest("Account registration", testAccountRegistration)
+	runTest("Room creation", testRoomCreation)
 }
 
 func testLurker(s *serverUnderTest) {
@@ -1155,5 +1156,66 @@ func testAccountRegistration(s *serverUnderTest) {
 			`{"namespace":"email","id":"registration@euphoria.io","password":"hunter2"}`)
 		observer.expect("1", "register-account-reply",
 			`{"success":false,"reason":"personal identity already in use"}`)
+	})
+}
+
+func testRoomCreation(s *serverUnderTest) {
+	Convey("Unlock staff capability and create room", func() {
+		b := s.backend
+		ctx := scope.New()
+		kms := s.app.kms
+		at := b.AgentTracker()
+		agentKey := &security.ManagedKey{
+			KeyType:   proto.AgentKeyType,
+			Plaintext: make([]byte, proto.AgentKeyType.KeySize()),
+		}
+
+		// Create staff account.
+		nonce := fmt.Sprintf("%s", time.Now())
+		loganAgent, err := proto.NewAgent([]byte("logan"+nonce), agentKey)
+		So(err, ShouldBeNil)
+		So(at.Register(ctx, loganAgent), ShouldBeNil)
+		logan, _, err := b.AccountManager().Register(
+			ctx, kms, "email", "logan"+nonce, "loganpass", loganAgent.IDString(), agentKey)
+		So(err, ShouldBeNil)
+		So(b.AccountManager().GrantStaff(ctx, logan.ID(), s.kms.KMSCredential()), ShouldBeNil)
+
+		// Connect and log into staff account in a throwaway room.
+		conn := s.Connect("createroomstage")
+		defer conn.Close()
+
+		conn.expectPing()
+		conn.expectSnapshot(s.backend.Version(), nil, nil)
+		conn.send("1", "login",
+			`{"namespace":"email","id":"logan%s","password":"loganpass"}`, nonce)
+		conn.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, logan.ID())
+		conn.expect("", "bounce-event", `{"reason":"authentication changed"}`)
+		conn.Close()
+
+		// Reconnect, and fail to create room because staff capability is locked.
+		conn = s.Connect("createroom", conn.cookies...)
+		conn.expectPing()
+		conn.expectSnapshot(s.backend.Version(), nil, nil)
+		conn.send("1", "create-room", `{"name":"create-room-new","managers":["%s"],"private":true}`,
+			logan.ID())
+		conn.expect("1", "create-room-reply",
+			`{"success":false,"failure_reason":"must unlock staff capability first"}`)
+
+		// Unlock staff capability and try again.
+		conn.send("2", "unlock-staff-capability", `{"password":"loganpass"}`)
+		conn.expect("2", "unlock-staff-capability-reply", `{"success":true}`)
+		conn.send("3", "create-room", `{"name":"create-room-new","managers":["%s"],"private":true}`,
+			logan.ID())
+		conn.expect("3", "create-room-reply", `{"success":true}`)
+
+		// Verify room.
+		room, err := s.backend.GetRoom(ctx, "create-room-new")
+		So(err, ShouldBeNil)
+		managers, err := room.Managers(ctx)
+		So(len(managers), ShouldEqual, 1)
+		So(managers[0].ID(), ShouldEqual, logan.ID())
+		mkey, err := room.MessageKey(ctx)
+		So(err, ShouldBeNil)
+		So(mkey, ShouldNotBeNil)
 	})
 }

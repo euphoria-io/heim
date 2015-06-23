@@ -52,6 +52,9 @@ var (
 	RegisterAccountType      = PacketType("register-account")
 	RegisterAccountReplyType = RegisterAccountType.Reply()
 
+	UnlockStaffCapabilityType      = PacketType("unlock-staff-capability")
+	UnlockStaffCapabilityReplyType = UnlockStaffCapabilityType.Reply()
+
 	WhoType      = PacketType("who")
 	WhoEventType = WhoType.Event()
 	WhoReplyType = WhoType.Reply()
@@ -102,6 +105,9 @@ var (
 
 		RegisterAccountType:      reflect.TypeOf(RegisterAccountCommand{}),
 		RegisterAccountReplyType: reflect.TypeOf(RegisterAccountReply{}),
+
+		UnlockStaffCapabilityType:      reflect.TypeOf(UnlockStaffCapabilityCommand{}),
+		UnlockStaffCapabilityReplyType: reflect.TypeOf(UnlockStaffCapabilityReply{}),
 
 		WhoType:      reflect.TypeOf(WhoCommand{}),
 		WhoEventType: reflect.TypeOf(WhoEvent{}),
@@ -236,6 +242,15 @@ type LoginReply struct {
 
 type RegisterAccountCommand LoginCommand
 type RegisterAccountReply LoginReply
+
+type UnlockStaffCapabilityCommand struct {
+	Password string `json:"password"`
+}
+
+type UnlockStaffCapabilityReply struct {
+	Success       bool   `json:"success"`
+	FailureReason string `json:"failure_reason"`
+}
 
 type WhoCommand struct{}
 

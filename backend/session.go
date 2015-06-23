@@ -97,6 +97,7 @@ type session struct {
 	state    cmdState
 	client   *proto.Client
 	agentKey *security.ManagedKey
+	staffKMS security.KMS
 	keyID    string
 	onClose  func()
 
@@ -447,6 +448,8 @@ func (s *session) handleCommand(cmd *proto.Packet) *response {
 		return s.handleLoginCommand(msg)
 	case *proto.RegisterAccountCommand:
 		return s.handleRegisterAccountCommand(msg)
+	case *proto.UnlockStaffCapabilityCommand:
+		return s.handleUnlockStaffCapabilityCommand(msg)
 	case *proto.CreateRoomCommand:
 		return s.handleCreateRoomCommand(msg)
 	default:
@@ -687,6 +690,27 @@ func (s *session) handleAuthCommand(msg *proto.AuthCommand) *response {
 	return &response{packet: &proto.AuthReply{Success: true}}
 }
 
+func (s *session) handleUnlockStaffCapabilityCommand(cmd *proto.UnlockStaffCapabilityCommand) *response {
+	rejection := func(reason string) *response {
+		return &response{packet: &proto.UnlockStaffCapabilityReply{FailureReason: reason}}
+	}
+
+	failure := func(err error) *response { return &response{err: err} }
+
+	if s.client.Account == nil || !s.client.Account.IsStaff() {
+		return rejection("access denied")
+	}
+
+	kms, err := s.client.Account.UnlockStaffKMS(s.client.Account.KeyFromPassword(cmd.Password))
+	if err != nil {
+		// TODO: return specific failure reason for incorrect password
+		return failure(err)
+	}
+
+	s.staffKMS = kms
+	return &response{packet: &proto.UnlockStaffCapabilityReply{Success: true}}
+}
+
 func (s *session) handleCreateRoomCommand(cmd *proto.CreateRoomCommand) *response {
 	rejection := func(reason string) *response {
 		return &response{packet: &proto.CreateRoomReply{FailureReason: reason}}
@@ -696,6 +720,10 @@ func (s *session) handleCreateRoomCommand(cmd *proto.CreateRoomCommand) *respons
 
 	if s.client.Account == nil || !s.client.Account.IsStaff() {
 		return rejection("access denied")
+	}
+
+	if s.staffKMS == nil {
+		return rejection("must unlock staff capability first")
 	}
 
 	if len(cmd.Managers) == 0 {
@@ -719,7 +747,7 @@ func (s *session) handleCreateRoomCommand(cmd *proto.CreateRoomCommand) *respons
 	// TODO: validate room name
 	// TODO: support unnamed rooms
 
-	_, err := s.backend.CreateRoom(s.ctx, s.kms, cmd.Private, cmd.Name, managers...)
+	_, err := s.backend.CreateRoom(s.ctx, s.staffKMS, cmd.Private, cmd.Name, managers...)
 	if err != nil {
 		return failure(err)
 	}
