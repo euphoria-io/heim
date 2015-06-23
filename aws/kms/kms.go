@@ -3,6 +3,8 @@ package kms
 import (
 	"fmt"
 
+	"encoding/json"
+
 	"euphoria.io/heim/proto/security"
 
 	"github.com/awslabs/aws-sdk-go/aws"
@@ -10,6 +12,12 @@ import (
 	"github.com/awslabs/aws-sdk-go/aws/credentials"
 	"github.com/awslabs/aws-sdk-go/service/kms"
 )
+
+const AwsKMSType = security.KMSType("aws")
+
+func init() {
+	security.RegisterKMSType(AwsKMSType, &KMSCredential{})
+}
 
 func New(region, keyID string) (*KMS, error) {
 	config := &aws.Config{
@@ -89,4 +97,43 @@ func (k *KMS) DecryptKey(key *security.ManagedKey) error {
 	key.Plaintext = resp.Plaintext
 	key.Ciphertext = nil
 	return nil
+}
+
+type kmsCredential struct {
+	AccessKey string `json:"access_key"`
+	SecretKey string `json:"secret_key"`
+	Region    string `json:"region"`
+	KeyID     string `json:"key_id"`
+}
+
+type KMSCredential struct {
+	kmsCredential
+}
+
+func (c *KMSCredential) KMS() security.KMS {
+	config := &aws.Config{
+		Credentials: credentials.NewCredentials(c),
+		Region:      c.Region,
+	}
+	return &KMS{
+		kms:   kms.New(config),
+		keyID: c.KeyID,
+	}
+}
+
+func (c *KMSCredential) KMSType() security.KMSType    { return AwsKMSType }
+func (c *KMSCredential) MarshalJSON() ([]byte, error) { return json.Marshal(c.kmsCredential) }
+
+func (c *KMSCredential) UnmarshalJSON(data []byte) error {
+	return json.Unmarshal(data, &c.kmsCredential)
+}
+
+func (c *KMSCredential) IsExpired() bool { return false }
+
+func (c *KMSCredential) Retrieve() (credentials.Value, error) {
+	value := credentials.Value{
+		AccessKeyID:     c.AccessKey,
+		SecretAccessKey: c.SecretKey,
+	}
+	return value, nil
 }

@@ -56,6 +56,7 @@ type MockKMS interface {
 	KMS
 
 	KMSCredential() KMSCredential
+	MasterKey() []byte
 	SetMasterKey([]byte)
 }
 
@@ -70,6 +71,7 @@ type localKMS struct {
 func (kms *localKMS) KMSType() KMSType             { return LocalKMSType }
 func (kms *localKMS) KMS() KMS                     { return kms }
 func (kms *localKMS) KMSCredential() KMSCredential { return kms }
+func (kms *localKMS) MasterKey() []byte            { return kms.masterKey }
 func (kms *localKMS) SetMasterKey(key []byte)      { kms.masterKey = key }
 
 func (kms *localKMS) GenerateNonce(bytes int) ([]byte, error) {

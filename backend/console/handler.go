@@ -5,9 +5,11 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"strings"
 
 	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/security"
+	"euphoria.io/heim/proto/snowflake"
 	"euphoria.io/scope"
 )
 
@@ -63,6 +65,18 @@ func (c *console) Printf(format string, args ...interface{}) { fmt.Fprintf(c, fo
 func (c *console) Write(data []byte) (int, error) {
 	data = bytes.Replace(data, []byte("\n"), []byte("\r\n"), -1)
 	return c.ioterm.Write(data)
+}
+
+func (c *console) resolveAccount(ctx scope.Context, ref string) (proto.Account, error) {
+	idx := strings.IndexRune(ref, ':')
+	if idx < 0 {
+		var accountID snowflake.Snowflake
+		if err := accountID.FromString(ref); err != nil {
+			return nil, err
+		}
+		return c.backend.AccountManager().Get(ctx, accountID)
+	}
+	return c.backend.AccountManager().Resolve(ctx, ref[:idx], ref[idx+1:])
 }
 
 type consoleIdentity console
