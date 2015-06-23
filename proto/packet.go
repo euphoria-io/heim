@@ -29,6 +29,9 @@ var (
 	EditMessageEventType = EditMessageType.Event()
 	EditMessageReplyType = EditMessageType.Reply()
 
+	GrantAccessType      = PacketType("grant-access")
+	GrantAccessReplyType = GrantAccessType.Reply()
+
 	JoinType      = PacketType("join")
 	JoinEventType = JoinType.Event()
 	PartType      = PacketType("part")
@@ -76,6 +79,9 @@ var (
 		EditMessageType:      reflect.TypeOf(EditMessageCommand{}),
 		EditMessageEventType: reflect.TypeOf(EditMessageEvent{}),
 		EditMessageReplyType: reflect.TypeOf(EditMessageReply{}),
+
+		GrantAccessType:      reflect.TypeOf(GrantAccessCommand{}),
+		GrantAccessReplyType: reflect.TypeOf(GrantAccessReply{}),
 
 		LogType:      reflect.TypeOf(LogCommand{}),
 		LogEventType: reflect.TypeOf(LogEvent{}),
@@ -156,6 +162,12 @@ type EditMessageEvent struct {
 	Message
 	EditID snowflake.Snowflake `json:"edit_id"`
 }
+
+type GrantAccessCommand struct {
+	AccountID snowflake.Snowflake `json:"account_id"`
+}
+
+type GrantAccessReply struct{}
 
 type PresenceEvent SessionView
 

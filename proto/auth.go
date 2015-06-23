@@ -17,7 +17,6 @@ const (
 
 type Authorization struct {
 	ClientKey      *security.ManagedKey
-	HasManagerKey  bool
 	ManagerKeyPair *security.ManagedKeyPair
 	MessageKeys    map[string]*security.ManagedKey
 }

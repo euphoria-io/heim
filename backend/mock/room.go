@@ -350,7 +350,7 @@ func (r *memRoom) Managers(ctx scope.Context) ([]proto.Account, error) {
 	return managers, nil
 }
 
-func (r *memRoom) verifyManager(actor proto.Account, actorKey *security.ManagedKey) (
+func (r *memRoom) verifyManager(ctx scope.Context, actor proto.Account, actorKey *security.ManagedKey) (
 	*security.PublicKeyCapability, error) {
 
 	// Verify that actorKey unlocks actor's keypair. In a real implementation,
@@ -361,16 +361,30 @@ func (r *memRoom) verifyManager(actor proto.Account, actorKey *security.ManagedK
 	}
 
 	// Verify actor is a manager.
-	cid, ok := r.managers[actor.ID().String()]
-	if !ok {
-		return nil, proto.ErrAccessDenied
-	}
-	c, ok := r.capabilities[cid]
-	if !ok {
-		return nil, proto.ErrAccessDenied
+	c, err := r.ManagerCapability(ctx, actor)
+	if err != nil {
+		if err == proto.ErrManagerNotFound {
+			return nil, proto.ErrAccessDenied
+		}
+		return nil, err
 	}
 
 	return c.(*security.PublicKeyCapability), nil
+}
+
+func (r *memRoom) ManagerCapability(ctx scope.Context, manager proto.Account) (
+	security.Capability, error) {
+
+	// Verify manager is a manager.
+	cid, ok := r.managers[manager.ID().String()]
+	if !ok {
+		return nil, proto.ErrManagerNotFound
+	}
+	c, ok := r.capabilities[cid]
+	if !ok {
+		return nil, proto.ErrManagerNotFound
+	}
+	return c, nil
 }
 
 func (r *memRoom) AddManager(
@@ -381,7 +395,7 @@ func (r *memRoom) AddManager(
 	defer r.m.Unlock()
 
 	// Verify actor.
-	pkCap, err := r.verifyManager(actor, actorKey)
+	pkCap, err := r.verifyManager(ctx, actor, actorKey)
 	if err != nil {
 		return err
 	}
@@ -434,7 +448,7 @@ func (r *memRoom) RemoveManager(
 	defer r.m.Unlock()
 
 	// Verify actor.
-	if _, err := r.verifyManager(actor, actorKey); err != nil {
+	if _, err := r.verifyManager(ctx, actor, actorKey); err != nil {
 		return err
 	}
 

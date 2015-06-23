@@ -113,6 +113,9 @@ type Room interface {
 	// and corresponding account are needed from the user taking this action.
 	RemoveManager(
 		ctx scope.Context, actor Account, actorKey *security.ManagedKey, formerManager Account) error
+
+	// ManagerCapability returns the manager capablity for the given account.
+	ManagerCapability(ctx scope.Context, manager Account) (security.Capability, error)
 }
 
 type RoomMessageKey interface {

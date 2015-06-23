@@ -209,6 +209,7 @@ func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
 	var accountID snowflake.Snowflake
 	if err := accountID.FromString(agent.AccountID); agent.AccountID != "" && err == nil {
 		if err := client.AuthenticateWithAgent(ctx, s.b, room, agent, agentKey); err != nil {
+			fmt.Printf("agent auth failed: %s\n", err)
 			switch err {
 			case proto.ErrAccessDenied:
 				http.Error(w, err.Error(), http.StatusForbidden)

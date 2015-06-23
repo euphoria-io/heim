@@ -357,6 +357,7 @@ func (rb *RoomBinding) SaveCapability(ctx scope.Context, capability security.Cap
 	rcb := &RoomCapabilityBinding{
 		Capability: Capability{
 			ID:                   capability.CapabilityID(),
+			NonceBytes:           capability.Nonce(),
 			EncryptedPrivateData: capability.EncryptedPayload(),
 			PublicData:           capability.PublicPayload(),
 		},
@@ -487,8 +488,21 @@ func (rb *RoomBinding) Managers(ctx scope.Context) ([]proto.Account, error) {
 	return accounts, nil
 }
 
-func (rb *RoomBinding) getManagerCapability(account proto.Account) (
+func (rb *RoomBinding) getManagerCapability(ctx scope.Context, account proto.Account) (
 	*security.PublicKeyCapability, error) {
+
+	c, err := rb.ManagerCapability(ctx, account)
+	if err != nil {
+		if err == proto.ErrManagerNotFound {
+			return nil, proto.ErrAccessDenied
+		}
+		return nil, err
+	}
+	return &security.PublicKeyCapability{Capability: c}, nil
+}
+
+func (rb *RoomBinding) ManagerCapability(ctx scope.Context, manager proto.Account) (
+	security.Capability, error) {
 
 	var c Capability
 	err := rb.SelectOne(
@@ -497,13 +511,13 @@ func (rb *RoomBinding) getManagerCapability(account proto.Account) (
 			" FROM capability c, room_capability rc, room_manager rm"+
 			" WHERE rm.room = $1 AND rm.account_id = $2 AND rm.capability_id = rc.capability_id"+
 			" AND rc.revoked < rc.granted AND c.id = rc.capability_id",
-		rb.Name, account.ID().String())
+		rb.Name, manager.ID().String())
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, proto.ErrAccessDenied
+			return nil, proto.ErrManagerNotFound
 		}
 	}
-	return &security.PublicKeyCapability{&c}, nil
+	return &c, nil
 }
 
 func (rb *RoomBinding) AddManager(
@@ -511,7 +525,7 @@ func (rb *RoomBinding) AddManager(
 	newManager proto.Account) error {
 
 	// Get the actor's manager capability.
-	pkCap, err := rb.getManagerCapability(actor)
+	pkCap, err := rb.getManagerCapability(ctx, actor)
 	if err != nil {
 		return err
 	}
@@ -589,7 +603,7 @@ func (rb *RoomBinding) RemoveManager(
 	formerManager proto.Account) error {
 
 	// Get the actor's manager capability.
-	pkCap, err := rb.getManagerCapability(actor)
+	pkCap, err := rb.getManagerCapability(ctx, actor)
 	if err != nil {
 		return err
 	}

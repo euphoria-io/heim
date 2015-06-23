@@ -335,6 +335,7 @@ func IntegrationTest(t *testing.T, factory func() proto.Backend) {
 	runTest("Account login", testAccountLogin)
 	runTest("Account registration", testAccountRegistration)
 	runTest("Room creation", testRoomCreation)
+	runTest("Room grants", testRoomGrants)
 }
 
 func testLurker(s *serverUnderTest) {
@@ -1217,5 +1218,81 @@ func testRoomCreation(s *serverUnderTest) {
 		mkey, err := room.MessageKey(ctx)
 		So(err, ShouldBeNil)
 		So(mkey, ShouldNotBeNil)
+	})
+}
+
+func testRoomGrants(s *serverUnderTest) {
+	Convey("Grant access to account", func() {
+		b := s.backend
+		ctx := scope.New()
+		kms := s.app.kms
+		at := b.AgentTracker()
+		agentKey := &security.ManagedKey{
+			KeyType:   proto.AgentKeyType,
+			Plaintext: make([]byte, proto.AgentKeyType.KeySize()),
+		}
+
+		// Create manager account and room.
+		nonce := fmt.Sprintf("%s", time.Now())
+		loganAgent, err := proto.NewAgent([]byte("logan"+nonce), agentKey)
+		So(err, ShouldBeNil)
+		So(at.Register(ctx, loganAgent), ShouldBeNil)
+		logan, _, err := b.AccountManager().Register(
+			ctx, kms, "email", "logan"+nonce, "loganpass", loganAgent.IDString(), agentKey)
+		So(err, ShouldBeNil)
+
+		_, err = b.CreateRoom(ctx, kms, true, "grants", logan)
+		So(err, ShouldBeNil)
+
+		// Create access account (without access yet).
+		maxAgent, err := proto.NewAgent([]byte("max"+nonce), agentKey)
+		So(err, ShouldBeNil)
+		So(at.Register(ctx, maxAgent), ShouldBeNil)
+		max, _, err := b.AccountManager().Register(
+			ctx, kms, "email", "max"+nonce, "maxpass", maxAgent.IDString(), agentKey)
+
+		// Connect and log into manager account in a throwaway room.
+		loganConn := s.Connect("grantsstage")
+		loganConn.expectPing()
+		loganConn.expectSnapshot(s.backend.Version(), nil, nil)
+		loganConn.send("1", "login", `{"namespace":"email","id":"logan%s","password":"loganpass"}`, nonce)
+		loganConn.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, logan.ID())
+		loganConn.expect("", "bounce-event", `{"reason":"authentication changed"}`)
+		loganConn.Close()
+
+		// Reconnect manager to private room.
+		loganConn = s.Connect("grants", loganConn.cookies...)
+		loganConn.expectPing()
+		loganConn.expectSnapshot(s.backend.Version(), nil, nil)
+
+		// Fail to connect with access account.
+		maxConn := s.Connect("grants")
+		maxConn.expectPing()
+		maxConn.expect("", "bounce-event", `{"reason":"authentication required"}`)
+		maxConn.send("1", "login", `{"namespace":"email","id":"max%s","password":"maxpass"}`, nonce)
+		maxConn.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, max.ID())
+		maxConn.expect("", "bounce-event", `{"reason":"authentication changed"}`)
+		maxConn.Close()
+		maxConn = s.Connect("grants", maxConn.cookies...)
+		maxConn.expectPing()
+		maxConn.expect("", "bounce-event", `{"reason":"authentication required"}`)
+		maxConn.Close()
+
+		// Grant access.
+		loganConn.send("1", "grant-access", `{"account_id":"%s"}`, max.ID())
+		loganConn.expect("1", "grant-access-reply", `{}`)
+
+		// Connect with access account.
+		maxConn = s.Connect("grants", maxConn.cookies...)
+		maxConn.expectPing()
+		maxConn.expectSnapshot(
+			s.backend.Version(),
+			[]string{
+				fmt.Sprintf(`{"session_id":"%s","id":"%s","server_id":"test1","server_era":"era1"}`,
+					loganConn.sessionID, loganConn.userID)},
+			nil)
+
+		loganConn.Close()
+		maxConn.Close()
 	})
 }

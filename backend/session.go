@@ -444,6 +444,8 @@ func (s *session) handleCommand(cmd *proto.Packet) *response {
 			return &response{err: err}
 		}
 		return &response{packet: &proto.WhoReply{Listing: listing}}
+	case *proto.GrantAccessCommand:
+		return s.handleGrantAccessCommand(msg)
 	case *proto.LoginCommand:
 		return s.handleLoginCommand(msg)
 	case *proto.RegisterAccountCommand:
@@ -570,6 +572,44 @@ func (s *session) handleSendCommand(cmd *proto.SendCommand) *response {
 		err:    err,
 		cost:   10,
 	}
+}
+
+func (s *session) handleGrantAccessCommand(cmd *proto.GrantAccessCommand) *response {
+	mkp := s.client.Authorization.ManagerKeyPair
+	if mkp == nil {
+		return &response{err: proto.ErrAccessDenied}
+	}
+
+	rmk, err := s.room.MessageKey(s.ctx)
+	if err != nil {
+		return &response{err: err}
+	}
+	if rmk == nil {
+		return &response{err: fmt.Errorf("room is public")}
+	}
+
+	messageKey, ok := s.client.Authorization.MessageKeys[rmk.KeyID()]
+	if !ok {
+		return &response{err: fmt.Errorf("not holding message key")}
+	}
+
+	account, err := s.backend.AccountManager().Get(s.ctx, cmd.AccountID)
+	if err != nil {
+		return &response{err: err}
+	}
+
+	kp := account.KeyPair()
+	c, err := security.GrantPublicKeyCapability(
+		s.kms, rmk.Nonce(), mkp, &kp, nil, messageKey.Plaintext)
+	if err != nil {
+		return &response{err: err}
+	}
+
+	if err := s.room.SaveCapability(s.ctx, c); err != nil {
+		return &response{err: err}
+	}
+
+	return &response{packet: &proto.GrantAccessReply{}}
 }
 
 func (s *session) handleLoginCommand(cmd *proto.LoginCommand) *response {

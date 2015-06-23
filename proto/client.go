@@ -84,7 +84,37 @@ func (c *Client) AuthenticateWithAgent(
 		return fmt.Errorf("client key error: %s", err)
 	}
 
-	// TODO: check if account is manager
+	managerKey, err := room.ManagerKey(ctx)
+	if err != nil {
+		return fmt.Errorf("manager key error: %s", err)
+	}
+
+	managerCap, err := room.ManagerCapability(ctx, account)
+	if err != nil && err != ErrManagerNotFound {
+		return err
+	}
+	if err == nil {
+		subjectKey := managerKey.KeyPair()
+		pc := &security.PublicKeyCapability{Capability: managerCap}
+		secretJSON, err := pc.DecryptPayload(&subjectKey, holderKey)
+		if err != nil {
+			return fmt.Errorf("manager capability decrypt error: %s", err)
+		}
+
+		key := &security.ManagedKey{
+			KeyType: RoomManagerKeyType,
+		}
+		if err := json.Unmarshal(secretJSON, &key.Plaintext); err != nil {
+			return fmt.Errorf("manager key unmarshal error: %s", err)
+		}
+
+		managerKeyPair, err := managerKey.Unlock(key)
+		if err != nil {
+			return fmt.Errorf("manager key unlock error: %s", err)
+		}
+
+		c.Authorization.ManagerKeyPair = managerKeyPair
+	}
 
 	// Look for message key grants to this account.
 	messageKey, err := room.MessageKey(ctx)
@@ -92,15 +122,11 @@ func (c *Client) AuthenticateWithAgent(
 		return err
 	}
 	if messageKey != nil {
-		managerKey, err := room.ManagerKey(ctx)
-		if err != nil {
-			return err
-		}
 		subjectKey := managerKey.KeyPair()
 		capabilityID := security.PublicKeyCapabilityID(&subjectKey, holderKey, messageKey.Nonce())
 		capability, err := room.GetCapability(ctx, capabilityID)
 		if err != nil {
-			return err
+			return fmt.Errorf("access capability error: %s", err)
 		}
 		if capability != nil {
 			pkc := &security.PublicKeyCapability{
@@ -108,13 +134,13 @@ func (c *Client) AuthenticateWithAgent(
 			}
 			roomKeyJSON, err := pkc.DecryptPayload(&subjectKey, holderKey)
 			if err != nil {
-				return err
+				return fmt.Errorf("access capability decrypt error: %s", err)
 			}
 			roomKey := &security.ManagedKey{
 				KeyType: security.AES128,
 			}
 			if err := json.Unmarshal(roomKeyJSON, &roomKey.Plaintext); err != nil {
-				return err
+				return fmt.Errorf("access capability unmarshal error: %s", err)
 			}
 			c.Authorization.AddMessageKey(messageKey.KeyID(), roomKey)
 		}
