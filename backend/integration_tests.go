@@ -1037,8 +1037,6 @@ func testAccountLogin(s *serverUnderTest) {
 
 		// Connect as test user.
 		conn := s.Connect("login")
-		defer conn.Close()
-
 		conn.expectPing()
 		conn.expectSnapshot(
 			s.backend.Version(),
@@ -1077,6 +1075,12 @@ func testAccountLogin(s *serverUnderTest) {
 
 		// Wait for join.
 		observer.expect("", "join-event",
+			`{"session_id":"%s","id":"%s","server_id":"test1","server_era":"era1"}`,
+			conn.sessionID, conn.userID)
+
+		// Disconnect first party again and wait for part.
+		conn.Close()
+		observer.expect("", "part-event",
 			`{"session_id":"%s","id":"%s","server_id":"test1","server_era":"era1"}`,
 			conn.sessionID, conn.userID)
 
