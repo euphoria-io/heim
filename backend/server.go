@@ -7,6 +7,7 @@ import (
 	"path"
 	"strings"
 	"sync"
+	"time"
 
 	"euphoria.io/heim/backend/cluster"
 	"euphoria.io/heim/proto"
@@ -39,7 +40,8 @@ type Server struct {
 	sc         *securecookie.SecureCookie
 	rootCtx    scope.Context
 
-	allowRoomCreation bool
+	allowRoomCreation     bool
+	newAccountMinAgentAge time.Duration
 
 	m sync.Mutex
 
@@ -70,7 +72,8 @@ func NewServer(
 	return s, nil
 }
 
-func (s *Server) AllowRoomCreation(allow bool) { s.allowRoomCreation = allow }
+func (s *Server) AllowRoomCreation(allow bool)            { s.allowRoomCreation = allow }
+func (s *Server) NewAccountMinAgentAge(age time.Duration) { s.newAccountMinAgentAge = age }
 
 func (s *Server) route() {
 	s.r = mux.NewRouter().StrictSlash(true)
@@ -233,7 +236,7 @@ func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
 	defer conn.Close()
 
 	// Serve the session.
-	session := newSession(ctx, conn, client, agentKey, s.ID, s.Era, s.b, s.kms, roomName, room)
+	session := newSession(ctx, s, conn, roomName, room, client, agentKey)
 	if err = session.serve(); err != nil {
 		// TODO: error handling
 		return

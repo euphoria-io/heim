@@ -1158,6 +1158,17 @@ func testAccountRegistration(s *serverUnderTest) {
 		observer.expect("1", "register-account-reply",
 			`{"success":false,"reason":"personal identity already in use"}`)
 	})
+
+	Convey("Min agent age prevents account registration", func() {
+		s.app.NewAccountMinAgentAge(time.Hour)
+		conn := s.Connect("registration2")
+		conn.expectPing()
+		conn.expectSnapshot(s.backend.Version(), nil, nil)
+		conn.send("1", "register-account",
+			`{"namespace":"email","id":"newaccount@euphoria.io","password":"hunter2"}`)
+		conn.expect("1", "register-account-reply",
+			`{"success":false,"reason":"not familiar yet, try again later"}`)
+	})
 }
 
 func testRoomCreation(s *serverUnderTest) {

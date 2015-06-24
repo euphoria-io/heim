@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
+	"time"
 
 	"gopkg.in/yaml.v2"
 
@@ -60,7 +61,8 @@ func (k *CSV) Set(flags string) error {
 }
 
 type ServerConfig struct {
-	AllowRoomCreation bool `yaml:"allow_room_creation"`
+	AllowRoomCreation     bool          `yaml:"allow_room_creation"`
+	NewAccountMinAgentAge time.Duration `yaml:"new_account_min_agent_age"`
 
 	Cluster ClusterConfig  `yaml:"cluster,omitempty"`
 	Console ConsoleConfig  `yaml:"console,omitempty"`

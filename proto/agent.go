@@ -65,9 +65,10 @@ func NewAgent(agentID []byte, accessKey *security.ManagedKey) (*Agent, error) {
 	poly1305.Sum(&mac, iv, &key)
 
 	agent := &Agent{
-		ID:  agentID,
-		IV:  iv,
-		MAC: mac[:],
+		ID:      agentID,
+		IV:      iv,
+		MAC:     mac[:],
+		Created: time.Now(),
 	}
 	return agent, nil
 }
@@ -78,6 +79,7 @@ type Agent struct {
 	MAC                []byte
 	EncryptedClientKey *security.ManagedKey
 	AccountID          string
+	Created            time.Time
 }
 
 func (a *Agent) IDString() string { return base64.URLEncoding.EncodeToString(a.ID) }

@@ -85,6 +85,7 @@ type cmdState func(*proto.Packet) *response
 type session struct {
 	id        string
 	ctx       scope.Context
+	server    *Server
 	conn      *websocket.Conn
 	identity  *memIdentity
 	serverID  string
@@ -116,9 +117,8 @@ type session struct {
 }
 
 func newSession(
-	ctx scope.Context, conn *websocket.Conn, client *proto.Client, agentKey *security.ManagedKey,
-	serverID, serverEra string, backend proto.Backend, kms security.KMS,
-	roomName string, room proto.Room) *session {
+	ctx scope.Context, server *Server, conn *websocket.Conn,
+	roomName string, room proto.Room, client *proto.Client, agentKey *security.ManagedKey) *session {
 
 	nextID := atomic.AddUint64(&sessionIDCounter, 1)
 	sessionCount.WithLabelValues(roomName).Set(float64(nextID))
@@ -128,16 +128,17 @@ func newSession(
 	session := &session{
 		id:        sessionID,
 		ctx:       ctx,
+		server:    server,
 		conn:      conn,
-		identity:  newMemIdentity(client.UserID(), serverID, serverEra),
+		identity:  newMemIdentity(client.UserID(), server.ID, server.Era),
 		client:    client,
 		agentKey:  agentKey,
-		serverID:  serverID,
-		serverEra: serverEra,
+		serverID:  server.ID,
+		serverEra: server.Era,
 		roomName:  roomName,
 		room:      room,
-		backend:   backend,
-		kms:       kms,
+		backend:   server.b,
+		kms:       server.kms,
 
 		incoming:     make(chan *proto.Packet),
 		outgoing:     make(chan *proto.Packet, 100),
@@ -671,6 +672,10 @@ func (s *session) handleLoginCommand(cmd *proto.LoginCommand) *response {
 func (s *session) handleRegisterAccountCommand(cmd *proto.RegisterAccountCommand) *response {
 	if s.client.Account != nil {
 		return &response{packet: &proto.RegisterAccountReply{Reason: "already logged in"}}
+	}
+
+	if time.Now().Sub(s.client.Agent.Created) < s.server.newAccountMinAgentAge {
+		return &response{packet: &proto.RegisterAccountReply{Reason: "not familiar yet, try again later"}}
 	}
 
 	if ok, reason := proto.ValidatePersonalIdentity(cmd.Namespace, cmd.ID); !ok {

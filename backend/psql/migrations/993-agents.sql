@@ -6,7 +6,8 @@ CREATE TABLE agent (
     iv bytea NOT NULL,
     mac bytea NOT NULL,
     encrypted_client_key bytea NOT NULL,
-    account_id text REFERENCES account(id) ON DELETE CASCADE
+    account_id text REFERENCES account(id) ON DELETE CASCADE,
+    created timestamp with time zone NOT NULL
 );
 
 -- index agent by account_id

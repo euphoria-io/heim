@@ -23,6 +23,7 @@ type Agent struct {
 	MAC                []byte
 	EncryptedClientKey []byte         `db:"encrypted_client_key"`
 	AccountID          sql.NullString `db:"account_id"`
+	Created            time.Time
 }
 
 type AgentTrackerBinding struct {
@@ -55,9 +56,10 @@ func (atb *AgentTrackerBinding) UnbanAgent(ctx scope.Context, agentID string) er
 
 func (atb *AgentTrackerBinding) Register(ctx scope.Context, agent *proto.Agent) error {
 	row := &Agent{
-		ID:  agent.IDString(),
-		IV:  agent.IV,
-		MAC: agent.MAC,
+		ID:      agent.IDString(),
+		IV:      agent.IV,
+		MAC:     agent.MAC,
+		Created: agent.Created,
 	}
 	if agent.EncryptedClientKey != nil {
 		row.EncryptedClientKey = agent.EncryptedClientKey.Ciphertext
@@ -99,6 +101,7 @@ func (atb *AgentTrackerBinding) getFromDB(agentID string, db gorp.SqlExecutor) (
 			Ciphertext: agentRow.EncryptedClientKey,
 		},
 		AccountID: agentRow.AccountID.String,
+		Created:   agentRow.Created,
 	}
 	return agent, nil
 }
