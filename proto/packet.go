@@ -32,6 +32,9 @@ var (
 	GrantAccessType      = PacketType("grant-access")
 	GrantAccessReplyType = GrantAccessType.Reply()
 
+	GrantManagerType      = PacketType("grant-manager")
+	GrantManagerReplyType = GrantManagerType.Reply()
+
 	JoinType      = PacketType("join")
 	JoinEventType = JoinType.Event()
 	PartType      = PacketType("part")
@@ -82,6 +85,9 @@ var (
 
 		GrantAccessType:      reflect.TypeOf(GrantAccessCommand{}),
 		GrantAccessReplyType: reflect.TypeOf(GrantAccessReply{}),
+
+		GrantManagerType:      reflect.TypeOf(GrantManagerCommand{}),
+		GrantManagerReplyType: reflect.TypeOf(GrantManagerReply{}),
 
 		LogType:      reflect.TypeOf(LogCommand{}),
 		LogEventType: reflect.TypeOf(LogEvent{}),
@@ -168,6 +174,12 @@ type GrantAccessCommand struct {
 }
 
 type GrantAccessReply struct{}
+
+type GrantManagerCommand struct {
+	AccountID snowflake.Snowflake `json:"account_id"`
+}
+
+type GrantManagerReply struct{}
 
 type PresenceEvent SessionView
 

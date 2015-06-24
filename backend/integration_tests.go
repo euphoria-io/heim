@@ -1295,4 +1295,57 @@ func testRoomGrants(s *serverUnderTest) {
 		loganConn.Close()
 		maxConn.Close()
 	})
+
+	Convey("Grant manager to account", func() {
+		b := s.backend
+		ctx := scope.New()
+		kms := s.app.kms
+		at := b.AgentTracker()
+		agentKey := &security.ManagedKey{
+			KeyType:   proto.AgentKeyType,
+			Plaintext: make([]byte, proto.AgentKeyType.KeySize()),
+		}
+
+		// Create manager account and room.
+		nonce := fmt.Sprintf("+%s", time.Now())
+		loganAgent, err := proto.NewAgent([]byte("logan"+nonce), agentKey)
+		So(err, ShouldBeNil)
+		So(at.Register(ctx, loganAgent), ShouldBeNil)
+		logan, loganKey, err := b.AccountManager().Register(
+			ctx, kms, "email", "logan"+nonce, "loganpass", loganAgent.IDString(), agentKey)
+		So(err, ShouldBeNil)
+
+		room, err := b.CreateRoom(ctx, kms, true, "managergrants", logan)
+		So(err, ShouldBeNil)
+
+		// Create access account (without access yet).
+		maxAgent, err := proto.NewAgent([]byte("max"+nonce), agentKey)
+		So(err, ShouldBeNil)
+		So(at.Register(ctx, maxAgent), ShouldBeNil)
+		max, _, err := b.AccountManager().Register(
+			ctx, kms, "email", "max"+nonce, "maxpass", maxAgent.IDString(), agentKey)
+
+		// Connect and log into manager account in a throwaway room.
+		loganConn := s.Connect("managergrantsstage")
+		loganConn.expectPing()
+		loganConn.expectSnapshot(s.backend.Version(), nil, nil)
+		loganConn.send("1", "login", `{"namespace":"email","id":"logan%s","password":"loganpass"}`, nonce)
+		loganConn.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, logan.ID())
+		loganConn.expect("", "bounce-event", `{"reason":"authentication changed"}`)
+		loganConn.Close()
+
+		// Reconnect manager to private room.
+		loganConn = s.Connect("managergrants", loganConn.cookies...)
+		defer loganConn.Close()
+		loganConn.expectPing()
+		loganConn.expectSnapshot(s.backend.Version(), nil, nil)
+		loganConn.send("1", "grant-manager", `{"account_id":"%s"}`, max.ID())
+		loganConn.expect("1", "grant-manager-reply", `{}`)
+
+		So(room.RemoveManager(ctx, logan, loganKey, logan), ShouldBeNil)
+		managers, err := room.Managers(ctx)
+		So(err, ShouldBeNil)
+		So(len(managers), ShouldEqual, 1)
+		So(managers[0].ID(), ShouldEqual, max.ID())
+	})
 }

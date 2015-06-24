@@ -101,14 +101,15 @@ func (c *Client) AuthenticateWithAgent(
 			return fmt.Errorf("manager capability decrypt error: %s", err)
 		}
 
-		key := &security.ManagedKey{
+		c.Authorization.ManagerKeyEncryptingKey = &security.ManagedKey{
 			KeyType: RoomManagerKeyType,
 		}
-		if err := json.Unmarshal(secretJSON, &key.Plaintext); err != nil {
+		err = json.Unmarshal(secretJSON, &c.Authorization.ManagerKeyEncryptingKey.Plaintext)
+		if err != nil {
 			return fmt.Errorf("manager key unmarshal error: %s", err)
 		}
 
-		managerKeyPair, err := managerKey.Unlock(key)
+		managerKeyPair, err := managerKey.Unlock(c.Authorization.ManagerKeyEncryptingKey)
 		if err != nil {
 			return fmt.Errorf("manager key unlock error: %s", err)
 		}

@@ -446,6 +446,8 @@ func (s *session) handleCommand(cmd *proto.Packet) *response {
 		return &response{packet: &proto.WhoReply{Listing: listing}}
 	case *proto.GrantAccessCommand:
 		return s.handleGrantAccessCommand(msg)
+	case *proto.GrantManagerCommand:
+		return s.handleGrantManagerCommand(msg)
 	case *proto.LoginCommand:
 		return s.handleLoginCommand(msg)
 	case *proto.RegisterAccountCommand:
@@ -606,6 +608,25 @@ func (s *session) handleGrantAccessCommand(cmd *proto.GrantAccessCommand) *respo
 	}
 
 	if err := s.room.SaveCapability(s.ctx, c); err != nil {
+		return &response{err: err}
+	}
+
+	return &response{packet: &proto.GrantAccessReply{}}
+}
+
+func (s *session) handleGrantManagerCommand(cmd *proto.GrantManagerCommand) *response {
+	mkp := s.client.Authorization.ManagerKeyPair
+	if s.client.Account == nil || mkp == nil {
+		return &response{err: proto.ErrAccessDenied}
+	}
+
+	account, err := s.backend.AccountManager().Get(s.ctx, cmd.AccountID)
+	if err != nil {
+		return &response{err: err}
+	}
+
+	err = s.room.AddManager(s.ctx, s.kms, s.client.Account, s.client.Authorization.ClientKey, account)
+	if err != nil {
 		return &response{err: err}
 	}
 

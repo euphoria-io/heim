@@ -16,9 +16,10 @@ const (
 )
 
 type Authorization struct {
-	ClientKey      *security.ManagedKey
-	ManagerKeyPair *security.ManagedKeyPair
-	MessageKeys    map[string]*security.ManagedKey
+	ClientKey               *security.ManagedKey
+	ManagerKeyEncryptingKey *security.ManagedKey
+	ManagerKeyPair          *security.ManagedKeyPair
+	MessageKeys             map[string]*security.ManagedKey
 }
 
 func (a *Authorization) AddMessageKey(keyID string, key *security.ManagedKey) {
