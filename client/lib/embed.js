@@ -51,7 +51,7 @@ function render() {
         data: {
           width: displayWidth,
         }
-      }, process.env.HEIM_ENDPOINT)
+      }, process.env.HEIM_ORIGIN)
     }
 
     img.onload = function() {
@@ -79,7 +79,7 @@ function render() {
 }
 
 window.addEventListener('message', function(ev) {
-  if (ev.origin == process.env.HEIM_ENDPOINT) {
+  if (ev.origin == process.env.HEIM_ORIGIN) {
     if (ev.data.type == 'freeze') {
       document.body.classList.add('frozen')
     } else if (ev.data.type == 'unfreeze') {

@@ -42,7 +42,7 @@ module.exports = React.createClass({
   },
 
   _sendMessage: function(data) {
-    this.refs.iframe.getDOMNode().contentWindow.postMessage(data, process.env.EMBED_ENDPOINT)
+    this.refs.iframe.getDOMNode().contentWindow.postMessage(data, process.env.EMBED_ORIGIN)
   },
 
   freeze: function() {
@@ -56,7 +56,7 @@ module.exports = React.createClass({
   render: function() {
     var data = _.extend({}, this.props, {id: this.embedId})
     delete data.className
-    var url = process.env.EMBED_ENDPOINT + '/?' + queryString.stringify(data)
+    var url = process.env.EMBED_ORIGIN + '/?' + queryString.stringify(data)
     var classes = {'embed': true}
     if (this.props.className) {
       classes[this.props.className] = true

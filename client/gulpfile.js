@@ -47,14 +47,14 @@ function handleError(title) {
 function heimBundler(args) {
   return browserify('./lib/client.js', args)
     .transform(envify({
-      EMBED_ENDPOINT: process.env.EMBED_ENDPOINT,
+      EMBED_ORIGIN: process.env.EMBED_ORIGIN,
     }))
 }
 
 function embedBundler(args) {
   return browserify('./lib/embed.js', args)
     .transform(envify({
-      HEIM_ENDPOINT: process.env.HEIM_ENDPOINT,
+      HEIM_ORIGIN: process.env.HEIM_ORIGIN,
     }))
 }
 

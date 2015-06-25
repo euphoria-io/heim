@@ -125,7 +125,7 @@ if (!window.frameElement) {
     }
 
     Heim.addEventListener(uiwindow, 'message', function(ev) {
-      if (ev.origin == process.env.EMBED_ENDPOINT) {
+      if (ev.origin == process.env.EMBED_ORIGIN) {
         Heim.actions.embedMessage(ev.data)
       }
     }, false)
