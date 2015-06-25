@@ -139,3 +139,29 @@ func DecryptMessage(msg Message, auths map[string]*security.ManagedKey) (Message
 	}
 	return msg, nil
 }
+
+func decryptRoomKey(clientKey *security.ManagedKey, capability security.Capability) (
+	*security.ManagedKey, error) {
+
+	if clientKey.Encrypted() {
+		return nil, security.ErrKeyMustBeDecrypted
+	}
+
+	iv, err := base64.URLEncoding.DecodeString(capability.CapabilityID())
+	if err != nil {
+		return nil, err
+	}
+
+	roomKeyJSON := capability.EncryptedPayload()
+	if err := clientKey.BlockCrypt(iv, clientKey.Plaintext, roomKeyJSON, false); err != nil {
+		return nil, err
+	}
+
+	roomKey := &security.ManagedKey{
+		KeyType: security.AES128,
+	}
+	if err := json.Unmarshal(clientKey.Unpad(roomKeyJSON), &roomKey.Plaintext); err != nil {
+		return nil, err
+	}
+	return roomKey, nil
+}
