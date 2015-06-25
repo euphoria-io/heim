@@ -12,6 +12,9 @@ generate_manifest() {
 
 build_release() {
   export NODE_ENV=production
+  if [ ${DRONE_BRANCH%/*} == 'dev' ]; then
+    export HEIM_PREFIX="/$DRONE_BRANCH"
+  fi
   pushd ./client
   gulp build
   popd
@@ -31,13 +34,10 @@ build_release() {
     s3cmd cp s3://heim-release/${DRONE_COMMIT} s3://heim-release/latest
   fi
 
-  if [ ${DRONE_BRANCH%/*} == logan ]; then
+  if [ ${DRONE_BRANCH%/*} == dev ]; then
     s3cmd cp s3://heim-release/${DRONE_COMMIT} s3://heim-release/${DRONE_BRANCH}
   fi
 
-  if [ ${DRONE_BRANCH%/*} == chromakode ]; then
-    s3cmd cp s3://heim-release/${DRONE_COMMIT} s3://heim-release/${DRONE_BRANCH}
-  fi
   popd
 }
 

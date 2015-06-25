@@ -3,6 +3,7 @@ var gulp = require('gulp')
 var gutil = require('gulp-util')
 var gfile = require('gulp-file')
 var gzip = require('gulp-gzip')
+var gtemplate = require('gulp-template')
 var less = require('gulp-less')
 var autoprefixer = require('gulp-autoprefixer')
 var uglify = require('gulp-uglify')
@@ -22,6 +23,12 @@ var exec = require('child_process').exec
 var watching = false
 var heimDest = './build/heim'
 var embedDest = './build/embed'
+
+var heimOptions = {
+  HEIM_ORIGIN: process.env.HEIM_ORIGIN,
+  HEIM_PREFIX: process.env.HEIM_PREFIX || '',
+  EMBED_ORIGIN: process.env.EMBED_ORIGIN,
+}
 
 // via https://github.com/tblobaum/git-rev
 function shell(cmd, cb) {
@@ -46,9 +53,7 @@ function handleError(title) {
 
 function heimBundler(args) {
   return browserify('./lib/client.js', args)
-    .transform(envify({
-      EMBED_ORIGIN: process.env.EMBED_ORIGIN,
-    }))
+    .transform(envify(heimOptions))
 }
 
 function embedBundler(args) {
@@ -160,6 +165,7 @@ gulp.task('embed-static', function() {
 
 gulp.task('heim-html', function() {
   return gulp.src(['./lib/index.html', './lib/home.html'])
+    .pipe(gtemplate(heimOptions))
     .pipe(gulp.dest(heimDest))
 })
 

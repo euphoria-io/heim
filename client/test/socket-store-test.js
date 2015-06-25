@@ -2,14 +2,23 @@ var support = require('./support/setup')
 var assert = require('assert')
 var sinon = require('sinon')
 
+var HEIM_ORIGIN = 'https://heimhost'
+var HEIM_PREFIX = '/test'
+
 describe('socket store', function() {
   var socket = require('../lib/stores/socket')
   var clock
   var realWebSocket = window.WebSocket
   var fakeWebSocket, fakeWebSocketContructor
+  var origProcessEnv
 
   beforeEach(function() {
     clock = support.setupClock()
+    origProcessEnv = process.env
+    process.env = {
+      HEIM_ORIGIN: HEIM_ORIGIN,
+      HEIM_PREFIX: HEIM_PREFIX,
+    }
     fakeWebSocketContructor = sinon.spy(function() {
       fakeWebSocket = this
       this.send = sinon.spy()
@@ -21,25 +30,24 @@ describe('socket store', function() {
 
   afterEach(function() {
     clock.restore()
+    process.env = origProcessEnv
     window.WebSocket = realWebSocket
   })
 
   describe('_wsurl', function() {
     it('should return wss://host/room/name/ws if protocol is https', function() {
-      var loc = {protocol: 'https:', host: 'host', pathname: '/path/'}
-      assert.equal(socket.store._wsurl(loc, 'ezzie'), 'wss://host/room/ezzie/ws')
+      assert.equal(socket.store._wsurl('https://host', '/prefix', 'ezzie'), 'wss://host/prefix/room/ezzie/ws')
     })
 
     it('should return ws://host/room/name/ws if protocol is NOT https', function() {
-      var loc = {protocol: 'http:', host: 'host', pathname: '/path/'}
-      assert.equal(socket.store._wsurl(loc, 'ezzie'), 'ws://host/room/ezzie/ws')
+      assert.equal(socket.store._wsurl('http://host', '/prefix', 'ezzie'), 'ws://host/prefix/room/ezzie/ws')
     })
   })
 
   describe('connect action', function() {
     it('should connect to ws://host/room/name/ws with heim1 protocol', function() {
       socket.store.connect('ezzie')
-      var expectedPath = 'ws://' + location.host + '/room/ezzie/ws'
+      var expectedPath = 'wss://heimhost/test/room/ezzie/ws'
       sinon.assert.calledWithExactly(fakeWebSocketContructor, expectedPath, 'heim1')
     })
 

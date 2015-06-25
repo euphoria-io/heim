@@ -1,4 +1,5 @@
 var _ = require('lodash')
+var url = require('url')
 var Reflux = require('reflux')
 
 
@@ -25,12 +26,15 @@ module.exports.store = Reflux.createStore({
     this.lastMessage = null
   },
 
-  _wsurl: function(loc, roomName) {
+  _wsurl: function(origin, prefix, roomName) {
+    var parsedOrigin = url.parse(origin)
+
     var scheme = 'ws'
-    if (loc.protocol == 'https:') {
+    if (parsedOrigin.protocol == 'https:') {
       scheme = 'wss'
     }
-    return scheme + '://' + loc.host + '/room/' + roomName + '/ws'
+
+    return scheme + '://' + parsedOrigin.host + prefix + '/room/' + roomName + '/ws'
   },
 
   connect: function(roomName) {
@@ -39,7 +43,8 @@ module.exports.store = Reflux.createStore({
   },
 
   _connect: function() {
-    this.ws = new WebSocket(this._wsurl(location, this.roomName), 'heim1')
+    var wsurl = this._wsurl(process.env.HEIM_ORIGIN, process.env.HEIM_PREFIX, this.roomName)
+    this.ws = new WebSocket(wsurl, 'heim1')
     this.ws.onopen = this._open
     this.ws.onclose = this._closeReconnectSlow
     this.ws.onmessage = this._message
