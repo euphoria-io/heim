@@ -147,6 +147,7 @@ describe('socket store', function() {
 
   describe('when server ping received', function() {
     beforeEach(function() {
+      sinon.spy(window, 'setTimeout')
       socket.store.connect('ezzie')
       socket.store._message({data: JSON.stringify({
         type: 'ping-event',
@@ -157,6 +158,10 @@ describe('socket store', function() {
       })})
     })
 
+    afterEach(function() {
+      window.setTimeout.restore()
+    })
+
     it('should send a ping-reply', function() {
       sinon.assert.calledWith(fakeWebSocket.send, JSON.stringify({
         type: 'ping-reply',
@@ -165,6 +170,27 @@ describe('socket store', function() {
         },
         id: '0',
       }))
+    })
+
+    it('should schedule timeout', function() {
+      sinon.assert.calledWith(setTimeout, socket.store._ping, 20 * 1000)
+    })
+
+    describe('when a second ping received late', function() {
+      beforeEach(function() {
+        setTimeout.reset()
+        socket.store._message({data: JSON.stringify({
+          type: 'ping-event',
+          data: {
+            time: 0,
+            next: 10,
+          },
+        })})
+      })
+
+      it('should not schedule timeout', function() {
+        sinon.assert.notCalled(setTimeout)
+      })
     })
 
     describe('if another server ping isn\'t received before the next timeout', function() {
@@ -245,6 +271,19 @@ describe('socket store', function() {
       socket.store.pingIfIdle()
       sinon.assert.notCalled(fakeWebSocket.send)
     })
+
+    it('should not send a second ping if one was sent in the last 2000ms', function() {
+      socket.store.pingIfIdle()
+      sinon.assert.calledWith(fakeWebSocket.send, JSON.stringify({
+        type: 'ping',
+        id: '0',
+        data: {},
+      }))
+      fakeWebSocket.send.reset()
+      clock.tick(100)
+      socket.store.pingIfIdle()
+      sinon.assert.notCalled(fakeWebSocket.send)
+    })
   })
 
   describe('send action', function() {
@@ -289,6 +328,11 @@ describe('socket store', function() {
     it('should send a data property even if unset', function() {
       socket.store.send({})
       sinon.assert.calledWith(fakeWebSocket.send, JSON.stringify({id: '0', data: {}}))
+    })
+
+    it('should send an id property if specified', function() {
+      socket.store.send({id: 'heyyy'})
+      sinon.assert.calledWith(fakeWebSocket.send, JSON.stringify({id: 'heyyy', data: {}}))
     })
   })
 })
