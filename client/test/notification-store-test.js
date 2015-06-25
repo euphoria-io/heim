@@ -9,15 +9,21 @@ describe('notification store', function() {
   var Tree = require('../lib/tree')
   var notification = require('../lib/stores/notification')
   var storage = require('../lib/stores/storage')
+  var clock
   var _Notification = window.Notification
 
+  var startTime = notification.store.mentionTTL + 10 * 1000
+
   beforeEach(function() {
+    clock = support.setupClock()
+    clock.tick(startTime)
     sinon.stub(storage, 'set')
     sinon.stub(storage, 'setRoom')
     sinon.stub(Heim, 'setFavicon')
   })
 
   afterEach(function() {
+    clock.restore()
     window.Notification = _Notification
     storage.set.restore()
     storage.setRoom.restore()
@@ -120,7 +126,7 @@ describe('notification store', function() {
 
     var messageMentionOld = {
       'id': 'id3',
-      'time': Date.now() - notification.store.mentionTTL,
+      'time': (startTime - notification.store.mentionTTL) / 1000,
       'sender': {
         'id': '32.64.96.128:12345',
         'name': 'tester',
@@ -207,7 +213,7 @@ describe('notification store', function() {
 
     describe('disabling popups for a time', function() {
       it('should store pause time', function() {
-        var time = Date.now() + 1000
+        var time = startTime + 1000
         notification.store.pausePopupsUntil(time)
         sinon.assert.calledWithExactly(storage.set, 'notifyPausedUntil', time)
       })
@@ -247,7 +253,7 @@ describe('notification store', function() {
 
       describe('receiving a message while notifications paused', function() {
         it('should not display a notification', function() {
-          notification.store.storageChange(_.extend({}, storageMock, {notifyPausedUntil: Date.now() + 1000}))
+          notification.store.storageChange(_.extend({}, storageMock, {notifyPausedUntil: startTime + 1000}))
           notification.store.messageReceived(Immutable.Map(message1), mockChatState)
           sinon.assert.notCalled(Notification)
         })
@@ -312,23 +318,23 @@ describe('notification store', function() {
             sinon.assert.calledOnce(Heim.setFavicon)
             sinon.assert.calledWithExactly(Heim.setFavicon, notification.favicons.highlight)
             sinon.assert.calledOnce(storage.setRoom)
-            sinon.assert.calledWithExactly(storage.setRoom, 'ezzie', 'seenMentions', {id3: 43200000})
+            sinon.assert.calledWithExactly(storage.setRoom, 'ezzie', 'seenMentions', {id3: startTime + notification.store.mentionTTL})
           })
 
           it('if seen before should not display a notification', function() {
-            notification.store.storageChange({notify: true, room: {ezzie: {seenMentions: {id3: Date.now() + 1000}}}})
+            notification.store.storageChange({notify: true, room: {ezzie: {seenMentions: {id3: startTime + 1000}}}})
             notification.store.messagesChanged([messageMention.id], mockChatStateMention)
             sinon.assert.notCalled(Notification)
             sinon.assert.notCalled(Heim.setFavicon)
           })
 
           it('if seen before, but expired, should display a notification, set favicon, and store seen', function() {
-            notification.store.storageChange({notify: true, room: {ezzie: {seenMentions: {id3: Date.now() - 1000, other: Date.now() - 1000}}}})
+            notification.store.storageChange({notify: true, room: {ezzie: {seenMentions: {id3: startTime - 1000, other: startTime - 1000}}}})
             notification.store.messagesChanged([messageMention.id], mockChatStateMention)
             sinon.assert.calledOnce(Heim.setFavicon)
             sinon.assert.calledWithExactly(Heim.setFavicon, notification.favicons.highlight)
             sinon.assert.calledOnce(storage.setRoom)
-            sinon.assert.calledWithExactly(storage.setRoom, 'ezzie', 'seenMentions', {id3: 43200000})
+            sinon.assert.calledWithExactly(storage.setRoom, 'ezzie', 'seenMentions', {id3: startTime + notification.store.mentionTTL})
           })
 
           it('if message is older than TTL, should not display a notification', function() {
@@ -423,12 +429,12 @@ describe('notification store', function() {
       })
 
       it('should close after 3 seconds', function() {
-        support.clock.tick(3000)
+        clock.tick(3000)
         sinon.assert.calledOnce(fakeNotification.close)
       })
 
       it('should retain favicon state after timeout and reconnect', function() {
-        support.clock.tick(3000)
+        clock.tick(3000)
         notification.store.chatStateChange({connected: false})
         Heim.setFavicon.reset()
         notification.store.chatStateChange({connected: true})

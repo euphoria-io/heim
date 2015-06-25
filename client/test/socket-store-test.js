@@ -4,10 +4,12 @@ var sinon = require('sinon')
 
 describe('socket store', function() {
   var socket = require('../lib/stores/socket')
+  var clock
   var realWebSocket = window.WebSocket
   var fakeWebSocket, fakeWebSocketContructor
 
   beforeEach(function() {
+    clock = support.setupClock()
     fakeWebSocketContructor = sinon.spy(function() {
       fakeWebSocket = this
       this.send = sinon.spy()
@@ -18,6 +20,7 @@ describe('socket store', function() {
   })
 
   afterEach(function() {
+    clock.restore()
     window.WebSocket = realWebSocket
   })
 
@@ -102,7 +105,7 @@ describe('socket store', function() {
 
     it('should attempt to reconnect within 5s', function() {
       socket.store.ws.onclose()
-      support.clock.tick(5000)
+      clock.tick(5000)
       sinon.assert.calledOnce(socket.store._connect)
     })
   })
@@ -168,7 +171,7 @@ describe('socket store', function() {
       beforeEach(function() {
         fakeWebSocket.send.reset()
         sinon.stub(socket.store, '_reconnect')
-        support.clock.tick(20000)
+        clock.tick(20000)
       })
 
       afterEach(function() {
@@ -188,18 +191,18 @@ describe('socket store', function() {
       describe('after 2000ms', function() {
         describe('if there is no response', function() {
           it('should force a reconnect', function() {
-            support.clock.tick(2000)
+            clock.tick(2000)
             sinon.assert.calledOnce(socket.store._reconnect)
           })
         })
 
         describe('if any server message received', function() {
           it('should not reconnect', function() {
-            support.clock.tick(1000)
+            clock.tick(1000)
             socket.store._message({data: JSON.stringify({
               type: 'another-message',
             })})
-            support.clock.tick(1000)
+            clock.tick(1000)
             sinon.assert.notCalled(socket.store._reconnect)
           })
         })
@@ -225,7 +228,7 @@ describe('socket store', function() {
       socket.store._message({data: JSON.stringify({
         type: 'hello, ezzie.',
       })})
-      support.clock.tick(2000)
+      clock.tick(2000)
       socket.store.pingIfIdle()
       sinon.assert.calledWith(fakeWebSocket.send, JSON.stringify({
         type: 'ping',
@@ -238,7 +241,7 @@ describe('socket store', function() {
       socket.store._message({data: JSON.stringify({
         type: 'hello, ezzie.',
       })})
-      support.clock.tick(1000)
+      clock.tick(1000)
       socket.store.pingIfIdle()
       sinon.assert.notCalled(fakeWebSocket.send)
     })

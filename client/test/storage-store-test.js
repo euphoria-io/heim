@@ -5,11 +5,13 @@ var sinon = require('sinon')
 
 describe('storage store', function() {
   var storage = require('../lib/stores/storage')
+  var clock
   var getItem = localStorage.getItem
   var setItem = localStorage.setItem
   var fakeStorage
 
   beforeEach(function() {
+    clock = support.setupClock()
     fakeStorage = {}
     sinon.stub(localStorage, 'getItem', function(key) {
       return fakeStorage[key]
@@ -21,6 +23,8 @@ describe('storage store', function() {
   })
 
   afterEach(function() {
+    clock.restore()
+
     // stub.restore() seems to fail here.
     localStorage.getItem = getItem
     localStorage.setItem = setItem
@@ -60,7 +64,7 @@ describe('storage store', function() {
 
     it('should save JSON to localStorage', function() {
       storage.store.set(testKey, testValue)
-      support.clock.tick(1000)
+      clock.tick(1000)
       sinon.assert.calledWithExactly(localStorage.setItem, 'data', JSON.stringify({
         'testKey': testValue,
         'room': {},
@@ -69,10 +73,10 @@ describe('storage store', function() {
 
     it('should not save unchanged values', function() {
       storage.store.set(testKey, testValue)
-      support.clock.tick(1000)
+      clock.tick(1000)
       localStorage.setItem.reset()
       storage.store.set(testKey, testValue)
-      support.clock.tick(1000)
+      clock.tick(1000)
       sinon.assert.notCalled(localStorage.setItem)
     })
 
@@ -96,7 +100,7 @@ describe('storage store', function() {
       storage.store.load()
 
       storage.store.setRoom(testRoom, testKey, testValue)
-      support.clock.tick(1000)
+      clock.tick(1000)
       sinon.assert.calledWithExactly(localStorage.setItem, 'data', JSON.stringify({
         'room': {
           'ezzie': {
@@ -111,10 +115,10 @@ describe('storage store', function() {
       storage.store.load()
 
       storage.store.setRoom(testRoom, testKey, testValue)
-      support.clock.tick(1000)
+      clock.tick(1000)
       localStorage.setItem.reset()
       storage.store.setRoom(testRoom, testKey, testValue)
-      support.clock.tick(1000)
+      clock.tick(1000)
       sinon.assert.notCalled(localStorage.setItem)
     })
 
@@ -181,7 +185,7 @@ describe('storage store', function() {
 
     it('should change previously dirty values after a save', function(done) {
       storage.store.set('hello', 'ezzie')
-      support.clock.tick(1000)
+      clock.tick(1000)
       support.listenOnce(storage.store, function(state) {
         assert.equal(state.hello, 'max')
         done()
@@ -225,7 +229,7 @@ describe('storage store', function() {
 
       it('should log a warning', function() {
         storage.store.set('key', 'value')
-        support.clock.tick(1000)
+        clock.tick(1000)
         sinon.assert.calledOnce(console.warn)
       })
     })

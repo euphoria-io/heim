@@ -22,7 +22,7 @@ module.exports.store = Reflux.createStore({
     this.pingTimeout = null
     this.pingReplyTimeout = null
     this.nextPing = 0
-    this.lastMessage = 0
+    this.lastMessage = null
   },
 
   _wsurl: function(loc, roomName) {
@@ -61,6 +61,7 @@ module.exports.store = Reflux.createStore({
   _close: function() {
     clearTimeout(this.pingTimeout)
     clearTimeout(this.pingReplyTimeout)
+    this.pingReplyTimeout = null
     this.ws.onopen = this.ws.onclose = this.ws.onmessage = null
     this.trigger({
       status: 'close',
@@ -105,6 +106,7 @@ module.exports.store = Reflux.createStore({
 
     // receiving any message removes the need to ping
     clearTimeout(this.pingReplyTimeout)
+    this.pingReplyTimeout = null
   },
 
   send: function(data) {
@@ -121,16 +123,19 @@ module.exports.store = Reflux.createStore({
   },
 
   _ping: function() {
+    if (this.pingReplyTimeout) {
+      return
+    }
+
     this.send({
       type: 'ping',
     })
 
-    clearTimeout(this.pingReplyTimeout)
     this.pingReplyTimeout = setTimeout(this._reconnect, this.pingLimit)
   },
 
   pingIfIdle: function() {
-    if (Date.now() - this.lastMessage >= this.pingLimit) {
+    if (this.lastMessage === null || Date.now() - this.lastMessage >= this.pingLimit) {
       this._ping()
     }
   },
