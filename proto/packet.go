@@ -65,9 +65,10 @@ var (
 	WhoEventType = WhoType.Event()
 	WhoReplyType = WhoType.Reply()
 
-	BounceEventType   = PacketType("bounce").Event()
-	NetworkEventType  = PacketType("network").Event()
-	SnapshotEventType = PacketType("snapshot").Event()
+	BounceEventType     = PacketType("bounce").Event()
+	DisconnectEventType = PacketType("disconnect").Event()
+	NetworkEventType    = PacketType("network").Event()
+	SnapshotEventType   = PacketType("snapshot").Event()
 
 	ErrorReplyType = PacketType("error").Reply()
 
@@ -108,9 +109,10 @@ var (
 		AuthEventType: reflect.TypeOf(AuthEvent{}),
 		AuthReplyType: reflect.TypeOf(AuthReply{}),
 
-		BounceEventType:   reflect.TypeOf(BounceEvent{}),
-		NetworkEventType:  reflect.TypeOf(NetworkEvent{}),
-		SnapshotEventType: reflect.TypeOf(SnapshotEvent{}),
+		BounceEventType:     reflect.TypeOf(BounceEvent{}),
+		DisconnectEventType: reflect.TypeOf(DisconnectEvent{}),
+		NetworkEventType:    reflect.TypeOf(NetworkEvent{}),
+		SnapshotEventType:   reflect.TypeOf(SnapshotEvent{}),
 
 		LoginType:      reflect.TypeOf(LoginCommand{}),
 		LoginReplyType: reflect.TypeOf(LoginReply{}),
@@ -238,6 +240,10 @@ type BounceEvent struct {
 	IP          string       `json:"ip,omitempty"`
 }
 
+type DisconnectEvent struct {
+	Reason string `json:"reason"`
+}
+
 type SnapshotEvent struct {
 	Identity  string    `json:"identity"`
 	SessionID string    `json:"session_id"`
@@ -348,6 +354,8 @@ func MakeEvent(payload interface{}) (*Packet, error) {
 	switch payload.(type) {
 	case *BounceEvent:
 		packet.Type = BounceEventType
+	case *DisconnectEvent:
+		packet.Type = DisconnectEventType
 	case *PingEvent:
 		packet.Type = PingEventType
 	case *NetworkEvent:

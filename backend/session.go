@@ -309,11 +309,11 @@ func (s *session) serve() error {
 			switch msg := reply.packet.(type) {
 			case *proto.LoginReply:
 				if msg.Success {
-					s.sendBounce("authentication changed")
+					s.sendDisconnect("authentication changed")
 				}
 			case *proto.RegisterAccountReply:
 				if msg.Success {
-					s.sendBounce("authentication changed")
+					s.sendDisconnect("authentication changed")
 				}
 			}
 		case cmd := <-s.outgoing:
@@ -495,6 +495,15 @@ func (s *session) sendBounce(reason string) error {
 		// TODO: fill in AuthOptions
 	}
 	event, err := proto.MakeEvent(bounce)
+	if err != nil {
+		return err
+	}
+	s.outgoing <- event
+	return nil
+}
+
+func (s *session) sendDisconnect(reason string) error {
+	event, err := proto.MakeEvent(&proto.DisconnectEvent{Reason: reason})
 	if err != nil {
 		return err
 	}

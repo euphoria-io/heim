@@ -697,7 +697,7 @@ func testAuthentication(s *serverUnderTest) {
 		conn.send("1", "login",
 			`{"namespace":"email","id":"logan-private","password":"loganpass"}`)
 		conn.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, logan.ID())
-		conn.expect("", "bounce-event", `{"reason":"authentication changed"}`)
+		conn.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
 		conn.Close()
 
 		// Reconnect with authentication.
@@ -1054,7 +1054,7 @@ func testAccountLogin(s *serverUnderTest) {
 		conn.send("1", "login",
 			`{"namespace":"email","id":"logan%s","password":"loganpass"}`, nonce)
 		conn.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, logan.ID())
-		conn.expect("", "bounce-event", `{"reason":"authentication changed"}`)
+		conn.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
 		conn.Close()
 
 		// Wait for part.
@@ -1126,7 +1126,7 @@ func testAccountRegistration(s *serverUnderTest) {
 		conn.send("1", "register-account",
 			`{"namespace":"email","id":"registration@euphoria.io","password":"hunter2"}`)
 		conn.expect("1", "register-account-reply", `{"success":true,"account_id":"%s"}`, sfs[0])
-		conn.expect("", "bounce-event", `{"reason":"authentication changed"}`)
+		conn.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
 		conn.Close()
 
 		// Wait for part.
@@ -1199,7 +1199,7 @@ func testRoomCreation(s *serverUnderTest) {
 		conn.send("1", "login",
 			`{"namespace":"email","id":"logan%s","password":"loganpass"}`, nonce)
 		conn.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, logan.ID())
-		conn.expect("", "bounce-event", `{"reason":"authentication changed"}`)
+		conn.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
 		conn.Close()
 
 		// Reconnect, and fail to create room because staff capability is locked.
@@ -1266,7 +1266,7 @@ func testRoomGrants(s *serverUnderTest) {
 		loganConn.expectSnapshot(s.backend.Version(), nil, nil)
 		loganConn.send("1", "login", `{"namespace":"email","id":"logan%s","password":"loganpass"}`, nonce)
 		loganConn.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, logan.ID())
-		loganConn.expect("", "bounce-event", `{"reason":"authentication changed"}`)
+		loganConn.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
 		loganConn.Close()
 
 		// Reconnect manager to private room.
@@ -1280,7 +1280,7 @@ func testRoomGrants(s *serverUnderTest) {
 		maxConn.expect("", "bounce-event", `{"reason":"authentication required"}`)
 		maxConn.send("1", "login", `{"namespace":"email","id":"max%s","password":"maxpass"}`, nonce)
 		maxConn.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, max.ID())
-		maxConn.expect("", "bounce-event", `{"reason":"authentication changed"}`)
+		maxConn.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
 		maxConn.Close()
 		maxConn = s.Connect("grants", maxConn.cookies...)
 		maxConn.expectPing()
@@ -1340,7 +1340,7 @@ func testRoomGrants(s *serverUnderTest) {
 		loganConn.expectSnapshot(s.backend.Version(), nil, nil)
 		loganConn.send("1", "login", `{"namespace":"email","id":"logan%s","password":"loganpass"}`, nonce)
 		loganConn.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, logan.ID())
-		loganConn.expect("", "bounce-event", `{"reason":"authentication changed"}`)
+		loganConn.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
 		loganConn.Close()
 
 		// Reconnect manager to private room.
