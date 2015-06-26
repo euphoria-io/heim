@@ -349,22 +349,22 @@ describe('socket store', function() {
 
     beforeEach(function() {
       socket.store.connect('ezzie')
-      sinon.stub(console, 'debug')
+      sinon.stub(console, 'log')
       socket.store._logPackets = true
     })
 
     afterEach(function() {
-      console.debug.restore()
+      console.log.restore()
     })
 
     it('should output packets received', function() {
       socket.store.send(testPacket)
-      sinon.assert.calledWithExactly(console.debug, testPacket)
+      sinon.assert.calledWithExactly(console.log, testPacket)
     })
 
     it('should output packets sent', function() {
       socket.store._message({data: JSON.stringify(testPacket)})
-      sinon.assert.calledWithExactly(console.debug, testPacket)
+      sinon.assert.calledWithExactly(console.log, testPacket)
     })
   })
 })

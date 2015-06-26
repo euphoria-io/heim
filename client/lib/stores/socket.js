@@ -14,7 +14,7 @@ storeActions.connect.sync = true
 
 function logPacket(kind, data) {
   console.groupCollapsed(kind, data.type, data.id ? '(id: ' + data.id + ')' : '(no id)')
-  console.debug(data)
+  console.log(data)
   console.groupEnd()
 }
 
