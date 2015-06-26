@@ -353,6 +353,10 @@ iframe.js {
             height: 153px;
             border: none;
             border-radius: 3px;
+
+            // iframes with canvases seem to result in really long webkit
+            // paints without this
+            -webkit-transform: translate3d(0, 0, 0);
           }
         }
 
