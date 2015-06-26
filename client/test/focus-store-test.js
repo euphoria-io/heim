@@ -4,9 +4,15 @@ var assert = require('assert')
 
 describe('focus store', function() {
   var focus = require('../lib/stores/focus')
+  var clock
 
   beforeEach(function() {
+    clock = support.setupClock()
     support.resetStore(focus.store)
+  })
+
+  afterEach(function() {
+    clock.restore()
   })
 
   it('should initialize with window unfocused', function() {
