@@ -76,8 +76,8 @@ var Message = module.exports = React.createClass({
     if (embeds.length) {
       messageEmbeds = (
         <div className="embeds">{_.map(embeds, (embed, idx) =>
-          <a key={idx} href={embed.link} target="_blank" onMouseEnter={this.unfreezeEmbed} onMouseLeave={this.freezeEmbed}>
-            <Embed ref="embed" kind="img" url={embed.img} />
+          <a key={idx} href={embed.link} target="_blank" onMouseEnter={() => this.unfreezeEmbed(idx)} onMouseLeave={() => this.freezeEmbed(idx)}>
+            <Embed ref={'embed' + idx} kind="img" url={embed.img} />
           </a>
         )}</div>
       )
@@ -157,11 +157,11 @@ var Message = module.exports = React.createClass({
     ev.stopPropagation()
   },
 
-  freezeEmbed: function() {
-    this.refs.embed.freeze()
+  freezeEmbed: function(idx) {
+    this.refs['embed' + idx].freeze()
   },
 
-  unfreezeEmbed: function() {
-    this.refs.embed.unfreeze()
+  unfreezeEmbed: function(idx) {
+    this.refs['embed' + idx].unfreeze()
   },
 })
