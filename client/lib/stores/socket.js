@@ -15,6 +15,7 @@ storeActions.connect.sync = true
 function logPacket(kind, data) {
   console.groupCollapsed(kind, data.type, data.id ? '(id: ' + data.id + ')' : '(no id)')
   console.log(data)
+  console.log(JSON.stringify(data, true, 2))
   console.groupEnd()
 }
 
