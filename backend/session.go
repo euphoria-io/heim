@@ -451,6 +451,8 @@ func (s *session) handleCommand(cmd *proto.Packet) *response {
 		return s.handleGrantManagerCommand(msg)
 	case *proto.LoginCommand:
 		return s.handleLoginCommand(msg)
+	case *proto.LogoutCommand:
+		return s.handleLogoutCommand()
 	case *proto.RegisterAccountCommand:
 		return s.handleRegisterAccountCommand(msg)
 	case *proto.UnlockStaffCapabilityCommand:
@@ -669,6 +671,15 @@ func (s *session) handleLoginCommand(cmd *proto.LoginCommand) *response {
 		AccountID: account.ID(),
 	}
 	return &response{packet: reply}
+}
+
+func (s *session) handleLogoutCommand() *response {
+	if err := s.backend.AgentTracker().ClearClientKey(s.ctx, s.client.Agent.IDString()); err != nil {
+		return &response{err: err}
+	}
+
+	s.sendDisconnect("authentication changed")
+	return &response{packet: &proto.LoginReply{}}
 }
 
 func (s *session) handleRegisterAccountCommand(cmd *proto.RegisterAccountCommand) *response {

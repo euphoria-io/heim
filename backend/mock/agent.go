@@ -63,3 +63,16 @@ func (t *agentTracker) SetClientKey(
 	agent.AccountID = accountID.String()
 	return nil
 }
+
+func (t *agentTracker) ClearClientKey(ctx scope.Context, agentID string) error {
+	t.b.Lock()
+	defer t.b.Unlock()
+
+	agent, err := t.Get(ctx, agentID)
+	if err != nil {
+		return err
+	}
+
+	agent.AccountID = ""
+	return nil
+}

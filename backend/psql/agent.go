@@ -162,3 +162,22 @@ func (atb *AgentTrackerBinding) SetClientKey(
 
 	return nil
 }
+
+func (atb *AgentTrackerBinding) ClearClientKey(ctx scope.Context, agentID string) error {
+	resp, err := atb.Backend.DbMap.Exec(
+		"UPDATE agent SET account_id = NULL, encrypted_client_key = '' WHERE id = $1",
+		agentID)
+	if err != nil {
+		return err
+	}
+
+	n, err := resp.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return proto.ErrAgentNotFound
+	}
+
+	return nil
+}

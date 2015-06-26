@@ -1078,7 +1078,10 @@ func testAccountLogin(s *serverUnderTest) {
 			`{"session_id":"%s","id":"%s","server_id":"test1","server_era":"era1"}`,
 			conn.sessionID, conn.userID)
 
-		// Disconnect first party again and wait for part.
+		// Log out first party and wait for part.
+		conn.send("1", "logout", "")
+		conn.expect("1", "logout-reply", "{}")
+		conn.expect("", "disconnect-event", `{"reason": "authentication changed"}`)
 		conn.Close()
 		observer.expect("", "part-event",
 			`{"session_id":"%s","id":"%s","server_id":"test1","server_era":"era1"}`,

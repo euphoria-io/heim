@@ -32,6 +32,9 @@ type AgentTracker interface {
 		ctx scope.Context, agentID string, accessKey *security.ManagedKey,
 		accountID snowflake.Snowflake, clientKey *security.ManagedKey) error
 
+	// ClearClientKey logs the agent out.
+	ClearClientKey(ctx scope.Context, agentID string) error
+
 	// BanAgent globally bans an agent. A zero value for until indicates a
 	// permanent ban.
 	BanAgent(ctx scope.Context, agentID string, until time.Time) error

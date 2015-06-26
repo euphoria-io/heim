@@ -47,6 +47,9 @@ var (
 	LoginType      = PacketType("login")
 	LoginReplyType = LoginType.Reply()
 
+	LogoutType      = PacketType("logout")
+	LogoutReplyType = LogoutType.Reply()
+
 	NickType      = PacketType("nick")
 	NickEventType = NickType.Event()
 	NickReplyType = NickType.Reply()
@@ -116,6 +119,9 @@ var (
 
 		LoginType:      reflect.TypeOf(LoginCommand{}),
 		LoginReplyType: reflect.TypeOf(LoginReply{}),
+
+		LogoutType:      reflect.TypeOf(LogoutCommand{}),
+		LogoutReplyType: reflect.TypeOf(LogoutReply{}),
 
 		RegisterAccountType:      reflect.TypeOf(RegisterAccountCommand{}),
 		RegisterAccountReplyType: reflect.TypeOf(RegisterAccountReply{}),
@@ -269,6 +275,9 @@ type LoginReply struct {
 	Reason    string              `json:"reason"`
 	AccountID snowflake.Snowflake `json:"account_id"`
 }
+
+type LogoutCommand struct{}
+type LogoutReply struct{}
 
 type RegisterAccountCommand LoginCommand
 type RegisterAccountReply LoginReply
