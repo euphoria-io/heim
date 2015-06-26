@@ -9,6 +9,7 @@ type MessageKey struct {
 
 type Capability struct {
 	ID                   string
+	AccountID            string `db:"account_id"`
 	NonceBytes           []byte `db:"nonce"`
 	EncryptedPrivateData []byte `db:"encrypted_private_data"`
 	PublicData           []byte `db:"public_data"`

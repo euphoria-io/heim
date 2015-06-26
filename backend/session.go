@@ -591,8 +591,7 @@ func (s *session) handleGrantAccessCommand(cmd *proto.GrantAccessCommand) *respo
 		return &response{err: fmt.Errorf("room is public")}
 	}
 
-	messageKey, ok := s.client.Authorization.MessageKeys[rmk.KeyID()]
-	if !ok {
+	if _, ok := s.client.Authorization.MessageKeys[rmk.KeyID()]; !ok {
 		return &response{err: fmt.Errorf("not holding message key")}
 	}
 
@@ -601,14 +600,8 @@ func (s *session) handleGrantAccessCommand(cmd *proto.GrantAccessCommand) *respo
 		return &response{err: err}
 	}
 
-	kp := account.KeyPair()
-	c, err := security.GrantPublicKeyCapability(
-		s.kms, rmk.Nonce(), mkp, &kp, nil, messageKey.Plaintext)
+	err = rmk.GrantToAccount(s.ctx, s.kms, s.client.Account, s.client.Authorization.ClientKey, account)
 	if err != nil {
-		return &response{err: err}
-	}
-
-	if err := s.room.SaveCapability(s.ctx, c); err != nil {
 		return &response{err: err}
 	}
 

@@ -207,7 +207,7 @@ func (k *ManagedKeyPair) Decrypt(keyKey *ManagedKey) error {
 	buf := k.EncryptedPrivateKey
 
 	if err := keyKey.BlockCrypt(k.IV, keyKey.Plaintext, buf, false); err != nil {
-		return err
+		return fmt.Errorf("key-encrypting-key decrypt error: %s", err)
 	}
 
 	if k.PrivateKeySize()%keyKey.BlockSize() != 0 {

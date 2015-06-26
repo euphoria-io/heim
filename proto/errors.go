@@ -8,6 +8,7 @@ var (
 	ErrAccountNotFound       = fmt.Errorf("account not found")
 	ErrAgentAlreadyExists    = fmt.Errorf("agent already exists")
 	ErrAgentNotFound         = fmt.Errorf("agent not found")
+	ErrCapabilityNotFound    = fmt.Errorf("capability not found")
 	ErrClientKeyNotFound     = fmt.Errorf("client key not found")
 	ErrEditInconsistent      = fmt.Errorf("edit inconsistent")
 	ErrInvalidNick           = fmt.Errorf("invalid nick")

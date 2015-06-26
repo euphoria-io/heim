@@ -1,26 +1,45 @@
 -- +migrate Up
--- new table and foreign key for room manager
+-- Add room_manager_capability and update room_capability.
 
-CREATE TABLE room_manager (
-    room text NOT NULL,
-    account_id text NOT NULL REFERENCES account(id) ON DELETE CASCADE,
-    capability_id text NOT NULL,
-    FOREIGN KEY (room, capability_id) REFERENCES room_capability(room, capability_id) ON DELETE CASCADE,
-    PRIMARY KEY (room, account_id)
+-- add nonce and account_id to capability table
+-- TODO: add fk constraint
+ALTER TABLE capability
+    ADD nonce bytea,
+    ADD account_id text DEFAULT '',
+    ADD UNIQUE (id, account_id);
+
+-- get capabilities by account_id
+CREATE INDEX capability_account_id ON capability(account_id);
+
+-- add account_id and foreign key so capability deletions cascade
+ALTER TABLE room_capability
+    ADD account_id text,
+    ADD UNIQUE (room, account_id),
+    ADD CONSTRAINT capability_fk FOREIGN KEY (capability_id) REFERENCES capability(id) ON DELETE CASCADE;
+
+-- add room_manager_capability table
+CREATE TABLE room_manager_capability (
+    room text NOT NULL REFERENCES room(name) ON DELETE CASCADE,
+    capability_id text NOT NULL UNIQUE,
+    account_id text NOT NULL,
+    granted timestamp with time zone NOT NULL,
+    revoked timestamp with time zone,
+    PRIMARY KEY (room, capability_id),
+    UNIQUE (room, account_id),
+    FOREIGN KEY (capability_id, account_id) REFERENCES capability(id, account_id) ON DELETE CASCADE
 );
 
--- index room_manager by account_id, room
-CREATE INDEX room_manager_account_id_room ON room_manager(account_id, room);
-
--- add nonce to capability table
-ALTER TABLE capability ADD nonce bytea;
-
--- add foreign key so capability deletions cascade
-ALTER TABLE room_capability ADD CONSTRAINT capability_fk FOREIGN KEY (capability_id) REFERENCES capability(id) ON DELETE CASCADE;
+-- get manager capabilities by room ordered by granted, revoked
+CREATE INDEX room_manager_capability_room_granted_revoked
+    ON room_manager_capability(room, granted, revoked);
 
 -- +migrate Down
 -- drop new table, column, and foreign key
 
-DROP TABLE room_manager;
-ALTER TABLE capability DROP IF EXISTS nonce;
+DROP TABLE IF EXISTS room_manager_capability;
+
+ALTER TABLE capability
+    DROP IF EXISTS nonce,
+    DROP IF EXISTS account_id;
+
 ALTER TABLE room_capability DROP CONSTRAINT IF EXISTS capability_fk;

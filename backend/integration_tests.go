@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"sort"
@@ -75,23 +76,25 @@ type testSuite func(*serverUnderTest)
 func newServerUnderTest(
 	backend proto.Backend, app *Server, server *httptest.Server, kms security.MockKMS) *serverUnderTest {
 	return &serverUnderTest{
-		backend:  backend,
-		app:      app,
-		server:   server,
-		kms:      kms,
-		accounts: map[string]proto.Account{},
-		rooms:    map[string]proto.Room{},
+		backend:     backend,
+		app:         app,
+		server:      server,
+		kms:         kms,
+		accounts:    map[string]proto.Account{},
+		accountKeys: map[string]*security.ManagedKey{},
+		rooms:       map[string]proto.Room{},
 	}
 }
 
 type serverUnderTest struct {
-	backend  proto.Backend
-	app      *Server
-	server   *httptest.Server
-	kms      security.MockKMS
-	once     sync.Once
-	accounts map[string]proto.Account
-	rooms    map[string]proto.Room
+	backend     proto.Backend
+	app         *Server
+	server      *httptest.Server
+	kms         security.MockKMS
+	once        sync.Once
+	accounts    map[string]proto.Account
+	accountKeys map[string]*security.ManagedKey
+	rooms       map[string]proto.Room
 }
 
 func (s *serverUnderTest) Close() {
@@ -111,16 +114,21 @@ func (s *serverUnderTest) Connect(roomName string, cookies ...*http.Cookie) *tes
 	}
 	url := strings.Replace(s.server.URL, "http:", "ws:", 1) + "/room/" + roomName + "/ws"
 	conn, resp, err := websocket.DefaultDialer.Dial(url, headers)
+	if err != nil {
+		body, _ := ioutil.ReadAll(resp.Body)
+		So(string(body), ShouldEqual, "")
+	}
 	So(err, ShouldBeNil)
 	return &testConn{Conn: conn, cookies: resp.Cookies()}
 }
 
 func (s *serverUnderTest) Account(
-	ctx scope.Context, kms security.KMS, namespace, id, password string) (proto.Account, error) {
+	ctx scope.Context, kms security.KMS, namespace, id, password string) (
+	proto.Account, *security.ManagedKey, error) {
 
 	key := fmt.Sprintf("%s:%s", namespace, id)
 	if account, ok := s.accounts[key]; ok {
-		return account, nil
+		return account, s.accountKeys[key], nil
 	}
 
 	b := s.backend
@@ -131,20 +139,21 @@ func (s *serverUnderTest) Account(
 	}
 	agent, err := proto.NewAgent([]byte(id), agentKey)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if err := at.Register(ctx, agent); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	account, _, err := b.AccountManager().Register(
+	account, clientKey, err := b.AccountManager().Register(
 		ctx, kms, namespace, id, password, agent.IDString(), agentKey)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	s.accounts[key] = account
-	return account, nil
+	s.accountKeys[key] = clientKey
+	return account, clientKey, nil
 }
 
 func (s *serverUnderTest) Room(
@@ -638,7 +647,7 @@ func testAuthentication(s *serverUnderTest) {
 	kms := security.LocalKMS()
 	kms.SetMasterKey(make([]byte, security.AES256.KeySize()))
 
-	logan, err := s.Account(ctx, kms, "email", "logan-private", "loganpass")
+	logan, loganKey, err := s.Account(ctx, kms, "email", "logan-private", "loganpass")
 	So(err, ShouldBeNil)
 
 	room, err := s.Room(ctx, kms, true, "private", logan)
@@ -647,16 +656,7 @@ func testAuthentication(s *serverUnderTest) {
 	s.once.Do(func() {
 		rkey, err := room.MessageKey(ctx)
 		So(err, ShouldBeNil)
-
-		mkey := rkey.ManagedKey()
-		So(kms.DecryptKey(&mkey), ShouldBeNil)
-
-		clientKey := security.KeyFromPasscode([]byte("hunter2"), rkey.Nonce(), security.AES128)
-		capability, err := security.GrantSharedSecretCapability(
-			clientKey, rkey.Nonce(), nil, mkey.Plaintext)
-		So(err, ShouldBeNil)
-
-		So(room.SaveCapability(ctx, capability), ShouldBeNil)
+		So(rkey.GrantToPasscode(ctx, logan, loganKey, "hunter2"), ShouldBeNil)
 	})
 
 	Convey("Access denied", func() {
@@ -969,9 +969,7 @@ func testManagersLowLevel(s *serverUnderTest) {
 	})
 
 	Convey("Manager should be able to add new manager", func() {
-		fmt.Printf("ADD NEW MANAGER --v\n")
 		So(room.AddManager(ctx, kms, alice, aliceKey, carol), ShouldBeNil)
-		fmt.Printf("^--- ADD NEW MANAGER\n")
 		managers, err := room.Managers(ctx)
 		So(err, ShouldBeNil)
 		So(managers, shouldComprise, "alice", "bob", "carol")

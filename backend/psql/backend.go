@@ -32,10 +32,10 @@ var schema = []struct {
 	PrimaryKey []string
 }{
 	// Rooms.
-	{"room", Room{}, []string{"Name"}},
-	{"room_manager", RoomManager{}, []string{"Room", "AccountID"}},
 	{"room_master_key", RoomMessageKey{}, []string{"Room", "KeyID"}},
 	{"room_capability", RoomCapability{}, []string{"Room", "CapabilityID"}},
+	{"room_manager_capability", RoomManagerCapability{}, []string{"Room", "CapabilityID"}},
+	{"room", Room{}, []string{"Name"}},
 
 	// Presence.
 	{"presence", Presence{}, []string{"Room", "Topic", "ServerID", "ServerEra", "SessionID"}},
@@ -301,7 +301,7 @@ func (b *Backend) CreateRoom(
 		msgKey security.ManagedKey
 	)
 	if private {
-		rmkb, err = room.generateMessageKey(kms)
+		rmkb, err = room.generateMessageKey(b, kms)
 		if err != nil {
 			return nil, err
 		}
@@ -370,28 +370,14 @@ func (b *Backend) CreateRoom(
 			rollback()
 			return nil, err
 		}
-
-		// TODO: generate access capabilities for managers
 	}
 
+	managerCapTable := RoomManagerCapabilities{
+		Room:     room,
+		Executor: t,
+	}
 	for i, capability := range managerCaps {
-		c := &Capability{
-			ID:                   capability.CapabilityID(),
-			NonceBytes:           capability.Nonce(),
-			EncryptedPrivateData: capability.EncryptedPayload(),
-			PublicData:           capability.PublicPayload(),
-		}
-		rc := &RoomCapability{
-			Room:         name,
-			CapabilityID: capability.CapabilityID(),
-			Granted:      time.Now(),
-		}
-		rm := &RoomManager{
-			Room:         name,
-			AccountID:    managers[i].ID().String(),
-			CapabilityID: capability.CapabilityID(),
-		}
-		if err := t.Insert(c, rc, rm); err != nil {
+		if err := managerCapTable.Save(ctx, managers[i], capability); err != nil {
 			backend.Logger(ctx).Printf(
 				"room creation error on %s (manager %s): %s", name, managers[i].ID().String(), err)
 			rollback()
@@ -399,19 +385,12 @@ func (b *Backend) CreateRoom(
 		}
 	}
 
-	for _, capability := range accessCaps {
-		c := &Capability{
-			ID:                   capability.CapabilityID(),
-			NonceBytes:           capability.Nonce(),
-			EncryptedPrivateData: capability.EncryptedPayload(),
-			PublicData:           capability.PublicPayload(),
-		}
-		rc := &RoomCapability{
-			Room:         name,
-			CapabilityID: capability.CapabilityID(),
-			Granted:      time.Now(),
-		}
-		if err := t.Insert(c, rc); err != nil {
+	messageCapTable := RoomMessageCapabilities{
+		Room:     room,
+		Executor: t,
+	}
+	for i, capability := range accessCaps {
+		if err := messageCapTable.Save(ctx, managers[i], capability); err != nil {
 			backend.Logger(ctx).Printf(
 				"room creation error on %s (access capability): %s", name, err)
 			rollback()

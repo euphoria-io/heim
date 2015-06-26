@@ -91,13 +91,6 @@ type Room interface {
 	// ManagerKey returns a handle to the room's manager key.
 	ManagerKey(ctx scope.Context) (RoomManagerKey, error)
 
-	// SaveCapability saves the given capability.
-	SaveCapability(ctx scope.Context, capability security.Capability) error
-
-	// GetCapability retrieves the capability under the given ID, or
-	// returns nil if it doesn't exist.
-	GetCapability(ctx scope.Context, id string) (security.Capability, error)
-
 	// Managers returns the list of accounts managing the room.
 	Managers(ctx scope.Context) ([]Account, error)
 
@@ -119,6 +112,9 @@ type Room interface {
 }
 
 type RoomMessageKey interface {
+	AccountGrantable
+	PasscodeGrantable
+
 	// ID returns a unique identifier for the key.
 	KeyID() string
 
@@ -133,6 +129,8 @@ type RoomMessageKey interface {
 }
 
 type RoomManagerKey interface {
+	AccountGrantable
+
 	// KeyPair returns the current encrypted ManagedKeyPair for the room.
 	KeyPair() security.ManagedKeyPair
 

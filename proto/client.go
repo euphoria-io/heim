@@ -123,17 +123,13 @@ func (c *Client) AuthenticateWithAgent(
 		return err
 	}
 	if messageKey != nil {
-		subjectKey := managerKey.KeyPair()
-		capabilityID := security.PublicKeyCapabilityID(&subjectKey, holderKey, messageKey.Nonce())
-		capability, err := room.GetCapability(ctx, capabilityID)
+		capability, err := messageKey.AccountCapability(ctx, account)
 		if err != nil {
 			return fmt.Errorf("access capability error: %s", err)
 		}
 		if capability != nil {
-			pkc := &security.PublicKeyCapability{
-				Capability: capability,
-			}
-			roomKeyJSON, err := pkc.DecryptPayload(&subjectKey, holderKey)
+			subjectKey := managerKey.KeyPair()
+			roomKeyJSON, err := capability.DecryptPayload(&subjectKey, holderKey)
 			if err != nil {
 				return fmt.Errorf("access capability decrypt error: %s", err)
 			}
@@ -160,14 +156,7 @@ func (c *Client) AuthenticateWithPasscode(ctx scope.Context, room Room, passcode
 		return "", nil
 	}
 
-	holderKey := security.KeyFromPasscode([]byte(passcode), mkey.Nonce(), security.AES128)
-
-	capabilityID, err := security.SharedSecretCapabilityID(holderKey, mkey.Nonce())
-	if err != nil {
-		return "", err
-	}
-
-	capability, err := room.GetCapability(ctx, capabilityID)
+	capability, err := mkey.PasscodeCapability(ctx, passcode)
 	if err != nil {
 		return "", err
 	}
@@ -176,6 +165,7 @@ func (c *Client) AuthenticateWithPasscode(ctx scope.Context, room Room, passcode
 		return "passcode incorrect", nil
 	}
 
+	holderKey := security.KeyFromPasscode([]byte(passcode), mkey.Nonce(), security.AES128)
 	roomKey, err := decryptRoomKey(holderKey, capability)
 	if err != nil {
 		return "", err

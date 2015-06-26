@@ -6,8 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"encoding/json"
-
 	"euphoria.io/heim/backend"
 	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/security"
@@ -39,7 +37,7 @@ func (r *Room) Bind(b *Backend) *RoomBinding {
 	}
 }
 
-func (r *Room) generateMessageKey(kms security.KMS) (*RoomMessageKeyBinding, error) {
+func (r *Room) generateMessageKey(b *Backend, kms security.KMS) (*RoomMessageKeyBinding, error) {
 	// Generate unique ID for storing new key in DB.
 	keyID, err := snowflake.New()
 	if err != nil {
@@ -57,20 +55,7 @@ func (r *Room) generateMessageKey(kms security.KMS) (*RoomMessageKeyBinding, err
 		return nil, err
 	}
 
-	rmkb := &RoomMessageKeyBinding{
-		MessageKey: MessageKey{
-			ID:           keyID.String(),
-			EncryptedKey: mkey.Ciphertext,
-			IV:           mkey.IV,
-			Nonce:        nonce,
-		},
-		RoomMessageKey: RoomMessageKey{
-			Room:      r.Name,
-			KeyID:     keyID.String(),
-			Activated: time.Now(),
-		},
-	}
-	return rmkb, nil
+	return NewRoomMessageKeyBinding(r.Bind(b), keyID, mkey, nonce), nil
 }
 
 type RoomBinding struct {
@@ -293,7 +278,7 @@ func (rb *RoomBinding) RenameUser(ctx scope.Context, session proto.Session, form
 func (rb *RoomBinding) GenerateMessageKey(ctx scope.Context, kms security.KMS) (
 	proto.RoomMessageKey, error) {
 
-	rmkb, err := rb.Room.generateMessageKey(kms)
+	rmkb, err := rb.Room.generateMessageKey(rb.Backend, kms)
 	if err != nil {
 		return nil, err
 	}
@@ -326,9 +311,12 @@ func (rb *RoomBinding) GenerateMessageKey(ctx scope.Context, kms security.KMS) (
 }
 
 func (rb *RoomBinding) MessageKey(ctx scope.Context) (proto.RoomMessageKey, error) {
-	rmkb := &RoomMessageKeyBinding{}
+	var row struct {
+		MessageKey
+		RoomMessageKey
+	}
 	err := rb.DbMap.SelectOne(
-		rmkb,
+		&row,
 		"SELECT mk.id, mk.encrypted_key, mk.iv, mk.nonce,"+
 			" r.room, r.key_id, r.activated, r.expired, r.comment"+
 			" FROM master_key mk, room_master_key r"+
@@ -341,68 +329,23 @@ func (rb *RoomBinding) MessageKey(ctx scope.Context) (proto.RoomMessageKey, erro
 		}
 		return nil, err
 	}
-	return rmkb, nil
+
+	msgKey := &security.ManagedKey{
+		KeyType:      proto.RoomMessageKeyType,
+		IV:           row.MessageKey.IV,
+		Ciphertext:   row.MessageKey.EncryptedKey,
+		ContextKey:   "room",
+		ContextValue: rb.Room.Name,
+	}
+	var keyID snowflake.Snowflake
+	if err := keyID.FromString(row.KeyID); err != nil {
+		return nil, err
+	}
+	return NewRoomMessageKeyBinding(rb, keyID, msgKey, row.Nonce), nil
 }
 
 func (rb *RoomBinding) ManagerKey(ctx scope.Context) (proto.RoomManagerKey, error) {
-	return &RoomManagerKeyBinding{rb.Room}, nil
-}
-
-func (rb *RoomBinding) SaveCapability(ctx scope.Context, capability security.Capability) error {
-	transaction, err := rb.DbMap.Begin()
-	if err != nil {
-		return err
-	}
-
-	rcb := &RoomCapabilityBinding{
-		Capability: Capability{
-			ID:                   capability.CapabilityID(),
-			NonceBytes:           capability.Nonce(),
-			EncryptedPrivateData: capability.EncryptedPayload(),
-			PublicData:           capability.PublicPayload(),
-		},
-		RoomCapability: RoomCapability{
-			Room:         rb.Name,
-			CapabilityID: capability.CapabilityID(),
-			Granted:      time.Now(),
-		},
-	}
-
-	if err := transaction.Insert(&rcb.Capability, &rcb.RoomCapability); err != nil {
-		if rerr := transaction.Rollback(); rerr != nil {
-			backend.Logger(ctx).Printf("rollback error: %s", rerr)
-		}
-		return err
-	}
-
-	if err := transaction.Commit(); err != nil {
-		return err
-	}
-
-	backend.Logger(ctx).Printf("added capability %s to room %s", capability.CapabilityID(), rb.Name)
-	return nil
-}
-
-func (rb *RoomBinding) GetCapability(ctx scope.Context, id string) (security.Capability, error) {
-	rcb := &RoomCapabilityBinding{}
-
-	backend.Logger(ctx).Printf("looking up capability %s in room %s", id, rb.Name)
-	err := rb.DbMap.SelectOne(
-		rcb,
-		"SELECT c.id, c.nonce, c.encrypted_private_data, c.public_data,"+
-			" r.room, r.capability_id, r.granted, r.revoked"+
-			" FROM capability c, room_capability r"+
-			" WHERE r.room = $1 AND r.capability_id = $2 AND c.id = $2 AND r.revoked < r.granted",
-		rb.Name, id)
-
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, nil
-		}
-		return nil, err
-	}
-
-	return rcb, nil
+	return NewRoomManagerKeyBinding(rb), nil
 }
 
 func (rb *RoomBinding) BanAgent(ctx scope.Context, agentID string, until time.Time) error {
@@ -470,8 +413,8 @@ func (rb *RoomBinding) Managers(ctx scope.Context) ([]proto.Account, error) {
 		Account{},
 		"SELECT a.id, a.nonce, a.mac, a.encrypted_system_key, a.encrypted_user_key,"+
 			" a.encrypted_private_key, a.public_key"+
-			" FROM account a, room_manager m"+
-			" WHERE m.room = $1 AND m.account_id = a.id",
+			" FROM account a, room_manager_capability m"+
+			" WHERE m.room = $1 AND m.account_id = a.id AND revoked < granted",
 		rb.Name)
 	if err != nil {
 		return nil, err
@@ -508,9 +451,9 @@ func (rb *RoomBinding) ManagerCapability(ctx scope.Context, manager proto.Accoun
 	err := rb.SelectOne(
 		&c,
 		"SELECT c.id, c.nonce, c.encrypted_private_data, c.public_data"+
-			" FROM capability c, room_capability rc, room_manager rm"+
-			" WHERE rm.room = $1 AND rm.account_id = $2 AND rm.capability_id = rc.capability_id"+
-			" AND rc.revoked < rc.granted AND c.id = rc.capability_id",
+			" FROM capability c, room_manager_capability rm"+
+			" WHERE rm.room = $1 AND c.id = rm.capability_id AND c.account_id = $2"+
+			" AND rm.revoked < rm.granted",
 		rb.Name, manager.ID().String())
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -524,75 +467,14 @@ func (rb *RoomBinding) AddManager(
 	ctx scope.Context, kms security.KMS, actor proto.Account, actorKey *security.ManagedKey,
 	newManager proto.Account) error {
 
-	// Get the actor's manager capability.
-	pkCap, err := rb.getManagerCapability(ctx, actor)
-	if err != nil {
-		return err
-	}
-
-	// Extract the manager key from the actor's capability.
-	rmkb := &RoomManagerKeyBinding{rb.Room}
-	subjectKeyPair := rmkb.KeyPair()
-	actorKeyPair, err := actor.Unlock(actorKey)
-	if err != nil {
-		return err
-	}
-	secretJSON, err := pkCap.DecryptPayload(&subjectKeyPair, actorKeyPair)
-	if err != nil {
-		return err
-	}
-	managerKey := &security.ManagedKey{
-		KeyType: proto.RoomManagerKeyType,
-	}
-	if err := json.Unmarshal(secretJSON, &managerKey.Plaintext); err != nil {
-		return err
-	}
-
-	// Verify manager key is correct.
-	unlockedSubjectKeyPair, err := rmkb.Unlock(managerKey)
-	if err != nil {
-		return fmt.Errorf("room security unlock error: %s", err)
-	}
-
-	// Grant capability for new manager.
-	newManagerKeyPair := newManager.KeyPair()
-	capability, err := security.GrantPublicKeyCapability(
-		kms, rb.Room.Nonce, unlockedSubjectKeyPair, &newManagerKeyPair, nil, managerKey.Plaintext)
-	if err != nil {
-		return err
-	}
-
-	// Save the results.
-	c := &Capability{
-		ID:                   capability.CapabilityID(),
-		NonceBytes:           capability.Nonce(),
-		EncryptedPrivateData: capability.EncryptedPayload(),
-		PublicData:           capability.PublicPayload(),
-	}
-	rc := &RoomCapability{
-		Room:         rb.Name,
-		CapabilityID: capability.CapabilityID(),
-		Granted:      time.Now(),
-	}
-	rm := &RoomManager{
-		Room:         rb.Name,
-		AccountID:    newManager.ID().String(),
-		CapabilityID: capability.CapabilityID(),
-	}
-	t, err := rb.DbMap.Begin()
-	if err != nil {
-		return err
-	}
-	if err := t.Insert(c, rc, rm); err != nil {
-		if rerr := t.Rollback(); rerr != nil {
-			backend.Logger(ctx).Printf("rollback error: %s", rerr)
+	rmkb := NewRoomManagerKeyBinding(rb)
+	if err := rmkb.GrantToAccount(ctx, kms, actor, actorKey, newManager); err != nil {
+		if err == proto.ErrCapabilityNotFound {
+			return proto.ErrAccessDenied
 		}
-		if strings.HasPrefix(err.Error(), "pq: duplicate key value") {
+		if err.Error() == `pq: duplicate key value violates unique constraint "capability_pkey"` {
 			return nil
 		}
-		return err
-	}
-	if err := t.Commit(); err != nil {
 		return err
 	}
 	return nil
@@ -602,37 +484,7 @@ func (rb *RoomBinding) RemoveManager(
 	ctx scope.Context, actor proto.Account, actorKey *security.ManagedKey,
 	formerManager proto.Account) error {
 
-	// Get the actor's manager capability.
-	pkCap, err := rb.getManagerCapability(ctx, actor)
-	if err != nil {
-		return err
-	}
-
-	// Extract the manager key from the actor's capability.
-	rmkb := &RoomManagerKeyBinding{rb.Room}
-	subjectKeyPair := rmkb.KeyPair()
-	actorKeyPair, err := actor.Unlock(actorKey)
-	if err != nil {
-		return err
-	}
-	secretJSON, err := pkCap.DecryptPayload(&subjectKeyPair, actorKeyPair)
-	if err != nil {
-		return fmt.Errorf("public key capability error: %s", err)
-	}
-	managerKey := &security.ManagedKey{
-		KeyType: proto.RoomManagerKeyType,
-	}
-	if err := json.Unmarshal(secretJSON, &managerKey.Plaintext); err != nil {
-		return err
-	}
-
-	// Verify manager key is correct.
-	if _, err = rmkb.Unlock(managerKey); err != nil {
-		return fmt.Errorf("room security unlock error: %s", err)
-	}
-
-	// Look up and remove the target capability.
-	t, err := rb.DbMap.Begin()
+	t, err := rb.Backend.DbMap.Begin()
 	if err != nil {
 		return err
 	}
@@ -643,33 +495,23 @@ func (rb *RoomBinding) RemoveManager(
 		}
 	}
 
-	var rm RoomManager
-	err = t.SelectOne(
-		&rm,
-		"SELECT room, account_id, capability_id FROM room_manager WHERE room = $1 AND account_id = $2",
-		rb.Name, formerManager.ID().String())
-	if err != nil {
+	rmkb := NewRoomManagerKeyBinding(rb)
+	rmkb.SetExecutor(t)
+
+	if _, _, _, err := rmkb.Authority(ctx, actor, actorKey); err != nil {
 		rollback()
-		if err == sql.ErrNoRows {
-			return proto.ErrManagerNotFound
+		if err == proto.ErrCapabilityNotFound {
+			return proto.ErrAccessDenied
 		}
 		return err
 	}
 
-	result, err := t.Exec("DELETE FROM capability WHERE id = $1", rm.CapabilityID)
-	if err != nil {
+	if err := rmkb.RevokeFromAccount(ctx, formerManager); err != nil {
 		rollback()
+		if err == proto.ErrCapabilityNotFound || err == proto.ErrAccessDenied {
+			return proto.ErrManagerNotFound
+		}
 		return err
-	}
-
-	n, err := result.RowsAffected()
-	if err != nil {
-		rollback()
-		return fmt.Errorf("unable to determine number of affected rows: %s", err)
-	}
-	if n < 1 {
-		rollback()
-		return fmt.Errorf("no rows were affected")
 	}
 
 	if err := t.Commit(); err != nil {

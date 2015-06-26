@@ -6,8 +6,6 @@ import (
 	"sync"
 	"time"
 
-	"encoding/json"
-
 	"euphoria.io/heim/backend"
 	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/security"
@@ -18,16 +16,13 @@ import (
 type memRoom struct {
 	m sync.Mutex
 
-	name            string
-	version         string
-	log             *memLog
-	agentBans       map[string]time.Time
-	ipBans          map[string]time.Time
-	identities      map[string]proto.Identity
-	managers        map[string]string
-	managerAccounts map[string]proto.Account
-	live            map[string][]proto.Session
-	capabilities    map[string]security.Capability
+	name       string
+	version    string
+	log        *memLog
+	agentBans  map[string]time.Time
+	ipBans     map[string]time.Time
+	identities map[string]proto.Identity
+	live       map[string][]proto.Session
 
 	sec        *proto.RoomSecurity
 	messageKey *roomMessageKey
@@ -53,16 +48,22 @@ func NewRoom(
 	}
 
 	room := &memRoom{
-		name:            name,
-		version:         version,
-		log:             newMemLog(),
-		agentBans:       map[string]time.Time{},
-		ipBans:          map[string]time.Time{},
-		managers:        map[string]string{},
-		managerAccounts: map[string]proto.Account{},
-		capabilities:    map[string]security.Capability{},
-		sec:             sec,
+		name:      name,
+		version:   version,
+		log:       newMemLog(),
+		agentBans: map[string]time.Time{},
+		ipBans:    map[string]time.Time{},
+		sec:       sec,
+		managerKey: &roomManagerKey{
+			RoomSecurity: sec,
+			GrantManager: &proto.GrantManager{
+				Capabilities:   &capabilities{},
+				SubjectKeyPair: &sec.KeyPair,
+				SubjectNonce:   sec.Nonce,
+			},
+		},
 	}
+	room.managerKey.GrantManager.Managers = room.managerKey
 
 	var (
 		roomMsgKey proto.RoomMessageKey
@@ -87,9 +88,7 @@ func NewRoom(
 		if err != nil {
 			return nil, err
 		}
-		room.capabilities[c.CapabilityID()] = c
-		room.managers[manager.ID().String()] = c.CapabilityID()
-		room.managerAccounts[manager.ID().String()] = manager
+		room.managerKey.Capabilities.Save(ctx, manager, c)
 
 		if private {
 			c, err = security.GrantPublicKeyCapability(
@@ -97,7 +96,7 @@ func NewRoom(
 			if err != nil {
 				return nil, err
 			}
-			room.capabilities[c.CapabilityID()] = c
+			room.messageKey.Capabilities.Save(ctx, manager, c)
 		}
 	}
 
@@ -269,7 +268,7 @@ func (r *memRoom) MessageKey(ctx scope.Context) (proto.RoomMessageKey, error) {
 }
 
 func (r *memRoom) ManagerKey(ctx scope.Context) (proto.RoomManagerKey, error) {
-	return &roomManagerKey{r.sec}, nil
+	return r.managerKey, nil
 }
 
 func (r *memRoom) GenerateMessageKey(ctx scope.Context, kms security.KMS) (proto.RoomMessageKey, error) {
@@ -283,24 +282,20 @@ func (r *memRoom) GenerateMessageKey(ctx scope.Context, kms security.KMS) (proto
 		return nil, err
 	}
 
+	kp := r.managerKey.KeyPair()
 	r.messageKey = &roomMessageKey{
+		GrantManager: &proto.GrantManager{
+			Capabilities:   &capabilities{},
+			Managers:       r.managerKey,
+			SubjectKeyPair: &kp,
+			SubjectNonce:   nonce,
+		},
 		timestamp: time.Now(),
 		nonce:     nonce,
 		key:       *mkey,
 	}
 	r.messageKey.id = fmt.Sprintf("%s", r.messageKey.timestamp)
 	return r.messageKey, nil
-}
-
-func (r *memRoom) SaveCapability(ctx scope.Context, capability security.Capability) error {
-	r.m.Lock()
-	r.capabilities[capability.CapabilityID()] = capability
-	r.m.Unlock()
-	return nil
-}
-
-func (r *memRoom) GetCapability(ctx scope.Context, id string) (security.Capability, error) {
-	return r.capabilities[id], nil
 }
 
 func (r *memRoom) BanAgent(ctx scope.Context, agentID string, until time.Time) error {
@@ -341,12 +336,14 @@ func (r *memRoom) IsValidParent(id snowflake.Snowflake) (bool, error) {
 }
 
 func (r *memRoom) Managers(ctx scope.Context) ([]proto.Account, error) {
-	r.m.Lock()
-	managers := make([]proto.Account, 0, len(r.managerAccounts))
-	for _, manager := range r.managerAccounts {
+	caps := r.managerKey.Capabilities.(*capabilities)
+	caps.Lock()
+	defer caps.Unlock()
+
+	managers := make([]proto.Account, 0, len(caps.accounts))
+	for _, manager := range caps.accounts {
 		managers = append(managers, manager)
 	}
-	r.m.Unlock()
 	return managers, nil
 }
 
@@ -375,13 +372,14 @@ func (r *memRoom) verifyManager(ctx scope.Context, actor proto.Account, actorKey
 func (r *memRoom) ManagerCapability(ctx scope.Context, manager proto.Account) (
 	security.Capability, error) {
 
-	// Verify manager is a manager.
-	cid, ok := r.managers[manager.ID().String()]
-	if !ok {
-		return nil, proto.ErrManagerNotFound
+	c, err := r.managerKey.AccountCapability(ctx, manager)
+	if err != nil {
+		if err == proto.ErrAccessDenied {
+			return nil, proto.ErrManagerNotFound
+		}
+		return nil, err
 	}
-	c, ok := r.capabilities[cid]
-	if !ok {
+	if c == nil {
 		return nil, proto.ErrManagerNotFound
 	}
 	return c, nil
@@ -391,82 +389,28 @@ func (r *memRoom) AddManager(
 	ctx scope.Context, kms security.KMS, actor proto.Account, actorKey *security.ManagedKey,
 	newManager proto.Account) error {
 
-	r.m.Lock()
-	defer r.m.Unlock()
-
-	// Verify actor.
-	pkCap, err := r.verifyManager(ctx, actor, actorKey)
-	if err != nil {
-		return err
-	}
-
-	// Add new manager.
-	subjectKeyPair := r.sec.KeyPair.Clone()
-	actorKeyPair, err := actor.Unlock(actorKey)
-	if err != nil {
-		return err
-	}
-	secretJSON, err := pkCap.DecryptPayload(&subjectKeyPair, actorKeyPair)
-	if err != nil {
-		return err
-	}
-
-	var secret []byte
-	if err := json.Unmarshal(secretJSON, &secret); err != nil {
-		return err
-	}
-
-	managerKey := &security.ManagedKey{
-		KeyType:   security.AES128,
-		Plaintext: secret,
-	}
-	unlockedSubjectKeyPair, err := r.sec.Unlock(managerKey)
-	if err != nil {
-		return err
-	}
-
-	newManagerKeyPair := newManager.KeyPair()
-
-	nc, err := security.GrantPublicKeyCapability(
-		kms, r.sec.Nonce, unlockedSubjectKeyPair, &newManagerKeyPair, nil, secret)
-	if err != nil {
-		return err
-	}
-
-	r.capabilities[nc.CapabilityID()] = nc
-	r.managers[newManager.ID().String()] = nc.CapabilityID()
-	r.managerAccounts[newManager.ID().String()] = newManager
-
-	return nil
+	return r.managerKey.GrantToAccount(ctx, kms, actor, actorKey, newManager)
 }
 
 func (r *memRoom) RemoveManager(
 	ctx scope.Context, actor proto.Account, actorKey *security.ManagedKey,
 	formerManager proto.Account) error {
 
-	r.m.Lock()
-	defer r.m.Unlock()
-
-	// Verify actor.
-	if _, err := r.verifyManager(ctx, actor, actorKey); err != nil {
+	if _, _, _, err := r.managerKey.Authority(ctx, actor, actorKey); err != nil {
 		return err
 	}
 
-	// Verify target is a manager.
-	cid, ok := r.managers[formerManager.ID().String()]
-	if !ok {
-		return proto.ErrManagerNotFound
+	if err := r.managerKey.RevokeFromAccount(ctx, formerManager); err != nil {
+		if err == proto.ErrCapabilityNotFound || err == proto.ErrAccessDenied {
+			return proto.ErrManagerNotFound
+		}
+		return err
 	}
-
-	// Remove.
-	delete(r.capabilities, cid)
-	delete(r.managers, formerManager.ID().String())
-	delete(r.managerAccounts, formerManager.ID().String())
-
 	return nil
 }
 
 type roomMessageKey struct {
+	*proto.GrantManager
 	id        string
 	timestamp time.Time
 	nonce     []byte
@@ -479,6 +423,7 @@ func (k *roomMessageKey) Nonce() []byte                   { return k.nonce }
 func (k *roomMessageKey) ManagedKey() security.ManagedKey { return k.key.Clone() }
 
 type roomManagerKey struct {
+	*proto.GrantManager
 	*proto.RoomSecurity
 }
 
