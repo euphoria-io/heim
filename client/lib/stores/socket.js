@@ -12,6 +12,12 @@ _.extend(module.exports, storeActions)
 
 storeActions.connect.sync = true
 
+function logPacket(kind, data) {
+  console.groupCollapsed(kind, data.type, data.id ? '(id: ' + data.id + ')' : '(no id)')
+  console.debug(data)
+  console.groupEnd()
+}
+
 module.exports.store = Reflux.createStore({
   listenables: storeActions,
 
@@ -24,6 +30,7 @@ module.exports.store = Reflux.createStore({
     this.pingReplyTimeout = null
     this.nextPing = 0
     this.lastMessage = null
+    this._logPackets = false
   },
 
   _wsurl: function(origin, prefix, roomName) {
@@ -82,6 +89,10 @@ module.exports.store = Reflux.createStore({
   _message: function(ev) {
     var data = JSON.parse(ev.data)
 
+    if (this._logPackets) {
+      logPacket('recv', data)
+    }
+
     this.lastMessage = Date.now()
 
     this._handlePings(data)
@@ -124,6 +135,9 @@ module.exports.store = Reflux.createStore({
       data.data = {}
     }
 
+    if (this._logPackets) {
+      logPacket('send', data)
+    }
     this.ws.send(JSON.stringify(data))
   },
 

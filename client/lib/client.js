@@ -38,6 +38,7 @@ if (!window.frameElement) {
   moment.relativeTimeThreshold('m', 60)
 
 
+  var queryString = require('querystring')
   var _ = require('lodash')
   require('setimmediate')
 
@@ -70,12 +71,18 @@ if (!window.frameElement) {
 
   Heim.hook = Heim.plugins.hook
 
-  if (location.hash == '#perf') {
+  var hashFlags = queryString.parse(location.hash.substr(1))
+
+  if (_.has(hashFlags, 'perf')) {
     var React = require('react/addons')
     if (React.addons && React.addons.Perf) {
       uiwindow.ReactPerf = React.addons.Perf
       uiwindow.ReactPerf.start()
     }
+  }
+
+  if (_.has(hashFlags, 'socket')) {
+    Heim.socket.store._logPackets = true
   }
 
   var roomName = location.pathname.match(/(\w+)\/$/)[1]

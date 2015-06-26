@@ -343,4 +343,28 @@ describe('socket store', function() {
       sinon.assert.calledWith(fakeWebSocket.send, JSON.stringify({id: 'heyyy', data: {}}))
     })
   })
+
+  describe('debug logging', function() {
+    var testPacket = {type: 'test', data: {}, id: 0}
+
+    beforeEach(function() {
+      socket.store.connect('ezzie')
+      sinon.stub(console, 'debug')
+      socket.store._logPackets = true
+    })
+
+    afterEach(function() {
+      console.debug.restore()
+    })
+
+    it('should output packets received', function() {
+      socket.store.send(testPacket)
+      sinon.assert.calledWithExactly(console.debug, testPacket)
+    })
+
+    it('should output packets sent', function() {
+      socket.store._message({data: JSON.stringify(testPacket)})
+      sinon.assert.calledWithExactly(console.debug, testPacket)
+    })
+  })
 })
