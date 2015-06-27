@@ -1308,6 +1308,52 @@ func testRoomGrants(s *serverUnderTest) {
 		maxConn.Close()
 	})
 
+	Convey("Grant manager by staff", func() {
+		b := s.backend
+		ctx := scope.New()
+		kms := s.app.kms
+		at := b.AgentTracker()
+		agentKey := &security.ManagedKey{
+			KeyType:   proto.AgentKeyType,
+			Plaintext: make([]byte, proto.AgentKeyType.KeySize()),
+		}
+
+		// Create staff account and room.
+		_, err := b.CreateRoom(ctx, kms, true, "staffmanagergrants")
+		So(err, ShouldBeNil)
+
+		nonce := fmt.Sprintf("+%s", time.Now())
+		loganAgent, err := proto.NewAgent([]byte("logan"+nonce), agentKey)
+		So(err, ShouldBeNil)
+		So(at.Register(ctx, loganAgent), ShouldBeNil)
+		logan, _, err := b.AccountManager().Register(
+			ctx, kms, "email", "logan"+nonce, "loganpass", loganAgent.IDString(), agentKey)
+		So(err, ShouldBeNil)
+		So(b.AccountManager().GrantStaff(ctx, logan.ID(), s.kms.KMSCredential()), ShouldBeNil)
+
+		// Connect to room, log in, reconnect, and grant management to self.
+		loganConn := s.Connect("staffmanagergrants")
+		loganConn.expectPing()
+		loganConn.expect("", "bounce-event", `{"reason":"authentication required"}`)
+		loganConn.send("1", "login", `{"namespace":"email","id":"logan%s","password":"loganpass"}`, nonce)
+		loganConn.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, logan.ID())
+		loganConn.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
+
+		loganConn = s.Connect("staffmanagergrants", loganConn.cookies...)
+		loganConn.expectPing()
+		loganConn.expect("", "bounce-event", `{"reason":"authentication required"}`)
+		loganConn.send("1", "unlock-staff-capability", `{"password":"loganpass"}`)
+		loganConn.expect("1", "unlock-staff-capability-reply", `{"success":true}`)
+		loganConn.send("2", "staff-grant-manager", `{"account_id":"%s"}`, logan.ID())
+		loganConn.expect("2", "staff-grant-manager-reply", `{}`)
+		loganConn.Close()
+
+		// Reconnect to verify.
+		loganConn = s.Connect("staffmanagergrants", loganConn.cookies...)
+		loganConn.expectPing()
+		loganConn.expectSnapshot(s.backend.Version(), nil, nil)
+	})
+
 	Convey("Grant manager to account", func() {
 		b := s.backend
 		ctx := scope.New()

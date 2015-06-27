@@ -382,10 +382,20 @@ func (s *session) handleAuth(cmd *proto.Packet) *response {
 		return s.handleAuthCommand(msg)
 	case *proto.PingCommand, *proto.PingReply:
 		return s.handleCommand(cmd)
+	case *proto.GrantAccessCommand:
+		return s.handleGrantAccessCommand(msg)
+	case *proto.GrantManagerCommand:
+		return s.handleGrantManagerCommand(msg)
+	case *proto.StaffGrantManagerCommand:
+		return s.handleStaffGrantManagerCommand(msg)
 	case *proto.RegisterAccountCommand:
 		return s.handleCommand(cmd)
 	case *proto.LoginCommand:
 		return s.handleCommand(cmd)
+	case *proto.LogoutCommand:
+		return s.handleLogoutCommand()
+	case *proto.UnlockStaffCapabilityCommand:
+		return s.handleUnlockStaffCapabilityCommand(msg)
 	default:
 		return &response{err: fmt.Errorf("access denied, please authenticate")}
 	}
@@ -449,6 +459,8 @@ func (s *session) handleCommand(cmd *proto.Packet) *response {
 		return s.handleGrantAccessCommand(msg)
 	case *proto.GrantManagerCommand:
 		return s.handleGrantManagerCommand(msg)
+	case *proto.StaffGrantManagerCommand:
+		return s.handleStaffGrantManagerCommand(msg)
 	case *proto.LoginCommand:
 		return s.handleLoginCommand(msg)
 	case *proto.LogoutCommand:
@@ -636,6 +648,39 @@ func (s *session) handleGrantManagerCommand(cmd *proto.GrantManagerCommand) *res
 	}
 
 	return &response{packet: &proto.GrantAccessReply{}}
+}
+
+func (s *session) handleStaffGrantManagerCommand(cmd *proto.StaffGrantManagerCommand) *response {
+	if s.staffKMS == nil {
+		return &response{err: fmt.Errorf("must unlock staff capability first")}
+	}
+
+	account, err := s.backend.AccountManager().Get(s.ctx, cmd.AccountID)
+	if err != nil {
+		return &response{err: err}
+	}
+
+	mkey, err := s.room.ManagerKey(s.ctx)
+	if err != nil {
+		return &response{err: err}
+	}
+
+	msgkey, err := s.room.MessageKey(s.ctx)
+	if err != nil {
+		return &response{err: err}
+	}
+
+	if err := mkey.StaffGrantToAccount(s.ctx, s.staffKMS, account); err != nil {
+		return &response{err: err}
+	}
+
+	if msgkey != nil {
+		if err := msgkey.StaffGrantToAccount(s.ctx, s.staffKMS, account); err != nil {
+			return &response{err: err}
+		}
+	}
+
+	return &response{packet: &proto.StaffGrantManagerReply{}}
 }
 
 func (s *session) handleLoginCommand(cmd *proto.LoginCommand) *response {

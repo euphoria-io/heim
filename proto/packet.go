@@ -61,6 +61,9 @@ var (
 	RegisterAccountType      = PacketType("register-account")
 	RegisterAccountReplyType = RegisterAccountType.Reply()
 
+	StaffGrantManagerType      = PacketType("staff-grant-manager")
+	StaffGrantManagerReplyType = StaffGrantManagerType.Reply()
+
 	UnlockStaffCapabilityType      = PacketType("unlock-staff-capability")
 	UnlockStaffCapabilityReplyType = UnlockStaffCapabilityType.Reply()
 
@@ -107,6 +110,9 @@ var (
 		PingType:      reflect.TypeOf(PingCommand{}),
 		PingEventType: reflect.TypeOf(PingEvent{}),
 		PingReplyType: reflect.TypeOf(PingReply{}),
+
+		StaffGrantManagerType:      reflect.TypeOf(StaffGrantManagerCommand{}),
+		StaffGrantManagerReplyType: reflect.TypeOf(StaffGrantManagerReply{}),
 
 		AuthType:      reflect.TypeOf(AuthCommand{}),
 		AuthEventType: reflect.TypeOf(AuthEvent{}),
@@ -188,6 +194,9 @@ type GrantManagerCommand struct {
 }
 
 type GrantManagerReply struct{}
+
+type StaffGrantManagerCommand GrantManagerCommand
+type StaffGrantManagerReply GrantManagerReply
 
 type PresenceEvent SessionView
 

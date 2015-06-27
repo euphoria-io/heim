@@ -189,6 +189,11 @@ func NewRoomMessageKeyBinding(
 				Executor: rb.Backend.DbMap,
 			},
 			Managers: NewRoomManagerKeyBinding(rb),
+			KeyEncryptingKey: &security.ManagedKey{
+				Ciphertext:   rb.Room.EncryptedManagementKey,
+				ContextKey:   "room",
+				ContextValue: rb.Room.Name,
+			},
 			SubjectKeyPair: &security.ManagedKeyPair{
 				KeyPairType:         security.Curve25519,
 				IV:                  rb.Room.IV,
@@ -247,6 +252,11 @@ func NewRoomManagerKeyBinding(rb *RoomBinding) *RoomManagerKeyBinding {
 			Executor: rb.Backend.DbMap,
 		},
 		GrantManager: &proto.GrantManager{
+			KeyEncryptingKey: &security.ManagedKey{
+				Ciphertext:   rb.Room.EncryptedManagementKey,
+				ContextKey:   "room",
+				ContextValue: rb.Room.Name,
+			},
 			SubjectKeyPair: &security.ManagedKeyPair{
 				KeyPairType:         security.Curve25519,
 				IV:                  rb.Room.IV,

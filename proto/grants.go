@@ -19,6 +19,8 @@ type AccountGrantable interface {
 		ctx scope.Context, kms security.KMS, manager Account, managerClientKey *security.ManagedKey,
 		target Account) error
 
+	StaffGrantToAccount(ctx scope.Context, kms security.KMS, target Account) error
+
 	RevokeFromAccount(ctx scope.Context, account Account) error
 
 	AccountCapability(ctx scope.Context, account Account) (*security.PublicKeyCapability, error)
@@ -34,10 +36,11 @@ type PasscodeGrantable interface {
 }
 
 type GrantManager struct {
-	Capabilities   CapabilityTable
-	Managers       AccountGrantable
-	SubjectKeyPair *security.ManagedKeyPair
-	SubjectNonce   []byte
+	Capabilities     CapabilityTable
+	Managers         AccountGrantable
+	KeyEncryptingKey *security.ManagedKey
+	SubjectKeyPair   *security.ManagedKeyPair
+	SubjectNonce     []byte
 }
 
 func (gs *GrantManager) unlockSubjectKeyPair(
@@ -121,6 +124,28 @@ func (gs *GrantManager) GrantToAccount(
 	kp := target.KeyPair()
 	c, err := security.GrantPublicKeyCapability(
 		kms, gs.SubjectNonce, subjectKeyPair, &kp, public, private)
+	if err != nil {
+		return err
+	}
+
+	return gs.Capabilities.Save(ctx, target, c)
+}
+
+func (gs *GrantManager) StaffGrantToAccount(ctx scope.Context, kms security.KMS, target Account) error {
+	keyEncryptingKey := gs.KeyEncryptingKey.Clone()
+	if err := kms.DecryptKey(&keyEncryptingKey); err != nil {
+		return err
+	}
+
+	subjectKeyPair := gs.SubjectKeyPair.Clone()
+	if err := subjectKeyPair.Decrypt(&keyEncryptingKey); err != nil {
+		return err
+	}
+
+	// TODO: customize public/private payloads
+	kp := target.KeyPair()
+	c, err := security.GrantPublicKeyCapability(
+		kms, gs.SubjectNonce, &subjectKeyPair, &kp, nil, keyEncryptingKey.Plaintext)
 	if err != nil {
 		return err
 	}

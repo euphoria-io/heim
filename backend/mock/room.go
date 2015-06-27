@@ -57,9 +57,10 @@ func NewRoom(
 		managerKey: &roomManagerKey{
 			RoomSecurity: sec,
 			GrantManager: &proto.GrantManager{
-				Capabilities:   &capabilities{},
-				SubjectKeyPair: &sec.KeyPair,
-				SubjectNonce:   sec.Nonce,
+				Capabilities:     &capabilities{},
+				KeyEncryptingKey: &sec.KeyEncryptingKey,
+				SubjectKeyPair:   &sec.KeyPair,
+				SubjectNonce:     sec.Nonce,
 			},
 		},
 	}
@@ -285,10 +286,11 @@ func (r *memRoom) GenerateMessageKey(ctx scope.Context, kms security.KMS) (proto
 	kp := r.managerKey.KeyPair()
 	r.messageKey = &roomMessageKey{
 		GrantManager: &proto.GrantManager{
-			Capabilities:   &capabilities{},
-			Managers:       r.managerKey,
-			SubjectKeyPair: &kp,
-			SubjectNonce:   nonce,
+			Capabilities:     &capabilities{},
+			Managers:         r.managerKey,
+			KeyEncryptingKey: &r.sec.KeyEncryptingKey,
+			SubjectKeyPair:   &kp,
+			SubjectNonce:     nonce,
 		},
 		timestamp: time.Now(),
 		nonce:     nonce,
