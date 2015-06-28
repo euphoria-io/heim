@@ -17,6 +17,7 @@ index['chromakode'] = 'chromakode'
 index['pewpewpew'] = 'pewpewpew'
 index['leck'] = 'leck'
 index['dealwithit'] = 'dealwithit'
+index['spider'] = 'spider'
 
 module.exports.names = _.invert(index)
 
