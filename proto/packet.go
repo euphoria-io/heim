@@ -332,7 +332,7 @@ type StaffCreateRoomCommand struct {
 
 type StaffCreateRoomReply struct {
 	Success       bool   `json:"success"`
-	FailureReason string `json:"failure_reason"`
+	FailureReason string `json:"failure_reason,omitempty"`
 }
 
 type StaffRevokeAccessCommand RevokeAccessCommand
@@ -350,7 +350,7 @@ type UnlockStaffCapabilityCommand struct {
 
 type UnlockStaffCapabilityReply struct {
 	Success       bool   `json:"success"`
-	FailureReason string `json:"failure_reason"`
+	FailureReason string `json:"failure_reason,omitempty"`
 }
 
 type WhoCommand struct{}
