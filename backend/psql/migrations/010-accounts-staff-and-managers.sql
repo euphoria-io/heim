@@ -70,15 +70,24 @@ CREATE INDEX agent_account_id ON agent(account_id);
 -- +migrate Down
 -- Undo everything!
 
-ALTER TABLE room DROP IF EXISTS pk_nonce, DROP IF EXISTS pk_iv, DROP IF EXISTS pk_mac, DROP IF EXISTS encrypted_management_key, DROP IF EXISTS encrypted_private_key, DROP IF EXISTS public_key;
+DROP TABLE IF EXISTS agent;
+DROP TABLE IF EXISTS personal_identity;
+DROP TABLE IF EXISTS account;
+DROP TABLE IF EXISTS room_manager_capability;
 
 ALTER TABLE capability
     DROP IF EXISTS nonce,
     DROP IF EXISTS account_id;
 
-ALTER TABLE room_capability DROP CONSTRAINT IF EXISTS capability_fk;
+ALTER TABLE room
+    DROP IF EXISTS pk_nonce,
+    DROP IF EXISTS pk_iv,
+    DROP IF EXISTS pk_mac,
+    DROP IF EXISTS encrypted_management_key,
+    DROP IF EXISTS encrypted_private_key,
+    DROP IF EXISTS public_key;
 
-DROP TABLE IF EXISTS agent;
-DROP TABLE IF EXISTS personal_identity;
-DROP TABLE IF EXISTS account;
-DROP TABLE IF EXISTS room_manager_capability;
+ALTER TABLE room_capability
+    DROP IF EXISTS account_id,
+    DROP CONSTRAINT IF EXISTS capability_fk;
+
