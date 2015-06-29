@@ -396,6 +396,8 @@ func (s *session) handleAuth(cmd *proto.Packet) *response {
 		return s.handleStaffRevokeManagerCommand(msg)
 	case *proto.StaffRevokeAccessCommand:
 		return s.handleStaffRevokeAccessCommand(msg)
+	case *proto.StaffLockRoomCommand:
+		return s.handleStaffLockRoomCommand()
 	case *proto.RegisterAccountCommand:
 		return s.handleCommand(cmd)
 	case *proto.LoginCommand:
@@ -477,6 +479,8 @@ func (s *session) handleCommand(cmd *proto.Packet) *response {
 		return s.handleStaffRevokeManagerCommand(msg)
 	case *proto.StaffRevokeAccessCommand:
 		return s.handleStaffRevokeAccessCommand(msg)
+	case *proto.StaffLockRoomCommand:
+		return s.handleStaffLockRoomCommand()
 	case *proto.LoginCommand:
 		return s.handleLoginCommand(msg)
 	case *proto.LogoutCommand:
@@ -803,6 +807,18 @@ func (s *session) handleStaffRevokeAccessCommand(cmd *proto.StaffRevokeAccessCom
 	}
 
 	return &response{packet: &proto.RevokeAccessReply{}}
+}
+
+func (s *session) handleStaffLockRoomCommand() *response {
+	if s.staffKMS == nil {
+		return &response{err: fmt.Errorf("must unlock staff capability first")}
+	}
+
+	if _, err := s.room.GenerateMessageKey(s.ctx, s.staffKMS); err != nil {
+		return &response{err: err}
+	}
+
+	return &response{packet: &proto.StaffLockRoomReply{}}
 }
 
 func (s *session) handleLoginCommand(cmd *proto.LoginCommand) *response {

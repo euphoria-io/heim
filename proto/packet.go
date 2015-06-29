@@ -70,6 +70,9 @@ var (
 	StaffGrantManagerType      = PacketType("staff-grant-manager")
 	StaffGrantManagerReplyType = StaffGrantManagerType.Reply()
 
+	StaffLockRoomType      = PacketType("staff-lock-room")
+	StaffLockRoomReplyType = StaffLockRoomType.Reply()
+
 	StaffRevokeAccessType      = PacketType("staff-revoke-access")
 	StaffRevokeAccessReplyType = StaffRevokeManagerType.Reply()
 
@@ -125,6 +128,9 @@ var (
 
 		StaffGrantManagerType:      reflect.TypeOf(StaffGrantManagerCommand{}),
 		StaffGrantManagerReplyType: reflect.TypeOf(StaffGrantManagerReply{}),
+
+		StaffLockRoomType:      reflect.TypeOf(StaffLockRoomCommand{}),
+		StaffLockRoomReplyType: reflect.TypeOf(StaffLockRoomReply{}),
 
 		StaffRevokeAccessType:      reflect.TypeOf(StaffRevokeAccessCommand{}),
 		StaffRevokeAccessReplyType: reflect.TypeOf(StaffRevokeAccessReply{}),
@@ -334,6 +340,9 @@ type StaffRevokeAccessReply RevokeAccessReply
 
 type StaffRevokeManagerCommand RevokeManagerCommand
 type StaffRevokeManagerReply RevokeManagerReply
+
+type StaffLockRoomCommand struct{}
+type StaffLockRoomReply struct{}
 
 type UnlockStaffCapabilityCommand struct {
 	Password string `json:"password"`
