@@ -18,9 +18,6 @@ var (
 	AuthEventType = AuthType.Event()
 	AuthReplyType = AuthType.Reply()
 
-	CreateRoomType      = PacketType("create-room")
-	CreateRoomReplyType = CreateRoomType.Reply()
-
 	SendType      = PacketType("send")
 	SendEventType = SendType.Event()
 	SendReplyType = SendType.Reply()
@@ -67,6 +64,9 @@ var (
 	RevokeManagerType      = PacketType("revoke-manager")
 	RevokeManagerReplyType = RevokeManagerType.Reply()
 
+	StaffCreateRoomType      = PacketType("staff-create-room")
+	StaffCreateRoomReplyType = StaffCreateRoomType.Reply()
+
 	StaffGrantManagerType      = PacketType("staff-grant-manager")
 	StaffGrantManagerReplyType = StaffGrantManagerType.Reply()
 
@@ -94,9 +94,6 @@ var (
 	ErrorReplyType = PacketType("error").Reply()
 
 	payloadMap = map[PacketType]reflect.Type{
-		CreateRoomType:      reflect.TypeOf(CreateRoomCommand{}),
-		CreateRoomReplyType: reflect.TypeOf(CreateRoomReply{}),
-
 		SendType:      reflect.TypeOf(SendCommand{}),
 		SendReplyType: reflect.TypeOf(SendReply{}),
 		SendEventType: reflect.TypeOf(SendEvent{}),
@@ -125,6 +122,9 @@ var (
 		PingType:      reflect.TypeOf(PingCommand{}),
 		PingEventType: reflect.TypeOf(PingEvent{}),
 		PingReplyType: reflect.TypeOf(PingReply{}),
+
+		StaffCreateRoomType:      reflect.TypeOf(StaffCreateRoomCommand{}),
+		StaffCreateRoomReplyType: reflect.TypeOf(StaffCreateRoomReply{}),
 
 		StaffGrantManagerType:      reflect.TypeOf(StaffGrantManagerCommand{}),
 		StaffGrantManagerReplyType: reflect.TypeOf(StaffGrantManagerReply{}),
@@ -182,17 +182,6 @@ type SendCommand struct {
 
 type SendEvent Message
 type SendReply SendEvent
-
-type CreateRoomCommand struct {
-	Name     string                `json:"name"`
-	Managers []snowflake.Snowflake `json:"managers"`
-	Private  bool                  `json:"private,omitempty"`
-}
-
-type CreateRoomReply struct {
-	Success       bool   `json:"success"`
-	FailureReason string `json:"failure_reason"`
-}
 
 type EditMessageCommand struct {
 	ID             snowflake.Snowflake `json:"id"`
@@ -334,6 +323,17 @@ type RevokeManagerCommand struct {
 }
 
 type RevokeManagerReply struct{}
+
+type StaffCreateRoomCommand struct {
+	Name     string                `json:"name"`
+	Managers []snowflake.Snowflake `json:"managers"`
+	Private  bool                  `json:"private,omitempty"`
+}
+
+type StaffCreateRoomReply struct {
+	Success       bool   `json:"success"`
+	FailureReason string `json:"failure_reason"`
+}
 
 type StaffRevokeAccessCommand RevokeAccessCommand
 type StaffRevokeAccessReply RevokeAccessReply

@@ -489,8 +489,8 @@ func (s *session) handleCommand(cmd *proto.Packet) *response {
 		return s.handleRegisterAccountCommand(msg)
 	case *proto.UnlockStaffCapabilityCommand:
 		return s.handleUnlockStaffCapabilityCommand(msg)
-	case *proto.CreateRoomCommand:
-		return s.handleCreateRoomCommand(msg)
+	case *proto.StaffCreateRoomCommand:
+		return s.handleStaffCreateRoomCommand(msg)
 	default:
 		return &response{err: fmt.Errorf("command type %T not implemented", payload)}
 	}
@@ -973,9 +973,9 @@ func (s *session) handleUnlockStaffCapabilityCommand(cmd *proto.UnlockStaffCapab
 	return &response{packet: &proto.UnlockStaffCapabilityReply{Success: true}}
 }
 
-func (s *session) handleCreateRoomCommand(cmd *proto.CreateRoomCommand) *response {
+func (s *session) handleStaffCreateRoomCommand(cmd *proto.StaffCreateRoomCommand) *response {
 	rejection := func(reason string) *response {
-		return &response{packet: &proto.CreateRoomReply{FailureReason: reason}}
+		return &response{packet: &proto.StaffCreateRoomReply{FailureReason: reason}}
 	}
 
 	failure := func(err error) *response { return &response{err: err} }
@@ -1014,7 +1014,7 @@ func (s *session) handleCreateRoomCommand(cmd *proto.CreateRoomCommand) *respons
 		return failure(err)
 	}
 
-	return &response{packet: &proto.CreateRoomReply{Success: true}}
+	return &response{packet: &proto.StaffCreateRoomReply{Success: true}}
 }
 
 func (s *session) sendPing() error {

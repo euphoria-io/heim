@@ -1212,17 +1212,17 @@ func testRoomCreation(s *serverUnderTest) {
 		conn = s.Connect("createroom", conn.cookies...)
 		conn.expectPing()
 		conn.expectSnapshot(s.backend.Version(), nil, nil)
-		conn.send("1", "create-room", `{"name":"create-room-new","managers":["%s"],"private":true}`,
+		conn.send("1", "staff-create-room", `{"name":"create-room-new","managers":["%s"],"private":true}`,
 			logan.ID())
-		conn.expect("1", "create-room-reply",
+		conn.expect("1", "staff-create-room-reply",
 			`{"success":false,"failure_reason":"must unlock staff capability first"}`)
 
 		// Unlock staff capability and try again.
 		conn.send("2", "unlock-staff-capability", `{"password":"loganpass"}`)
 		conn.expect("2", "unlock-staff-capability-reply", `{"success":true}`)
-		conn.send("3", "create-room", `{"name":"create-room-new","managers":["%s"],"private":true}`,
+		conn.send("3", "staff-create-room", `{"name":"create-room-new","managers":["%s"],"private":true}`,
 			logan.ID())
-		conn.expect("3", "create-room-reply", `{"success":true}`)
+		conn.expect("3", "staff-create-room-reply", `{"success":true}`)
 
 		// Verify room.
 		room, err := s.backend.GetRoom(ctx, "create-room-new")
