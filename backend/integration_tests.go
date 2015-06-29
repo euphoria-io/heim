@@ -242,7 +242,9 @@ func (tc *testConn) expect(id, cmdType, data string, args ...interface{}) {
 		e, _ := json.Marshal(expectedPayload)
 		a, _ := json.Marshal(payload)
 		view := reporting.FailureView{
-			Message:  fmt.Sprintf("Expected: %s\nActual:   %s\nShould resemble!", string(e), string(a)),
+			Message: fmt.Sprintf(
+				"Expected: (%T) %s\nActual:   (%T) %s\nShould resemble!",
+				expectedPayload, payload, string(e), string(a)),
 			Expected: string(e),
 			Actual:   string(a),
 		}
@@ -1304,7 +1306,21 @@ func testRoomGrants(s *serverUnderTest) {
 					loganConn.sessionID, loganConn.userID)},
 			nil)
 
+		// Synchronize and revoke access.
+		maxConn.Close()
+		loganConn.expect("", "join-event",
+			`{"session_id":"%s","id":"%s","server_id":"test1","server_era":"era1"}`,
+			maxConn.sessionID, maxConn.id())
+		loganConn.expect("", "part-event",
+			`{"session_id":"%s","id":"%s","server_id":"test1","server_era":"era1"}`,
+			maxConn.sessionID, maxConn.id())
+		loganConn.send("2", "revoke-access", `{"account_id":"%s"}`, max.ID())
+		loganConn.expect("2", "revoke-access-reply", `{}`)
 		loganConn.Close()
+
+		maxConn = s.Connect("grants", maxConn.cookies...)
+		maxConn.expectPing()
+		maxConn.expect("", "bounce-event", `{"reason":"authentication required"}`)
 		maxConn.Close()
 	})
 
@@ -1352,6 +1368,12 @@ func testRoomGrants(s *serverUnderTest) {
 		loganConn = s.Connect("staffmanagergrants", loganConn.cookies...)
 		loganConn.expectPing()
 		loganConn.expectSnapshot(s.backend.Version(), nil, nil)
+
+		// Revoke self as manager.
+		loganConn.send("1", "unlock-staff-capability", `{"password":"loganpass"}`)
+		loganConn.expect("1", "unlock-staff-capability-reply", `{"success":true}`)
+		loganConn.send("2", "staff-revoke-manager", `{"account_id":"%s"}`, logan.ID())
+		loganConn.expect("2", "staff-revoke-manager-reply", `{}`)
 	})
 
 	Convey("Grant manager to account", func() {
@@ -1369,7 +1391,7 @@ func testRoomGrants(s *serverUnderTest) {
 		loganAgent, err := proto.NewAgent([]byte("logan"+nonce), agentKey)
 		So(err, ShouldBeNil)
 		So(at.Register(ctx, loganAgent), ShouldBeNil)
-		logan, loganKey, err := b.AccountManager().Register(
+		logan, _, err := b.AccountManager().Register(
 			ctx, kms, "email", "logan"+nonce, "loganpass", loganAgent.IDString(), agentKey)
 		So(err, ShouldBeNil)
 
@@ -1400,7 +1422,10 @@ func testRoomGrants(s *serverUnderTest) {
 		loganConn.send("1", "grant-manager", `{"account_id":"%s"}`, max.ID())
 		loganConn.expect("1", "grant-manager-reply", `{}`)
 
-		So(room.RemoveManager(ctx, logan, loganKey, logan), ShouldBeNil)
+		// Revoke self as manager.
+		loganConn.send("2", "revoke-manager", `{"account_id":"%s"}`, logan.ID())
+		loganConn.expect("2", "revoke-manager-reply", `{}`)
+
 		managers, err := room.Managers(ctx)
 		So(err, ShouldBeNil)
 		So(len(managers), ShouldEqual, 1)

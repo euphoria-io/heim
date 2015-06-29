@@ -61,8 +61,20 @@ var (
 	RegisterAccountType      = PacketType("register-account")
 	RegisterAccountReplyType = RegisterAccountType.Reply()
 
+	RevokeAccessType      = PacketType("revoke-access")
+	RevokeAccessReplyType = RevokeAccessType.Reply()
+
+	RevokeManagerType      = PacketType("revoke-manager")
+	RevokeManagerReplyType = RevokeManagerType.Reply()
+
 	StaffGrantManagerType      = PacketType("staff-grant-manager")
 	StaffGrantManagerReplyType = StaffGrantManagerType.Reply()
+
+	StaffRevokeAccessType      = PacketType("staff-revoke-access")
+	StaffRevokeAccessReplyType = StaffRevokeManagerType.Reply()
+
+	StaffRevokeManagerType      = PacketType("staff-revoke-manager")
+	StaffRevokeManagerReplyType = StaffRevokeManagerType.Reply()
 
 	UnlockStaffCapabilityType      = PacketType("unlock-staff-capability")
 	UnlockStaffCapabilityReplyType = UnlockStaffCapabilityType.Reply()
@@ -114,6 +126,12 @@ var (
 		StaffGrantManagerType:      reflect.TypeOf(StaffGrantManagerCommand{}),
 		StaffGrantManagerReplyType: reflect.TypeOf(StaffGrantManagerReply{}),
 
+		StaffRevokeAccessType:      reflect.TypeOf(StaffRevokeAccessCommand{}),
+		StaffRevokeAccessReplyType: reflect.TypeOf(StaffRevokeAccessReply{}),
+
+		StaffRevokeManagerType:      reflect.TypeOf(StaffRevokeManagerCommand{}),
+		StaffRevokeManagerReplyType: reflect.TypeOf(StaffRevokeManagerReply{}),
+
 		AuthType:      reflect.TypeOf(AuthCommand{}),
 		AuthEventType: reflect.TypeOf(AuthEvent{}),
 		AuthReplyType: reflect.TypeOf(AuthReply{}),
@@ -131,6 +149,12 @@ var (
 
 		RegisterAccountType:      reflect.TypeOf(RegisterAccountCommand{}),
 		RegisterAccountReplyType: reflect.TypeOf(RegisterAccountReply{}),
+
+		RevokeManagerType:      reflect.TypeOf(RevokeManagerCommand{}),
+		RevokeManagerReplyType: reflect.TypeOf(RevokeManagerReply{}),
+
+		RevokeAccessType:      reflect.TypeOf(RevokeAccessCommand{}),
+		RevokeAccessReplyType: reflect.TypeOf(RevokeAccessReply{}),
 
 		UnlockStaffCapabilityType:      reflect.TypeOf(UnlockStaffCapabilityCommand{}),
 		UnlockStaffCapabilityReplyType: reflect.TypeOf(UnlockStaffCapabilityReply{}),
@@ -185,6 +209,7 @@ type EditMessageEvent struct {
 
 type GrantAccessCommand struct {
 	AccountID snowflake.Snowflake `json:"account_id"`
+	Passcode  string              `json:"passcode"`
 }
 
 type GrantAccessReply struct{}
@@ -290,6 +315,25 @@ type LogoutReply struct{}
 
 type RegisterAccountCommand LoginCommand
 type RegisterAccountReply LoginReply
+
+type RevokeAccessCommand struct {
+	AccountID snowflake.Snowflake `json:"account_id"`
+	Passcode  string              `json:"passcode"`
+}
+
+type RevokeAccessReply struct{}
+
+type RevokeManagerCommand struct {
+	AccountID snowflake.Snowflake `json:"account_id"`
+}
+
+type RevokeManagerReply struct{}
+
+type StaffRevokeAccessCommand RevokeAccessCommand
+type StaffRevokeAccessReply RevokeAccessReply
+
+type StaffRevokeManagerCommand RevokeManagerCommand
+type StaffRevokeManagerReply RevokeManagerReply
 
 type UnlockStaffCapabilityCommand struct {
 	Password string `json:"password"`

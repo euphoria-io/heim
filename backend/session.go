@@ -386,8 +386,16 @@ func (s *session) handleAuth(cmd *proto.Packet) *response {
 		return s.handleGrantAccessCommand(msg)
 	case *proto.GrantManagerCommand:
 		return s.handleGrantManagerCommand(msg)
+	case *proto.RevokeManagerCommand:
+		return s.handleRevokeManagerCommand(msg)
+	case *proto.RevokeAccessCommand:
+		return s.handleRevokeAccessCommand(msg)
 	case *proto.StaffGrantManagerCommand:
 		return s.handleStaffGrantManagerCommand(msg)
+	case *proto.StaffRevokeManagerCommand:
+		return s.handleStaffRevokeManagerCommand(msg)
+	case *proto.StaffRevokeAccessCommand:
+		return s.handleStaffRevokeAccessCommand(msg)
 	case *proto.RegisterAccountCommand:
 		return s.handleCommand(cmd)
 	case *proto.LoginCommand:
@@ -459,8 +467,16 @@ func (s *session) handleCommand(cmd *proto.Packet) *response {
 		return s.handleGrantAccessCommand(msg)
 	case *proto.GrantManagerCommand:
 		return s.handleGrantManagerCommand(msg)
+	case *proto.RevokeManagerCommand:
+		return s.handleRevokeManagerCommand(msg)
+	case *proto.RevokeAccessCommand:
+		return s.handleRevokeAccessCommand(msg)
 	case *proto.StaffGrantManagerCommand:
 		return s.handleStaffGrantManagerCommand(msg)
+	case *proto.StaffRevokeManagerCommand:
+		return s.handleStaffRevokeManagerCommand(msg)
+	case *proto.StaffRevokeAccessCommand:
+		return s.handleStaffRevokeAccessCommand(msg)
 	case *proto.LoginCommand:
 		return s.handleLoginCommand(msg)
 	case *proto.LogoutCommand:
@@ -631,6 +647,35 @@ func (s *session) handleGrantAccessCommand(cmd *proto.GrantAccessCommand) *respo
 	return &response{packet: &proto.GrantAccessReply{}}
 }
 
+func (s *session) handleRevokeAccessCommand(cmd *proto.RevokeAccessCommand) *response {
+	mkp := s.client.Authorization.ManagerKeyPair
+	if s.client.Account == nil || mkp == nil {
+		return &response{err: proto.ErrAccessDenied}
+	}
+
+	mkey, err := s.room.MessageKey(s.ctx)
+	if err != nil {
+		return &response{err: err}
+	}
+
+	switch {
+	case cmd.AccountID != 0:
+		account, err := s.backend.AccountManager().Get(s.ctx, cmd.AccountID)
+		if err != nil {
+			return &response{err: err}
+		}
+		if err := mkey.RevokeFromAccount(s.ctx, account); err != nil {
+			return &response{err: err}
+		}
+	case cmd.Passcode != "":
+		if err := mkey.RevokeFromPasscode(s.ctx, cmd.Passcode); err != nil {
+			return &response{err: err}
+		}
+	}
+
+	return &response{packet: &proto.RevokeAccessReply{}}
+}
+
 func (s *session) handleGrantManagerCommand(cmd *proto.GrantManagerCommand) *response {
 	mkp := s.client.Authorization.ManagerKeyPair
 	if s.client.Account == nil || mkp == nil {
@@ -648,6 +693,24 @@ func (s *session) handleGrantManagerCommand(cmd *proto.GrantManagerCommand) *res
 	}
 
 	return &response{packet: &proto.GrantAccessReply{}}
+}
+
+func (s *session) handleRevokeManagerCommand(cmd *proto.RevokeManagerCommand) *response {
+	if s.client.Account == nil || s.client.Authorization.ManagerKeyPair == nil {
+		return &response{err: proto.ErrAccessDenied}
+	}
+
+	account, err := s.backend.AccountManager().Get(s.ctx, cmd.AccountID)
+	if err != nil {
+		return &response{err: err}
+	}
+
+	err = s.room.RemoveManager(s.ctx, s.client.Account, s.client.Authorization.ClientKey, account)
+	if err != nil {
+		return &response{err: err}
+	}
+
+	return &response{packet: &proto.RevokeManagerReply{}}
 }
 
 func (s *session) handleStaffGrantManagerCommand(cmd *proto.StaffGrantManagerCommand) *response {
@@ -681,6 +744,56 @@ func (s *session) handleStaffGrantManagerCommand(cmd *proto.StaffGrantManagerCom
 	}
 
 	return &response{packet: &proto.StaffGrantManagerReply{}}
+}
+
+func (s *session) handleStaffRevokeManagerCommand(cmd *proto.StaffRevokeManagerCommand) *response {
+	if s.staffKMS == nil {
+		return &response{err: fmt.Errorf("must unlock staff capability first")}
+	}
+
+	account, err := s.backend.AccountManager().Get(s.ctx, cmd.AccountID)
+	if err != nil {
+		return &response{err: err}
+	}
+
+	mkey, err := s.room.ManagerKey(s.ctx)
+	if err != nil {
+		return &response{err: err}
+	}
+
+	if err := mkey.RevokeFromAccount(s.ctx, account); err != nil {
+		return &response{err: err}
+	}
+
+	return &response{packet: &proto.StaffRevokeManagerReply{}}
+}
+
+func (s *session) handleStaffRevokeAccessCommand(cmd *proto.StaffRevokeAccessCommand) *response {
+	if s.staffKMS == nil {
+		return &response{err: fmt.Errorf("must unlock staff capability first")}
+	}
+
+	mkey, err := s.room.MessageKey(s.ctx)
+	if err != nil {
+		return &response{err: err}
+	}
+
+	switch {
+	case cmd.AccountID != 0:
+		account, err := s.backend.AccountManager().Get(s.ctx, cmd.AccountID)
+		if err != nil {
+			return &response{err: err}
+		}
+		if err := mkey.RevokeFromAccount(s.ctx, account); err != nil {
+			return &response{err: err}
+		}
+	case cmd.Passcode != "":
+		if err := mkey.RevokeFromPasscode(s.ctx, cmd.Passcode); err != nil {
+			return &response{err: err}
+		}
+	}
+
+	return &response{packet: &proto.RevokeAccessReply{}}
 }
 
 func (s *session) handleLoginCommand(cmd *proto.LoginCommand) *response {
