@@ -418,6 +418,8 @@ func (r *memRoom) RemoveManager(
 	return nil
 }
 
+func (r *memRoom) UpgradeRoom(ctx scope.Context, kms security.KMS) error { return nil }
+
 type roomMessageKey struct {
 	*proto.GrantManager
 	id        string

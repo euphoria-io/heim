@@ -109,6 +109,9 @@ type Room interface {
 
 	// ManagerCapability returns the manager capablity for the given account.
 	ManagerCapability(ctx scope.Context, manager Account) (security.Capability, error)
+
+	// UpgradeRoom generates a manager key for a preexisting room.
+	UpgradeRoom(ctx scope.Context, kms security.KMS) error
 }
 
 type RoomMessageKey interface {
