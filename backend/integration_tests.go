@@ -244,7 +244,7 @@ func (tc *testConn) expect(id, cmdType, data string, args ...interface{}) {
 		view := reporting.FailureView{
 			Message: fmt.Sprintf(
 				"Expected: (%T) %s\nActual:   (%T) %s\nShould resemble!",
-				expectedPayload, payload, string(e), string(a)),
+				expectedPayload, string(e), payload, string(a)),
 			Expected: string(e),
 			Actual:   string(a),
 		}
@@ -715,51 +715,65 @@ func testDeletion(s *serverUnderTest) {
 		tc := NewTestClock()
 		defer tc.Close()
 
-		conn := s.Connect("deletion")
-		defer conn.Close()
-
-		conn.expectPing()
-		conn.expectSnapshot(s.backend.Version(), nil, nil)
-
-		id := &proto.SessionView{
-			SessionID:    conn.sessionID,
-			IdentityView: &proto.IdentityView{ID: conn.id(), Name: conn.id()},
+		b := s.backend
+		ctx := scope.New()
+		kms := s.app.kms
+		at := b.AgentTracker()
+		agentKey := &security.ManagedKey{
+			KeyType:   proto.AgentKeyType,
+			Plaintext: make([]byte, proto.AgentKeyType.KeySize()),
 		}
 
-		sfs := snowflakes(2)
-		sf := sfs[0]
+		// Create manager account and room.
+		nonce := fmt.Sprintf("deletion-%s", time.Now())
+		loganAgent, err := proto.NewAgent([]byte("logan"+nonce), agentKey)
+		So(err, ShouldBeNil)
+		So(at.Register(ctx, loganAgent), ShouldBeNil)
+		logan, _, err := b.AccountManager().Register(
+			ctx, kms, "email", "logan"+nonce, "loganpass", loganAgent.IDString(), agentKey)
+		So(err, ShouldBeNil)
+
+		_, err = b.CreateRoom(ctx, kms, false, "deletion", logan)
+		So(err, ShouldBeNil)
+
+		// Connect to stage room to log in.
+		conn := s.Connect("deletionstage")
+		conn.expectPing()
+		conn.expectSnapshot(s.backend.Version(), nil, nil)
+		conn.send("1", "login",
+			`{"namespace":"email","id":"logan%s","password":"loganpass"}`, nonce)
+		conn.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, logan.ID())
+		conn.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
+		conn.Close()
+
+		// Connect to deletion room as manager.
+		conn = s.Connect("deletion", conn.cookies...)
+		defer conn.Close()
+
+		sfs := snowflakes(3)
+		sf := sfs[1]
 
 		server := `"name":"speaker","server_id":"test1","server_era":"era1"`
 
+		conn.expectPing()
+		conn.expectSnapshot(s.backend.Version(), nil, nil)
 		conn.send("1", "nick", `{"name":"speaker"}`)
 		conn.expect("1", "nick-reply",
 			`{"session_id":"%s","id":"%s","from":"","to":"speaker"}`, conn.sessionID, conn.id())
 
 		conn.send("1", "send", `{"content":"@#$!"}`)
 		conn.expect("1", "send-reply",
-			`{"id":"%s","time":1,"sender":{"session_id":"%s","id":"%s",%s},"content":"@#$!"}`,
-			sf, id.SessionID, id.ID, server)
+			`{"id":"%s","time":2,"sender":{"session_id":"%s","id":"%s",%s},"content":"@#$!"}`,
+			sf, conn.sessionID, conn.userID, server)
 
 		conn.send("3", "log", `{"n":10}`)
 		conn.expect("3", "log-reply",
-			`{"log":[{"id":"%s","time":1,"sender":{"session_id":"%s","id":"%s",%s},"content":"@#$!"}]}`,
-			sf, id.SessionID, id.ID, server)
+			`{"log":[{"id":"%s","time":2,"sender":{"session_id":"%s","id":"%s",%s},"content":"@#$!"}]}`,
+			sf, conn.sessionID, conn.userID, server)
 
-		ctx := scope.New()
-		room, err := s.backend.GetRoom(ctx, "deletion")
-		So(err, ShouldBeNil)
-
-		cmd := proto.EditMessageCommand{
-			ID:       sf,
-			Delete:   true,
-			Announce: true,
-		}
-		So(room.EditMessage(scope.New(), nil, cmd), ShouldBeNil)
-
-		conn.expect("", "edit-message-event",
-			`{"id":"%s","time":1,"sender":{"session_id":"%s","id":"%s",%s},"deleted":3,"edited":3,`+
-				`"content":"@#$!","edit_id":"%s"}`,
-			sf, id.SessionID, id.ID, server, sfs[1])
+		// Delete message.
+		conn.send("4", "edit-message", `{"id":"%s","delete":true,"announce":true}`, sf)
+		conn.expect("4", "edit-message-reply", `{"edit_id":"%s","deleted":true}`, sfs[2])
 
 		conn2 := s.Connect("deletion")
 		defer conn2.Close()
@@ -767,7 +781,8 @@ func testDeletion(s *serverUnderTest) {
 		conn2.expectPing()
 		conn2.expectSnapshot(
 			s.backend.Version(),
-			[]string{fmt.Sprintf(`{"session_id":"%s","id":"%s",%s}`, conn.sessionID, id.ID, server)},
+			[]string{
+				fmt.Sprintf(`{"session_id":"%s","id":"%s",%s}`, conn.sessionID, conn.userID, server)},
 			nil)
 	})
 }
@@ -1103,6 +1118,11 @@ func testAccountRegistration(s *serverUnderTest) {
 		tc := NewTestClock()
 		defer tc.Close()
 
+		// Skip ahead in snowflakes to avoid account_id collision.
+		for i := 0; i < 1000; i++ {
+			snowflake.New()
+		}
+
 		// Add observer for timing control.
 		observer := s.Connect("registration")
 		defer observer.Close()
@@ -1128,7 +1148,7 @@ func testAccountRegistration(s *serverUnderTest) {
 			conn.sessionID, conn.userID)
 
 		// Upgrade to account.
-		sfs := snowflakes(1)
+		sfs := snowflakes(1001)[1000:]
 		conn.send("1", "register-account",
 			`{"namespace":"email","id":"registration@euphoria.io","password":"hunter2"}`)
 		conn.expect("1", "register-account-reply", `{"success":true,"account_id":"%s"}`, sfs[0])
@@ -1159,6 +1179,7 @@ func testAccountRegistration(s *serverUnderTest) {
 		// Observer should fail to register the same personal identity.
 		observer.send("1", "register-account",
 			`{"namespace":"email","id":"registration@euphoria.io","password":"hunter2"}`)
+		fmt.Printf("SECOND REGISTRATION\n")
 		observer.expect("1", "register-account-reply",
 			`{"success":false,"reason":"personal identity already in use"}`)
 	})

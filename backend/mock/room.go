@@ -189,16 +189,17 @@ func (r *memRoom) Send(ctx scope.Context, session proto.Session, message proto.M
 }
 
 func (r *memRoom) EditMessage(
-	ctx scope.Context, session proto.Session, edit proto.EditMessageCommand) error {
+	ctx scope.Context, session proto.Session, edit proto.EditMessageCommand) (
+	proto.EditMessageReply, error) {
 
 	editID, err := snowflake.New()
 	if err != nil {
-		return err
+		return proto.EditMessageReply{}, err
 	}
 
 	msg, err := r.log.edit(edit)
 	if err != nil {
-		return err
+		return proto.EditMessageReply{}, err
 	}
 
 	if edit.Announce {
@@ -206,10 +207,16 @@ func (r *memRoom) EditMessage(
 			EditID:  editID,
 			Message: *msg,
 		}
-		return r.broadcast(ctx, proto.EditMessageType, event, session)
+		if err := r.broadcast(ctx, proto.EditMessageType, event, session); err != nil {
+			return proto.EditMessageReply{}, err
+		}
 	}
 
-	return nil
+	reply := proto.EditMessageReply{
+		EditID:  editID,
+		Deleted: edit.Delete,
+	}
+	return reply, nil
 }
 
 func (r *memRoom) broadcast(

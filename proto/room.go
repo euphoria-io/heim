@@ -67,7 +67,7 @@ type Room interface {
 	Send(scope.Context, Session, Message) (Message, error)
 
 	// Edit modifies or deletes a message.
-	EditMessage(scope.Context, Session, EditMessageCommand) error
+	EditMessage(scope.Context, Session, EditMessageCommand) (EditMessageReply, error)
 
 	// Listing returns the current global list of connected sessions to this
 	// Room.

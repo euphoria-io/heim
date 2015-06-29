@@ -197,7 +197,11 @@ func (b *AccountManagerBinding) Register(
 		ID:        id,
 		AccountID: accountID.String(),
 	}
-	if err := t.Insert(account, personalIdentity); err != nil {
+	if err := t.Insert(account); err != nil {
+		rollback()
+		return nil, nil, err
+	}
+	if err := t.Insert(personalIdentity); err != nil {
 		rollback()
 		if strings.HasPrefix(err.Error(), "pq: duplicate key value") {
 			return nil, nil, proto.ErrPersonalIdentityInUse

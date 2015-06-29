@@ -491,6 +491,8 @@ func (s *session) handleCommand(cmd *proto.Packet) *response {
 		return s.handleUnlockStaffCapabilityCommand(msg)
 	case *proto.StaffCreateRoomCommand:
 		return s.handleStaffCreateRoomCommand(msg)
+	case *proto.EditMessageCommand:
+		return s.handleEditMessageCommand(msg)
 	default:
 		return &response{err: fmt.Errorf("command type %T not implemented", payload)}
 	}
@@ -1015,6 +1017,17 @@ func (s *session) handleStaffCreateRoomCommand(cmd *proto.StaffCreateRoomCommand
 	}
 
 	return &response{packet: &proto.StaffCreateRoomReply{Success: true}}
+}
+
+func (s *session) handleEditMessageCommand(msg *proto.EditMessageCommand) *response {
+	if s.client.Account == nil || s.client.Authorization.ManagerKeyPair == nil {
+		return &response{err: proto.ErrAccessDenied}
+	}
+	reply, err := s.room.EditMessage(s.ctx, s, *msg)
+	if err != nil {
+		return &response{err: err}
+	}
+	return &response{packet: reply}
 }
 
 func (s *session) sendPing() error {

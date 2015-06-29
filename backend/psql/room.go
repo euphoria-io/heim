@@ -138,16 +138,19 @@ func (rb *RoomBinding) Send(ctx scope.Context, session proto.Session, msg proto.
 }
 
 func (rb *RoomBinding) EditMessage(
-	ctx scope.Context, session proto.Session, edit proto.EditMessageCommand) error {
+	ctx scope.Context, session proto.Session, edit proto.EditMessageCommand) (
+	proto.EditMessageReply, error) {
+
+	var reply proto.EditMessageReply
 
 	editID, err := snowflake.New()
 	if err != nil {
-		return err
+		return reply, err
 	}
 
 	t, err := rb.DbMap.Begin()
 	if err != nil {
-		return err
+		return reply, err
 	}
 
 	rollback := func() {
@@ -165,12 +168,12 @@ func (rb *RoomBinding) EditMessage(
 		rb.Name, edit.ID.String())
 	if err != nil {
 		rollback()
-		return err
+		return reply, err
 	}
 
 	if msg.PreviousEditID.Valid && msg.PreviousEditID.String != edit.PreviousEditID.String() {
 		rollback()
-		return proto.ErrEditInconsistent
+		return reply, proto.ErrEditInconsistent
 	}
 
 	entry := &MessageEditLog{
@@ -193,7 +196,7 @@ func (rb *RoomBinding) EditMessage(
 	}
 	if err := t.Insert(entry); err != nil {
 		rollback()
-		return err
+		return reply, err
 	}
 
 	now := time.Time(proto.Now())
@@ -223,11 +226,11 @@ func (rb *RoomBinding) EditMessage(
 	query := fmt.Sprintf("UPDATE message SET %s WHERE room = $1 AND id = $2", strings.Join(sets, ", "))
 	if _, err := t.Exec(query, args...); err != nil {
 		rollback()
-		return err
+		return reply, err
 	}
 
 	if err := t.Commit(); err != nil {
-		return err
+		return reply, err
 	}
 
 	if edit.Announce {
@@ -235,10 +238,15 @@ func (rb *RoomBinding) EditMessage(
 			EditID:  editID,
 			Message: msg.ToBackend(),
 		}
-		return rb.Backend.broadcast(ctx, rb.Room, proto.EditMessageEventType, event, session)
+		err = rb.Backend.broadcast(ctx, rb.Room, proto.EditMessageEventType, event, session)
+		if err != nil {
+			return reply, err
+		}
 	}
 
-	return nil
+	reply.EditID = editID
+	reply.Deleted = edit.Delete
+	return reply, nil
 }
 
 func (rb *RoomBinding) Listing(ctx scope.Context) (proto.Listing, error) {

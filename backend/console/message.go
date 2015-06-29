@@ -84,7 +84,7 @@ func setDeleted(ctx scope.Context, c *console, args []string, deleted bool) erro
 			Delete:         deleted,
 			Announce:       !*quiet,
 		}
-		if err := room.EditMessage(ctx, c, edit); err != nil {
+		if _, err := room.EditMessage(ctx, c, edit); err != nil {
 			return fmt.Errorf("%s: %s", arg, err)
 		}
 		if deleted {
