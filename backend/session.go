@@ -311,6 +311,8 @@ func (s *session) serve() error {
 				if msg.Success {
 					s.sendDisconnect("authentication changed")
 				}
+			case *proto.LogoutReply:
+				s.sendDisconnect("authentication changed")
 			case *proto.RegisterAccountReply:
 				if msg.Success {
 					s.sendDisconnect("authentication changed")
@@ -326,6 +328,10 @@ func (s *session) serve() error {
 			if err := s.conn.WriteMessage(websocket.TextMessage, data); err != nil {
 				logger.Printf("error: write message: %s", err)
 				return err
+			}
+
+			if cmd.Type == proto.DisconnectEventType {
+				return nil
 			}
 		}
 	}
@@ -862,9 +868,7 @@ func (s *session) handleLogoutCommand() *response {
 	if err := s.backend.AgentTracker().ClearClientKey(s.ctx, s.client.Agent.IDString()); err != nil {
 		return &response{err: err}
 	}
-
-	s.sendDisconnect("authentication changed")
-	return &response{packet: &proto.LoginReply{}}
+	return &response{packet: &proto.LogoutReply{}}
 }
 
 func (s *session) handleRegisterAccountCommand(cmd *proto.RegisterAccountCommand) *response {
