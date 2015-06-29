@@ -634,14 +634,23 @@ func (s *session) handleGrantAccessCommand(cmd *proto.GrantAccessCommand) *respo
 		return &response{err: fmt.Errorf("not holding message key")}
 	}
 
-	account, err := s.backend.AccountManager().Get(s.ctx, cmd.AccountID)
-	if err != nil {
-		return &response{err: err}
-	}
+	switch {
+	case cmd.AccountID != 0:
+		account, err := s.backend.AccountManager().Get(s.ctx, cmd.AccountID)
+		if err != nil {
+			return &response{err: err}
+		}
 
-	err = rmk.GrantToAccount(s.ctx, s.kms, s.client.Account, s.client.Authorization.ClientKey, account)
-	if err != nil {
-		return &response{err: err}
+		err = rmk.GrantToAccount(
+			s.ctx, s.kms, s.client.Account, s.client.Authorization.ClientKey, account)
+		if err != nil {
+			return &response{err: err}
+		}
+	case cmd.Passcode != "":
+		err = rmk.GrantToPasscode(s.ctx, s.client.Account, s.client.Authorization.ClientKey, cmd.Passcode)
+		if err != nil {
+			return &response{err: err}
+		}
 	}
 
 	return &response{packet: &proto.GrantAccessReply{}}
