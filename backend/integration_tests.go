@@ -405,8 +405,6 @@ func testBroadcast(s *serverUnderTest) {
 		for i := range conns {
 			conn := s.Connect("broadcast")
 			conns[i] = conn
-			conn.send("1", "nick", `{"name":"user%d"}`, i)
-			conn.send("2", "who", "")
 
 			conn.expectPing()
 			conn.expectSnapshot(s.backend.Version(), listingParts, nil)
@@ -419,6 +417,9 @@ func testBroadcast(s *serverUnderTest) {
 				fmt.Sprintf(
 					`{"session_id":"%s","id":"%s","name":"%s","server_id":"test1","server_era":"era1"}`,
 					ids[i].SessionID, ids[i].ID, ids[i].Name))
+
+			conn.send("1", "nick", `{"name":"user%d"}`, i)
+			conn.send("2", "who", "")
 
 			conn.expect("1", "nick-reply",
 				`{"session_id":"%s","id":"%s","from":"","to":"%s"}`,
