@@ -200,6 +200,7 @@ func NewRoomMessageKeyBinding(
 				EncryptedPrivateKey: rb.Room.EncryptedPrivateKey,
 				PublicKey:           rb.Room.PublicKey,
 			},
+			PayloadKey:   msgKey,
 			SubjectNonce: nonce,
 		},
 		MessageKey: MessageKey{

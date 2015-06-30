@@ -41,6 +41,7 @@ type GrantManager struct {
 	KeyEncryptingKey *security.ManagedKey
 	SubjectKeyPair   *security.ManagedKeyPair
 	SubjectNonce     []byte
+	PayloadKey       *security.ManagedKey
 }
 
 func (gs *GrantManager) unlockSubjectKeyPair(
@@ -144,8 +145,17 @@ func (gs *GrantManager) StaffGrantToAccount(ctx scope.Context, kms security.KMS,
 
 	// TODO: customize public/private payloads
 	kp := target.KeyPair()
+	var payloadKey security.ManagedKey
+	if gs.PayloadKey == nil {
+		payloadKey = keyEncryptingKey
+	} else {
+		payloadKey = gs.PayloadKey.Clone()
+		if err := kms.DecryptKey(&payloadKey); err != nil {
+			return fmt.Errorf("payload-key decrypt error: %s", err)
+		}
+	}
 	c, err := security.GrantPublicKeyCapability(
-		kms, gs.SubjectNonce, &subjectKeyPair, &kp, nil, keyEncryptingKey.Plaintext)
+		kms, gs.SubjectNonce, &subjectKeyPair, &kp, nil, payloadKey.Plaintext)
 	if err != nil {
 		return err
 	}
