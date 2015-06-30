@@ -328,6 +328,8 @@ func (s *session) serve() error {
 				if msg.Success {
 					s.sendDisconnect("authentication changed")
 				}
+			case *proto.StaffUpgradeRoomReply:
+				s.sendDisconnect("room upgraded")
 			}
 		case cmd := <-s.outgoing:
 			data, err := cmd.Encode()
@@ -853,7 +855,7 @@ func (s *session) handleStaffUpgradeRoomCommand() *response {
 		return &response{err: err}
 	}
 
-	return &response{packet: &proto.StaffLockRoomReply{}}
+	return &response{packet: &proto.StaffUpgradeRoomReply{}}
 }
 
 func (s *session) handleLoginCommand(cmd *proto.LoginCommand) *response {
