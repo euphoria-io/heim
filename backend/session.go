@@ -425,6 +425,8 @@ func (s *session) handleAuth(cmd *proto.Packet) *response {
 		return s.handleLogoutCommand()
 	case *proto.UnlockStaffCapabilityCommand:
 		return s.handleUnlockStaffCapabilityCommand(msg)
+	case *proto.StaffCreateRoomCommand:
+		return s.handleStaffCreateRoomCommand(msg)
 	default:
 		return &response{err: fmt.Errorf("access denied, please authenticate")}
 	}
