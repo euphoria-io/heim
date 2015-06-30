@@ -345,7 +345,8 @@ describe('socket store', function() {
   })
 
   describe('debug logging', function() {
-    var testPacket = {type: 'test', data: {}, id: 0}
+    var testPacket1 = {type: 'test', data: {}, id: 0}
+    var testPacket2 = {type: 'test', data: {hello: 'world'}}
 
     beforeEach(function() {
       socket.store.connect('ezzie')
@@ -358,13 +359,25 @@ describe('socket store', function() {
     })
 
     it('should output packets sent', function() {
-      socket.store.send(testPacket)
-      sinon.assert.calledWithExactly(console.log, testPacket)
+      socket.store.send(testPacket1)
+      sinon.assert.calledWithExactly(console.log, testPacket1)
     })
 
     it('should output packets received', function() {
-      socket.store._message({data: JSON.stringify(testPacket)})
-      sinon.assert.calledWithExactly(console.log, testPacket)
+      socket.store._message({data: JSON.stringify(testPacket2)})
+      sinon.assert.calledWithExactly(console.log, testPacket2)
+    })
+
+    it('should output packets sent and response received when sent with log flag', function() {
+      socket.store._logPackets = false
+
+      socket.store.devSend(testPacket1)
+      sinon.assert.calledWithExactly(console.log, testPacket1)
+
+      console.log.reset()
+
+      socket.store._message({data: JSON.stringify(testPacket1)})
+      sinon.assert.calledWithExactly(console.log, testPacket1)
     })
   })
 })

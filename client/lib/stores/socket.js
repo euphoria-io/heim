@@ -5,6 +5,7 @@ var Reflux = require('reflux')
 
 var storeActions = Reflux.createActions([
   'send',
+  'devSend',
   'pingIfIdle',
   'connect',
 ])
@@ -12,8 +13,14 @@ _.extend(module.exports, storeActions)
 
 storeActions.connect.sync = true
 
-function logPacket(kind, data) {
-  console.groupCollapsed(kind, data.type, data.id ? '(id: ' + data.id + ')' : '(no id)')
+function logPacket(kind, data, highlight) {
+  var group = highlight ? 'group' : 'groupCollapsed'
+  console[group](
+    '%c%s %c%s %c%s',
+    kind == 'send' ? 'color: green' : 'color: #06f', kind,
+    'color: black', data.type,
+    highlight ? 'background: #efb' : 'color: gray; font-weight: normal', data.id ? '(id: ' + data.id + ')' : '(no id)'
+  )
   console.log(data)
   console.log(JSON.stringify(data, true, 2))
   console.groupEnd()
@@ -32,6 +39,7 @@ module.exports.store = Reflux.createStore({
     this.nextPing = 0
     this.lastMessage = null
     this._logPackets = false
+    this._logPacketIds = {}
   },
 
   _wsurl: function(origin, prefix, roomName) {
@@ -90,8 +98,9 @@ module.exports.store = Reflux.createStore({
   _message: function(ev) {
     var data = JSON.parse(ev.data)
 
-    if (this._logPackets) {
-      logPacket('recv', data)
+    var packetLogged = _.has(this._logPacketIds, data.id)
+    if (this._logPackets || packetLogged) {
+      logPacket('recv', data, packetLogged)
     }
 
     this.lastMessage = Date.now()
@@ -126,7 +135,7 @@ module.exports.store = Reflux.createStore({
     this.pingReplyTimeout = null
   },
 
-  send: function(data) {
+  send: function(data, log) {
     if (!data.id) {
       data.id = String(this.seq++)
     }
@@ -136,10 +145,17 @@ module.exports.store = Reflux.createStore({
       data.data = {}
     }
 
-    if (this._logPackets) {
-      logPacket('send', data)
+    if (log) {
+      this._logPacketIds[data.id] = true
+    }
+    if (this._logPackets || log) {
+      logPacket('send', data, log)
     }
     this.ws.send(JSON.stringify(data))
+  },
+
+  devSend: function(data) {
+    this.send(data, true)
   },
 
   _ping: function() {
