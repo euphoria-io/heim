@@ -13,6 +13,7 @@ type Authorization struct {
 	ManagerKeyEncryptingKey *security.ManagedKey
 	ManagerKeyPair          *security.ManagedKeyPair
 	MessageKeys             map[string]*security.ManagedKey
+	CurrentMessageKeyID     string
 }
 
 func (a *Authorization) AddMessageKey(keyID string, key *security.ManagedKey) {

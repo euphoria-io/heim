@@ -140,6 +140,7 @@ func (c *Client) AuthenticateWithAgent(
 				return fmt.Errorf("access capability unmarshal error: %s", err)
 			}
 			c.Authorization.AddMessageKey(messageKey.KeyID(), roomKey)
+			c.Authorization.CurrentMessageKeyID = messageKey.KeyID()
 		}
 	}
 
@@ -175,6 +176,7 @@ func (c *Client) AuthenticateWithPasscode(ctx scope.Context, room Room, passcode
 	// TODO: load and return all historic keys
 
 	c.Authorization.AddMessageKey(mkey.KeyID(), roomKey)
+	c.Authorization.CurrentMessageKeyID = mkey.KeyID()
 	return "", nil
 }
 

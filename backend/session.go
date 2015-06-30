@@ -231,6 +231,7 @@ func (s *session) serve() error {
 		s.state = s.handleCommand
 	default:
 		if _, ok := s.client.Authorization.MessageKeys[key.KeyID()]; ok {
+			s.client.Authorization.CurrentMessageKeyID = key.KeyID()
 			if err := s.join(); err != nil {
 				// TODO: send an error packet
 				return err
@@ -978,6 +979,7 @@ func (s *session) handleAuthCommand(msg *proto.AuthCommand) *response {
 		return &response{packet: &proto.AuthReply{Reason: failureReason}}
 	}
 
+	s.keyID = s.client.Authorization.CurrentMessageKeyID
 	s.state = s.handleCommand
 	if err := s.join(); err != nil {
 		s.keyID = ""
