@@ -5,7 +5,7 @@ module.exports = function setFavicon(document, href) {
   var head = document.getElementsByTagName('head')[0]
   var faviconId = 'favicon'
   var oldLink = document.getElementById(faviconId)
-  if (oldLink.href == href) {
+  if (oldLink.getAttribute('href') == href) {
     return
   }
   var link = document.createElement('link')
