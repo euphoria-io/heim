@@ -534,26 +534,16 @@ func (rb *RoomBinding) UpgradeRoom(ctx scope.Context, kms security.KMS) error {
 		return fmt.Errorf("already upgraded")
 	}
 
-	msgKey, err := rb.MessageKey(ctx)
-	if err != nil {
-		return err
-	}
-
 	sec, err := proto.NewRoomSecurity(kms, rb.Room.Name)
 	if err != nil {
 		return err
-	}
-
-	nonce := sec.Nonce
-	if msgKey != nil {
-		nonce = msgKey.Nonce()
 	}
 
 	resp, err := rb.Backend.DbMap.Exec(
 		`UPDATE room SET pk_nonce = $1, pk_mac = $2, pk_iv = $3,`+
 			` encrypted_management_key = $4, encrypted_private_key = $5, public_key = $6`+
 			` WHERE name = $7`,
-		nonce, sec.MAC, sec.KeyPair.IV,
+		sec.Nonce, sec.MAC, sec.KeyPair.IV,
 		sec.KeyEncryptingKey.Ciphertext, sec.KeyPair.EncryptedPrivateKey, sec.KeyPair.PublicKey,
 		rb.Room.Name)
 	if err != nil {
