@@ -120,8 +120,9 @@ func (ab *AccountBinding) UnlockStaffKMS(clientKey *security.ManagedKey) (securi
 	key := &security.ManagedKey{
 		KeyType:    proto.ClientKeyType,
 		IV:         iv,
-		Ciphertext: ab.Account.EncryptedUserKey,
+		Ciphertext: make([]byte, len(ab.Account.EncryptedUserKey)),
 	}
+	copy(key.Ciphertext, ab.Account.EncryptedUserKey)
 	if err := key.Decrypt(clientKey); err != nil {
 		return nil, err
 	}

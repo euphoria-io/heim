@@ -206,6 +206,17 @@ func (s *session) serve() error {
 		return err
 	}
 
+	// TODO: have user explicitly unlock staff KMS
+	if s.client.Account != nil && s.client.Account.IsStaff() {
+		kms, err := s.client.Account.UnlockStaffKMS(s.client.Authorization.ClientKey)
+		if err != nil {
+			logger.Printf("staff account %s unable to unlock staff capability: %s",
+				s.client.Account.ID(), err)
+		} else {
+			s.staffKMS = kms
+		}
+	}
+
 	// TODO: check room auth
 	key, err := s.room.MessageKey(s.ctx)
 	if err != nil {
