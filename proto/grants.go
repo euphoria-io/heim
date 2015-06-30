@@ -134,7 +134,7 @@ func (gs *GrantManager) GrantToAccount(
 func (gs *GrantManager) StaffGrantToAccount(ctx scope.Context, kms security.KMS, target Account) error {
 	keyEncryptingKey := gs.KeyEncryptingKey.Clone()
 	if err := kms.DecryptKey(&keyEncryptingKey); err != nil {
-		return err
+		return fmt.Errorf("key-encrypting-key decrypt error: %s", err)
 	}
 
 	subjectKeyPair := gs.SubjectKeyPair.Clone()

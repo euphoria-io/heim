@@ -253,6 +253,7 @@ func NewRoomManagerKeyBinding(rb *RoomBinding) *RoomManagerKeyBinding {
 		},
 		GrantManager: &proto.GrantManager{
 			KeyEncryptingKey: &security.ManagedKey{
+				KeyType:      proto.RoomManagerKeyType,
 				Ciphertext:   rb.Room.EncryptedManagementKey,
 				ContextKey:   "room",
 				ContextValue: rb.Room.Name,
