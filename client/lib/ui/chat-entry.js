@@ -22,7 +22,7 @@ module.exports = React.createClass({
 
   componentDidMount: function() {
     this.refs.input.getDOMNode().setSelectionRange(this.state.chat.entrySelectionStart, this.state.chat.entrySelectionEnd)
-    this.autoSize()
+    this.autoSize(true)
   },
 
   getInitialState: function() {
@@ -284,20 +284,19 @@ module.exports = React.createClass({
           </div>
         </div>
         <textarea key="msg" ref="input" autoFocus defaultValue={this.state.chat.entryText} onChange={this.saveEntryState} onKeyDown={this.onKeyDown} onClick={this.saveEntryState} onFocus={actions.scrollToEntry} />
+        <textarea key="measure" ref="measure" className="measure" />
       </form>
     )
   },
 
-  autoSize: function() {
+  autoSize: function(force) {
     var input = this.refs.input.getDOMNode()
-    var parentEl = input.parentNode
-    // if we don't retain the height of the parent, reducing the height of the
-    // textarea (to measure scrollHeight) will cause the browser to scroll
-    // automatically.
-    parentEl.style.height = parentEl.getBoundingClientRect().height + 'px'
-    input.style.height = null
-    input.style.height = input.scrollHeight + 'px'
-    parentEl.style.height = null
+    var measure = this.refs.measure.getDOMNode()
+    if (force || input.value != this.state.chat.entryText) {
+      measure.style.width = input.offsetWidth + 'px'
+      measure.value = input.value
+      input.style.height = measure.scrollHeight + 'px'
+    }
   },
 
   componentDidUpdate: function() {
