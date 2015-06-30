@@ -67,6 +67,10 @@ CREATE TABLE agent (
 -- index agent by account_id
 CREATE INDEX agent_account_id ON agent(account_id);
 
+-- add foreign key reference from room_master_key onto master_key
+ALTER TABLE room_master_key
+    ADD CONSTRAINT master_key_fk FOREIGN KEY (key_id) REFERENCES master_key(id) ON DELETE CASCADE;
+
 -- +migrate Down
 -- Undo everything!
 
@@ -91,3 +95,5 @@ ALTER TABLE room_capability
     DROP IF EXISTS account_id,
     DROP CONSTRAINT IF EXISTS capability_fk;
 
+ALTER TABLE room_master_key
+    DROP CONSTRAINT IF EXISTS master_key_fk;
