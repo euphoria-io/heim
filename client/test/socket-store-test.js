@@ -357,12 +357,12 @@ describe('socket store', function() {
       console.log.restore()
     })
 
-    it('should output packets received', function() {
+    it('should output packets sent', function() {
       socket.store.send(testPacket)
       sinon.assert.calledWithExactly(console.log, testPacket)
     })
 
-    it('should output packets sent', function() {
+    it('should output packets received', function() {
       socket.store._message({data: JSON.stringify(testPacket)})
       sinon.assert.calledWithExactly(console.log, testPacket)
     })
