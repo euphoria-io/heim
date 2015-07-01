@@ -2,6 +2,7 @@ package backend
 
 import (
 	"crypto/rand"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -72,6 +73,10 @@ func init() {
 	prometheus.MustRegister(authAttempts)
 	prometheus.MustRegister(authFailures)
 	prometheus.MustRegister(authTerminations)
+
+	if err := binary.Read(rand.Reader, binary.BigEndian, &sessionIDCounter); err != nil {
+		panic(fmt.Sprintf("random session id counter error: %s", err))
+	}
 }
 
 type response struct {
