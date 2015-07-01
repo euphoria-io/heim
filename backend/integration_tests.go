@@ -347,6 +347,7 @@ func IntegrationTest(t *testing.T, factory func() proto.Backend) {
 	runTest("Account registration", testAccountRegistration)
 	runTest("Room creation", testRoomCreation)
 	runTest("Room grants", testRoomGrants)
+	runTest("Room not found", testRoomNotFound)
 }
 
 func testLurker(s *serverUnderTest) {
@@ -1455,4 +1456,13 @@ func testRoomGrants(s *serverUnderTest) {
 		So(len(managers), ShouldEqual, 1)
 		So(managers[0].ID(), ShouldEqual, max.ID())
 	})
+}
+
+func testRoomNotFound(s *serverUnderTest) {
+	s.app.AllowRoomCreation(false)
+	url := strings.Replace(s.server.URL, "http:", "ws:", 1) + "/room/roomnotfound/ws"
+	_, resp, err := websocket.DefaultDialer.Dial(url, nil)
+	So(err, ShouldNotBeNil)
+	So(resp, ShouldNotBeNil)
+	So(resp.StatusCode, ShouldEqual, http.StatusNotFound)
 }

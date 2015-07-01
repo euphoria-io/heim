@@ -114,7 +114,7 @@ func (s *Server) handleRoomStatic(w http.ResponseWriter, r *http.Request) {
 		roomName := mux.Vars(r)["room"]
 		_, err := s.b.GetRoom(scope.New(), roomName)
 		if err != nil {
-			if err.Error() == "no such room" {
+			if err == proto.ErrRoomNotFound {
 				http.Error(w, "404 page not found", http.StatusNotFound)
 				return
 			}
@@ -190,7 +190,7 @@ func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
 	roomName := mux.Vars(r)["room"]
 	room, err := s.b.GetRoom(ctx, roomName)
 	if err != nil {
-		if err.Error() == "no such room" {
+		if err == proto.ErrRoomNotFound {
 			http.Error(w, "404 page not found", http.StatusNotFound)
 			return
 		}
