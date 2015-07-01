@@ -114,6 +114,7 @@ type session struct {
 	authFailCount int
 
 	m                   sync.Mutex
+	joined              bool
 	banned              bool
 	maybeAbandoned      bool
 	outstandingPings    int
@@ -604,6 +605,7 @@ func (s *session) join() error {
 		return err
 	}
 
+	s.joined = true
 	return nil
 }
 
@@ -948,6 +950,10 @@ func (s *session) handleRegisterAccountCommand(cmd *proto.RegisterAccountCommand
 }
 
 func (s *session) handleAuthCommand(msg *proto.AuthCommand) *response {
+	if s.joined {
+		return &response{packet: &proto.AuthReply{Success: true}}
+	}
+
 	if s.authFailCount > 0 {
 		buf := []byte{0}
 		if _, err := rand.Read(buf); err != nil {
