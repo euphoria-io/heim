@@ -73,7 +73,8 @@ is in reply to.
 Here is an example [send](#send) command sent from a client to the server:
 
 ```
-{"id": "1",
+{
+ "id": "1",
  "type": "send",
  "data": {
   "content": "hello world!"
@@ -84,7 +85,8 @@ Here is an example [send](#send) command sent from a client to the server:
 In response, the server will send back a [send-reply](#send):
 
 ```
-{"id": "1",
+{
+ "id": "1",
  "type": "send-reply",
  "data": {
   "id": "00gd6yy9hvksg",
@@ -105,7 +107,8 @@ The server will also send a [send-event](#send-event) to all the other sessions 
 to the same room:
 
 ```
-{"type": "send-event",
+{
+ "type": "send-event",
  "data": {
   "id": "00gd6yy9hvksg",
   "time": 1418585715,
@@ -127,7 +130,8 @@ When a client connects to the websocket for a room, the server will begin the se
 with a [ping-event](#ping-event):
 
 ```
-{"type": "ping-event",
+{
+ "type": "ping-event",
  "data": {
   "time": 1428979816,
   "next": 1428979846
@@ -138,7 +142,8 @@ with a [ping-event](#ping-event):
 The client should immediately reply with the same timestamp:
 
 ```
-{"type": "ping-reply",
+{
+ "type": "ping-reply",
  "data": {
   "time": 1428979816
  }
