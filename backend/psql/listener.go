@@ -46,8 +46,8 @@ func (lm ListenerMap) Broadcast(ctx scope.Context, event *proto.Packet, exclude 
 	fastKeepaliveAgentID := ""
 	if event.Type == proto.JoinEventType {
 		if presence, ok := payload.(*proto.PresenceEvent); ok {
-			if idx := strings.IndexRune(presence.ID, '-'); idx >= 0 {
-				fastKeepaliveAgentID = presence.ID[:idx]
+			if idx := strings.IndexRune(string(presence.ID), '-'); idx >= 1 {
+				fastKeepaliveAgentID = string(presence.ID[:idx])
 			}
 		}
 		for _, sessionID := range exclude {

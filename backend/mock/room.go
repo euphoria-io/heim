@@ -21,8 +21,8 @@ type memRoom struct {
 	log        *memLog
 	agentBans  map[string]time.Time
 	ipBans     map[string]time.Time
-	identities map[string]proto.Identity
-	live       map[string][]proto.Session
+	identities map[proto.UserID]proto.Identity
+	live       map[proto.UserID][]proto.Session
 
 	sec        *proto.RoomSecurity
 	messageKey *roomMessageKey
@@ -124,10 +124,10 @@ func (r *memRoom) Join(ctx scope.Context, session proto.Session) error {
 	defer r.m.Unlock()
 
 	if r.identities == nil {
-		r.identities = map[string]proto.Identity{}
+		r.identities = map[proto.UserID]proto.Identity{}
 	}
 	if r.live == nil {
-		r.live = map[string][]proto.Session{}
+		r.live = map[proto.UserID][]proto.Session{}
 	}
 
 	ident := session.Identity()

@@ -231,7 +231,7 @@ func (tc *testConn) expect(id, cmdType, data string, args ...interface{}) {
 	if packetType == proto.SnapshotEventType {
 		snapshot := payload.(*proto.SnapshotEvent)
 		tc.sessionID = snapshot.SessionID
-		tc.userID = snapshot.Identity
+		tc.userID = string(snapshot.Identity)
 		snapshot.SessionID = "???"
 		snapshot.Identity = "???"
 	}
@@ -411,8 +411,11 @@ func testBroadcast(s *serverUnderTest) {
 			conn.expectSnapshot(s.backend.Version(), listingParts, nil)
 			me := conn.id()
 			ids[i] = proto.SessionView{
-				SessionID:    conn.sessionID,
-				IdentityView: &proto.IdentityView{ID: me, Name: fmt.Sprintf("user%d", i)},
+				SessionID: conn.sessionID,
+				IdentityView: &proto.IdentityView{
+					ID:   proto.UserID(me),
+					Name: fmt.Sprintf("user%d", i),
+				},
 			}
 			listingParts = append(listingParts,
 				fmt.Sprintf(
@@ -495,7 +498,7 @@ func testThreading(s *serverUnderTest) {
 
 		id := &proto.SessionView{
 			SessionID:    conn.sessionID,
-			IdentityView: &proto.IdentityView{ID: conn.id(), Name: conn.id()},
+			IdentityView: &proto.IdentityView{ID: proto.UserID(conn.id()), Name: conn.id()},
 		}
 		sfs := snowflakes(2)
 		sf1 := sfs[0]

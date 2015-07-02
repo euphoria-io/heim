@@ -17,14 +17,14 @@ func newMemIdentity(id, serverID, serverEra string) *memIdentity {
 	}
 }
 
-func (s *memIdentity) ID() string        { return s.id }
+func (s *memIdentity) ID() proto.UserID  { return proto.UserID(s.id) }
 func (s *memIdentity) Name() string      { return s.name }
 func (s *memIdentity) ServerID() string  { return s.serverID }
 func (s *memIdentity) ServerEra() string { return s.serverEra }
 
 func (s *memIdentity) View() *proto.IdentityView {
 	return &proto.IdentityView{
-		ID:        s.id,
+		ID:        proto.UserID(s.id),
 		Name:      s.name,
 		ServerID:  s.serverID,
 		ServerEra: s.serverEra,

@@ -190,7 +190,7 @@ func (rb *RoomBinding) EditMessage(
 	// TODO: tests pass in a nil session, until we add support for the edit command
 	if session != nil {
 		entry.EditorID = sql.NullString{
-			String: session.Identity().ID(),
+			String: string(session.Identity().ID()),
 			Valid:  true,
 		}
 	}

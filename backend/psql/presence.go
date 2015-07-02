@@ -45,21 +45,21 @@ type roomConn struct {
 
 type roomPresence map[string]roomConn
 
-func (rp roomPresence) load(sessionID, userID, nick string) {
-	rc, ok := rp[userID]
+func (rp roomPresence) load(sessionID string, userID proto.UserID, nick string) {
+	rc, ok := rp[string(userID)]
 	if !ok {
 		rc = roomConn{
 			sessions: map[string]proto.Session{},
 			nicks:    map[string]string{},
 		}
-		rp[userID] = rc
+		rp[string(userID)] = rc
 	}
 	rc.nicks[sessionID] = nick
 }
 
 func (rp roomPresence) join(session proto.Session) {
 	rp.load(session.ID(), session.Identity().ID(), session.Identity().Name())
-	rp[session.Identity().ID()].sessions[session.ID()] = session
+	rp[string(session.Identity().ID())].sessions[session.ID()] = session
 }
 
 func (rp roomPresence) part(session proto.Session) { delete(rp, session.ID()) }
@@ -93,13 +93,13 @@ func (rp roomPresence) broadcast(ctx scope.Context, event *proto.Packet, exclude
 }
 
 func (rp roomPresence) rename(nickEvent *proto.NickEvent) {
-	rc, ok := rp[nickEvent.ID]
+	rc, ok := rp[string(nickEvent.ID)]
 	if !ok {
 		rc = roomConn{
 			sessions: map[string]proto.Session{},
 			nicks:    map[string]string{},
 		}
-		rp[nickEvent.ID] = rc
+		rp[string(nickEvent.ID)] = rc
 	}
 
 	for _, session := range rc.sessions {

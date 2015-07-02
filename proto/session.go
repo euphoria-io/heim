@@ -30,7 +30,8 @@ type Session interface {
 	View() *SessionView
 }
 
+// SessionView describes a session and its identity.
 type SessionView struct {
 	*IdentityView
-	SessionID string `json:"session_id"`
+	SessionID string `json:"session_id"` // id of the session, unique across all sessions globally
 }

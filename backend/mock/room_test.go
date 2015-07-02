@@ -33,9 +33,9 @@ func TestRoomPresence(t *testing.T) {
 	Convey("First join", t, func() {
 		So(room.Join(ctx, userA), ShouldBeNil)
 		So(room.identities, ShouldResemble,
-			map[string]proto.Identity{"A": userA.Identity()})
+			map[proto.UserID]proto.Identity{"A": userA.Identity()})
 		So(room.live, ShouldResemble,
-			map[string][]proto.Session{"A": []proto.Session{userA}})
+			map[proto.UserID][]proto.Session{"A": []proto.Session{userA}})
 	})
 
 	Convey("Second join", t, func() {

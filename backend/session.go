@@ -483,7 +483,7 @@ func (s *session) handleCommand(cmd *proto.Packet) *response {
 		return &response{packet: &proto.PingReply{UnixTime: msg.UnixTime}}
 	case *proto.PingReply:
 		s.finishFastKeepalive()
-		if msg.UnixTime == s.expectedPingReply {
+		if time.Time(msg.UnixTime).Unix() == s.expectedPingReply {
 			s.outstandingPings = 0
 		} else if s.outstandingPings > 1 {
 			s.outstandingPings--
@@ -1080,8 +1080,8 @@ func (s *session) sendPing() error {
 	logger := Logger(s.ctx)
 	now := time.Now()
 	cmd, err := proto.MakeEvent(&proto.PingEvent{
-		UnixTime:     now.Unix(),
-		NextUnixTime: now.Add(3 * KeepAlive / 2).Unix(),
+		UnixTime:     proto.Time(now),
+		NextUnixTime: proto.Time(now.Add(3 * KeepAlive / 2)),
 	})
 	if err != nil {
 		logger.Printf("error: ping event: %s", err)

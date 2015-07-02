@@ -20,20 +20,22 @@ const (
 	bidiIsolatePop  = '\u2069'
 )
 
+type UserID string
+
 // An Identity maps to a global persona. It may exist only in the context
 // of a single Room. An Identity may be anonymous.
 type Identity interface {
-	ID() string
+	ID() UserID
 	Name() string
 	ServerID() string
 	View() *IdentityView
 }
 
 type IdentityView struct {
-	ID        string `json:"id"`
-	Name      string `json:"name"`
-	ServerID  string `json:"server_id"`
-	ServerEra string `json:"server_era"`
+	ID        UserID `json:"id"`         // the id of an agent or account
+	Name      string `json:"name"`       // the name-in-use at the time this view was captured
+	ServerID  string `json:"server_id"`  // the id of the server that captured this view
+	ServerEra string `json:"server_era"` // the era of the server that captured this view
 }
 
 // NormalizeNick validates and normalizes a proposed name from a user.

@@ -81,7 +81,7 @@ func (c *console) resolveAccount(ctx scope.Context, ref string) (proto.Account, 
 
 type consoleIdentity console
 
-func (c *consoleIdentity) ID() string       { return "console" }
+func (c *consoleIdentity) ID() proto.UserID { return proto.UserID("console") }
 func (c *consoleIdentity) Name() string     { return "console" }
 func (c *consoleIdentity) ServerID() string { return "" }
 

@@ -40,7 +40,7 @@ func NewMessage(
 	}
 	if sessionView != nil {
 		msg.SessionID = sessionView.SessionID
-		msg.SenderID = sessionView.ID
+		msg.SenderID = string(sessionView.ID)
 		msg.SenderName = sessionView.Name
 		msg.ServerID = sessionView.ServerID
 		msg.ServerEra = sessionView.ServerEra
@@ -59,7 +59,7 @@ func (m *Message) ToBackend() proto.Message {
 		UnixTime: proto.Time(m.Posted),
 		Sender: &proto.SessionView{
 			IdentityView: &proto.IdentityView{
-				ID:        m.SenderID,
+				ID:        proto.UserID(m.SenderID),
 				Name:      m.SenderName,
 				ServerID:  m.ServerID,
 				ServerEra: m.ServerEra,
