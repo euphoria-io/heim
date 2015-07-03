@@ -16,11 +16,12 @@ Copies of this license are available at the root of the repository,
 (`LICENSE.agpl`), as well as in a file named `LICENSE` in each of the
 aforementioned directories.
 
-## art and doc
+## art, doc, and client/res
 
-Files under the `art` and `doc` directories are offered under the terms of the
-[CC BY 4.0](http://creativecommons.org/licenses/by/4.0/) license.
-You'll find a copy in the `LICENSE` file in each of these directories.
+Files under the `art`, `doc`, and `client/res` directories are offered under
+the terms of the [CC BY 4.0](http://creativecommons.org/licenses/by/4.0/)
+license.  You'll find a copy in the `LICENSE` file in each of these
+directories.
 
 ## client and all else
 
