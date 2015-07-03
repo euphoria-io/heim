@@ -7,7 +7,7 @@ Files other than source code are offered under the CC-BY 4.0 license.
 Please pay careful attention to the license that applies if you reuse or modify
 any of these components.
 
-## aws, backend and heimctl
+## aws, backend, and heimctl
 
 Source code under the `aws`, `backend`, and `heimctl` directories is licensed
 under the terms of the
