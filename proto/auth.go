@@ -29,14 +29,6 @@ type AuthorizationResult struct {
 	FailureReason string
 }
 
-type Authentication struct {
-	Capability     security.Capability
-	KeyID          string
-	Key            *security.ManagedKey
-	AccountKeyPair *security.ManagedKeyPair
-	FailureReason  string
-}
-
 func authorizationFailure(reason string) (*AuthorizationResult, error) {
 	return &AuthorizationResult{FailureReason: reason}, nil
 }
