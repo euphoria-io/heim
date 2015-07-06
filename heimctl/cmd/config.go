@@ -6,8 +6,8 @@ import (
 	"os"
 
 	"euphoria.io/heim/backend"
-	"euphoria.io/heim/backend/cluster"
 	"euphoria.io/heim/backend/psql"
+	"euphoria.io/heim/cluster"
 	"euphoria.io/heim/proto/snowflake"
 	"euphoria.io/scope"
 )

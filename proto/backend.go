@@ -3,7 +3,7 @@ package proto
 import (
 	"time"
 
-	"euphoria.io/heim/backend/cluster"
+	"euphoria.io/heim/cluster"
 	"euphoria.io/heim/proto/security"
 	"euphoria.io/scope"
 )

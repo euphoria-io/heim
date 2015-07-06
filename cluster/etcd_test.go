@@ -3,8 +3,8 @@ package cluster_test
 import (
 	"testing"
 
-	"euphoria.io/heim/backend/cluster"
-	"euphoria.io/heim/backend/cluster/clustertest"
+	"euphoria.io/heim/cluster"
+	"euphoria.io/heim/cluster/clustertest"
 	"euphoria.io/heim/proto/security"
 
 	. "github.com/smartystreets/goconvey/convey"

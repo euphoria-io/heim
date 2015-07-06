@@ -7,9 +7,9 @@ Files other than source code are offered under the CC-BY 4.0 license.
 Please pay careful attention to the license that applies if you reuse or modify
 any of these components.
 
-## aws, backend, and heimctl
+## aws, backend, cluster, and heimctl
 
-Source code under the `aws`, `backend`, and `heimctl` directories is licensed
+Source code under the `aws`, `backend`, `cluster`, and `heimctl` directories is licensed
 under the terms of the
 [GNU Affero General Public License (Version 3)](https://www.gnu.org/licenses/agpl-3.0.html).
 Copies of this license are available at the root of the repository,

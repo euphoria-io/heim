@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"euphoria.io/heim/backend/cluster"
+	"euphoria.io/heim/cluster"
 	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/security"
 	"euphoria.io/heim/proto/snowflake"

@@ -7,8 +7,8 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 
-	"euphoria.io/heim/backend/cluster"
 	"euphoria.io/heim/backend/psql"
+	"euphoria.io/heim/cluster"
 	"euphoria.io/scope"
 )
 

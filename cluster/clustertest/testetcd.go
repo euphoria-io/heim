@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"euphoria.io/heim/backend/cluster"
+	"euphoria.io/heim/cluster"
 	"euphoria.io/scope"
 )
 

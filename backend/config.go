@@ -11,7 +11,7 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"euphoria.io/heim/aws/kms"
-	"euphoria.io/heim/backend/cluster"
+	"euphoria.io/heim/cluster"
 	"euphoria.io/heim/proto/security"
 	"euphoria.io/scope"
 )

@@ -8,8 +8,8 @@ import (
 	"testing"
 
 	"euphoria.io/heim/backend"
-	"euphoria.io/heim/backend/cluster"
-	"euphoria.io/heim/backend/cluster/clustertest"
+	"euphoria.io/heim/cluster"
+	"euphoria.io/heim/cluster/clustertest"
 	"euphoria.io/heim/proto"
 	"euphoria.io/scope"
 

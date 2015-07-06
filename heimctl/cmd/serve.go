@@ -9,8 +9,8 @@ import (
 	"sync"
 
 	"euphoria.io/heim/backend"
-	"euphoria.io/heim/backend/cluster"
 	"euphoria.io/heim/backend/console"
+	"euphoria.io/heim/cluster"
 	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/security"
 	"euphoria.io/scope"
