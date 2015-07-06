@@ -402,9 +402,9 @@ type LoginCommand struct {
 // `disconnect-event` shortly after. The next connection the client makes
 // will be a logged in session.
 type LoginReply struct {
-	Success   bool                `json:"success"`    // true if the session is now logged in
-	Reason    string              `json:"reason"`     // if `success` was false, the reason why
-	AccountID snowflake.Snowflake `json:"account_id"` // if `success` was true, the id of the account the session logged into.
+	Success   bool                `json:"success"`              // true if the session is now logged in
+	Reason    string              `json:"reason,omitempty"`     // if `success` was false, the reason why
+	AccountID snowflake.Snowflake `json:"account_id,omitempty"` // if `success` was true, the id of the account the session logged into.
 }
 
 // The `logout` command logs a session out of an account. It will return an error

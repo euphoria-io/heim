@@ -4,14 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"sort"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -28,47 +26,6 @@ import (
 )
 
 var agentIDCounter int
-
-// TODO: move time mocking to snowflake_test?
-type testClock struct {
-	secs            int64
-	savedClock      func() time.Time
-	savedSnowflaker snowflake.Snowflaker
-	savedEpoch      time.Time
-	savedSeqCounter uint64
-}
-
-func NewTestClock() io.Closer {
-	tc := &testClock{
-		savedClock:      snowflake.Clock,
-		savedSnowflaker: snowflake.DefaultSnowflaker,
-		savedEpoch:      snowflake.Epoch,
-		savedSeqCounter: snowflake.SeqCounter,
-	}
-	snowflake.Clock = tc.clock
-	snowflake.DefaultSnowflaker = tc
-	snowflake.Epoch = time.Unix(0, 0)
-	snowflake.SeqCounter = 0
-	return tc
-}
-
-func (tc *testClock) Close() error {
-	snowflake.Clock = tc.savedClock
-	snowflake.DefaultSnowflaker = tc.savedSnowflaker
-	snowflake.Epoch = tc.savedEpoch
-	snowflake.SeqCounter = tc.savedSeqCounter
-	return nil
-}
-
-func (tc *testClock) Next() (uint64, error) {
-	sf := snowflake.NewFromTime(tc.clock())
-	return uint64(sf), nil
-}
-
-func (tc *testClock) clock() time.Time {
-	secs := atomic.AddInt64(&tc.secs, 1)
-	return time.Unix(secs, 0)
-}
 
 type factoryTestSuite func(factory func() proto.Backend)
 type testSuite func(*serverUnderTest)
@@ -213,46 +170,110 @@ func (tc *testConn) readPacket() (proto.PacketType, interface{}) {
 	return packet.Type, payload
 }
 
-func (tc *testConn) expect(id, cmdType, data string, args ...interface{}) {
+func (tc *testConn) expect(id, cmdType, data string, args ...interface{}) map[string]interface{} {
 	if len(args) > 0 {
 		data = fmt.Sprintf(data, args...)
 	}
 
-	fmt.Printf("reading packet, expecting %s\n", cmdType)
-	packetType, payload := tc.readPacket()
-	So(packetType, ShouldEqual, cmdType)
+	// Construct expected map
+	var expected map[string]interface{}
+	So(json.Unmarshal([]byte(data), &expected), ShouldBeNil)
 
-	var expected proto.Packet
-	expectedString := fmt.Sprintf(`{"id":"%s","type":"%s","data":%s}`, id, cmdType, data)
-	So(json.Unmarshal([]byte(expectedString), &expected), ShouldBeNil)
-	expectedPayload, err := expected.Payload()
+	// Read packet
+	msgType, packetData, err := tc.Conn.ReadMessage()
 	So(err, ShouldBeNil)
+	So(msgType, ShouldEqual, websocket.TextMessage)
 
-	if packetType == proto.SnapshotEventType {
-		snapshot := payload.(*proto.SnapshotEvent)
-		tc.sessionID = snapshot.SessionID
-		tc.userID = string(snapshot.Identity)
-		snapshot.SessionID = "???"
-		snapshot.Identity = "???"
-	}
+	fmt.Printf("%s received %s\n", tc.LocalAddr(), string(packetData))
+	var packet proto.Packet
+	So(json.Unmarshal(packetData, &packet), ShouldBeNil)
+	So(packet.Error, ShouldEqual, "")
 
-	result := ""
+	// Construct actual map
+	var actual map[string]interface{}
+	So(json.Unmarshal([]byte(packet.Data), &actual), ShouldBeNil)
 
-	if msg := ShouldResemble(payload, expectedPayload); msg != "" {
-		e, _ := json.Marshal(expectedPayload)
-		a, _ := json.Marshal(payload)
+	// Compare.
+	var result string
+	captures := map[string]interface{}{}
+	if msg := matchPayload(captures, "", expected, actual); msg != "" {
 		view := reporting.FailureView{
 			Message: fmt.Sprintf(
-				"Expected: (%T) %s\nActual:   (%T) %s\nShould resemble!",
-				expectedPayload, string(e), payload, string(a)),
-			Expected: string(e),
-			Actual:   string(a),
+				"Expected: %s\nActual:   %s\nReason:   (%s) %s",
+				data, string(packet.Data), packet.Type, msg),
+			Expected: data,
+			Actual:   string(packet.Data),
 		}
 		r, _ := json.Marshal(view)
 		result = string(r)
 	}
-
 	So(nil, func(interface{}, ...interface{}) string { return result })
+
+	// Side-effect on snapshot-event: capture some session state.
+	if packet.Type == proto.SnapshotEventType {
+		payload, err := packet.Payload()
+		So(err, ShouldBeNil)
+		snapshot := payload.(*proto.SnapshotEvent)
+		tc.sessionID = snapshot.SessionID
+		tc.userID = string(snapshot.Identity)
+	}
+
+	return captures
+}
+
+func matchField(captures map[string]interface{}, name string, expected, actual interface{}) string {
+	if evStr, ok := expected.(string); ok && evStr == "*" {
+		captures[name] = actual
+		return ""
+	}
+	if subExp, ok := expected.(map[string]interface{}); ok {
+		subAct, ok := actual.(map[string]interface{})
+		if !ok {
+			return fmt.Sprintf("%s: expected object, got %T", name, actual)
+		}
+		return matchPayload(captures, name+".", subExp, subAct)
+	}
+	if listExp, ok := expected.([]interface{}); ok {
+		listAct, ok := actual.([]interface{})
+		if !ok {
+			return fmt.Sprintf("%s: expected list, got %T", name, actual)
+		}
+		for i, _ := range listExp {
+			msg := matchField(captures, fmt.Sprintf("%s[%d]", name, i), listExp[i], listAct[i])
+			if msg != "" {
+				return msg
+			}
+		}
+		return ""
+	}
+	if msg := ShouldEqual(expected, actual); msg != "" {
+		return fmt.Sprintf("%s: %s", name, msg)
+	}
+	return ""
+}
+
+func matchPayload(
+	captures map[string]interface{}, prefix string, expected, actual map[string]interface{}) string {
+
+	// Verify that each entry in expected has the correct value in actual.
+	for name, expectedValue := range expected {
+		actualValue, ok := actual[name]
+		if !ok {
+			return fmt.Sprintf("expected field %s=%#v", name, expectedValue)
+		}
+		if msg := matchField(captures, prefix+name, expectedValue, actualValue); msg != "" {
+			return msg
+		}
+	}
+
+	// Verify that each entry in actual was covered by expected.
+	for name, actualValue := range actual {
+		if _, ok := expected[name]; !ok && actualValue != nil {
+			return fmt.Sprintf("unexpected field %s%s=%#v", prefix, name, actualValue)
+		}
+	}
+
+	return ""
 }
 
 func (tc *testConn) expectError(id, cmdType, errFormat string, errArgs ...interface{}) {
@@ -277,7 +298,7 @@ func (tc *testConn) expectPing() {
 
 func (tc *testConn) expectSnapshot(version string, listingParts []string, logParts []string) {
 	tc.expect("", "snapshot-event",
-		`{"identity":"???","session_id":"???","version":"%s","listing":[%s],"log":[%s]}`,
+		`{"identity":"*","session_id":"*","version":"%s","listing":[%s],"log":[%s]}`,
 		version, strings.Join(listingParts, ","), strings.Join(logParts, ","))
 }
 
@@ -285,19 +306,6 @@ func (tc *testConn) Close() {
 	tc.Conn.WriteMessage(
 		websocket.CloseMessage,
 		websocket.FormatCloseMessage(websocket.CloseNormalClosure, "normal closure"))
-}
-
-func snowflakes(n int) []snowflake.Snowflake {
-	fc := NewTestClock()
-	defer fc.Close()
-
-	snowflakes := make([]snowflake.Snowflake, n)
-	for i := range snowflakes {
-		var err error
-		snowflakes[i], err = snowflake.New()
-		So(err, ShouldBeNil)
-	}
-	return snowflakes
 }
 
 func IntegrationTest(t *testing.T, factory func() proto.Backend) {
@@ -365,7 +373,8 @@ func testLurker(s *serverUnderTest) {
 		conn2.expectPing()
 		conn2.expectSnapshot(s.backend.Version(),
 			[]string{
-				fmt.Sprintf(`{"session_id":"%s","id":"%s","server_id":"test1","server_era":"era1"}`,
+				fmt.Sprintf(
+					`{"session_id":"%s","id":"%s","name":"","server_id":"test1","server_era":"era1"}`,
 					conn1.sessionID, id1)},
 			nil)
 		id2 := conn2.id()
@@ -375,19 +384,16 @@ func testLurker(s *serverUnderTest) {
 			`{"session_id":"%s","id":"%s","from":"","to":"speaker"}`, conn2.sessionID, conn2.id())
 
 		conn1.expect("", "join-event",
-			`{"session_id":"%s","id":"%s","server_id":"test1","server_era":"era1"}`, conn2.sessionID, id2)
+			`{"session_id":"%s","id":"%s","name":"","server_id":"test1","server_era":"era1"}`,
+			conn2.sessionID, id2)
 		conn1.expect("", "nick-event",
-			`{"session_id":"%s","id":"%s","to":"speaker"}`, conn2.sessionID, conn2.id())
+			`{"session_id":"%s","id":"%s","from":"","to":"speaker"}`, conn2.sessionID, conn2.id())
 	})
 }
 
 func testBroadcast(s *serverUnderTest) {
 	Convey("Broadcast", func() {
-		tc := NewTestClock()
-		defer tc.Close()
-
 		conns := make([]*testConn, 3)
-
 		ids := make(proto.Listing, len(conns))
 
 		// Connect a lurker first. We'll receive events through this connection
@@ -431,7 +437,7 @@ func testBroadcast(s *serverUnderTest) {
 			conn.expect("2", "who-reply", `{"listing":[%s]}`, strings.Join(listingParts, ","))
 
 			lurker.expect("", "join-event",
-				`{"session_id":"%s","id":"%s","server_id":"test1","server_era":"era1"}`,
+				`{"session_id":"%s","id":"%s","name":"","server_id":"test1","server_era":"era1"}`,
 				ids[i].SessionID, ids[i].ID)
 			lurker.expect("", "nick-event",
 				`{"session_id":"%s","id":"%s","from":"","to":"%s"}`,
@@ -440,7 +446,7 @@ func testBroadcast(s *serverUnderTest) {
 			for j, c := range conns[:i] {
 				fmt.Printf("\n>>> id %s expecting events for new conn %s\n\n", ids[j].ID, ids[i].ID)
 				c.expect("", "join-event",
-					`{"session_id":"%s","id":"%s","server_id":"test1","server_era":"era1"}`,
+					`{"session_id":"%s","id":"%s","name":"","server_id":"test1","server_era":"era1"}`,
 					ids[i].SessionID, ids[i].ID)
 				c.expect("", "nick-event",
 					`{"session_id":"%s","id":"%s","from":"","to":"%s"}`,
@@ -454,42 +460,36 @@ func testBroadcast(s *serverUnderTest) {
 			}
 		}()
 
-		sfs := snowflakes(2)
-		sf1 := sfs[0]
-		sf2 := sfs[1]
 		server := `"server_id":"test1","server_era":"era1"`
 
 		conns[1].send("2", "send", `{"content":"hi"}`)
 		conns[0].expect("", "send-event",
-			`{"id":"%s","time":1,"sender":{"session_id":"%s","id":"%s","name":"%s",%s},"content":"hi"}`,
-			sf1, ids[1].SessionID, ids[1].ID, ids[1].Name, server)
+			`{"id":"*","time":"*","sender":{"session_id":"%s","id":"%s","name":"%s",%s},"content":"hi"}`,
+			ids[1].SessionID, ids[1].ID, ids[1].Name, server)
 
 		conns[2].send("2", "send", `{"content":"bye"}`)
 		conns[0].expect("", "send-event",
-			`{"id":"%s","time":2,"sender":{"session_id":"%s","id":"%s","name":"%s",%s},"content":"bye"}`,
-			sf2, ids[2].SessionID, ids[2].ID, ids[2].Name, server)
+			`{"id":"*","time":"*","sender":{"session_id":"%s","id":"%s","name":"%s",%s},"content":"bye"}`,
+			ids[2].SessionID, ids[2].ID, ids[2].Name, server)
 
 		conns[1].expect("2", "send-reply",
-			`{"id":"%s","time":1,"sender":{"session_id":"%s","id":"%s","name":"%s",%s},"content":"hi"}`,
-			sf1, ids[1].SessionID, ids[1].ID, ids[1].Name, server)
+			`{"id":"*","time":"*","sender":{"session_id":"%s","id":"%s","name":"%s",%s},"content":"hi"}`,
+			ids[1].SessionID, ids[1].ID, ids[1].Name, server)
 		conns[1].expect("", "send-event",
-			`{"id":"%s","time":2,"sender":{"session_id":"%s","id":"%s","name":"%s",%s},"content":"bye"}`,
-			sf2, ids[2].SessionID, ids[2].ID, ids[2].Name, server)
+			`{"id":"*","time":"*","sender":{"session_id":"%s","id":"%s","name":"%s",%s},"content":"bye"}`,
+			ids[2].SessionID, ids[2].ID, ids[2].Name, server)
 
 		conns[2].expect("", "send-event",
-			`{"id":"%s","time":1,"sender":{"session_id":"%s","id":"%s","name":"%s",%s},"content":"hi"}`,
-			sf1, ids[1].SessionID, ids[1].ID, ids[1].Name, server)
+			`{"id":"*","time":"*","sender":{"session_id":"%s","id":"%s","name":"%s",%s},"content":"hi"}`,
+			ids[1].SessionID, ids[1].ID, ids[1].Name, server)
 		conns[2].expect("2", "send-reply",
-			`{"id":"%s","time":2,"sender":{"session_id":"%s","id":"%s","name":"%s",%s},"content":"bye"}`,
-			sf2, ids[2].SessionID, ids[2].ID, ids[2].Name, server)
+			`{"id":"*","time":"*","sender":{"session_id":"%s","id":"%s","name":"%s",%s},"content":"bye"}`,
+			ids[2].SessionID, ids[2].ID, ids[2].Name, server)
 	})
 }
 
 func testThreading(s *serverUnderTest) {
 	Convey("Send with parent", func() {
-		tc := NewTestClock()
-		defer tc.Close()
-
 		conn := s.Connect("threading")
 		defer conn.Close()
 
@@ -500,9 +500,6 @@ func testThreading(s *serverUnderTest) {
 			SessionID:    conn.sessionID,
 			IdentityView: &proto.IdentityView{ID: proto.UserID(conn.id()), Name: conn.id()},
 		}
-		sfs := snowflakes(2)
-		sf1 := sfs[0]
-		sf2 := sfs[1]
 		server := `"name":"test","server_id":"test1","server_era":"era1"`
 
 		conn.send("1", "nick", `{"name":"test"}`)
@@ -510,21 +507,21 @@ func testThreading(s *serverUnderTest) {
 			`{"session_id":"%s","id":"%s","from":"","to":"test"}`, conn.sessionID, conn.id())
 
 		conn.send("1", "send", `{"content":"root"}`)
-		conn.expect("1", "send-reply",
-			`{"id":"%s","time":1,"sender":{"session_id":"%s","id":"%s",%s},"content":"root"}`,
-			sf1, id.SessionID, id.ID, server)
+		capture := conn.expect("1", "send-reply",
+			`{"id":"*","time":"*","sender":{"session_id":"%s","id":"%s",%s},"content":"root"}`,
+			id.SessionID, id.ID, server)
 
-		conn.send("2", "send", `{"parent":"%s","content":"ch1"}`, sf1)
+		conn.send("2", "send", `{"parent":"%s","content":"ch1"}`, capture["id"])
 		conn.expect("2", "send-reply",
-			`{"id":"%s","parent":"%s","time":2,"sender":{"session_id":"%s","id":"%s",%s},"content":"ch1"}`,
-			sf2, sf1, id.SessionID, id.ID, server)
+			`{"id":"*","parent":"*","time":"*","sender":{"session_id":"%s","id":"%s",%s},"content":"ch1"}`,
+			id.SessionID, id.ID, server)
 
 		conn.send("3", "log", `{"n":10}`)
 		conn.expect("3", "log-reply",
 			`{"log":[`+
-				`{"id":"%s","time":1,"sender":{"session_id":"%s","id":"%s",%s},"content":"root"},`+
-				`{"id":"%s","parent":"%s","time":2,"sender":{"session_id":"%s","id":"%s",%s},"content":"ch1"}]}`,
-			sf1, id.SessionID, id.ID, server, sf2, sf1, id.SessionID, id.ID, server)
+				`{"id":"%s","time":"*","sender":{"session_id":"%s","id":"%s",%s},"content":"root"},`+
+				`{"id":"*","parent":"%s","time":"*","sender":{"session_id":"%s","id":"%s",%s},"content":"ch1"}]}`,
+			capture["id"], id.SessionID, id.ID, server, capture["id"], id.SessionID, id.ID, server)
 	})
 }
 
@@ -556,16 +553,16 @@ func testPresence(factory func() proto.Backend) {
 		other.expectSnapshot(s.backend.Version(),
 			[]string{
 				fmt.Sprintf(
-					`{"session_id":"%s","id":"%s","server_id":"test1","server_era":"era1"}`,
+					`{"session_id":"%s","id":"%s","name":"","server_id":"test1","server_era":"era1"}`,
 					self.sessionID, selfID),
 			}, nil)
 		otherID := other.id()
 
 		self.expect("", "join-event",
-			`{"session_id":"%s","id":"%s","server_id":"test1","server_era":"era1"}`,
+			`{"session_id":"%s","id":"%s","name":"","server_id":"test1","server_era":"era1"}`,
 			other.sessionID, otherID)
 		self.send("1", "who", "")
-		server := `"server_id":"test1","server_era":"era1"`
+		server := `"name":"","server_id":"test1","server_era":"era1"`
 		self.expect("1", "who-reply",
 			`{"listing":[{"session_id":"%s","id":"%s",%s},{"session_id":"%s","id":"%s",%s}]}`,
 			self.sessionID, selfID, server, other.sessionID, otherID, server)
@@ -590,16 +587,17 @@ func testPresence(factory func() proto.Backend) {
 		self.expectPing()
 		self.expectSnapshot(s.backend.Version(),
 			[]string{
-				fmt.Sprintf(`{"session_id":"%s","id":"%s","server_id":"test1","server_era":"era1"}`,
+				fmt.Sprintf(
+					`{"session_id":"%s","id":"%s","name":"","server_id":"test1","server_era":"era1"}`,
 					other.sessionID, otherID)},
 			nil)
 		selfID := self.id()
 
 		other.expect("", "join-event",
-			`{"session_id":"%s","id":"%s","server_id":"test1","server_era":"era1"}`,
+			`{"session_id":"%s","id":"%s","name":"","server_id":"test1","server_era":"era1"}`,
 			self.sessionID, selfID)
 		self.send("1", "who", "")
-		server := `"server_id":"test1","server_era":"era1"`
+		server := `"name":"","server_id":"test1","server_era":"era1"`
 		self.expect("1", "who-reply",
 			`{"listing":[{"session_id":"%s","id":"%s",%s},{"session_id":"%s","id":"%s",%s}]}`,
 			other.sessionID, otherID, server, self.sessionID, selfID, server)
@@ -716,9 +714,6 @@ func testAuthentication(s *serverUnderTest) {
 
 func testDeletion(s *serverUnderTest) {
 	Convey("Deletion", func() {
-		tc := NewTestClock()
-		defer tc.Close()
-
 		b := s.backend
 		ctx := scope.New()
 		kms := s.app.kms
@@ -754,9 +749,6 @@ func testDeletion(s *serverUnderTest) {
 		conn = s.Connect("deletion", conn.cookies...)
 		defer conn.Close()
 
-		sfs := snowflakes(3)
-		sf := sfs[1]
-
 		server := `"name":"speaker","server_id":"test1","server_era":"era1"`
 
 		conn.expectPing()
@@ -766,18 +758,18 @@ func testDeletion(s *serverUnderTest) {
 			`{"session_id":"%s","id":"%s","from":"","to":"speaker"}`, conn.sessionID, conn.id())
 
 		conn.send("1", "send", `{"content":"@#$!"}`)
-		conn.expect("1", "send-reply",
-			`{"id":"%s","time":2,"sender":{"session_id":"%s","id":"%s",%s},"content":"@#$!"}`,
-			sf, conn.sessionID, conn.userID, server)
+		capture := conn.expect("1", "send-reply",
+			`{"id":"*","time":"*","sender":{"session_id":"%s","id":"%s",%s},"content":"@#$!"}`,
+			conn.sessionID, conn.userID, server)
 
 		conn.send("3", "log", `{"n":10}`)
 		conn.expect("3", "log-reply",
-			`{"log":[{"id":"%s","time":2,"sender":{"session_id":"%s","id":"%s",%s},"content":"@#$!"}]}`,
-			sf, conn.sessionID, conn.userID, server)
+			`{"log":[{"id":"*","time":"*","sender":{"session_id":"%s","id":"%s",%s},"content":"@#$!"}]}`,
+			conn.sessionID, conn.userID, server)
 
 		// Delete message.
-		conn.send("4", "edit-message", `{"id":"%s","delete":true,"announce":true}`, sf)
-		conn.expect("4", "edit-message-reply", `{"edit_id":"%s","deleted":true}`, sfs[2])
+		conn.send("4", "edit-message", `{"id":"%s","delete":true,"announce":true}`, capture["id"])
+		conn.expect("4", "edit-message-reply", `{"edit_id":"*","deleted":true}`)
 
 		conn2 := s.Connect("deletion")
 		defer conn2.Close()
@@ -1047,9 +1039,6 @@ func testAccountLogin(s *serverUnderTest) {
 	So(err, ShouldBeNil)
 
 	Convey("Agent logs into account", func() {
-		tc := NewTestClock()
-		defer tc.Close()
-
 		// Add observer for timing control.
 		observer := s.Connect("login")
 		defer observer.Close()
@@ -1063,13 +1052,14 @@ func testAccountLogin(s *serverUnderTest) {
 		conn.expectSnapshot(
 			s.backend.Version(),
 			[]string{
-				fmt.Sprintf(`{"session_id":"%s","id":"%s","server_id":"test1","server_era":"era1"}`,
+				fmt.Sprintf(
+					`{"session_id":"%s","id":"%s","name":"","server_id":"test1","server_era":"era1"}`,
 					observer.sessionID, observer.userID)},
 			nil)
 		So(conn.userID, ShouldStartWith, "agent:")
 
 		observer.expect("", "join-event",
-			`{"session_id":"%s","id":"%s","server_id":"test1","server_era":"era1"}`,
+			`{"session_id":"%s","id":"%s","name":"","server_id":"test1","server_era":"era1"}`,
 			conn.sessionID, conn.userID)
 
 		// Log in.
@@ -1081,7 +1071,7 @@ func testAccountLogin(s *serverUnderTest) {
 
 		// Wait for part.
 		observer.expect("", "part-event",
-			`{"session_id":"%s","id":"%s","server_id":"test1","server_era":"era1"}`,
+			`{"session_id":"%s","id":"%s","name":"","server_id":"test1","server_era":"era1"}`,
 			conn.sessionID, conn.userID)
 
 		// Verify logged in on reconnect.
@@ -1090,14 +1080,15 @@ func testAccountLogin(s *serverUnderTest) {
 		conn.expectSnapshot(
 			s.backend.Version(),
 			[]string{
-				fmt.Sprintf(`{"session_id":"%s","id":"%s","server_id":"test1","server_era":"era1"}`,
+				fmt.Sprintf(
+					`{"session_id":"%s","id":"%s","name":"","server_id":"test1","server_era":"era1"}`,
 					observer.sessionID, observer.userID)},
 			nil)
 		So(conn.userID, ShouldEqual, fmt.Sprintf("account:%s", logan.ID()))
 
 		// Wait for join.
 		observer.expect("", "join-event",
-			`{"session_id":"%s","id":"%s","server_id":"test1","server_era":"era1"}`,
+			`{"session_id":"%s","id":"%s","name":"","server_id":"test1","server_era":"era1"}`,
 			conn.sessionID, conn.userID)
 
 		// Log out first party and wait for part.
@@ -1106,7 +1097,7 @@ func testAccountLogin(s *serverUnderTest) {
 		conn.expect("", "disconnect-event", `{"reason": "authentication changed"}`)
 		conn.Close()
 		observer.expect("", "part-event",
-			`{"session_id":"%s","id":"%s","server_id":"test1","server_era":"era1"}`,
+			`{"session_id":"%s","id":"%s","name":"","server_id":"test1","server_era":"era1"}`,
 			conn.sessionID, conn.userID)
 
 		// Observer should fail to log in with incorrect identity or password.
@@ -1119,14 +1110,6 @@ func testAccountLogin(s *serverUnderTest) {
 
 func testAccountRegistration(s *serverUnderTest) {
 	Convey("Agent upgrades to account", func() {
-		tc := NewTestClock()
-		defer tc.Close()
-
-		// Skip ahead in snowflakes to avoid account_id collision.
-		for i := 0; i < 1000; i++ {
-			snowflake.New()
-		}
-
 		// Add observer for timing control.
 		observer := s.Connect("registration")
 		defer observer.Close()
@@ -1142,26 +1125,27 @@ func testAccountRegistration(s *serverUnderTest) {
 		conn.expectSnapshot(
 			s.backend.Version(),
 			[]string{
-				fmt.Sprintf(`{"session_id":"%s","id":"%s","server_id":"test1","server_era":"era1"}`,
+				fmt.Sprintf(
+					`{"session_id":"%s","id":"%s","name":"","server_id":"test1","server_era":"era1"}`,
 					observer.sessionID, observer.userID)},
 			nil)
 		So(conn.userID, ShouldStartWith, "agent:")
 
 		observer.expect("", "join-event",
-			`{"session_id":"%s","id":"%s","server_id":"test1","server_era":"era1"}`,
+			`{"session_id":"%s","id":"%s","name":"","server_id":"test1","server_era":"era1"}`,
 			conn.sessionID, conn.userID)
 
 		// Upgrade to account.
-		sfs := snowflakes(1001)[1000:]
 		conn.send("1", "register-account",
 			`{"namespace":"email","id":"registration@euphoria.io","password":"hunter2"}`)
-		conn.expect("1", "register-account-reply", `{"success":true,"account_id":"%s"}`, sfs[0])
+		capture := conn.expect("1", "register-account-reply", `{"success":true,"account_id":"*"}`)
+		accountID := capture["account_id"]
 		conn.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
 		conn.Close()
 
 		// Wait for part.
 		observer.expect("", "part-event",
-			`{"session_id":"%s","id":"%s","server_id":"test1","server_era":"era1"}`,
+			`{"session_id":"%s","id":"%s","name":"","server_id":"test1","server_era":"era1"}`,
 			conn.sessionID, conn.userID)
 
 		// Verify logged in on reconnect.
@@ -1170,14 +1154,15 @@ func testAccountRegistration(s *serverUnderTest) {
 		conn.expectSnapshot(
 			s.backend.Version(),
 			[]string{
-				fmt.Sprintf(`{"session_id":"%s","id":"%s","server_id":"test1","server_era":"era1"}`,
+				fmt.Sprintf(
+					`{"session_id":"%s","id":"%s","name":"","server_id":"test1","server_era":"era1"}`,
 					observer.sessionID, observer.userID)},
 			nil)
-		So(conn.userID, ShouldEqual, fmt.Sprintf("account:%s", sfs[0]))
+		So(conn.userID, ShouldEqual, fmt.Sprintf("account:%s", accountID))
 
 		// Wait for join.
 		observer.expect("", "join-event",
-			`{"session_id":"%s","id":"%s","server_id":"test1","server_era":"era1"}`,
+			`{"session_id":"%s","id":"%s","name":"","server_id":"test1","server_era":"era1"}`,
 			conn.sessionID, conn.userID)
 
 		// Observer should fail to register the same personal identity.
@@ -1330,17 +1315,18 @@ func testRoomGrants(s *serverUnderTest) {
 		maxConn.expectSnapshot(
 			s.backend.Version(),
 			[]string{
-				fmt.Sprintf(`{"session_id":"%s","id":"%s","server_id":"test1","server_era":"era1"}`,
+				fmt.Sprintf(
+					`{"session_id":"%s","id":"%s","name":"","server_id":"test1","server_era":"era1"}`,
 					loganConn.sessionID, loganConn.userID)},
 			nil)
 
 		// Synchronize and revoke access.
 		maxConn.Close()
 		loganConn.expect("", "join-event",
-			`{"session_id":"%s","id":"%s","server_id":"test1","server_era":"era1"}`,
+			`{"session_id":"%s","id":"%s","name":"","server_id":"test1","server_era":"era1"}`,
 			maxConn.sessionID, maxConn.id())
 		loganConn.expect("", "part-event",
-			`{"session_id":"%s","id":"%s","server_id":"test1","server_era":"era1"}`,
+			`{"session_id":"%s","id":"%s","name":"","server_id":"test1","server_era":"era1"}`,
 			maxConn.sessionID, maxConn.id())
 		loganConn.send("2", "revoke-access", `{"account_id":"%s"}`, max.ID())
 		loganConn.expect("2", "revoke-access-reply", `{}`)
