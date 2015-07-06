@@ -717,19 +717,10 @@ func testDeletion(s *serverUnderTest) {
 		b := s.backend
 		ctx := scope.New()
 		kms := s.app.kms
-		at := b.AgentTracker()
-		agentKey := &security.ManagedKey{
-			KeyType:   proto.AgentKeyType,
-			Plaintext: make([]byte, proto.AgentKeyType.KeySize()),
-		}
 
 		// Create manager account and room.
 		nonce := fmt.Sprintf("deletion-%s", time.Now())
-		loganAgent, err := proto.NewAgent([]byte("logan"+nonce), agentKey)
-		So(err, ShouldBeNil)
-		So(at.Register(ctx, loganAgent), ShouldBeNil)
-		logan, _, err := b.AccountManager().Register(
-			ctx, kms, "email", "logan"+nonce, "loganpass", loganAgent.IDString(), agentKey)
+		logan, _, err := s.Account(ctx, kms, "email", "logan"+nonce, "loganpass")
 		So(err, ShouldBeNil)
 
 		_, err = b.CreateRoom(ctx, kms, false, "deletion", logan)
@@ -867,19 +858,10 @@ func testStaffLowLevel(s *serverUnderTest) {
 		b := s.backend
 		ctx := scope.New()
 		kms := s.app.kms
-		at := b.AgentTracker()
-		agentKey := &security.ManagedKey{
-			KeyType:   proto.AgentKeyType,
-			Plaintext: make([]byte, proto.AgentKeyType.KeySize()),
-		}
 
 		// Create test account.
 		nonce := fmt.Sprintf("%s", time.Now())
-		loganAgent, err := proto.NewAgent([]byte("logan"+nonce), agentKey)
-		So(err, ShouldBeNil)
-		So(at.Register(ctx, loganAgent), ShouldBeNil)
-		logan, loganKey, err := b.AccountManager().Register(
-			ctx, kms, "email", "logan"+nonce, "loganpass", loganAgent.IDString(), agentKey)
+		logan, loganKey, err := s.Account(ctx, kms, "email", "logan"+nonce, "loganpass")
 		So(err, ShouldBeNil)
 		So(logan.IsStaff(), ShouldBeFalse)
 
@@ -915,34 +897,17 @@ func testManagersLowLevel(s *serverUnderTest) {
 	b := s.backend
 	ctx := scope.New()
 	kms := s.app.kms
-	at := b.AgentTracker()
-	agentKey := &security.ManagedKey{
-		KeyType:   proto.AgentKeyType,
-		Plaintext: make([]byte, proto.AgentKeyType.KeySize()),
-	}
 
 	// Create test accounts.
 	nonce := fmt.Sprintf("%s", time.Now())
 
-	aliceAgent, err := proto.NewAgent([]byte("alice"+nonce), agentKey)
-	So(err, ShouldBeNil)
-	So(at.Register(ctx, aliceAgent), ShouldBeNil)
-	alice, aliceKey, err := b.AccountManager().Register(
-		ctx, kms, "email", "alice"+nonce, "alicepass", aliceAgent.IDString(), agentKey)
+	alice, aliceKey, err := s.Account(ctx, kms, "email", "alice"+nonce, "alicepass")
 	So(err, ShouldBeNil)
 
-	bobAgent, err := proto.NewAgent([]byte("bob"+nonce), agentKey)
-	So(err, ShouldBeNil)
-	So(at.Register(ctx, bobAgent), ShouldBeNil)
-	bob, bobKey, err := b.AccountManager().Register(
-		ctx, kms, "email", "bob"+nonce, "bobpass", bobAgent.IDString(), agentKey)
+	bob, bobKey, err := s.Account(ctx, kms, "email", "bob"+nonce, "bobpass")
 	So(err, ShouldBeNil)
 
-	carolAgent, err := proto.NewAgent([]byte("carol"+nonce), agentKey)
-	So(err, ShouldBeNil)
-	So(at.Register(ctx, carolAgent), ShouldBeNil)
-	carol, carolKey, err := b.AccountManager().Register(
-		ctx, kms, "email", "carol"+nonce, "carolpass", carolAgent.IDString(), agentKey)
+	carol, carolKey, err := s.Account(ctx, kms, "email", "carol"+nonce, "carolpass")
 	So(err, ShouldBeNil)
 
 	names := map[string]string{
@@ -1022,20 +987,10 @@ func testManagersLowLevel(s *serverUnderTest) {
 }
 
 func testAccountLogin(s *serverUnderTest) {
-	b := s.backend
-	at := b.AgentTracker()
 	ctx := scope.New()
 	kms := s.app.kms
 	nonce := fmt.Sprintf("%s", time.Now())
-	agentKey := &security.ManagedKey{
-		KeyType:   proto.AgentKeyType,
-		Plaintext: make([]byte, proto.AgentKeyType.KeySize()),
-	}
-	loganAgent, err := proto.NewAgent([]byte("logan"+nonce), agentKey)
-	So(err, ShouldBeNil)
-	So(at.Register(ctx, loganAgent), ShouldBeNil)
-	logan, _, err := b.AccountManager().Register(
-		ctx, kms, "email", "logan"+nonce, "loganpass", loganAgent.IDString(), agentKey)
+	logan, _, err := s.Account(ctx, kms, "email", "logan"+nonce, "loganpass")
 	So(err, ShouldBeNil)
 
 	Convey("Agent logs into account", func() {
@@ -1190,19 +1145,10 @@ func testRoomCreation(s *serverUnderTest) {
 		b := s.backend
 		ctx := scope.New()
 		kms := s.app.kms
-		at := b.AgentTracker()
-		agentKey := &security.ManagedKey{
-			KeyType:   proto.AgentKeyType,
-			Plaintext: make([]byte, proto.AgentKeyType.KeySize()),
-		}
 
 		// Create staff account.
 		nonce := fmt.Sprintf("%s", time.Now())
-		loganAgent, err := proto.NewAgent([]byte("logan"+nonce), agentKey)
-		So(err, ShouldBeNil)
-		So(at.Register(ctx, loganAgent), ShouldBeNil)
-		logan, _, err := b.AccountManager().Register(
-			ctx, kms, "email", "logan"+nonce, "loganpass", loganAgent.IDString(), agentKey)
+		logan, _, err := s.Account(ctx, kms, "email", "logan"+nonce, "loganpass")
 		So(err, ShouldBeNil)
 		So(b.AccountManager().GrantStaff(ctx, logan.ID(), s.kms.KMSCredential()), ShouldBeNil)
 
@@ -1222,15 +1168,15 @@ func testRoomCreation(s *serverUnderTest) {
 		conn = s.Connect("createroom", conn.cookies...)
 		conn.expectPing()
 		conn.expectSnapshot(s.backend.Version(), nil, nil)
-		/*
-			conn.send("1", "staff-create-room", `{"name":"create-room-new","managers":["%s"],"private":true}`,
-				logan.ID())
-			conn.expect("1", "staff-create-room-reply",
-				`{"success":false,"failure_reason":"must unlock staff capability first"}`)
+		/* TODO: require unlock-staff-capability
+		conn.send("1", "staff-create-room", `{"name":"create-room-new","managers":["%s"],"private":true}`,
+			logan.ID())
+		conn.expect("1", "staff-create-room-reply",
+			`{"success":false,"failure_reason":"must unlock staff capability first"}`)
 
-			// Unlock staff capability and try again.
-			conn.send("2", "unlock-staff-capability", `{"password":"loganpass"}`)
-			conn.expect("2", "unlock-staff-capability-reply", `{"success":true}`)
+		// Unlock staff capability and try again.
+		conn.send("2", "unlock-staff-capability", `{"password":"loganpass"}`)
+		conn.expect("2", "unlock-staff-capability-reply", `{"success":true}`)
 		*/
 		conn.send("3", "staff-create-room", `{"name":"create-room-new","managers":["%s"],"private":true}`,
 			logan.ID())
@@ -1253,30 +1199,17 @@ func testRoomGrants(s *serverUnderTest) {
 		b := s.backend
 		ctx := scope.New()
 		kms := s.app.kms
-		at := b.AgentTracker()
-		agentKey := &security.ManagedKey{
-			KeyType:   proto.AgentKeyType,
-			Plaintext: make([]byte, proto.AgentKeyType.KeySize()),
-		}
 
 		// Create manager account and room.
 		nonce := fmt.Sprintf("%s", time.Now())
-		loganAgent, err := proto.NewAgent([]byte("logan"+nonce), agentKey)
+		logan, _, err := s.Account(ctx, kms, "email", "logan"+nonce, "loganpass")
 		So(err, ShouldBeNil)
-		So(at.Register(ctx, loganAgent), ShouldBeNil)
-		logan, _, err := b.AccountManager().Register(
-			ctx, kms, "email", "logan"+nonce, "loganpass", loganAgent.IDString(), agentKey)
-		So(err, ShouldBeNil)
-
 		_, err = b.CreateRoom(ctx, kms, true, "grants", logan)
 		So(err, ShouldBeNil)
 
 		// Create access account (without access yet).
-		maxAgent, err := proto.NewAgent([]byte("max"+nonce), agentKey)
+		max, _, err := s.Account(ctx, kms, "email", "max"+nonce, "maxpass")
 		So(err, ShouldBeNil)
-		So(at.Register(ctx, maxAgent), ShouldBeNil)
-		max, _, err := b.AccountManager().Register(
-			ctx, kms, "email", "max"+nonce, "maxpass", maxAgent.IDString(), agentKey)
 
 		// Connect and log into manager account in a throwaway room.
 		loganConn := s.Connect("grantsstage")
@@ -1342,22 +1275,13 @@ func testRoomGrants(s *serverUnderTest) {
 		b := s.backend
 		ctx := scope.New()
 		kms := s.app.kms
-		at := b.AgentTracker()
-		agentKey := &security.ManagedKey{
-			KeyType:   proto.AgentKeyType,
-			Plaintext: make([]byte, proto.AgentKeyType.KeySize()),
-		}
 
 		// Create staff account and room.
 		_, err := b.CreateRoom(ctx, kms, true, "staffmanagergrants")
 		So(err, ShouldBeNil)
 
 		nonce := fmt.Sprintf("+%s", time.Now())
-		loganAgent, err := proto.NewAgent([]byte("logan"+nonce), agentKey)
-		So(err, ShouldBeNil)
-		So(at.Register(ctx, loganAgent), ShouldBeNil)
-		logan, _, err := b.AccountManager().Register(
-			ctx, kms, "email", "logan"+nonce, "loganpass", loganAgent.IDString(), agentKey)
+		logan, _, err := s.Account(ctx, kms, "email", "logan"+nonce, "loganpass")
 		So(err, ShouldBeNil)
 		So(b.AccountManager().GrantStaff(ctx, logan.ID(), s.kms.KMSCredential()), ShouldBeNil)
 
@@ -1394,30 +1318,17 @@ func testRoomGrants(s *serverUnderTest) {
 		b := s.backend
 		ctx := scope.New()
 		kms := s.app.kms
-		at := b.AgentTracker()
-		agentKey := &security.ManagedKey{
-			KeyType:   proto.AgentKeyType,
-			Plaintext: make([]byte, proto.AgentKeyType.KeySize()),
-		}
 
 		// Create manager account and room.
 		nonce := fmt.Sprintf("+%s", time.Now())
-		loganAgent, err := proto.NewAgent([]byte("logan"+nonce), agentKey)
+		logan, _, err := s.Account(ctx, kms, "email", "logan"+nonce, "loganpass")
 		So(err, ShouldBeNil)
-		So(at.Register(ctx, loganAgent), ShouldBeNil)
-		logan, _, err := b.AccountManager().Register(
-			ctx, kms, "email", "logan"+nonce, "loganpass", loganAgent.IDString(), agentKey)
-		So(err, ShouldBeNil)
-
 		room, err := b.CreateRoom(ctx, kms, true, "managergrants", logan)
 		So(err, ShouldBeNil)
 
 		// Create access account (without access yet).
-		maxAgent, err := proto.NewAgent([]byte("max"+nonce), agentKey)
+		max, _, err := s.Account(ctx, kms, "email", "max"+nonce, "maxpass")
 		So(err, ShouldBeNil)
-		So(at.Register(ctx, maxAgent), ShouldBeNil)
-		max, _, err := b.AccountManager().Register(
-			ctx, kms, "email", "max"+nonce, "maxpass", maxAgent.IDString(), agentKey)
 
 		// Connect and log into manager account in a throwaway room.
 		loganConn := s.Connect("managergrantsstage")
