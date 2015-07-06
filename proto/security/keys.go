@@ -19,6 +19,8 @@ var (
 	ErrKeyMustBeDecrypted = errors.New("key must be decrypted")
 	ErrKeyMustBeEncrypted = errors.New("key must be encrypted")
 	ErrIVRequired         = errors.New("IV is required")
+
+	TestMode bool
 )
 
 type KeyType byte
@@ -179,8 +181,12 @@ func (k *ManagedKey) Decrypt(keyKey *ManagedKey) error {
 }
 
 func KeyFromPasscode(passcode, salt []byte, keyType KeyType) *ManagedKey {
+	iterations := keyDerivationIterations
+	if TestMode {
+		iterations = 1
+	}
 	return &ManagedKey{
 		KeyType:   keyType,
-		Plaintext: pbkdf2.Key(passcode, salt, keyDerivationIterations, keyType.KeySize(), sha256.New),
+		Plaintext: pbkdf2.Key(passcode, salt, iterations, keyType.KeySize(), sha256.New),
 	}
 }

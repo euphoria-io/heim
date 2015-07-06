@@ -309,6 +309,10 @@ func (tc *testConn) Close() {
 }
 
 func IntegrationTest(t *testing.T, factory func() proto.Backend) {
+	save := security.TestMode
+	defer func() { security.TestMode = save }()
+	security.TestMode = true
+
 	runTest := func(name string, test testSuite) {
 		backend := factory()
 		defer backend.Close()
