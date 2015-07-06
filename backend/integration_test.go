@@ -8,6 +8,6 @@ import (
 	"euphoria.io/heim/proto"
 )
 
-func TestTestBackend(t *testing.T) {
+func TestBackend(t *testing.T) {
 	backend.IntegrationTest(t, func() proto.Backend { return &mock.TestBackend{} })
 }
