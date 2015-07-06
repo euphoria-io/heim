@@ -114,7 +114,6 @@ func NewAccountSecurity(
 	if err = kms.DecryptKey(&kek); err != nil {
 		return nil, nil, fmt.Errorf("key decryption error: %s", err)
 	}
-	fmt.Printf("kek: %x\n", kek.Plaintext)
 
 	// Encrypt private key.
 	keyPair.IV = iv
