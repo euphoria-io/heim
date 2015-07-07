@@ -1,4 +1,4 @@
-require('./support/setup')
+var support = require('./support/setup')
 var assert = require('assert')
 var React = require('react/addons')
 var TestUtils = React.addons.TestUtils
@@ -6,6 +6,10 @@ var TestUtils = React.addons.TestUtils
 
 describe('<MessageText>', function() {
   var MessageText = require('../lib/ui/message-text')
+
+  support.fakeEnv({
+    HEIM_PREFIX: '/test',
+  })
 
   function renderMessageText(content) {
     return TestUtils.renderIntoDocument(
@@ -28,7 +32,7 @@ describe('<MessageText>', function() {
   it('linkifies &room references', function() {
     var messageContent = renderMessageText('hello &space! foo&bar &bar &baz')
     assert.equal(messageContent.getDOMNode().innerHTML,
-      'hello <a href="/room/space" target="_blank">&amp;space</a>! foo&amp;bar <a href="/room/bar" target="_blank">&amp;bar</a> <a href="/room/baz" target="_blank">&amp;baz</a>')
+      'hello <a href="/test/room/space/" target="_blank">&amp;space</a>! foo&amp;bar <a href="/test/room/bar/" target="_blank">&amp;bar</a> <a href="/test/room/baz/" target="_blank">&amp;baz</a>')
   })
 
   it('doesn\'t linkify javascript:// links', function() {
