@@ -2,23 +2,20 @@ var support = require('./support/setup')
 var assert = require('assert')
 var sinon = require('sinon')
 
-var HEIM_ORIGIN = 'https://heimhost'
-var HEIM_PREFIX = '/test'
 
 describe('socket store', function() {
   var socket = require('../lib/stores/socket')
   var clock
   var realWebSocket = window.WebSocket
   var fakeWebSocket, fakeWebSocketContructor
-  var origProcessEnv
+
+  support.fakeEnv({
+    HEIM_ORIGIN: 'https://heimhost',
+    HEIM_PREFIX: '/test',
+  })
 
   beforeEach(function() {
     clock = support.setupClock()
-    origProcessEnv = process.env
-    process.env = {
-      HEIM_ORIGIN: HEIM_ORIGIN,
-      HEIM_PREFIX: HEIM_PREFIX,
-    }
     fakeWebSocketContructor = sinon.spy(function() {
       fakeWebSocket = this
       this.send = sinon.spy()
@@ -30,7 +27,6 @@ describe('socket store', function() {
 
   afterEach(function() {
     clock.restore()
-    process.env = origProcessEnv
     window.WebSocket = realWebSocket
   })
 

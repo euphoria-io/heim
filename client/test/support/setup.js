@@ -49,6 +49,19 @@ support.resetStore = function(store) {
   store.emitter.removeAllListeners()
 }
 
+support.fakeEnv = function(env) {
+  var origProcessEnv
+
+  before(function() {
+    origProcessEnv = process.env
+    process.env = env
+  })
+
+  after(function() {
+    process.env = origProcessEnv
+  })
+}
+
 window.Heim = {
   setFavicon: function() {},
 }
