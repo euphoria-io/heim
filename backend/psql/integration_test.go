@@ -3,7 +3,6 @@ package psql
 import (
 	"database/sql"
 	"flag"
-	"fmt"
 	"os"
 	"testing"
 
@@ -55,23 +54,24 @@ func TestBackend(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Factory for test cases to generate fresh backends.
-	iter := 0
-	factory := func() proto.Backend {
-		iter++
-		c := etcd.Join("/test", "testcase", fmt.Sprintf("iter%d", iter))
-		desc := &cluster.PeerDesc{
-			ID:      "testcase",
-			Era:     fmt.Sprintf("iter%d", iter),
-			Version: "testver",
-		}
-		b, err := NewBackend(scope.New(), dsn, c, desc)
-		if err != nil {
-			t.Fatal(err)
-		}
-		return b
+	// Start up backend.
+	c := etcd.Join("/test", "testcase", "era")
+	desc := &cluster.PeerDesc{
+		ID:      "testcase",
+		Era:     "era",
+		Version: "testver",
+	}
+	b, err := NewBackend(scope.New(), dsn, c, desc)
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	// Run test suite.
-	backend.IntegrationTest(t, factory)
+	backend.IntegrationTest(t, func() proto.Backend { return nonClosingBackend{b} })
 }
+
+type nonClosingBackend struct {
+	proto.Backend
+}
+
+func (nonClosingBackend) Close() {}
