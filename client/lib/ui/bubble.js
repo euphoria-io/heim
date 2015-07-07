@@ -11,7 +11,6 @@ module.exports = React.createClass({
   getDefaultProps: function() {
     return {
       edgeSpacing: 10,
-      topOffset: 0,
     }
   },
 
@@ -57,9 +56,17 @@ module.exports = React.createClass({
       var node = this.refs.bubble.getDOMNode()
 
       var top = box.top
-      top -= Math.max(0, top + node.clientHeight + this.props.edgeSpacing + this.props.topOffset - uiwindow.innerHeight)
+      top -= Math.max(0, top + node.clientHeight + this.props.edgeSpacing - uiwindow.innerHeight)
 
-      node.style.left = box.right + 'px'
+      var left = box.right
+
+      if (this.props.offset) {
+        var offsetBox = this.props.offset()
+        left -= offsetBox.left
+        top -= offsetBox.top
+      }
+
+      node.style.left = left + 'px'
       node.style.top = top + 'px'
     }
   },

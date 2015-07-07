@@ -4,7 +4,9 @@ var React = require('react/addons')
 var Immutable = require('immutable')
 var EventEmitter = require('eventemitter3')
 
+var clamp = require('../clamp')
 var actions = require('../actions')
+var storage = require('./storage')
 var chat = require('./chat')
 var notification = require('./notification')
 
@@ -15,6 +17,8 @@ var storeActions = module.exports.actions = Reflux.createActions([
   'focusPane',
   'focusLeftPane',
   'focusRightPane',
+  'collapseInfoPane',
+  'expandInfoPane',
   'freezeInfo',
   'thawInfo',
   'showThreadPopup',
@@ -36,6 +40,7 @@ var store = module.exports.store = Reflux.createStore({
   listenables: [
     actions,
     storeActions,
+    {storageChange: storage.store},
     {chatChange: chat.store},
     {notificationChange: notification.store},
   ],
@@ -47,6 +52,7 @@ var store = module.exports.store = Reflux.createStore({
         m.set('popup', createPaneStore('popup'))
         m.set('main', createPaneStore('main'))
       }),
+      infoPaneExpanded: false,
       frozenThreadList: null,
       frozenNotifications: null,
       threadPopupAnchorEl: null,
@@ -60,12 +66,28 @@ var store = module.exports.store = Reflux.createStore({
     return this.state
   },
 
+  storageChange: function(data) {
+    if (!data) {
+      return
+    }
+    this.state.infoPaneExpanded = _.get(data, ['room', this.chatState.roomName, 'infoPaneExpanded'], false)
+    this.trigger(this.state)
+  },
+
   chatChange: function(state) {
     this.chatState = state
   },
 
   notificationChange: function(state) {
     this.notificationState = state
+  },
+
+  collapseInfoPane: function() {
+    storage.setRoom(this.chatState.roomName, 'infoPaneExpanded', false)
+  },
+
+  expandInfoPane: function() {
+    storage.setRoom(this.chatState.roomName, 'infoPaneExpanded', true)
   },
 
   freezeInfo: function() {
@@ -181,12 +203,14 @@ var store = module.exports.store = Reflux.createStore({
 
   _moveFocusedPane: function(delta) {
     var idx = this.state.panes.keySeq().indexOf(this.state.focusedPane)
-    idx = (idx + delta + this.state.panes.size) % this.state.panes.size
+    idx = clamp(0, idx + delta, this.state.panes.size - 1)
     var paneId = this.state.panes.entrySeq().get(idx)[0]
 
-    if (paneId == 'popup' && !this.state.threadPopupAnchorEl) {
-      storeActions.selectThreadInList(this.state.threadPopupRoot)
-      return
+    if (paneId == 'popup') {
+      if (!this.state.threadPopupAnchorEl) {
+        storeActions.selectThreadInList(this.state.threadPopupRoot)
+        return
+      }
     } else if (this.state.focusedPane == 'popup') {
       this.hideThreadPopup()
     }

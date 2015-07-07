@@ -1,4 +1,5 @@
 var React = require('react/addons')
+var classNames = require('classnames')
 var ReactCSSTransitionGroup = React.addons.CSSTransitionGroup
 
 var update = require('../stores/update')
@@ -28,6 +29,7 @@ module.exports = React.createClass({
     // bubbles. this makes the bubbles slide from "underneath" the bar.
     return (
       <div className="top-bar">
+        <FastButton className={classNames(this.props.sidebarExpanded ? 'collapse-sidebar' : 'expand-sidebar')} onClick={this.props.sidebarExpanded ? this.props.collapseSidebar : this.props.expandSidebar} />
         <RoomTitle name={this.props.roomName} authType={this.props.authType} connected={this.props.connected} joined={this.props.joined} />
         <div className="right">
           <ReactCSSTransitionGroup transitionName="spinner">{this.props.working && <div key="spinner" className="spinner" />}</ReactCSSTransitionGroup>

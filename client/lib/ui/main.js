@@ -198,7 +198,7 @@ module.exports = React.createClass({
     var threadPanes = this.state.ui.panes.filter((v, k) => /^thread-/.test(k))
     var extraPanes = this.templateHook('thread-panes')
     return (
-      <div id="ui" className={classNames({'disconnected': this.state.chat.connected === false})} onMouseDownCapture={this.onMouseDown} onClickCapture={this.onClick} onTouchMove={this.onTouchMove} onKeyDown={this.onKeyDown}>
+      <div id="ui" className={classNames({'disconnected': this.state.chat.connected === false, 'info-pane-hidden': !this.state.ui.infoPaneExpanded, 'info-pane-focused': this.state.ui.focusedPane == 'popup'})} onMouseDownCapture={this.onMouseDown} onClickCapture={this.onClick} onTouchMove={this.onTouchMove} onKeyDown={this.onKeyDown}>
         {this.state.storage && this.state.storage.useOpenDyslexic && <link rel="stylesheet" type="text/css" id="css" href="/static/od.css" />}
           {this.state.chat.authState && this.state.chat.authState != 'trying-stored' && <div className="hatch-shade fill" />}
         <div className="info-pane" onMouseEnter={ui.freezeInfo} onMouseLeave={ui.thawInfo}>
@@ -210,7 +210,7 @@ module.exports = React.createClass({
           <NotificationList tree={this.state.chat.messages} notifications={this.state.ui.frozenNotifications || this.state.notification.notifications} onNotificationSelect={this.onNotificationSelect} />
         </div>
         <div className="chat-pane-container main-pane">
-          <ChatTopBar who={this.state.chat.who} roomName={this.state.chat.roomName} connected={this.state.chat.connected} joined={this.state.chat.joined} authType={this.state.chat.authType} updateReady={this.state.update.get('ready')} working={this.state.chat.loadingLogs} />
+          <ChatTopBar who={this.state.chat.who} roomName={this.state.chat.roomName} connected={this.state.chat.connected} joined={this.state.chat.joined} authType={this.state.chat.authType} updateReady={this.state.update.get('ready')} working={this.state.chat.loadingLogs} sidebarExpanded={this.state.ui.infoPaneExpanded} collapseSidebar={ui.collapseInfoPane} expandSidebar={ui.expandInfoPane} />
           <ChatPane pane={this.state.ui.panes.get('main')} showTimeStamps={true} onScrollbarSize={this.onScrollbarSize} />
           <div className="sidebar" style={{marginRight: this.state.scrollbarWidth}}>
             {this.templateHook('main-sidebar')}
@@ -231,7 +231,7 @@ module.exports = React.createClass({
             )
           }).toArray()}
         </div>
-        <Bubble ref="threadPopup" className="thread-popup" anchorEl={this.state.ui.threadPopupAnchorEl} visible={!!this.state.ui.threadPopupAnchorEl} onDismiss={this.dismissThreadPopup} topOffset={-26}>
+        <Bubble ref="threadPopup" className="thread-popup" anchorEl={this.state.ui.threadPopupAnchorEl} visible={!!this.state.ui.threadPopupAnchorEl} onDismiss={this.dismissThreadPopup} offset={() => ({ left: this.getDOMNode().getBoundingClientRect().left, top: 26 })}>
           <div className="top-line">
             <FastButton className="to-pane" onClick={ui.popupToThreadPane}>new pane</FastButton>
             <FastButton className="scroll-to" onClick={ui.gotoPopupMessage}>go to</FastButton>
