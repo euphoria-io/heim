@@ -1230,6 +1230,59 @@ func testRoomCreation(s *serverUnderTest) {
 }
 
 func testRoomGrants(s *serverUnderTest) {
+	Convey("Grant access to passcode", func() {
+		b := s.backend
+		ctx := scope.New()
+		kms := s.app.kms
+
+		// Create manager account and room.
+		nonce := fmt.Sprintf("%s", time.Now())
+		logan, _, err := s.Account(ctx, kms, "email", "logan"+nonce, "loganpass")
+		So(err, ShouldBeNil)
+		_, err = b.CreateRoom(ctx, kms, true, "passcodegrants", logan)
+		So(err, ShouldBeNil)
+
+		// Connect and log into manager account in a throwaway room.
+		loganConn := s.Connect("passcodegrantsstage")
+		loganConn.expectPing()
+		loganConn.expectSnapshot(s.backend.Version(), nil, nil)
+		loganConn.send("1", "login", `{"namespace":"email","id":"logan%s","password":"loganpass"}`, nonce)
+		loganConn.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, logan.ID())
+		loganConn.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
+		loganConn.Close()
+
+		// Reconnect manager to private room and grant access to passcode.
+		loganConn = s.Connect("passcodegrants", loganConn.cookies...)
+		defer loganConn.Close()
+		loganConn.expectPing()
+		loganConn.expectSnapshot(s.backend.Version(), nil, nil)
+		loganConn.send("1", "grant-access", `{"passcode":"hunter2"}`)
+		loganConn.expect("1", "grant-access-reply", `{}`)
+
+		// Authenticate with passcode.
+		conn := s.Connect("passcodegrants")
+		conn.expectPing()
+		conn.expect("", "bounce-event", `{"reason":"authentication required"}`)
+		conn.send("1", "auth", `{"type":"passcode","passcode":"hunter2"}`)
+		conn.expect("1", "auth-reply", `{"success":true}`)
+		conn.expectSnapshot(s.backend.Version(), nil, nil)
+		conn.Close()
+
+		// Revoke passcode access.
+		loganConn.expect(
+			"", "join-event", `{"id":"*", "name":"", "server_id":"*","server_era":"*","session_id":"*"}`)
+		loganConn.expect(
+			"", "part-event", `{"id":"*", "name":"", "server_id":"*","server_era":"*","session_id":"*"}`)
+		loganConn.send("2", "revoke-access", `{"passcode":"hunter2"}`)
+		loganConn.expect("2", "revoke-access-reply", `{}`)
+		conn = s.Connect("passcodegrants")
+		defer conn.Close()
+		conn.expectPing()
+		conn.expect("", "bounce-event", `{"reason":"authentication required"}`)
+		conn.send("1", "auth", `{"type":"passcode","passcode":"hunter2"}`)
+		conn.expect("1", "auth-reply", `{"success":false,"reason":"passcode incorrect"}`)
+	})
+
 	Convey("Grant access to account", func() {
 		b := s.backend
 		ctx := scope.New()
@@ -1306,13 +1359,13 @@ func testRoomGrants(s *serverUnderTest) {
 		maxConn.Close()
 	})
 
-	Convey("Grant manager by staff", func() {
+	Convey("Grant manager and revoke access by staff", func() {
 		b := s.backend
 		ctx := scope.New()
 		kms := s.app.kms
 
 		// Create staff account and room.
-		_, err := b.CreateRoom(ctx, kms, true, "staffmanagergrants")
+		_, err := b.CreateRoom(ctx, kms, false, "staffmanagergrants")
 		So(err, ShouldBeNil)
 
 		nonce := fmt.Sprintf("+%s", time.Now())
@@ -1320,13 +1373,23 @@ func testRoomGrants(s *serverUnderTest) {
 		So(err, ShouldBeNil)
 		So(b.AccountManager().GrantStaff(ctx, logan.ID(), s.kms.KMSCredential()), ShouldBeNil)
 
-		// Connect to room, log in, reconnect, and grant management to self.
+		// Connect to room and make it private.
+
+		// Connect to room, log in, reconnect, lock room, and grant management to self.
 		loganConn := s.Connect("staffmanagergrants")
 		loganConn.expectPing()
-		loganConn.expect("", "bounce-event", `{"reason":"authentication required"}`)
+		loganConn.expectSnapshot(s.backend.Version(), nil, nil)
 		loganConn.send("1", "login", `{"namespace":"email","id":"logan%s","password":"loganpass"}`, nonce)
 		loganConn.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, logan.ID())
 		loganConn.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
+		loganConn.Close()
+
+		loganConn = s.Connect("staffmanagergrants", loganConn.cookies...)
+		loganConn.expectPing()
+		loganConn.expectSnapshot(s.backend.Version(), nil, nil)
+		loganConn.send("1", "staff-lock-room", `{}`)
+		loganConn.expect("1", "staff-lock-room-reply", `{}`)
+		loganConn.Close()
 
 		loganConn = s.Connect("staffmanagergrants", loganConn.cookies...)
 		loganConn.expectPing()
@@ -1347,6 +1410,15 @@ func testRoomGrants(s *serverUnderTest) {
 		loganConn.expect("1", "unlock-staff-capability-reply", `{"success":true}`)
 		loganConn.send("2", "staff-revoke-manager", `{"account_id":"%s"}`, logan.ID())
 		loganConn.expect("2", "staff-revoke-manager-reply", `{}`)
+
+		// Revoke access to self.
+		loganConn.send("3", "staff-revoke-access", `{"account_id":"%s"}`, logan.ID())
+		loganConn.expect("3", "staff-revoke-access-reply", `{}`)
+		loganConn.Close()
+
+		loganConn = s.Connect("staffmanagergrants", loganConn.cookies...)
+		loganConn.expectPing()
+		loganConn.expect("", "bounce-event", `{"reason":"authentication required"}`)
 	})
 
 	Convey("Grant manager to account", func() {
