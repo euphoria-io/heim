@@ -1,6 +1,8 @@
 var _ = require('lodash')
 var React = require('react')
 
+var clamp = require('../clamp')
+
 
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/sign
 Math.sign = Math.sign || function(x) {
@@ -9,10 +11,6 @@ Math.sign = Math.sign || function(x) {
     return x
   }
   return x > 0 ? 1 : -1
-}
-
-function clamp(min, v, max) {
-  return Math.min(Math.max(min, v), max)
 }
 
 function dimensions(el, prop) {

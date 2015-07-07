@@ -157,6 +157,12 @@ iframe.js {
   display: none;
 }
 
+#container {
+  overflow-x: hidden;
+}
+
+@info-pane-width: 240px;
+
 #ui {
   // stacking context so z-index: -1 works
   position: relative;
@@ -164,11 +170,28 @@ iframe.js {
   align-items: stretch;
   background: #ccc;
   z-index: 0;
+  transition: transform .1s ease-out;
 
   &.disconnected {
     .info-pane, .main-pane .chat-pane, .thread-panes {
       transition: opacity .2s ease;
       opacity: .8;
+    }
+  }
+
+  &.info-pane-hidden {
+    margin-left: -@info-pane-width;
+
+    .chat-pane-container {
+      transition: opacity .1s ease;
+    }
+
+    &.info-pane-focused {
+      transform: translateX(@info-pane-width);
+
+      .chat-pane-container {
+        opacity: .25;
+      }
     }
   }
 }
@@ -189,8 +212,9 @@ iframe.js {
 .info-pane {
   display: flex;
   flex-direction: column;
-  width: 220px;
+  width: @info-pane-width;
   padding: 8px 10px;
+  box-sizing: border-box;
   background: @pane-bg-color;
 
   & > * {
@@ -746,6 +770,25 @@ iframe.js {
 }
 
 .top-bar {
+  .collapse-sidebar, .expand-sidebar {
+    padding: 9px;
+    margin: -9px;
+    padding-left: 0;
+    padding-right: 2px;
+    margin-left: -10px;
+    margin-right: 5px;
+    .touchable-bg(white);
+    opacity: .35;
+
+    &.collapse-sidebar {
+      .button-icon('../res/collapse-sidebar.svg', 14px, 0, 1);
+    }
+
+    &.expand-sidebar {
+      .button-icon('../res/expand-sidebar.svg', 14px, 0, 1);
+    }
+  }
+
   .room-container {
     display: inherit;
   }
@@ -1497,7 +1540,6 @@ iframe.js {
 .thread-popup {
   @top-line-height: 26px;
   left: -9999px;
-  margin-top: -@top-line-height;
   width: 40vw;
   min-width: 400px;
   padding: 0;
