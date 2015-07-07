@@ -439,19 +439,6 @@ func (rb *RoomBinding) Managers(ctx scope.Context) ([]proto.Account, error) {
 	return accounts, nil
 }
 
-func (rb *RoomBinding) getManagerCapability(ctx scope.Context, account proto.Account) (
-	*security.PublicKeyCapability, error) {
-
-	c, err := rb.ManagerCapability(ctx, account)
-	if err != nil {
-		if err == proto.ErrManagerNotFound {
-			return nil, proto.ErrAccessDenied
-		}
-		return nil, err
-	}
-	return &security.PublicKeyCapability{Capability: c}, nil
-}
-
 func (rb *RoomBinding) ManagerCapability(ctx scope.Context, manager proto.Account) (
 	security.Capability, error) {
 
