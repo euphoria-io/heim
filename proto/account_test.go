@@ -1,6 +1,7 @@
 package proto
 
 import (
+	"fmt"
 	"testing"
 
 	"euphoria.io/heim/proto/security"
@@ -56,5 +57,37 @@ func TestNewAccountSecurity(t *testing.T) {
 		kp, err := unlock(nsec, "hunter3")
 		So(err, ShouldBeNil)
 		So(kp.PrivateKey, ShouldResemble, skp.PrivateKey)
+	})
+}
+
+func TestValidatePersonalIdentity(t *testing.T) {
+	Convey("Any email id is accepted", t, func() {
+		ok, reason := ValidatePersonalIdentity("email", "test")
+		So(ok, ShouldBeTrue)
+		So(reason, ShouldEqual, "")
+	})
+
+	Convey("No other namespace is accepted", t, func() {
+		ok, reason := ValidatePersonalIdentity("notemail", "test")
+		So(ok, ShouldBeFalse)
+		So(reason, ShouldEqual, "invalid namespace: notemail")
+	})
+}
+
+func TestValidateAccountPassword(t *testing.T) {
+	Convey("Password must be of sufficient length", t, func() {
+		minPassword := make([]byte, MinPasswordLength)
+		for i := 0; i < MinPasswordLength; i++ {
+			minPassword[i] = '*'
+		}
+
+		ok, reason := ValidateAccountPassword(string(minPassword))
+		So(ok, ShouldBeTrue)
+		So(reason, ShouldEqual, "")
+
+		ok, reason = ValidateAccountPassword(string(minPassword[:len(minPassword)-1]))
+		So(ok, ShouldBeFalse)
+		So(reason, ShouldEqual,
+			fmt.Sprintf("password must be at least %d characters long", MinPasswordLength))
 	})
 }
