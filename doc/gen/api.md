@@ -27,7 +27,6 @@
     * [staff-lock-room](#staff-lock-room)
     * [staff-revoke-access](#staff-revoke-access)
     * [staff-revoke-manager](#staff-revoke-manager)
-    * [staff-upgrade-room](#staff-upgrade-room)
     * [unlock-staff-capability](#unlock-staff-capability)
 * [Asynchronous Events](#asynchronous-events)
   * [bounce-event](#bounce-event)
@@ -347,10 +346,6 @@ most client implementations.
 ### staff-revoke-manager
 
 {{template "command.md" "staff-revoke-manager"}}
-
-### staff-upgrade-room
-
-{{template "command.md" "staff-upgrade-room"}}
 
 ### unlock-staff-capability
 

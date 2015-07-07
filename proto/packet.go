@@ -77,9 +77,6 @@ var (
 	StaffRevokeManagerType      = PacketType("staff-revoke-manager")
 	StaffRevokeManagerReplyType = StaffRevokeManagerType.Reply()
 
-	StaffUpgradeRoomType      = PacketType("staff-upgrade-room")
-	StaffUpgradeRoomReplyType = StaffUpgradeRoomType.Reply()
-
 	UnlockStaffCapabilityType      = PacketType("unlock-staff-capability")
 	UnlockStaffCapabilityReplyType = UnlockStaffCapabilityType.Reply()
 
@@ -136,9 +133,6 @@ var (
 
 		StaffRevokeManagerType:      reflect.TypeOf(StaffRevokeManagerCommand{}),
 		StaffRevokeManagerReplyType: reflect.TypeOf(StaffRevokeManagerReply{}),
-
-		StaffUpgradeRoomType:      reflect.TypeOf(StaffUpgradeRoomCommand{}),
-		StaffUpgradeRoomReplyType: reflect.TypeOf(StaffUpgradeRoomReply{}),
 
 		AuthType:      reflect.TypeOf(AuthCommand{}),
 		AuthReplyType: reflect.TypeOf(AuthReply{}),
@@ -492,13 +486,6 @@ type StaffLockRoomCommand struct{}
 
 // `staff-lock-room-reply` confirms that the room has been made newly private.
 type StaffLockRoomReply struct{}
-
-// The `staff-upgrade-room` command generates keys and nonces for a room that existed
-// before accounts were rolled out.
-type StaffUpgradeRoomCommand struct{}
-
-// `staff-upgrade-room-reply` confirms that the room was upgraded.
-type StaffUpgradeRoomReply struct{}
 
 // The `unlock-staff-capability` command may be called by a staff account to gain access to
 // staff commands.

@@ -27,7 +27,6 @@
     * [staff-lock-room](#staff-lock-room)
     * [staff-revoke-access](#staff-revoke-access)
     * [staff-revoke-manager](#staff-revoke-manager)
-    * [staff-upgrade-room](#staff-upgrade-room)
     * [unlock-staff-capability](#unlock-staff-capability)
 * [Asynchronous Events](#asynchronous-events)
   * [bounce-event](#bounce-event)
@@ -502,8 +501,8 @@ will be a logged in session.
 | Field | Type | Required? | Description |
 | :-- | :-- | :-- | :--------- |
 | `success` | [bool](#bool) | required |  true if the session is now logged in |
-| `reason` | [string](#string) | required |  if `success` was false, the reason why |
-| `account_id` | [Snowflake](#snowflake) | required |  if `success` was true, the id of the account the session logged into. |
+| `reason` | [string](#string) | *optional* |  if `success` was false, the reason why |
+| `account_id` | [Snowflake](#snowflake) | *optional* |  if `success` was true, the id of the account the session logged into. |
 
 
 
@@ -567,8 +566,8 @@ will be a logged in session, using the newly created account.
 | Field | Type | Required? | Description |
 | :-- | :-- | :-- | :--------- |
 | `success` | [bool](#bool) | required |  true if the session is now logged in |
-| `reason` | [string](#string) | required |  if `success` was false, the reason why |
-| `account_id` | [Snowflake](#snowflake) | required |  if `success` was true, the id of the account the session logged into. |
+| `reason` | [string](#string) | *optional* |  if `success` was false, the reason why |
+| `account_id` | [Snowflake](#snowflake) | *optional* |  if `success` was true, the id of the account the session logged into. |
 
 
 
@@ -855,27 +854,6 @@ of the room to use this command.
 
 
 `staff-revoke-manager-reply` confirms that requested manager capability was revoked.
-
-
-This packet has no fields.
-
-
-
-
-
-
-### staff-upgrade-room
-
-The `staff-upgrade-room` command generates keys and nonces for a room that existed
-before accounts were rolled out.
-
-
-This packet has no fields.
-
-
-
-
-`staff-upgrade-room-reply` confirms that the room was upgraded.
 
 
 This packet has no fields.

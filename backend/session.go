@@ -335,8 +335,6 @@ func (s *session) serve() error {
 				if msg.Success {
 					s.sendDisconnect("authentication changed")
 				}
-			case *proto.StaffUpgradeRoomReply:
-				s.sendDisconnect("room upgraded")
 			}
 		case cmd := <-s.outgoing:
 			data, err := cmd.Encode()
