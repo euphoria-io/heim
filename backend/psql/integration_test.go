@@ -65,6 +65,7 @@ func TestBackend(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer b.Close()
 
 	// Run test suite.
 	backend.IntegrationTest(t, func() proto.Backend { return nonClosingBackend{b} })
