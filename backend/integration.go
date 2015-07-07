@@ -196,7 +196,7 @@ func (tc *testConn) expect(id, cmdType, data string, args ...interface{}) map[st
 	// Compare.
 	var result string
 	captures := map[string]interface{}{}
-	if msg := matchPayload(captures, "", expected, actual); msg != "" {
+	if msg := matchPayload(captures, "", actual, expected); msg != "" {
 		view := reporting.FailureView{
 			Message: fmt.Sprintf(
 				"Expected: %s\nActual:   %s\nReason:   (%s) %s",
@@ -221,7 +221,7 @@ func (tc *testConn) expect(id, cmdType, data string, args ...interface{}) map[st
 	return captures
 }
 
-func matchField(captures map[string]interface{}, name string, expected, actual interface{}) string {
+func matchField(captures map[string]interface{}, name string, actual, expected interface{}) string {
 	if evStr, ok := expected.(string); ok && evStr == "*" {
 		captures[name] = actual
 		return ""
@@ -231,7 +231,7 @@ func matchField(captures map[string]interface{}, name string, expected, actual i
 		if !ok {
 			return fmt.Sprintf("%s: expected object, got %T", name, actual)
 		}
-		return matchPayload(captures, name+".", subExp, subAct)
+		return matchPayload(captures, name+".", subAct, subExp)
 	}
 	if listExp, ok := expected.([]interface{}); ok {
 		listAct, ok := actual.([]interface{})
@@ -239,21 +239,21 @@ func matchField(captures map[string]interface{}, name string, expected, actual i
 			return fmt.Sprintf("%s: expected list, got %T", name, actual)
 		}
 		for i, _ := range listExp {
-			msg := matchField(captures, fmt.Sprintf("%s[%d]", name, i), listExp[i], listAct[i])
+			msg := matchField(captures, fmt.Sprintf("%s[%d]", name, i), listAct[i], listExp[i])
 			if msg != "" {
 				return msg
 			}
 		}
 		return ""
 	}
-	if msg := ShouldEqual(expected, actual); msg != "" {
+	if msg := ShouldEqual(actual, expected); msg != "" {
 		return fmt.Sprintf("%s: %s", name, msg)
 	}
 	return ""
 }
 
 func matchPayload(
-	captures map[string]interface{}, prefix string, expected, actual map[string]interface{}) string {
+	captures map[string]interface{}, prefix string, actual, expected map[string]interface{}) string {
 
 	// Verify that each entry in expected has the correct value in actual.
 	for name, expectedValue := range expected {
@@ -261,7 +261,7 @@ func matchPayload(
 		if !ok {
 			return fmt.Sprintf("expected field %s=%#v", name, expectedValue)
 		}
-		if msg := matchField(captures, prefix+name, expectedValue, actualValue); msg != "" {
+		if msg := matchField(captures, prefix+name, actualValue, expectedValue); msg != "" {
 			return msg
 		}
 	}
@@ -494,10 +494,23 @@ func testBroadcast(s *serverUnderTest) {
 
 func testThreading(s *serverUnderTest) {
 	Convey("Send with parent", func() {
+		ctx := scope.New()
+		kms := s.app.kms
+
+		owner, ownerKey, err := s.Account(ctx, kms, "email", "threading-owner", "passcode")
+		So(err, ShouldBeNil)
+		room, err := s.Room(ctx, kms, true, "threading", owner)
+		So(err, ShouldBeNil)
+		rkey, err := room.MessageKey(ctx)
+		So(rkey.GrantToPasscode(ctx, owner, ownerKey, "hunter2"), ShouldBeNil)
+
 		conn := s.Connect("threading")
 		defer conn.Close()
 
 		conn.expectPing()
+		conn.expect("", "bounce-event", `{"reason":"authentication required"}`)
+		conn.send("1", "auth", `{"type":"passcode","passcode":"hunter2"}`)
+		conn.expect("1", "auth-reply", `{"success":true}`)
 		conn.expectSnapshot(s.backend.Version(), nil, nil)
 
 		id := &proto.SessionView{
@@ -505,26 +518,26 @@ func testThreading(s *serverUnderTest) {
 			IdentityView: &proto.IdentityView{ID: proto.UserID(conn.id()), Name: conn.id()},
 		}
 		server := `"name":"test","server_id":"test1","server_era":"era1"`
+		sendReplyCommon := fmt.Sprintf(
+			`"id":"*","time":"*","sender":{"session_id":"%s","id":"%s",%s},"encryption_key_id":"*"`,
+			id.SessionID, id.ID, server)
 
-		conn.send("1", "nick", `{"name":"test"}`)
-		conn.expect("1", "nick-reply",
+		conn.send("2", "nick", `{"name":"test"}`)
+		conn.expect("2", "nick-reply",
 			`{"session_id":"%s","id":"%s","from":"","to":"test"}`, conn.sessionID, conn.id())
 
-		conn.send("1", "send", `{"content":"root"}`)
-		capture := conn.expect("1", "send-reply",
-			`{"id":"*","time":"*","sender":{"session_id":"%s","id":"%s",%s},"content":"root"}`,
-			id.SessionID, id.ID, server)
+		conn.send("3", "send", `{"content":"root"}`)
+		capture := conn.expect("3", "send-reply", `{%s,"content":"root"}`, sendReplyCommon)
 
-		conn.send("2", "send", `{"parent":"%s","content":"ch1"}`, capture["id"])
-		conn.expect("2", "send-reply",
-			`{"id":"*","parent":"*","time":"*","sender":{"session_id":"%s","id":"%s",%s},"content":"ch1"}`,
-			id.SessionID, id.ID, server)
+		conn.send("4", "send", `{"parent":"%s","content":"ch1"}`, capture["id"])
+		conn.expect("4", "send-reply", `{%s,"parent":"%s","content":"ch1"}`,
+			sendReplyCommon, capture["id"])
 
-		conn.send("3", "log", `{"n":10}`)
-		conn.expect("3", "log-reply",
+		conn.send("5", "log", `{"n":10}`)
+		conn.expect("5", "log-reply",
 			`{"log":[`+
-				`{"id":"%s","time":"*","sender":{"session_id":"%s","id":"%s",%s},"content":"root"},`+
-				`{"id":"*","parent":"%s","time":"*","sender":{"session_id":"%s","id":"%s",%s},"content":"ch1"}]}`,
+				`{"id":"%s","time":"*","sender":{"session_id":"%s","id":"%s",%s},"content":"root","encryption_key_id":"*"},`+
+				`{"id":"*","parent":"%s","time":"*","sender":{"session_id":"%s","id":"%s",%s},"content":"ch1","encryption_key_id":"*"}]}`,
 			capture["id"], id.SessionID, id.ID, server, capture["id"], id.SessionID, id.ID, server)
 	})
 }

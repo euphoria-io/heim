@@ -178,11 +178,12 @@ func (r *memRoom) Send(ctx scope.Context, session proto.Session, message proto.M
 	defer r.m.Unlock()
 
 	msg := proto.Message{
-		ID:       message.ID,
-		UnixTime: proto.Time(message.ID.Time()),
-		Parent:   message.Parent,
-		Sender:   message.Sender,
-		Content:  message.Content,
+		ID:              message.ID,
+		UnixTime:        proto.Time(message.ID.Time()),
+		Parent:          message.Parent,
+		Sender:          message.Sender,
+		Content:         message.Content,
+		EncryptionKeyID: message.EncryptionKeyID,
 	}
 	r.log.post(&msg)
 	return msg, r.broadcast(ctx, proto.SendType, msg, session)
