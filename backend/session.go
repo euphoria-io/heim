@@ -264,6 +264,7 @@ func (s *session) serve() error {
 		case <-keepalive.C:
 			if s.outstandingPings > MaxKeepAliveMisses {
 				logger.Printf("connection timed out")
+				s.sendDisconnect("timed out")
 				return ErrUnresponsive
 			}
 

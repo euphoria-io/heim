@@ -6,8 +6,11 @@ import (
 	"time"
 
 	"euphoria.io/heim/proto"
+	"euphoria.io/heim/proto/security"
 	"euphoria.io/heim/proto/snowflake"
 )
+
+const authDelay = 2 * time.Second
 
 func (s *session) ignoreState(cmd *proto.Packet) *response {
 	switch cmd.Type {
@@ -492,7 +495,11 @@ func (s *session) handleAuthCommand(msg *proto.AuthCommand) *response {
 			return &response{err: err}
 		}
 		jitter := 4 * time.Duration(int(buf[0])-128) * time.Millisecond
-		time.Sleep(2*time.Second + jitter)
+		delay := authDelay + jitter
+		if security.TestMode {
+			delay = 0
+		}
+		time.Sleep(delay)
 	}
 
 	authAttempts.WithLabelValues(s.roomName).Inc()

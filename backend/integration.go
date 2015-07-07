@@ -149,6 +149,7 @@ func (tc *testConn) send(id, cmdType, data string, args ...interface{}) {
 	} else {
 		msg = fmt.Sprintf(`{"id":"%s","type":"%s","data":%s}`, id, cmdType, data)
 	}
+	fmt.Printf("sent %s\n", msg)
 	So(tc.Conn.WriteMessage(websocket.TextMessage, []byte(msg)), ShouldBeNil)
 }
 
@@ -290,10 +291,11 @@ func (tc *testConn) expectError(id, cmdType, errFormat string, errArgs ...interf
 	So(err.Error(), ShouldEqual, errMsg)
 }
 
-func (tc *testConn) expectPing() {
+func (tc *testConn) expectPing() *proto.PingEvent {
 	fmt.Printf("reading packet, expecting ping-event\n")
-	packetType, _ := tc.readPacket()
+	packetType, payload := tc.readPacket()
 	So(packetType, ShouldEqual, "ping-event")
+	return payload.(*proto.PingEvent)
 }
 
 func (tc *testConn) expectSnapshot(version string, listingParts []string, logParts []string) {
@@ -360,6 +362,7 @@ func IntegrationTest(t *testing.T, factory func() proto.Backend) {
 	runTest("Room creation", testRoomCreation)
 	runTest("Room grants", testRoomGrants)
 	runTest("Room not found", testRoomNotFound)
+	runTest("KeepAlive", testKeepAlive)
 }
 
 func testLurker(s *serverUnderTest) {
@@ -726,6 +729,21 @@ func testAuthentication(s *serverUnderTest) {
 		conn = s.Connect("private", conn.cookies...)
 		conn.expectPing()
 		conn.expectSnapshot(s.backend.Version(), nil, nil)
+	})
+
+	Convey("Ignore after excessive failures", func() {
+		conn := s.Connect("private")
+		defer conn.Close()
+		conn.expectPing()
+		conn.expect("", "bounce-event", `{"reason":"authentication required"}`)
+		for i := 0; i < MaxAuthFailures; i++ {
+			conn.send(fmt.Sprintf("%d", i+1), "auth", `{"type":"passcode","passcode":"dunno"}`)
+			conn.expect(fmt.Sprintf("%d", i+1), "auth-reply",
+				`{"success":false,"reason":"passcode incorrect"}`)
+		}
+		conn.send(fmt.Sprintf("%d", MaxAuthFailures+1), "auth", `{"type":"passcode","passcode":"dunno"}`)
+		conn.send(fmt.Sprintf("%d", MaxAuthFailures+2), "ping", `{}`)
+		conn.expect(fmt.Sprintf("%d", MaxAuthFailures+2), "ping-reply", `{}`)
 	})
 }
 
@@ -1382,4 +1400,23 @@ func testRoomNotFound(s *serverUnderTest) {
 	So(err, ShouldNotBeNil)
 	So(resp, ShouldNotBeNil)
 	So(resp.StatusCode, ShouldEqual, http.StatusNotFound)
+}
+
+func testKeepAlive(s *serverUnderTest) {
+	Convey("Ping event, reply, and timeout", func() {
+		save := KeepAlive
+		defer func() { KeepAlive = save }()
+		KeepAlive = 10 * time.Millisecond
+
+		conn := s.Connect("ping")
+		event := conn.expectPing()
+		conn.expectSnapshot(s.backend.Version(), nil, nil)
+		conn.send("", "ping-reply", `{"time":%d}`, time.Time(event.UnixTime).Unix())
+		time.Sleep(KeepAlive * MaxKeepAliveMisses)
+		for i := 0; i < MaxKeepAliveMisses+1; i++ {
+			conn.expectPing()
+		}
+		_, _, err := conn.Conn.ReadMessage()
+		So(err, ShouldNotBeNil)
+	})
 }
