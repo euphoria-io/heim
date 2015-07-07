@@ -28,7 +28,3 @@ type AuthorizationResult struct {
 	Authorization
 	FailureReason string
 }
-
-func authorizationFailure(reason string) (*AuthorizationResult, error) {
-	return &AuthorizationResult{FailureReason: reason}, nil
-}
