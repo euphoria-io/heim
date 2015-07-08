@@ -3,6 +3,7 @@ var _ = require('lodash')
 var assert = require('assert')
 var sinon = require('sinon')
 
+
 describe('notification store', function() {
   var ChatTree = require('../lib/chat-tree')
   var notification = require('../lib/stores/notification')
