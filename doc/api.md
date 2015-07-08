@@ -595,7 +595,7 @@ The command is a no-op if an identical entry already exists in the ban list.
 | :-- | :-- | :-- | :--------- |
 | `id` | [UserID](#userid) | *optional* |  if given, select for the given agent or account |
 | `ip` | [string](#string) | *optional* |  if given, select for the given IP address |
-| `expires` | [Time](#time) | *optional* |  if given, the ban is temporary up until this time |
+| `seconds` | [int](#int) | *optional* |  if given, the ban is temporary |
 
 
 

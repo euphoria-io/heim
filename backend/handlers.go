@@ -612,7 +612,11 @@ func (s *session) handleBanCommand(msg *proto.BanCommand) *response {
 	if msg.Ban.IP != "" {
 		return &response{err: fmt.Errorf("ip bans not supported")}
 	}
-	if err := s.room.Ban(s.ctx, msg.Ban, msg.Expires.StdTime()); err != nil {
+	var until time.Time
+	if msg.Seconds != 0 {
+		until = time.Now().Add(time.Duration(msg.Seconds) * time.Second)
+	}
+	if err := s.room.Ban(s.ctx, msg.Ban, until); err != nil {
 		return &response{err: err}
 	}
 	return &response{packet: &proto.BanReply{}}

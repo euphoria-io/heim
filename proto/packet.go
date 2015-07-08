@@ -362,7 +362,7 @@ type Ban struct {
 // The command is a no-op if an identical entry already exists in the ban list.
 type BanCommand struct {
 	Ban
-	Expires Time `json:"expires,omitempty"` // if given, the ban is temporary up until this time
+	Seconds int `json:"seconds,omitempty"` // if given, the ban is temporary
 }
 
 // The `ban-reply` packet indicates that the `ban` command succeeded.
