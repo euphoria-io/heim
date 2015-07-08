@@ -122,8 +122,14 @@ module.exports.store = Reflux.createStore({
     if (!data) {
       return
     }
+
+    var popupsWereEnabled = this._popupsAreEnabled()
     this.state.popupsEnabled = data.notify
     this.state.popupsPausedUntil = data.notifyPausedUntil
+    if (popupsWereEnabled && !this._popupsAreEnabled()) {
+      this.closeAllPopups()
+    }
+
     this._roomStorage = data.room
     this.trigger(this.state)
   },
@@ -303,6 +309,10 @@ module.exports.store = Reflux.createStore({
     }
   },
 
+  closeAllPopups: function() {
+    _.each(this.alerts, (alert, kind) => this.closePopup(kind))
+  },
+
   removeAlert: function(kind, messageId) {
     var alert = this.alerts[kind]
     if (!alert) {
@@ -317,6 +327,15 @@ module.exports.store = Reflux.createStore({
 
   removeAllAlerts: function() {
     _.each(this.alerts, (alert, kind) => this.removeAlert(kind))
+  },
+
+  _popupsAreEnabled: function() {
+    if (!this.state.popupsEnabled) {
+      return false
+    }
+
+    var popupsPaused = this.state.popupsPausedUntil && Date.now() < this.state.popupsPausedUntil
+    return !popupsPaused
   },
 
   _notifyAlert: function(kind, roomName, message, options) {
@@ -346,8 +365,7 @@ module.exports.store = Reflux.createStore({
       return
     }
 
-    var popupsPaused = this.state.popupsPausedUntil && Date.now() < this.state.popupsPausedUntil
-    if (this.state.popupsPermission && this.state.popupsEnabled && !popupsPaused) {
+    if (this.state.popupsPermission && this._popupsAreEnabled()) {
       var timeoutDuration = options.timeout
       delete options.timeout
 

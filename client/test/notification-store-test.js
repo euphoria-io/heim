@@ -245,6 +245,12 @@ describe('notification store', function() {
       ])
     }
 
+    var storageMock = {
+      notify: true,
+      notifyPausedUntil: 0,
+      room: {ezzie: {notifyMode: 'message'}},
+    }
+
     var fakeNotification
 
     beforeEach(function() {
@@ -292,6 +298,31 @@ describe('notification store', function() {
       })
     })
 
+    describe('when popup state changes in another tab', function() {
+      beforeEach(function() {
+        notification.store.chatStateChange({connected: true, joined: true})
+        notification.store.onInactive()
+        notification.store.storageChange(storageMock)
+        notification.store.messageReceived(mockChatState.messages.get('id1'), mockChatState)
+        clock.tick(0)
+        sinon.assert.calledOnce(Notification)
+      })
+
+      it('should close popups if paused', function() {
+        notification.store.storageChange(_.extend({}, storageMock, {
+          notifyPausedUntil: Date.now() + 1000,
+        }))
+        sinon.assert.calledOnce(fakeNotification.close)
+      })
+
+      it('should close popups if disabled', function() {
+        notification.store.storageChange(_.extend({}, storageMock, {
+          notify: false,
+        }))
+        sinon.assert.calledOnce(fakeNotification.close)
+      })
+    })
+
     describe('setting a room notification mode', function() {
       it('should store mode', function() {
         notification.store.setRoomNotificationMode('ezzie', 'none')
@@ -306,8 +337,6 @@ describe('notification store', function() {
         sinon.assert.calledWithExactly(Heim.setFavicon, notification.favicons.disconnected)
       })
     })
-
-    var storageMock = {notify: true, room: {ezzie: {notifyMode: 'message'}}}
 
     describe('when popups enabled', function() {
       beforeEach(function() {
