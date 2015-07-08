@@ -25,10 +25,16 @@ module.exports = React.createClass({
     }
   },
 
+  onKeyDown: function(ev) {
+    if (ev.key == 'Enter' || ev.key == 'Space') {
+      this.props.onClick(ev)
+    }
+  },
+
   render: function() {
     // https://bugzilla.mozilla.org/show_bug.cgi?id=984869#c2
     return (
-      <button {...this.props} onClick={this.onClick} onTouchStart={this.onClick}>
+      <button {...this.props} onClick={this.onClick} onTouchStart={this.onClick} onKeyDown={this.onKeyDown}>
         <div className="inner">{this.props.children}</div>
       </button>
     )
