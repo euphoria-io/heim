@@ -284,7 +284,7 @@ describe('notification store', function() {
       })
     })
 
-    describe('disabling popups for a time', function() {
+    describe('pausing popups for a time', function() {
       it('should store pause time', function() {
         var time = startTime + 1000
         notification.store.pausePopupsUntil(time)
