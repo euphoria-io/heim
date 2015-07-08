@@ -316,9 +316,7 @@ module.exports.store = Reflux.createStore({
   },
 
   removeAllAlerts: function() {
-    _.each(this.alerts, (alert, kind) => {
-      this.removeAlert(kind)
-    })
+    _.each(this.alerts, (alert, kind) => this.removeAlert(kind))
   },
 
   _notifyAlert: function(kind, roomName, message, options) {
