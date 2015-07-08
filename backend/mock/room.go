@@ -19,10 +19,11 @@ type memRoom struct {
 	name       string
 	version    string
 	log        *memLog
-	agentBans  map[string]time.Time
+	agentBans  map[proto.UserID]time.Time
 	ipBans     map[string]time.Time
 	identities map[proto.UserID]proto.Identity
 	live       map[proto.UserID][]proto.Session
+	clients    map[string]*proto.Client
 
 	sec        *proto.RoomSecurity
 	messageKey *roomMessageKey
@@ -51,7 +52,7 @@ func NewRoom(
 		name:      name,
 		version:   version,
 		log:       newMemLog(),
-		agentBans: map[string]time.Time{},
+		agentBans: map[proto.UserID]time.Time{},
 		ipBans:    map[string]time.Time{},
 		sec:       sec,
 		managerKey: &roomManagerKey{
@@ -129,11 +130,14 @@ func (r *memRoom) Join(ctx scope.Context, session proto.Session) error {
 	if r.live == nil {
 		r.live = map[proto.UserID][]proto.Session{}
 	}
+	if r.clients == nil {
+		r.clients = map[string]*proto.Client{}
+	}
 
 	ident := session.Identity()
 	id := ident.ID()
 
-	if banned, ok := r.agentBans[client.Agent.IDString()]; ok && banned.After(time.Now()) {
+	if banned, ok := r.agentBans[ident.ID()]; ok && banned.After(time.Now()) {
 		return proto.ErrAccessDenied
 	}
 
@@ -146,6 +150,8 @@ func (r *memRoom) Join(ctx scope.Context, session proto.Session) error {
 	}
 
 	r.live[id] = append(r.live[id], session)
+	r.clients[session.ID()] = client
+
 	return r.broadcast(ctx, proto.JoinType,
 		proto.PresenceEvent(*session.View()), session)
 }
@@ -167,6 +173,7 @@ func (r *memRoom) Part(ctx scope.Context, session proto.Session) error {
 		delete(r.live, id)
 		delete(r.identities, id)
 	}
+	delete(r.clients, session.ID())
 	return r.broadcast(ctx, proto.PartType,
 		proto.PresenceEvent(*session.View()), session)
 }
@@ -308,35 +315,64 @@ func (r *memRoom) GenerateMessageKey(ctx scope.Context, kms security.KMS) (proto
 	return r.messageKey, nil
 }
 
-func (r *memRoom) BanAgent(ctx scope.Context, agentID string, until time.Time) error {
+func (r *memRoom) Ban(ctx scope.Context, ban proto.Ban, until time.Time) error {
 	r.m.Lock()
-	r.agentBans[agentID] = until
-	r.m.Unlock()
-	return nil
-}
+	defer r.m.Unlock()
 
-func (r *memRoom) UnbanAgent(ctx scope.Context, agentID string) error {
-	r.m.Lock()
-	if _, ok := r.agentBans[agentID]; ok {
-		delete(r.agentBans, agentID)
+	if until.IsZero() {
+		until = time.Unix(1<<62-1, 0)
 	}
-	r.m.Unlock()
-	return nil
-}
 
-func (r *memRoom) BanIP(ctx scope.Context, ip string, until time.Time) error {
-	r.m.Lock()
-	r.ipBans[ip] = until
-	r.m.Unlock()
-	return nil
-}
-
-func (r *memRoom) UnbanIP(ctx scope.Context, ip string) error {
-	r.m.Lock()
-	if _, ok := r.ipBans[ip]; ok {
-		delete(r.ipBans, ip)
+	event := &proto.DisconnectEvent{Reason: "banned"}
+	switch {
+	case ban.ID != "":
+		r.agentBans[ban.ID] = until
+		for _, sessions := range r.live {
+			for _, session := range sessions {
+				if ban.ID == session.Identity().ID() {
+					if err := session.Send(ctx, proto.DisconnectEventType, event); err != nil {
+						// TODO: accumulate errors
+						return err
+					}
+				}
+			}
+		}
+		return nil
+	case ban.IP != "":
+		r.ipBans[ban.IP] = until
+		for _, sessions := range r.live {
+			for _, session := range sessions {
+				client := r.clients[session.ID()]
+				if client.IP == ban.IP {
+					if err := session.Send(ctx, proto.DisconnectEventType, event); err != nil {
+						// TODO: accumulate errors
+						return err
+					}
+				}
+			}
+		}
+		return nil
+	default:
+		return fmt.Errorf("id or ip must be given")
 	}
-	r.m.Unlock()
+}
+
+func (r *memRoom) Unban(ctx scope.Context, ban proto.Ban) error {
+	r.m.Lock()
+	defer r.m.Unlock()
+
+	switch {
+	case ban.ID != "":
+		if _, ok := r.agentBans[ban.ID]; ok {
+			delete(r.agentBans, ban.ID)
+		}
+	case ban.IP != "":
+		if _, ok := r.ipBans[ban.IP]; ok {
+			delete(r.ipBans, ban.IP)
+		}
+	default:
+		return fmt.Errorf("id or ip must be given")
+	}
 	return nil
 }
 

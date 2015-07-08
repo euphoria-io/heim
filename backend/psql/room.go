@@ -356,9 +356,31 @@ func (rb *RoomBinding) ManagerKey(ctx scope.Context) (proto.RoomManagerKey, erro
 	return NewRoomManagerKeyBinding(rb), nil
 }
 
-func (rb *RoomBinding) BanAgent(ctx scope.Context, agentID string, until time.Time) error {
+func (rb *RoomBinding) Ban(ctx scope.Context, ban proto.Ban, until time.Time) error {
+	switch {
+	case ban.ID != "":
+		return rb.banAgent(ctx, ban.ID, until)
+	case ban.IP != "":
+		return rb.banIP(ctx, ban.IP, until)
+	default:
+		return fmt.Errorf("id or ip must be given")
+	}
+}
+
+func (rb *RoomBinding) Unban(ctx scope.Context, ban proto.Ban) error {
+	switch {
+	case ban.ID != "":
+		return rb.unbanAgent(ctx, ban.ID)
+	case ban.IP != "":
+		return rb.unbanIP(ctx, ban.IP)
+	default:
+		return fmt.Errorf("id or ip must be given")
+	}
+}
+
+func (rb *RoomBinding) banAgent(ctx scope.Context, agentID proto.UserID, until time.Time) error {
 	ban := &BannedAgent{
-		AgentID: agentID,
+		AgentID: agentID.String(),
 		Room: sql.NullString{
 			String: rb.Name,
 			Valid:  true,
@@ -374,17 +396,17 @@ func (rb *RoomBinding) BanAgent(ctx scope.Context, agentID string, until time.Ti
 		return err
 	}
 
-	bounceEvent := &proto.BounceEvent{Reason: "banned", AgentID: agentID}
+	bounceEvent := &proto.BounceEvent{Reason: "banned", AgentID: agentID.String()}
 	return rb.broadcast(ctx, rb.Room, proto.BounceEventType, bounceEvent)
 }
 
-func (rb *RoomBinding) UnbanAgent(ctx scope.Context, agentID string) error {
+func (rb *RoomBinding) unbanAgent(ctx scope.Context, agentID proto.UserID) error {
 	_, err := rb.DbMap.Exec(
-		"DELETE FROM banned_agent WHERE agent_id = $1 AND room = $2", agentID, rb.Name)
+		"DELETE FROM banned_agent WHERE agent_id = $1 AND room = $2", agentID.String(), rb.Name)
 	return err
 }
 
-func (rb *RoomBinding) BanIP(ctx scope.Context, ip string, until time.Time) error {
+func (rb *RoomBinding) banIP(ctx scope.Context, ip string, until time.Time) error {
 	ban := &BannedIP{
 		IP: ip,
 		Room: sql.NullString{
@@ -406,7 +428,7 @@ func (rb *RoomBinding) BanIP(ctx scope.Context, ip string, until time.Time) erro
 	return rb.broadcast(ctx, rb.Room, proto.BounceEventType, bounceEvent)
 }
 
-func (rb *RoomBinding) UnbanIP(ctx scope.Context, ip string) error {
+func (rb *RoomBinding) unbanIP(ctx scope.Context, ip string) error {
 	_, err := rb.DbMap.Exec(
 		"DELETE FROM banned_ip WHERE ip = $1 AND room = $2", ip, rb.Name)
 	return err

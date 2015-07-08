@@ -16,11 +16,13 @@
     * [logout](#logout)
     * [register-account](#register-account)
   * [Room Manager Commands](#room-manager-commands)
+    * [ban](#ban)
     * [edit-message](#edit-message)
     * [grant-access](#grant-access)
     * [grant-manager](#grant-manager)
     * [revoke-access](#revoke-access)
     * [revoke-manager](#revoke-manager)
+    * [unban](#unban)
   * [Staff Commands](#staff-commands)
     * [staff-create-room](#staff-create-room)
     * [staff-grant-manager](#staff-grant-manager)
@@ -580,6 +582,35 @@ will be a logged in session, using the newly created account.
 These commands are available if the client is logged into an account that has a manager grant
 on the room.
 
+### ban
+
+The `ban` command adds an entry to the room's ban list. Any joined sessions
+that match this entry will be disconnected. New sessions matching the entry
+will be unable to join the room.
+
+The command is a no-op if an identical entry already exists in the ban list.
+
+
+| Field | Type | Required? | Description |
+| :-- | :-- | :-- | :--------- |
+| `id` | [UserID](#userid) | *optional* |  if given, select for the given agent or account |
+| `ip` | [string](#string) | *optional* |  if given, select for the given IP address |
+| `expires` | [Time](#time) | *optional* |  if given, the ban is temporary up until this time |
+
+
+
+
+
+The `ban-reply` packet indicates that the `ban` command succeeded.
+
+
+This packet has no fields.
+
+
+
+
+
+
 ### edit-message
 
 The `edit-message` command can be used by active room managers to modify the
@@ -723,6 +754,30 @@ your room!
 
 
 `revoke-manager-reply` confirms that the manager grant was revoked.
+
+
+This packet has no fields.
+
+
+
+
+
+
+### unban
+
+The `unban` command removes an entry from the room's ban list.
+
+
+| Field | Type | Required? | Description |
+| :-- | :-- | :-- | :--------- |
+| `id` | [UserID](#userid) | *optional* |  if given, select for the given agent or account |
+| `ip` | [string](#string) | *optional* |  if given, select for the given IP address |
+
+
+
+
+
+The `unban-reply` packet indicates that the `unban` command succeeded.
 
 
 This packet has no fields.

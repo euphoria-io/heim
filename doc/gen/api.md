@@ -16,11 +16,13 @@
     * [logout](#logout)
     * [register-account](#register-account)
   * [Room Manager Commands](#room-manager-commands)
+    * [ban](#ban)
     * [edit-message](#edit-message)
     * [grant-access](#grant-access)
     * [grant-manager](#grant-manager)
     * [revoke-access](#revoke-access)
     * [revoke-manager](#revoke-manager)
+    * [unban](#unban)
   * [Staff Commands](#staff-commands)
     * [staff-create-room](#staff-create-room)
     * [staff-grant-manager](#staff-grant-manager)
@@ -302,6 +304,10 @@ prerequisite for room management.
 These commands are available if the client is logged into an account that has a manager grant
 on the room.
 
+### ban
+
+{{template "command.md" "ban"}}
+
 ### edit-message
 
 {{template "command.md" "edit-message"}}
@@ -321,6 +327,10 @@ on the room.
 ### revoke-manager
 
 {{template "command.md" "revoke-manager"}}
+
+### unban
+
+{{template "command.md" "unban"}}
 
 ## Staff Commands
 

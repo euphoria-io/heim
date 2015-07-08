@@ -22,6 +22,16 @@ const (
 
 type UserID string
 
+func (uid UserID) String() string { return string(uid) }
+
+func (uid UserID) Parse() (kind, id string) {
+	parts := strings.SplitN(string(uid), ":", 2)
+	if len(parts) < 2 {
+		return "", string(uid)
+	}
+	return parts[0], parts[1]
+}
+
 // An Identity maps to a global persona. It may exist only in the context
 // of a single Room. An Identity may be anonymous.
 type Identity interface {

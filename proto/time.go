@@ -30,4 +30,6 @@ func (t *Time) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+func (t *Time) StdTime() time.Time { return time.Time(*t) }
+
 func Now() Time { return Time(snowflake.Clock().UTC()) }

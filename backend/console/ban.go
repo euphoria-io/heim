@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"euphoria.io/heim/proto"
 	"euphoria.io/scope"
 )
 
@@ -54,7 +55,7 @@ func (ban) run(ctx scope.Context, c *console, args []string) error {
 			if err != nil {
 				return err
 			}
-			if err := room.BanAgent(ctx, *agent, until); err != nil {
+			if err := room.Ban(ctx, proto.Ban{ID: proto.UserID(*agent)}, until); err != nil {
 				return err
 			}
 			c.Printf("agent %s banned in room %s %s\n", *agent, *roomName, untilStr)
@@ -73,7 +74,7 @@ func (ban) run(ctx scope.Context, c *console, args []string) error {
 			if err != nil {
 				return err
 			}
-			if err := room.BanIP(ctx, *ip, until); err != nil {
+			if err := room.Ban(ctx, proto.Ban{IP: *ip}, until); err != nil {
 				return err
 			}
 			c.Printf("ip %s banned in room %s %s\n", *ip, *roomName, untilStr)
@@ -114,7 +115,7 @@ func (unban) run(ctx scope.Context, c *console, args []string) error {
 			if err != nil {
 				return err
 			}
-			if err := room.UnbanAgent(ctx, *agent); err != nil {
+			if err := room.Unban(ctx, proto.Ban{ID: proto.UserID(*agent)}); err != nil {
 				return err
 			}
 			c.Printf("ban of agent %s in room %s lifted\n", *agent, *roomName)
@@ -133,7 +134,7 @@ func (unban) run(ctx scope.Context, c *console, args []string) error {
 			if err != nil {
 				return err
 			}
-			if err := room.UnbanIP(ctx, *ip); err != nil {
+			if err := room.Unban(ctx, proto.Ban{IP: *ip}); err != nil {
 				return err
 			}
 			c.Printf("ban of ip %s in room %s lifted\n", *ip, *roomName)

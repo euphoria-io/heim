@@ -17,6 +17,11 @@ var (
 	AuthType      = PacketType("auth")
 	AuthReplyType = AuthType.Reply()
 
+	BanType        = PacketType("ban")
+	BanReplyType   = BanType.Reply()
+	UnbanType      = PacketType("unban")
+	UnbanReplyType = UnbanType.Reply()
+
 	SendType      = PacketType("send")
 	SendEventType = SendType.Event()
 	SendReplyType = SendType.Reply()
@@ -136,6 +141,11 @@ var (
 
 		AuthType:      reflect.TypeOf(AuthCommand{}),
 		AuthReplyType: reflect.TypeOf(AuthReply{}),
+
+		BanType:        reflect.TypeOf(BanCommand{}),
+		BanReplyType:   reflect.TypeOf(BanReply{}),
+		UnbanType:      reflect.TypeOf(UnbanCommand{}),
+		UnbanReplyType: reflect.TypeOf(UnbanReply{}),
 
 		BounceEventType:     reflect.TypeOf(BounceEvent{}),
 		DisconnectEventType: reflect.TypeOf(DisconnectEvent{}),
@@ -337,6 +347,34 @@ type AuthReply struct {
 	Success bool   `json:"success"`          // true if authentication succeeded
 	Reason  string `json:"reason,omitempty"` // if `success` was false, the reason for failure
 }
+
+// `Ban` describes an entry in a ban list. When incoming sessions match one of
+// these entries, they are rejected.
+type Ban struct {
+	ID UserID `json:"id,omitempty"` // if given, select for the given agent or account
+	IP string `json:"ip,omitempty"` // if given, select for the given IP address
+}
+
+// The `ban` command adds an entry to the room's ban list. Any joined sessions
+// that match this entry will be disconnected. New sessions matching the entry
+// will be unable to join the room.
+//
+// The command is a no-op if an identical entry already exists in the ban list.
+type BanCommand struct {
+	Ban
+	Expires Time `json:"expires,omitempty"` // if given, the ban is temporary up until this time
+}
+
+// The `ban-reply` packet indicates that the `ban` command succeeded.
+type BanReply struct{}
+
+// The `unban` command removes an entry from the room's ban list.
+type UnbanCommand struct {
+	Ban
+}
+
+// The `unban-reply` packet indicates that the `unban` command succeeded.
+type UnbanReply struct{}
 
 // A `bounce-event` indicates that access to a room is denied.
 type BounceEvent struct {

@@ -130,6 +130,23 @@ func (s *serverUnderTest) Room(
 	return room, nil
 }
 
+func (s *serverUnderTest) RoomAndManager(
+	ctx scope.Context, kms security.KMS, private bool, roomName, namespace, id, password string) (
+	proto.Room, proto.Account, *security.ManagedKey, error) {
+
+	manager, key, err := s.Account(ctx, kms, namespace, id, password)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	room, err := s.Room(ctx, kms, private, roomName, manager)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	return room, manager, key, err
+}
+
 type testConn struct {
 	*websocket.Conn
 	cookies   []*http.Cookie
@@ -363,6 +380,7 @@ func IntegrationTest(t *testing.T, factory func() proto.Backend) {
 	runTest("Room grants", testRoomGrants)
 	runTest("Room not found", testRoomNotFound)
 	runTest("KeepAlive", testKeepAlive)
+	runTest("Bans", testBans)
 }
 
 func testLurker(s *serverUnderTest) {
@@ -1158,7 +1176,6 @@ func testAccountRegistration(s *serverUnderTest) {
 		// Observer should fail to register the same personal identity.
 		observer.send("1", "register-account",
 			`{"namespace":"email","id":"registration@euphoria.io","password":"hunter2"}`)
-		fmt.Printf("SECOND REGISTRATION\n")
 		observer.expect("1", "register-account-reply",
 			`{"success":false,"reason":"personal identity already in use"}`)
 	})
@@ -1490,5 +1507,139 @@ func testKeepAlive(s *serverUnderTest) {
 		}
 		_, _, err := conn.Conn.ReadMessage()
 		So(err, ShouldNotBeNil)
+	})
+}
+
+func testBans(s *serverUnderTest) {
+	Convey("Ban by agent", func() {
+		ctx := scope.New()
+		kms := s.app.kms
+
+		// Create manager and log in (via staging room).
+		nonce := fmt.Sprintf("%s", time.Now())
+		_, manager, _, err := s.RoomAndManager(ctx, kms, false, "bans", "email", nonce, "password")
+		So(err, ShouldBeNil)
+
+		mconn := s.Connect("bansstage")
+		mconn.expectPing()
+		mconn.expectSnapshot(s.backend.Version(), nil, nil)
+		mconn.send("1", "login", `{"namespace":"email","id":"%s","password":"password"}`, nonce)
+		mconn.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, manager.ID())
+		mconn.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
+		mconn.Close()
+
+		// Connect manager to managed room and wait for victim.
+		mconn = s.Connect("bans", mconn.cookies...)
+		mconn.expectPing()
+		mconn.expectSnapshot(s.backend.Version(), nil, nil)
+
+		// Connect victim.
+		vconn := s.Connect("bans")
+		vconn.expectPing()
+		vconn.expectSnapshot(s.backend.Version(), nil, nil)
+
+		// Wait for manager to see join, acquire agentID.
+		capture := mconn.expect("", "join-event",
+			`{"session_id":"*","id":"*","name":"","server_id":"test1","server_era":"era1"}`)
+		agentID := capture["id"]
+		So(agentID, ShouldNotBeNil)
+
+		// Ban agent.
+		mconn.send("1", "ban", `{"id":"%s"}`, agentID)
+		mconn.expect("1", "ban-reply", `{}`)
+
+		vconn.expect("", "disconnect-event", `{"reason":"banned"}`)
+		vconn.Close()
+
+		mconn.expect("", "part-event",
+			`{"session_id":"*","id":"%s","name":"","server_id":"test1","server_era":"era1"}`, agentID)
+
+		// Agent should be unable to reconnect.
+		vconn = s.Connect("bans", vconn.cookies...)
+		vconn.expectPing()
+		_, _, err = vconn.Conn.ReadMessage()
+		So(err, ShouldNotBeNil)
+		vconn.Close()
+
+		// Unban agent, who should be able to reconnect.
+		mconn.send("2", "unban", `{"id":"%s"}`, agentID)
+		mconn.expect("2", "unban-reply", `{}`)
+		mconn.Close()
+
+		vconn = s.Connect("bans", vconn.cookies...)
+		vconn.expectPing()
+		vconn.expectSnapshot(s.backend.Version(), nil, nil)
+	})
+
+	Convey("Ban by account", func() {
+		ctx := scope.New()
+		kms := s.app.kms
+
+		// Create manager and log in (via staging room).
+		nonce := fmt.Sprintf("%s", time.Now())
+		_, manager, _, err := s.RoomAndManager(ctx, kms, false, "acctbans", "email", nonce, "password")
+		So(err, ShouldBeNil)
+
+		mconn := s.Connect("acctbansstage1")
+		mconn.expectPing()
+		mconn.expectSnapshot(s.backend.Version(), nil, nil)
+		mconn.send("1", "login", `{"namespace":"email","id":"%s","password":"password"}`, nonce)
+		mconn.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, manager.ID())
+		mconn.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
+		mconn.Close()
+
+		// Connect manager to managed room and wait for victim.
+		mconn = s.Connect("acctbans", mconn.cookies...)
+		mconn.expectPing()
+		mconn.expectSnapshot(s.backend.Version(), nil, nil)
+
+		// Create victim account and log in (via staging room).
+		victim, _, err := s.Account(ctx, kms, "email", "victim"+nonce, "password")
+		So(err, ShouldBeNil)
+
+		vconn := s.Connect("acctbansstage2")
+		vconn.expectPing()
+		vconn.expectSnapshot(s.backend.Version(), nil, nil)
+		vconn.send("1", "login", `{"namespace":"email","id":"victim%s","password":"password"}`, nonce)
+		vconn.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, victim.ID())
+		vconn.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
+		vconn.Close()
+
+		// Connect victim.
+		vconn = s.Connect("acctbans", vconn.cookies...)
+		vconn.expectPing()
+		vconn.expectSnapshot(s.backend.Version(), nil, nil)
+
+		// Wait for manager to see join, acquire agentID.
+		mconn.expect("", "join-event",
+			`{"session_id":"*","id":"account:%s","name":"","server_id":"test1","server_era":"era1"}`,
+			victim.ID())
+
+		// Ban account.
+		mconn.send("1", "ban", `{"id":"account:%s"}`, victim.ID())
+		mconn.expect("1", "ban-reply", `{}`)
+
+		vconn.expect("", "disconnect-event", `{"reason":"banned"}`)
+		vconn.Close()
+
+		mconn.expect("", "part-event",
+			`{"session_id":"*","id":"account:%s","name":"","server_id":"test1","server_era":"era1"}`,
+			victim.ID())
+
+		// Account should be unable to reconnect.
+		vconn = s.Connect("acctbans", vconn.cookies...)
+		vconn.expectPing()
+		_, _, err = vconn.Conn.ReadMessage()
+		So(err, ShouldNotBeNil)
+		vconn.Close()
+
+		// Unban account, who should be able to reconnect.
+		mconn.send("2", "unban", `{"id":"account:%s"}`, victim.ID())
+		mconn.expect("2", "unban-reply", `{}`)
+		mconn.Close()
+
+		vconn = s.Connect("acctbans", vconn.cookies...)
+		vconn.expectPing()
+		vconn.expectSnapshot(s.backend.Version(), nil, nil)
 	})
 }

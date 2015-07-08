@@ -62,24 +62,24 @@ func (lm ListenerMap) Broadcast(ctx scope.Context, event *proto.Packet, exclude 
 	for sessionID, listener := range lm {
 		if _, ok := excludeSet[sessionID]; !ok {
 			if bounceAgentID != "" {
-				if strings.HasPrefix(sessionID, bounceAgentID) {
-					backend.Logger(ctx).Printf("sending bounce to %s: %#v", listener.ID(), payload)
-					if err := listener.Send(ctx, event.Type, payload); err != nil {
-						backend.Logger(ctx).Printf("error sending bounce event to %s: %s",
+				if listener.Session.Identity().ID().String() == bounceAgentID {
+					backend.Logger(ctx).Printf("sending disconnect to %s: %#v", listener.ID(), payload)
+					discEvent := &proto.DisconnectEvent{Reason: payload.(*proto.BounceEvent).Reason}
+					if err := listener.Send(ctx, proto.DisconnectEventType, discEvent); err != nil {
+						backend.Logger(ctx).Printf("error sending disconnect event to %s: %s",
 							listener.ID(), err)
 					}
-					listener.Close()
 				}
 				continue
 			}
 			if bounceIP != "" {
 				if listener.Client.IP == bounceIP {
-					backend.Logger(ctx).Printf("sending bounce to %s: %#v", listener.ID(), payload)
-					if err := listener.Send(ctx, event.Type, payload); err != nil {
-						backend.Logger(ctx).Printf("error sending bounce event to %s: %s",
+					backend.Logger(ctx).Printf("sending disconnect to %s: %#v", listener.ID(), payload)
+					discEvent := &proto.DisconnectEvent{Reason: payload.(*proto.BounceEvent).Reason}
+					if err := listener.Send(ctx, proto.DisconnectEventType, discEvent); err != nil {
+						backend.Logger(ctx).Printf("error sending disconnect event to %s: %s",
 							listener.ID(), err)
 					}
-					listener.Close()
 				}
 				continue
 			}

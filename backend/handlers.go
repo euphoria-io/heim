@@ -111,6 +111,10 @@ func (s *session) handleCoreCommands(payload interface{}) *response {
 		return s.handleRegisterAccountCommand(msg)
 
 	// room manager commands
+	case *proto.BanCommand:
+		return s.handleBanCommand(msg)
+	case *proto.UnbanCommand:
+		return s.handleUnbanCommand(msg)
 	case *proto.EditMessageCommand:
 		return s.handleEditMessageCommand(msg)
 	case *proto.GrantAccessCommand:
@@ -599,4 +603,27 @@ func (s *session) handleEditMessageCommand(msg *proto.EditMessageCommand) *respo
 		return &response{err: err}
 	}
 	return &response{packet: reply}
+}
+
+func (s *session) handleBanCommand(msg *proto.BanCommand) *response {
+	if s.client.Account == nil || s.client.Authorization.ManagerKeyPair == nil {
+		return &response{err: proto.ErrAccessDenied}
+	}
+	if msg.Ban.IP != "" {
+		return &response{err: fmt.Errorf("ip bans not supported")}
+	}
+	if err := s.room.Ban(s.ctx, msg.Ban, msg.Expires.StdTime()); err != nil {
+		return &response{err: err}
+	}
+	return &response{packet: &proto.BanReply{}}
+}
+
+func (s *session) handleUnbanCommand(msg *proto.UnbanCommand) *response {
+	if s.client.Account == nil || s.client.Authorization.ManagerKeyPair == nil {
+		return &response{err: proto.ErrAccessDenied}
+	}
+	if err := s.room.Unban(s.ctx, msg.Ban); err != nil {
+		return &response{err: err}
+	}
+	return &response{packet: &proto.BanReply{}}
 }
