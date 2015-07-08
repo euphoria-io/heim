@@ -37,14 +37,12 @@ module.exports = React.createClass({
     Heim.addEventListener(uiwindow, 'resize', this.onResize)
     this._onScroll = _.throttle(this.onScroll, 100)
     this._checkScroll = _.throttle(this.checkScroll, 150)
-    this._finishScroll = _.debounce(this.finishScroll, 100)
     this._targetInView = false
     this._lastViewHeight = 0
     this._lastScrollHeight = 0
     this._lastScrollTop = 0
     this._anchor = null
     this._anchorPos = null
-    this._scrollQueued = false
     this._waitingForUpdate = false
     this._lastTouch = 0
     this._animationFrames = {}
@@ -52,6 +50,7 @@ module.exports = React.createClass({
 
   componentDidMount: function() {
     this.updateAnchorPos()
+    this.checkScrollbar()
     this.onResize()
   },
 
@@ -60,7 +59,7 @@ module.exports = React.createClass({
   },
 
   _chromeRAFHack: function(id, callback) {
-    if (Heim.isChrome) {
+    if (Heim.isChrome && Heim.isTouch) {
       uiwindow.cancelAnimationFrame(this._animationFrames[id])
       this._animationFrames[id] = uiwindow.requestAnimationFrame(callback)
     } else {
@@ -79,15 +78,10 @@ module.exports = React.createClass({
     }
   },
 
-  finishScroll: function() {
-    this._scrollQueued = false
-    this.updateAnchorPos()
-  },
-
   onScroll: function() {
     this._checkScroll()
     this.updateAnchorPos()
-    if (!this._scrollQueued && this.props.onScroll) {
+    if (this.props.onScroll) {
       this.props.onScroll(this._isTouching())
     }
   },
@@ -105,12 +99,6 @@ module.exports = React.createClass({
   },
 
   updateAnchorPos: function() {
-    if (this._scrollQueued) {
-      // If we're waiting on a scroll, re-measuring the anchor position may
-      // lose track of it if we're in the process of scrolling it onscreen.
-      return
-    }
-
     // Record the position of our point of reference. Either the target (if
     // it's in view), or the centermost child element.
     var node = this.getDOMNode()
@@ -191,64 +179,63 @@ module.exports = React.createClass({
     // If the target was not previously in view, maintain the position of the
     // anchor element.
     //
-    var node = this.getDOMNode()
-    var nodeBox = dimensions(node)
-    var viewTop = nodeBox.top
-    var viewHeight = nodeBox.height
-    var scrollHeight = node.scrollHeight
-    var target = node.querySelector(this.props.target)
-    var canScroll = viewHeight < scrollHeight
-    var edgeSpace = Math.min(this.props.edgeSpace, viewHeight / 2)
 
-    var posRef, oldPos
-    if (target && (forceTargetInView || this._targetInView)) {
-      var viewShrunk = viewHeight < this._lastViewHeight
-      var hasGrown = scrollHeight > this._lastScrollHeight
-      var fromBottom = scrollHeight - (node.scrollTop + viewHeight)
-      var canScrollBottom = canScroll && fromBottom <= edgeSpace
+    // Note: mobile Webkit does this funny thing where getting/setting
+    // scrollTop doesn't happen promptly during inertial scrolling. It turns
+    // out that setting scrollTop inside a requestAnimationFrame callback
+    // circumvents this issue.
+    this._chromeRAFHack('scroll', () => {
+      var node = this.getDOMNode()
+      var nodeBox = dimensions(node)
+      var viewTop = nodeBox.top
+      var viewHeight = nodeBox.height
+      var scrollHeight = node.scrollHeight
+      var target = node.querySelector(this.props.target)
+      var canScroll = viewHeight < scrollHeight
+      var edgeSpace = Math.min(this.props.edgeSpace, viewHeight / 2)
 
-      var targetBox = dimensions(target)
-      var targetPos = targetBox.bottom
-      var clampedPos = clamp(viewTop + edgeSpace - targetBox.height, targetPos, viewTop + viewHeight - edgeSpace)
+      var posRef, oldPos
+      if (target && (forceTargetInView || this._targetInView)) {
+        var viewShrunk = viewHeight < this._lastViewHeight
+        var hasGrown = scrollHeight > this._lastScrollHeight
+        var fromBottom = scrollHeight - (node.scrollTop + viewHeight)
+        var canScrollBottom = canScroll && fromBottom <= edgeSpace
 
-      var movingTowardsEdge = Math.sign(targetPos - this._anchorPos) != Math.sign(clampedPos - targetPos)
-      var pastEdge = clampedPos != targetPos
-      var movingPastEdge = movingTowardsEdge && pastEdge
-      var jumping = Math.abs(targetPos - this._anchorPos) > 3 * target.offsetHeight
+        var targetBox = dimensions(target)
+        var targetPos = targetBox.bottom
+        var clampedPos = clamp(viewTop + edgeSpace - targetBox.height, targetPos, viewTop + viewHeight - edgeSpace)
 
-      var shouldHoldPos = hasGrown || (movingPastEdge && !jumping)
-      var shouldScrollBottom = hasGrown && canScrollBottom || viewShrunk
+        var movingTowardsEdge = Math.sign(targetPos - this._anchorPos) != Math.sign(clampedPos - targetPos)
+        var pastEdge = clampedPos != targetPos
+        var movingPastEdge = movingTowardsEdge && pastEdge
+        var jumping = Math.abs(targetPos - this._anchorPos) > 3 * target.offsetHeight
 
-      posRef = target
-      if (this._targetInView && shouldHoldPos && !shouldScrollBottom) {
-        oldPos = this._anchorPos
-      } else {
-        if (forceTargetInView && !this._targetInView || shouldScrollBottom || jumping) {
-          oldPos = clampedPos
+        var shouldHoldPos = hasGrown || (movingPastEdge && !jumping)
+        var shouldScrollBottom = hasGrown && canScrollBottom || viewShrunk
+
+        posRef = target
+        if (this._targetInView && shouldHoldPos && !shouldScrollBottom) {
+          oldPos = this._anchorPos
+        } else {
+          if (forceTargetInView && !this._targetInView || shouldScrollBottom || jumping) {
+            oldPos = clampedPos
+          }
         }
+      } else if (this._anchor) {
+        // Otherwise, try to keep the anchor element in the same place it was when
+        // we last saw it via updateAnchorPos.
+        posRef = this._anchor
+        oldPos = this._anchorPos
       }
-    } else if (this._anchor) {
-      // Otherwise, try to keep the anchor element in the same place it was when
-      // we last saw it via updateAnchorPos.
-      posRef = this._anchor
-      oldPos = this._anchorPos
-    }
 
-    var delta = dimensions(posRef, 'bottom') - oldPos
-    if (delta && canScroll) {
-      this._scrollQueued = true
-      // Note: mobile Webkit does this funny thing where getting/setting
-      // scrollTop doesn't happen promptly during inertial scrolling. It turns
-      // out that setting scrollTop inside a requestAnimationFrame callback
-      // circumvents this issue.
-      this._chromeRAFHack('scroll', () => {
-        var delta = dimensions(posRef, 'bottom') - oldPos
+      var delta = dimensions(posRef, 'bottom') - oldPos
+      if (delta && canScroll) {
         var scrollDelta = node.scrollTop - this._lastScrollTop
-        node.scrollTop += delta + scrollDelta
-        this._lastScrollTop = node.scrollTop
-        this._finishScroll()
-      })
-    }
+        this._lastScrollTop = node.scrollTop += delta + scrollDelta
+      }
+      this.updateAnchorPos()
+      this._checkScroll()
+    })
   },
 
   scrollToTarget: function() {
