@@ -8,6 +8,17 @@ function writeEnv(doc, hash) {
   doc.close()
 }
 
+var crashHandlerSetup = false
+function setupCrashHandler(evs) {
+  if (crashHandlerSetup) {
+    return
+  }
+  var crashHandler = require('./ui/crash-handler')
+  evs.addEventListener(document, 'ravenHandle', crashHandler)
+  evs.addEventListener(uidocument, 'ravenHandle', crashHandler)
+  crashHandlerSetup = true
+}
+
 if (!window.frameElement) {
   writeEnv(document.getElementById('env').contentWindow.document)
 } else {
@@ -15,6 +26,13 @@ if (!window.frameElement) {
   window.uiwindow = window.top
   window.uidocument = window.top.document
 
+  var EventListeners = require('./event-listeners')
+  var evs = new EventListeners()
+
+  if (!window.onReady) {
+    // if this is the first frame, register crash handlers early
+    setupCrashHandler(evs)
+  }
 
   var moment = require('moment')
   moment.relativeTimeThreshold('s', 0)
@@ -60,10 +78,7 @@ if (!window.frameElement) {
   var _ = require('lodash')
   require('setimmediate')
 
-  var EventListeners = require('./event-listeners')
   var isTextInput = require('./is-text-input')
-
-  var evs = new EventListeners()
 
   Heim = {
     addEventListener: evs.addEventListener.bind(evs),
@@ -134,6 +149,8 @@ if (!window.frameElement) {
   }
 
   Heim.attachUI = function() {
+    setupCrashHandler(evs)
+
     var Reflux = require('reflux')
 
     // IE9+ requires this bind: https://msdn.microsoft.com/en-us/library/ie/gg622930(v=vs.85).aspx
