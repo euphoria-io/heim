@@ -91,7 +91,6 @@ var Message = module.exports = React.createClass({
     var pane = this.props.pane
     var messageReplies
     var messageIndentedReplies
-    var showTimeAgo = this.props.showTimeAgo
     if (repliesInOtherPane || repliesInCustomPane) {
       messageIndentedReplies = (
         <FastButton component="div" className={classNames('replies', 'in-pane', {'focus-target': focused})} onClick={this.focusOtherPane}>
@@ -146,9 +145,6 @@ var Message = module.exports = React.createClass({
               {messageIndentedReplies}
             </KeyboardActionHandler>
           )
-        }
-        if (childCount) {
-          showTimeAgo = false
         }
       } else {
         var focusAction
@@ -228,7 +224,7 @@ var Message = module.exports = React.createClass({
       return ''
     })
 
-    var messageAgo = showTimeAgo && <LiveTimeAgo className="ago" time={time} />
+    var messageAgo = (this.props.showTimeAgo || children.size >= 3) && <LiveTimeAgo className="ago" time={time} />
 
     var messageRender
     if (!_.trim(content)) {
