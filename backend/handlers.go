@@ -434,14 +434,17 @@ func (s *session) handleLogoutCommand() *response {
 }
 
 func (s *session) handleRegisterAccountCommand(cmd *proto.RegisterAccountCommand) *response {
+	// Session must not be logged in.
 	if s.client.Account != nil {
 		return &response{packet: &proto.RegisterAccountReply{Reason: "already logged in"}}
 	}
 
+	// Agent must be of sufficient age.
 	if time.Now().Sub(s.client.Agent.Created) < s.server.newAccountMinAgentAge {
 		return &response{packet: &proto.RegisterAccountReply{Reason: "not familiar yet, try again later"}}
 	}
 
+	// Validate givens.
 	if ok, reason := proto.ValidatePersonalIdentity(cmd.Namespace, cmd.ID); !ok {
 		return &response{packet: &proto.RegisterAccountReply{Reason: reason}}
 	}
@@ -450,6 +453,7 @@ func (s *session) handleRegisterAccountCommand(cmd *proto.RegisterAccountCommand
 		return &response{packet: &proto.RegisterAccountReply{Reason: reason}}
 	}
 
+	// Register the account.
 	account, clientKey, err := s.backend.AccountManager().Register(
 		s.ctx, s.kms, cmd.Namespace, cmd.ID, cmd.Password, s.client.Agent.IDString(), s.agentKey)
 	if err != nil {
@@ -461,12 +465,20 @@ func (s *session) handleRegisterAccountCommand(cmd *proto.RegisterAccountCommand
 		}
 	}
 
+	// Kick off on-registration tasks.
+	if err := s.heim.OnAccountRegistration(s.ctx, account); err != nil {
+		// Log this error only.
+		Logger(s.ctx).Printf("error on account registration: %s", err)
+	}
+
+	// Authorize session's agent to unlock account.
 	err = s.backend.AgentTracker().SetClientKey(
 		s.ctx, s.client.Agent.IDString(), s.agentKey, account.ID(), clientKey)
 	if err != nil {
 		return &response{err: err}
 	}
 
+	// Return successful response.
 	reply := &proto.RegisterAccountReply{
 		Success:   true,
 		AccountID: account.ID(),

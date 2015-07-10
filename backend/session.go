@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"euphoria.io/heim/proto"
+	"euphoria.io/heim/proto/emails"
 	"euphoria.io/heim/proto/security"
 	"euphoria.io/scope"
 
@@ -98,6 +99,7 @@ type session struct {
 	room      proto.Room
 	backend   proto.Backend
 	kms       security.KMS
+	heim      *proto.Heim
 
 	state    cmdState
 	client   *proto.Client
@@ -144,6 +146,11 @@ func newSession(
 		room:      room,
 		backend:   server.b,
 		kms:       server.kms,
+		heim: &proto.Heim{
+			Backend: server.b,
+			KMS:     server.kms,
+			Emailer: &emails.TestEmailer{},
+		},
 
 		incoming:     make(chan *proto.Packet),
 		outgoing:     make(chan *proto.Packet, 100),

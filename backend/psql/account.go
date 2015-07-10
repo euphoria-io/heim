@@ -56,12 +56,22 @@ type PersonalIdentity struct {
 	Namespace string
 	ID        string
 	AccountID string `db:"account_id"`
+	Verified  bool
 }
+
+type PersonalIdentityBinding struct {
+	pid *PersonalIdentity
+}
+
+func (pib *PersonalIdentityBinding) Namespace() string { return pib.pid.Namespace }
+func (pib *PersonalIdentityBinding) ID() string        { return pib.pid.ID }
+func (pib *PersonalIdentityBinding) Verified() bool    { return pib.pid.Verified }
 
 type AccountBinding struct {
 	*Backend
 	*Account
 	StaffCapability *Capability
+	identities      []proto.PersonalIdentity
 }
 
 func (ab *AccountBinding) ID() snowflake.Snowflake {
@@ -149,6 +159,8 @@ func (ab *AccountBinding) UnlockStaffKMS(clientKey *security.ManagedKey) (securi
 
 	return kmsCred.KMS(), nil
 }
+
+func (ab *AccountBinding) PersonalIdentities() []proto.PersonalIdentity { return ab.identities }
 
 type AccountManagerBinding struct {
 	*Backend
@@ -239,16 +251,10 @@ func (b *AccountManagerBinding) Register(
 func (b *AccountManagerBinding) Resolve(
 	ctx scope.Context, namespace, id string) (proto.Account, error) {
 
-	var row AccountWithStaffCapability
+	var pid PersonalIdentity
 	err := b.DbMap.SelectOne(
-		&row,
-		"SELECT a.id, a.nonce, a.mac, a.encrypted_system_key, a.encrypted_user_key,"+
-			" a.encrypted_private_key, a.public_key,"+
-			" c.id AS staff_capability_id, c.nonce AS staff_capability_nonce,"+
-			" c.encrypted_private_data, c.public_data"+
-			" FROM (account a JOIN personal_identity i ON a.id = i.account_id)"+
-			" LEFT OUTER JOIN capability c ON a.staff_capability_id = c.id"+
-			" WHERE i.namespace = $1 AND i.id = $2 AND i.account_id = a.id",
+		&pid,
+		"SELECT account_id FROM personal_identity WHERE namespace = $1 AND id = $2",
 		namespace, id)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -257,7 +263,12 @@ func (b *AccountManagerBinding) Resolve(
 		return nil, err
 	}
 
-	return row.Bind(b.Backend), nil
+	var accountID snowflake.Snowflake
+	if err := accountID.FromString(pid.AccountID); err != nil {
+		return nil, err
+	}
+
+	return b.Get(ctx, accountID)
 }
 
 func (b *AccountManagerBinding) Get(
@@ -280,7 +291,24 @@ func (b *AccountManagerBinding) Get(
 		return nil, err
 	}
 
-	return row.Bind(b.Backend), nil
+	ab := row.Bind(b.Backend)
+
+	rows, err := b.DbMap.Select(
+		PersonalIdentity{},
+		"SELECT namespace, id, account_id, verified FROM personal_identity WHERE account_id = $1",
+		id.String())
+	switch err {
+	case sql.ErrNoRows:
+	case nil:
+		ab.identities = make([]proto.PersonalIdentity, len(rows))
+		for i, row := range rows {
+			ab.identities[i] = &PersonalIdentityBinding{row.(*PersonalIdentity)}
+		}
+	default:
+		return nil, err
+	}
+
+	return ab, nil
 }
 
 func (b *AccountManagerBinding) GrantStaff(

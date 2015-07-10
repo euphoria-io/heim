@@ -31,9 +31,10 @@ func NewAccount(kms security.KMS, password string) (proto.Account, *security.Man
 }
 
 type memAccount struct {
-	id              snowflake.Snowflake
-	sec             proto.AccountSecurity
-	staffCapability security.Capability
+	id                 snowflake.Snowflake
+	sec                proto.AccountSecurity
+	staffCapability    security.Capability
+	personalIdentities []proto.PersonalIdentity
 }
 
 func (a *memAccount) ID() snowflake.Snowflake { return a.id }
@@ -83,6 +84,19 @@ func (a *memAccount) UnlockStaffKMS(clientKey *security.ManagedKey) (security.KM
 	return kmsCred.KMS(), nil
 }
 
+func (a *memAccount) PersonalIdentities() []proto.PersonalIdentity { return a.personalIdentities }
+
+type personalIdentity struct {
+	accountID snowflake.Snowflake
+	namespace string
+	id        string
+	verified  bool
+}
+
+func (pi *personalIdentity) Namespace() string { return pi.namespace }
+func (pi *personalIdentity) ID() string        { return pi.id }
+func (pi *personalIdentity) Verified() bool    { return pi.verified }
+
 type accountManager struct {
 	b *TestBackend
 }
@@ -106,15 +120,21 @@ func (m *accountManager) Register(
 	}
 
 	if m.b.accounts == nil {
-		m.b.accounts = map[string]proto.Account{account.ID().String(): account}
+		m.b.accounts = map[snowflake.Snowflake]proto.Account{account.ID(): account}
 	} else {
-		m.b.accounts[account.ID().String()] = account
+		m.b.accounts[account.ID()] = account
 	}
 
+	pi := &personalIdentity{
+		accountID: account.ID(),
+		namespace: namespace,
+		id:        id,
+	}
+	account.(*memAccount).personalIdentities = []proto.PersonalIdentity{pi}
 	if m.b.accountIDs == nil {
-		m.b.accountIDs = map[string]string{key: account.ID().String()}
+		m.b.accountIDs = map[string]*personalIdentity{key: pi}
 	} else {
-		m.b.accountIDs[key] = account.ID().String()
+		m.b.accountIDs[key] = pi
 	}
 
 	agent, err := m.b.AgentTracker().Get(ctx, agentID)
@@ -137,18 +157,18 @@ func (m *accountManager) Resolve(ctx scope.Context, namespace, id string) (proto
 	defer m.b.Unlock()
 
 	key := fmt.Sprintf("%s:%s", namespace, id)
-	accountID, ok := m.b.accountIDs[key]
+	pi, ok := m.b.accountIDs[key]
 	if !ok {
 		return nil, proto.ErrAccountNotFound
 	}
-	return m.b.accounts[accountID], nil
+	return m.b.accounts[pi.accountID], nil
 }
 
 func (m *accountManager) Get(ctx scope.Context, id snowflake.Snowflake) (proto.Account, error) {
 	m.b.Lock()
 	defer m.b.Unlock()
 
-	account, ok := m.b.accounts[id.String()]
+	account, ok := m.b.accounts[id]
 	if !ok {
 		return nil, proto.ErrAccountNotFound
 	}
@@ -161,7 +181,7 @@ func (m *accountManager) GrantStaff(
 	m.b.Lock()
 	defer m.b.Unlock()
 
-	account, ok := m.b.accounts[accountID.String()]
+	account, ok := m.b.accounts[accountID]
 	if !ok {
 		return proto.ErrAccountNotFound
 	}
@@ -191,7 +211,7 @@ func (m *accountManager) RevokeStaff(ctx scope.Context, accountID snowflake.Snow
 	m.b.Lock()
 	defer m.b.Unlock()
 
-	account, ok := m.b.accounts[accountID.String()]
+	account, ok := m.b.accounts[accountID]
 	if !ok {
 		return proto.ErrAccountNotFound
 	}
