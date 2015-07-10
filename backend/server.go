@@ -10,7 +10,6 @@ import (
 	"sync"
 	"time"
 
-	"euphoria.io/heim/cluster"
 	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/security"
 	"euphoria.io/heim/proto/snowflake"
@@ -36,6 +35,7 @@ type Server struct {
 	ID         string
 	Era        string
 	r          *mux.Router
+	heim       *proto.Heim
 	b          proto.Backend
 	kms        security.KMS
 	staticPath string
@@ -51,13 +51,10 @@ type Server struct {
 	agentIDGenerator func() ([]byte, error)
 }
 
-func NewServer(
-	ctx scope.Context, backend proto.Backend, cluster cluster.Cluster, kms security.KMS,
-	id, era, staticPath string) (*Server, error) {
-
+func NewServer(heim *proto.Heim, id, era, staticPath string) (*Server, error) {
 	mime.AddExtensionType(".map", "application/json")
 
-	cookieSecret, err := cluster.GetSecret(kms, "cookie", cookieKeySize)
+	cookieSecret, err := heim.Cluster.GetSecret(heim.KMS, "cookie", cookieKeySize)
 	if err != nil {
 		return nil, fmt.Errorf("error coordinating shared cookie secret: %s", err)
 	}
@@ -65,11 +62,12 @@ func NewServer(
 	s := &Server{
 		ID:         id,
 		Era:        era,
-		b:          backend,
-		kms:        kms,
+		heim:       heim,
+		b:          heim.Backend,
+		kms:        heim.KMS,
 		staticPath: staticPath,
 		sc:         securecookie.New(cookieSecret, nil),
-		rootCtx:    ctx,
+		rootCtx:    heim.Context,
 	}
 	s.route()
 	return s, nil

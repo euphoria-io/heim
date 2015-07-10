@@ -40,10 +40,7 @@ type Controller struct {
 	authorizedKeys []ssh.PublicKey
 }
 
-func NewController(
-	ctx scope.Context, addr string, backend proto.Backend, kms security.KMS, c cluster.Cluster) (
-	*Controller, error) {
-
+func NewController(heim *proto.Heim, addr string) (*Controller, error) {
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
 		return nil, fmt.Errorf("listen %s: %s", addr, err)
@@ -51,10 +48,10 @@ func NewController(
 
 	ctrl := &Controller{
 		listener: listener,
-		backend:  backend,
-		kms:      kms,
-		cluster:  c,
-		ctx:      ctx,
+		backend:  heim.Backend,
+		kms:      heim.KMS,
+		cluster:  heim.Cluster,
+		ctx:      heim.Context,
 	}
 
 	ctrl.config = &ssh.ServerConfig{

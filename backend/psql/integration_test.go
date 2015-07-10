@@ -10,7 +10,6 @@ import (
 	"euphoria.io/heim/cluster"
 	"euphoria.io/heim/cluster/clustertest"
 	"euphoria.io/heim/proto"
-	"euphoria.io/scope"
 
 	"github.com/rubenv/sql-migrate"
 )
@@ -54,21 +53,34 @@ func TestBackend(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Start up backend.
-	c := etcd.Join("/test", "testcase", "era")
-	desc := &cluster.PeerDesc{
-		ID:      "testcase",
-		Era:     "era",
-		Version: "testver",
+	// Define backend factory.
+	var b *Backend
+	defer func() {
+		if b != nil {
+			b.Close()
+		}
+	}()
+	factory := func(heim *proto.Heim) (proto.Backend, error) {
+		if b == nil {
+			// Use a real etcd cluster.
+			// TODO: do we have to?
+			heim.Cluster = etcd.Join("/test", "testcase", "era")
+			desc := &cluster.PeerDesc{
+				ID:      "testcase",
+				Era:     "era",
+				Version: "testver",
+			}
+
+			b, err = NewBackend(heim, dsn, desc)
+			if err != nil {
+				return nil, err
+			}
+		}
+		return &nonClosingBackend{b}, nil
 	}
-	b, err := NewBackend(scope.New(), dsn, c, desc)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer b.Close()
 
 	// Run test suite.
-	backend.IntegrationTest(t, func() proto.Backend { return nonClosingBackend{b} })
+	backend.IntegrationTest(t, factory)
 }
 
 type nonClosingBackend struct {

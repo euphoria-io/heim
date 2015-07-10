@@ -35,3 +35,5 @@ type Backend interface {
 	// Version returns the implementation version string.
 	Version() string
 }
+
+type BackendFactory func(*Heim) (Backend, error)

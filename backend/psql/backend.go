@@ -77,9 +77,7 @@ type Backend struct {
 	logger    *log.Logger
 }
 
-func NewBackend(
-	ctx scope.Context, dsn string, c cluster.Cluster, serverDesc *cluster.PeerDesc) (*Backend, error) {
-
+func NewBackend(heim *proto.Heim, dsn string, serverDesc *cluster.PeerDesc) (*Backend, error) {
 	var version string
 
 	if serverDesc == nil {
@@ -108,16 +106,16 @@ func NewBackend(
 		dsn:       dsn,
 		desc:      serverDesc,
 		version:   version,
-		cluster:   c,
+		cluster:   heim.Cluster,
 		peers:     map[string]string{},
 		listeners: map[string]ListenerMap{},
-		ctx:       ctx,
+		ctx:       heim.Context,
 	}
 	b.logger = log.New(os.Stdout, fmt.Sprintf("[backend %p] ", b), log.LstdFlags)
 
 	if serverDesc != nil {
 		b.peers[serverDesc.ID] = serverDesc.Era
-		for _, desc := range c.Peers() {
+		for _, desc := range heim.Cluster.Peers() {
 			b.peers[desc.ID] = desc.Era
 		}
 	}
