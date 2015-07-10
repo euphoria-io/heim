@@ -7,21 +7,23 @@ import (
 	"euphoria.io/heim/cluster"
 	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/security"
+	"euphoria.io/heim/proto/snowflake"
 	"euphoria.io/scope"
 )
 
 type TestBackend struct {
 	sync.Mutex
-	agents     map[string]*proto.Agent
-	agentBans  map[string]time.Time
-	ipBans     map[string]time.Time
-	rooms      map[string]proto.Room
-	accounts   map[string]proto.Account
-	accountIDs map[string]string
-	version    string
+	accountManager *accountManager
+	accounts       map[snowflake.Snowflake]proto.Account
+	accountIDs     map[string]*personalIdentity
+	agents         map[string]*proto.Agent
+	agentBans      map[string]time.Time
+	ipBans         map[string]time.Time
+	rooms          map[string]proto.Room
+	version        string
 }
 
-func (b *TestBackend) AccountManager() proto.AccountManager { return &accountManager{b} }
+func (b *TestBackend) AccountManager() proto.AccountManager { return &accountManager{b: b} }
 func (b *TestBackend) AgentTracker() proto.AgentTracker     { return &agentTracker{b} }
 
 func (b *TestBackend) Close() {}

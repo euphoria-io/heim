@@ -42,6 +42,7 @@ type AccountManager interface {
 type PersonalIdentity interface {
 	Namespace() string
 	ID() string
+	Verified() bool
 }
 
 func ValidatePersonalIdentity(namespace, id string) (bool, string) {
@@ -67,6 +68,7 @@ type Account interface {
 	Unlock(clientKey *security.ManagedKey) (*security.ManagedKeyPair, error)
 	IsStaff() bool
 	UnlockStaffKMS(clientKey *security.ManagedKey) (security.KMS, error)
+	PersonalIdentities() []PersonalIdentity
 }
 
 // NewAccountSecurity initializes the nonce and account secrets for a new account
