@@ -27,7 +27,7 @@ import (
 
 var agentIDCounter int
 
-type factoryTestSuite func(factory func() proto.Backend)
+type factoryTestSuite func(factory proto.BackendFactory)
 type testSuite func(*serverUnderTest)
 
 func newServerUnderTest(
@@ -72,8 +72,10 @@ func (s *serverUnderTest) Connect(roomName string, cookies ...*http.Cookie) *tes
 	url := strings.Replace(s.server.URL, "http:", "ws:", 1) + "/room/" + roomName + "/ws"
 	conn, resp, err := websocket.DefaultDialer.Dial(url, headers)
 	if err != nil {
-		body, _ := ioutil.ReadAll(resp.Body)
-		So(string(body), ShouldEqual, "")
+		if resp != nil {
+			body, _ := ioutil.ReadAll(resp.Body)
+			So(string(body), ShouldEqual, "")
+		}
 	}
 	So(err, ShouldBeNil)
 	return &testConn{Conn: conn, cookies: resp.Cookies()}
@@ -327,18 +329,27 @@ func (tc *testConn) Close() {
 		websocket.FormatCloseMessage(websocket.CloseNormalClosure, "normal closure"))
 }
 
-func IntegrationTest(t *testing.T, factory func() proto.Backend) {
+func IntegrationTest(t *testing.T, factory proto.BackendFactory) {
 	save := security.TestMode
 	defer func() { security.TestMode = save }()
 	security.TestMode = true
 
 	runTest := func(name string, test testSuite) {
-		backend := factory()
-		defer backend.Close()
+		heim := &proto.Heim{
+			Cluster: &cluster.TestCluster{},
+			Context: scope.New(),
+			KMS:     security.LocalKMS(),
+		}
+		heim.KMS.(security.MockKMS).SetMasterKey(make([]byte, security.AES256.KeySize()))
 
-		kms := security.LocalKMS()
-		kms.SetMasterKey(make([]byte, security.AES256.KeySize()))
-		app, err := NewServer(scope.New(), backend, &cluster.TestCluster{}, kms, "test1", "era1", "")
+		backend, err := factory(heim)
+		if err != nil {
+			t.Fatal(err)
+		}
+		heim.Backend = backend
+		defer heim.Backend.Close()
+
+		app, err := NewServer(heim, "test1", "era1", "")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -353,7 +364,7 @@ func IntegrationTest(t *testing.T, factory func() proto.Backend) {
 		defer server.Close()
 		defer server.CloseClientConnections()
 
-		s := newServerUnderTest(backend, app, server, kms)
+		s := newServerUnderTest(backend, app, server, heim.KMS.(security.MockKMS))
 		Convey(name, t, func() { test(s) })
 	}
 
@@ -563,11 +574,20 @@ func testThreading(s *serverUnderTest) {
 	})
 }
 
-func testPresence(factory func() proto.Backend) {
-	backend := factory()
-	kms := security.LocalKMS()
-	kms.SetMasterKey(make([]byte, security.AES256.KeySize()))
-	app, err := NewServer(scope.New(), backend, &cluster.TestCluster{}, kms, "test1", "era1", "")
+func testPresence(factory proto.BackendFactory) {
+	heim := &proto.Heim{
+		Cluster: &cluster.TestCluster{},
+		Context: scope.New(),
+		KMS:     security.LocalKMS(),
+	}
+	heim.KMS.(security.MockKMS).SetMasterKey(make([]byte, security.AES256.KeySize()))
+
+	backend, err := factory(heim)
+	So(err, ShouldBeNil)
+	heim.Backend = backend
+	defer heim.Backend.Close()
+
+	app, err := NewServer(heim, "test1", "era1", "")
 	So(err, ShouldBeNil)
 	app.AllowRoomCreation(true)
 	app.agentIDGenerator = func() ([]byte, error) {
@@ -577,7 +597,7 @@ func testPresence(factory func() proto.Backend) {
 	server := httptest.NewServer(app)
 	defer server.Close()
 	defer server.CloseClientConnections()
-	s := newServerUnderTest(backend, app, server, kms)
+	s := newServerUnderTest(backend, app, server, heim.KMS.(security.MockKMS))
 
 	Convey("Other party joins then parts", func() {
 		self := s.Connect("presence")

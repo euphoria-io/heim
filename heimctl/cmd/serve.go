@@ -10,9 +10,7 @@ import (
 
 	"euphoria.io/heim/backend"
 	"euphoria.io/heim/backend/console"
-	"euphoria.io/heim/cluster"
 	"euphoria.io/heim/proto"
-	"euphoria.io/heim/proto/security"
 	"euphoria.io/scope"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -73,28 +71,15 @@ func (cmd *serveCmd) run(ctx scope.Context, args []string) error {
 	}
 	defer closeListener()
 
-	c, err := getCluster(ctx)
-	if err != nil {
-		return err
-	}
+	heim, err := getHeim(ctx)
+	defer heim.Backend.Close()
 
-	kms, err := backend.Config.KMS.Get()
-	if err != nil {
-		return fmt.Errorf("kms error: %s", err)
-	}
-
-	b, err := getBackend(ctx, c)
-	if err != nil {
-		return fmt.Errorf("backend error: %s", err)
-	}
-	defer b.Close()
-
-	if err := controller(ctx, cmd.consoleAddr, b, kms, c); err != nil {
+	if err := controller(heim, cmd.consoleAddr); err != nil {
 		return fmt.Errorf("controller error: %s", err)
 	}
 
 	serverDesc := backend.Config.Cluster.DescribeSelf()
-	server, err := backend.NewServer(ctx, b, c, kms, serverDesc.ID, serverDesc.Era, cmd.static)
+	server, err := backend.NewServer(heim, serverDesc.ID, serverDesc.Era, cmd.static)
 	if err != nil {
 		return fmt.Errorf("server error: %s", err)
 	}
@@ -119,11 +104,9 @@ func (cmd *serveCmd) run(ctx scope.Context, args []string) error {
 	return nil
 }
 
-func controller(
-	ctx scope.Context, addr string, b proto.Backend, kms security.KMS, c cluster.Cluster) error {
-
+func controller(heim *proto.Heim, addr string) error {
 	if addr != "" {
-		ctrl, err := console.NewController(ctx, addr, b, kms, c)
+		ctrl, err := console.NewController(heim, addr)
 		if err != nil {
 			return err
 		}
@@ -147,7 +130,7 @@ func controller(
 			}
 		}
 
-		ctx.WaitGroup().Add(1)
+		heim.Context.WaitGroup().Add(1)
 		go ctrl.Serve()
 	}
 	return nil

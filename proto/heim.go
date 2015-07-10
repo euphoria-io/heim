@@ -1,6 +1,7 @@
 package proto
 
 import (
+	"euphoria.io/heim/cluster"
 	"euphoria.io/heim/proto/emails"
 	"euphoria.io/heim/proto/security"
 	"euphoria.io/scope"
@@ -12,6 +13,8 @@ const (
 
 type Heim struct {
 	Backend Backend
+	Cluster cluster.Cluster
+	Context scope.Context
 	Emailer emails.Emailer
 	KMS     security.KMS
 }

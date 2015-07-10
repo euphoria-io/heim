@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"flag"
-	"fmt"
 	"time"
 
 	"euphoria.io/heim/heimctl/retention"
@@ -42,20 +41,15 @@ func (cmd *retentionCmd) flags() *flag.FlagSet {
 }
 
 func (cmd *retentionCmd) run(ctx scope.Context, args []string) error {
-	c, err := getCluster(ctx)
+	heim, b, err := getHeimWithPsqlBackend(ctx)
 	if err != nil {
 		return err
 	}
 
-	b, err := getBackend(ctx, c)
-	if err != nil {
-		return fmt.Errorf("backend error: %s", err)
-	}
-	defer b.Close()
-
 	defer func() {
 		ctx.Cancel()
 		ctx.WaitGroup().Wait()
+		heim.Backend.Close()
 	}()
 
 	// start metrics server
@@ -64,11 +58,11 @@ func (cmd *retentionCmd) run(ctx scope.Context, args []string) error {
 
 	// start metrics scanner
 	ctx.WaitGroup().Add(1)
-	go retention.ExpiredScanLoop(ctx, c, b, cmd.interval)
+	go retention.ExpiredScanLoop(ctx, heim.Cluster, b, cmd.interval)
 
 	// start delete scanner
 	ctx.WaitGroup().Add(1)
-	retention.DeleteScanLoop(ctx, c, b, cmd.interval)
+	retention.DeleteScanLoop(ctx, heim.Cluster, b, cmd.interval)
 
 	return nil
 }

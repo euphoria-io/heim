@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"flag"
-	"fmt"
 	"time"
 
 	"euphoria.io/heim/heimctl/presence"
@@ -44,20 +43,17 @@ func (cmd *presenceCmd) flags() *flag.FlagSet {
 }
 
 func (cmd *presenceCmd) run(ctx scope.Context, args []string) error {
-	c, err := getCluster(ctx)
+	heim, err := getHeim(ctx)
 	if err != nil {
 		return err
 	}
 
-	b, err := getBackend(ctx, c)
-	if err != nil {
-		return fmt.Errorf("backend error: %s", err)
-	}
-	defer b.Close()
+	heim, b, err := getHeimWithPsqlBackend(ctx)
 
 	defer func() {
 		ctx.Cancel()
 		ctx.WaitGroup().Wait()
+		heim.Backend.Close()
 	}()
 
 	// Start metrics server.
@@ -66,7 +62,7 @@ func (cmd *presenceCmd) run(ctx scope.Context, args []string) error {
 
 	// Start scanner.
 	ctx.WaitGroup().Add(1)
-	presence.ScanLoop(ctx, c, b, cmd.interval)
+	presence.ScanLoop(ctx, heim.Cluster, b, cmd.interval)
 
 	return nil
 }

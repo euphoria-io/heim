@@ -9,5 +9,6 @@ import (
 )
 
 func TestBackend(t *testing.T) {
-	backend.IntegrationTest(t, func() proto.Backend { return &mock.TestBackend{} })
+	backend.IntegrationTest(
+		t, func(*proto.Heim) (proto.Backend, error) { return &mock.TestBackend{}, nil })
 }

@@ -7,7 +7,6 @@ import (
 
 	"github.com/lib/pq"
 
-	"euphoria.io/heim/backend"
 	"euphoria.io/heim/heimctl/activity"
 	"euphoria.io/scope"
 )
@@ -42,13 +41,12 @@ func (cmd *activityCmd) flags() *flag.FlagSet {
 }
 
 func (cmd *activityCmd) run(ctx scope.Context, args []string) error {
-	// Get cluster in order to load config.
-	_, err := getCluster(ctx)
+	cfg, err := getConfig(ctx)
 	if err != nil {
-		return fmt.Errorf("cluster error: %s", err)
+		return err
 	}
 
-	listener := pq.NewListener(backend.Config.DB.DSN, 200*time.Millisecond, 5*time.Second, nil)
+	listener := pq.NewListener(cfg.DB.DSN, 200*time.Millisecond, 5*time.Second, nil)
 	if err := listener.Listen("broadcast"); err != nil {
 		return fmt.Errorf("pq listen error: %s", err)
 	}

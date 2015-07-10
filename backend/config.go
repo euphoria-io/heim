@@ -12,11 +12,17 @@ import (
 
 	"euphoria.io/heim/aws/kms"
 	"euphoria.io/heim/cluster"
+	"euphoria.io/heim/proto"
+	"euphoria.io/heim/proto/emails"
 	"euphoria.io/heim/proto/security"
 	"euphoria.io/scope"
 )
 
-var Config ServerConfig
+var (
+	Config ServerConfig
+
+	backendFactories = map[string]proto.BackendFactory{}
+)
 
 func init() {
 	env := func(key, defaultValue string) string {
@@ -50,6 +56,8 @@ func init() {
 
 	flag.BoolVar(&Config.AllowRoomCreation, "allow-room-creation", true, "allow rooms to be created")
 }
+
+func RegisterBackend(name string, factory proto.BackendFactory) { backendFactories[name] = factory }
 
 type CSV []string
 
@@ -109,6 +117,52 @@ func (cfg *ServerConfig) LoadFromFile(path string) error {
 	}
 
 	return nil
+}
+
+func (cfg *ServerConfig) Heim(ctx scope.Context) (*proto.Heim, error) {
+	c, err := cfg.Cluster.EtcdCluster(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	kms, err := cfg.KMS.Get()
+	if err != nil {
+		return nil, err
+	}
+
+	heim := &proto.Heim{
+		Context: ctx,
+		Cluster: c,
+		KMS:     kms,
+		Emailer: &emails.TestEmailer{},
+	}
+
+	backend, err := cfg.GetBackend(heim)
+	if err != nil {
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	heim.Backend = backend
+	return heim, nil
+}
+
+func (cfg *ServerConfig) backendFactory() string {
+	if cfg.DB.DSN == "" {
+		return "mock"
+	} else {
+		return "psql"
+	}
+}
+
+func (cfg *ServerConfig) GetBackend(heim *proto.Heim) (proto.Backend, error) {
+	name := cfg.backendFactory()
+	factory, ok := backendFactories[name]
+	if !ok {
+		return nil, fmt.Errorf("no backend factory registered: %s", name)
+	}
+	return factory(heim)
 }
 
 type ClusterConfig struct {
