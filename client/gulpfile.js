@@ -1,4 +1,5 @@
 var _ = require('lodash')
+var merge = require('merge-stream')
 var gulp = require('gulp')
 var gutil = require('gulp-util')
 var gfile = require('gulp-file')
@@ -19,10 +20,13 @@ var fs = require('fs')
 var path = require('path')
 var exec = require('child_process').exec
 
+require('node-jsx').install()
+
 
 var watching = false
 var heimDest = './build/heim'
 var embedDest = './build/embed'
+var emailDest = './build/email'
 
 var heimOptions = {
   HEIM_ORIGIN: process.env.HEIM_ORIGIN,
@@ -174,6 +178,26 @@ gulp.task('embed-html', function() {
     .pipe(gulp.dest(embedDest))
 })
 
+gulp.task('email-html', function() {
+  function reload(moduleName) {
+    delete require.cache[require.resolve(moduleName)]
+    return require(moduleName)
+  }
+
+  var email = reload('./emails/email')
+  var emails = ['welcome', 'room-invitation', 'room-invitation-welcome']
+  return merge(_.map(emails, function(name) {
+    var html = email.renderEmail(reload('./emails/' + name))
+    return gfile(name + '.html', html, {src: true})
+  }))
+    .pipe(gulp.dest(emailDest))
+})
+
+gulp.task('email-static', function() {
+  return gulp.src(['./emails/static/*.png'])
+    .pipe(gulp.dest(emailDest))
+})
+
 gulp.task('lint', function() {
   return gulp.src(['./lib/**/*.js', './test/**/*.js', './gulpfile.js'])
     .pipe(react())
@@ -205,6 +229,7 @@ function watchifyTask(name, bundler, outFile, dest) {
 watchifyTask('heim-watchify', heimBundler, 'main.js', heimDest)
 watchifyTask('embed-watchify', embedBundler, 'embed.js', embedDest)
 
+gulp.task('build-emails', ['email-html', 'email-static'])
 gulp.task('build-statics', ['raven-js', 'heim-less', 'emoji-less', 'heim-static', 'embed-static', 'heim-html', 'embed-html'])
 gulp.task('build-browserify', ['heim-js', 'embed-js'])
 
@@ -214,7 +239,9 @@ gulp.task('watch', function() {
   gulp.watch('./res/**/*', ['heim-less', 'emoji-less'])
   gulp.watch('./lib/**/*.html', ['heim-html', 'embed-html'])
   gulp.watch('./static/**/*', ['heim-static', 'embed-static'])
+  gulp.watch('./emails/*', ['email-html'])
+  gulp.watch('./emails/static/*', ['email-static'])
 })
 
-gulp.task('build', ['build-statics', 'build-browserify'])
-gulp.task('default', ['build-statics', 'watch', 'heim-watchify', 'embed-watchify'])
+gulp.task('build', ['build-statics', 'build-browserify', 'build-emails'])
+gulp.task('default', ['build-statics', 'build-emails', 'watch', 'heim-watchify', 'embed-watchify'])
