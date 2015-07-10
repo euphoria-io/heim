@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"euphoria.io/heim/proto"
-	"euphoria.io/heim/proto/emails"
 	"euphoria.io/heim/proto/security"
 	"euphoria.io/scope"
 
@@ -146,11 +145,7 @@ func newSession(
 		room:      room,
 		backend:   server.b,
 		kms:       server.kms,
-		heim: &proto.Heim{
-			Backend: server.b,
-			KMS:     server.kms,
-			Emailer: &emails.TestEmailer{},
-		},
+		heim:      server.heim,
 
 		incoming:     make(chan *proto.Packet),
 		outgoing:     make(chan *proto.Packet, 100),

@@ -15,6 +15,7 @@ import (
 
 	"euphoria.io/heim/cluster"
 	"euphoria.io/heim/proto"
+	"euphoria.io/heim/proto/emails"
 	"euphoria.io/heim/proto/security"
 	"euphoria.io/heim/proto/snowflake"
 	"euphoria.io/scope"
@@ -338,6 +339,7 @@ func IntegrationTest(t *testing.T, factory proto.BackendFactory) {
 		heim := &proto.Heim{
 			Cluster: &cluster.TestCluster{},
 			Context: scope.New(),
+			Emailer: &emails.TestEmailer{},
 			KMS:     security.LocalKMS(),
 		}
 		heim.KMS.(security.MockKMS).SetMasterKey(make([]byte, security.AES256.KeySize()))
@@ -1138,6 +1140,8 @@ func testAccountLogin(s *serverUnderTest) {
 
 func testAccountRegistration(s *serverUnderTest) {
 	Convey("Agent upgrades to account", func() {
+		inbox := s.app.heim.Emailer.(emails.MockEmailer).Inbox("registration@euphoria.io")
+
 		// Add observer for timing control.
 		observer := s.Connect("registration")
 		defer observer.Close()
@@ -1198,6 +1202,9 @@ func testAccountRegistration(s *serverUnderTest) {
 			`{"namespace":"email","id":"registration@euphoria.io","password":"hunter2"}`)
 		observer.expect("1", "register-account-reply",
 			`{"success":false,"reason":"personal identity already in use"}`)
+
+		// Registration email should have been sent.
+		So(<-inbox, ShouldEqual, proto.WelcomeEmail)
 	})
 
 	Convey("Min agent age prevents account registration", func() {

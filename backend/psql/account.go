@@ -245,7 +245,9 @@ func (b *AccountManagerBinding) Register(
 	}
 	backend.Logger(ctx).Printf("registered new account %s for %s:%s", account.ID, namespace, id)
 
-	return account.Bind(b.Backend), clientKey, nil
+	ab := account.Bind(b.Backend)
+	ab.identities = []proto.PersonalIdentity{&PersonalIdentityBinding{personalIdentity}}
+	return ab, clientKey, nil
 }
 
 func (b *AccountManagerBinding) Resolve(

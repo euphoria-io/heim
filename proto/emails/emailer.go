@@ -16,11 +16,18 @@ type Emailer interface {
 		MessageID, error)
 }
 
+type MockEmailer interface {
+	Emailer
+
+	Inbox(addr string) <-chan Template
+}
+
 type TestEmailer struct {
 	sync.Mutex
 	counter    int
 	messages   map[MessageID]TestMessage
 	deliveries map[string][]MessageID
+	channels   map[string]chan Template
 }
 
 func (e *TestEmailer) Send(
@@ -44,7 +51,26 @@ func (e *TestEmailer) Send(
 		e.deliveries = map[string][]MessageID{}
 	}
 	e.deliveries[to] = append(e.deliveries[to], msg.ID)
+
+	if ch, ok := e.channels[to]; ok {
+		ch <- templateName
+	}
+
 	return msg.ID, nil
+}
+
+func (e *TestEmailer) Inbox(addr string) <-chan Template {
+	e.Lock()
+	defer e.Unlock()
+
+	if e.channels == nil {
+		e.channels = map[string]chan Template{}
+	}
+	if ch, ok := e.channels[addr]; ok {
+		return ch
+	}
+	e.channels[addr] = make(chan Template, 10)
+	return e.channels[addr]
 }
 
 type TestMessage struct {
