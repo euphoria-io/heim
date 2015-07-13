@@ -1,0 +1,3 @@
+Subject: {{SenderName}} invites you to join &{{RoomName}}
+From: {{EmailFromAddress}}
+Reply-To: {{EmailReplyToAddress}}

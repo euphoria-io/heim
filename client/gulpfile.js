@@ -178,28 +178,38 @@ gulp.task('embed-html', function() {
     .pipe(gulp.dest(embedDest))
 })
 
-gulp.task('email-html', function() {
+gulp.task('email-templates', function() {
   function reload(moduleName) {
     delete require.cache[require.resolve(moduleName)]
     return require(moduleName)
   }
 
   var email = reload('./emails/email')
-  var emails = ['welcome', 'room-invitation', 'room-invitation-welcome']
-  return merge(_.map(emails, function(name) {
+  reload('./emails/common')
+  var emails = ['welcome', 'room-invitation', 'room-invitation-welcome', 'password-changed', 'password-reset']
+
+  var htmls = merge(_.map(emails, function(name) {
     var html = email.renderEmail(reload('./emails/' + name))
     return gfile(name + '.html', html, {src: true})
   }))
+
+  var txtCommon = reload('./emails/common-txt.js')
+  var txts = merge(_.map(emails, function(name) {
+    return gulp.src('./emails/' + name + '.txt')
+      .pipe(gtemplate(txtCommon))
+  }))
+
+  return merge(htmls, txts)
     .pipe(gulp.dest(emailDest))
 })
 
 gulp.task('email-static', function() {
-  return gulp.src(['./emails/static/*.png'])
+  return gulp.src(['./emails/*.txt', './emails/*.hdr', './emails/static/*.png'])
     .pipe(gulp.dest(emailDest))
 })
 
 gulp.task('lint', function() {
-  return gulp.src(['./lib/**/*.js', './test/**/*.js', './gulpfile.js'])
+  return gulp.src(['./lib/**/*.js', './emails/*.js', './test/**/*.js', './gulpfile.js'])
     .pipe(react())
     .pipe(jshint())
     .pipe(jshint.reporter('default'))
@@ -229,7 +239,7 @@ function watchifyTask(name, bundler, outFile, dest) {
 watchifyTask('heim-watchify', heimBundler, 'main.js', heimDest)
 watchifyTask('embed-watchify', embedBundler, 'embed.js', embedDest)
 
-gulp.task('build-emails', ['email-html', 'email-static'])
+gulp.task('build-emails', ['email-templates', 'email-static'])
 gulp.task('build-statics', ['raven-js', 'heim-less', 'emoji-less', 'heim-static', 'embed-static', 'heim-html', 'embed-html'])
 gulp.task('build-browserify', ['heim-js', 'embed-js'])
 
@@ -239,7 +249,7 @@ gulp.task('watch', function() {
   gulp.watch('./res/**/*', ['heim-less', 'emoji-less'])
   gulp.watch('./lib/**/*.html', ['heim-html', 'embed-html'])
   gulp.watch('./static/**/*', ['heim-static', 'embed-static'])
-  gulp.watch('./emails/*', ['email-html'])
+  gulp.watch('./emails/*', ['email-templates'])
   gulp.watch('./emails/static/*', ['email-static'])
 })
 

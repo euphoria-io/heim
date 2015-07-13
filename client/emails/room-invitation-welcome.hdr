@@ -1,0 +1,3 @@
+Subject: {{SenderName}} invites you to join a chatroom on {{SiteName}}
+From: {{EmailFromAddress}}
+Reply-To: {{EmailReplyToAddress}}

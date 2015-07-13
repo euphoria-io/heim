@@ -13,22 +13,17 @@ var textDefaults = common.textDefaults
 
 module.exports = (
   <common.StandardEmail>
-    <common.TopBubbleBox logo="logo-active.png">
+    <common.TopBubbleBox logo="logo-warning.png" padding={15}>
       <Item align="center">
-        <Text {...textDefaults} fontSize={18}><strong>{'{{SenderName}}'}</strong> invites you to join</Text>
-      </Item>
-      <Item align="center">
-        <Link href="{{RoomURL}}">
-          <Text {...textDefaults} fontSize={32} color={null}>&{'{{RoomName}}'}</Text>
-        </Link>
+        <Text {...textDefaults} fontSize={24}>your password has been changed</Text>
       </Item>
     </common.TopBubbleBox>
     <common.BodyBox>
-      <Item align="center">
-        <Text {...textDefaults} color="#7d7d7d">a note from {'{{SenderName}}'}:</Text>
+      <Item>
+        <Text {...textDefaults}>hey {'{{AccountName}}'}, just keeping you in the loop. if you just updated your <Link {...textDefaults} href="{{SiteURL}}">{'{{SiteName}}'}</Link> password, you're good to go!</Text>
       </Item>
       <Item>
-        <Text {...textDefaults}>{'{{SenderMessage}}'}</Text>
+        <Text {...textDefaults}>if you did not change your password and suspect something fishy is going on, please reply to this email immediately.</Text>
       </Item>
     </common.BodyBox>
     <common.Footer>

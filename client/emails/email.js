@@ -48,7 +48,7 @@ var Box = module.exports.Box = React.createClass({
 
   render: function() {
     return (
-      <table align={this.props.align} valign={this.props.valign} cellPadding={this.props.cellPadding} cellSpacing={this.props.cellSpacing} align={this.props.align} valign={this.props.valign} border={this.props.border} bgcolor={this.props.bgcolor} width={this.props.width} height={this.props.height} style={this.props.style}>
+      <table align={this.props.align} valign={this.props.valign} cellPadding={this.props.cellPadding} cellSpacing={this.props.cellSpacing} border={this.props.border} bgcolor={this.props.bgcolor} width={this.props.width} height={this.props.height} style={this.props.style}>
         {this.props.children}
       </table>
     )
@@ -67,7 +67,7 @@ var Item = module.exports.Item = React.createClass({
   },
 })
 
-var Text = module.exports.Text = React.createClass({
+module.exports.Text = React.createClass({
   getDefaultProps: function() {
     return {
       fontFamily: 'sans-serif',
@@ -89,7 +89,7 @@ var Text = module.exports.Text = React.createClass({
   },
 })
 
-var Link = module.exports.Link = React.createClass({
+module.exports.Link = React.createClass({
   getDefaultProps: function() {
     return {
       textDecoration: 'underline',
@@ -106,7 +106,7 @@ var Link = module.exports.Link = React.createClass({
   },
 })
 
-var Image = module.exports.Image = React.createClass({
+module.exports.Image = React.createClass({
   render: function() {
     return (
       <img src={this.props.src} width={this.props.width} height={this.props.height} style={_.merge({
