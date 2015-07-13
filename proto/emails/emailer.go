@@ -8,7 +8,6 @@ import (
 )
 
 type MessageID string
-type Template string
 
 type Emailer interface {
 	Send(
