@@ -14,7 +14,7 @@ import (
 )
 
 func TestEvaluation(t *testing.T) {
-	templater := &Templater{Templates: map[Template]*template.Template{}}
+	templater := &Templater{templates: map[Template]*template.Template{}}
 	templateSet := func(name Template, hdr, txt, html string) {
 		tmpl := template.New(string(name)).Funcs(
 			template.FuncMap{"error": func(arg string) (string, error) { return "", errors.New(arg) }})
@@ -25,7 +25,7 @@ func TestEvaluation(t *testing.T) {
 		template.Must(txtTmpl.Parse(txt))
 		htmlTmpl := tmpl.New(fmt.Sprintf("%s.html", name))
 		template.Must(htmlTmpl.Parse(html))
-		templater.Templates[name] = tmpl
+		templater.templates[name] = tmpl
 	}
 
 	templateSet(
@@ -34,7 +34,7 @@ func TestEvaluation(t *testing.T) {
 	data := map[string]interface{}{"Subject": "test"}
 
 	Convey("evaluate", t, func() {
-		tmpl := templater.Templates[Template("welcome")]
+		tmpl := templater.templates[Template("welcome")]
 
 		Convey("error", func() {
 			content, err := evaluate(tmpl, Template("notfound"), "hdr", data)
@@ -113,6 +113,19 @@ func TestEvaluation(t *testing.T) {
 }
 
 func TestTemplater(t *testing.T) {
+	tempdir := func() string {
+		td, err := ioutil.TempDir("", "")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if err := os.Mkdir(filepath.Join(td, "static"), 0755); err != nil {
+			t.Fatal(err)
+		}
+
+		return td
+	}
+
 	write := func(tmpDir, name, content string) {
 		path := filepath.Join(tmpDir, name)
 		err := ioutil.WriteFile(path, []byte(content), 0644)
@@ -120,8 +133,7 @@ func TestTemplater(t *testing.T) {
 	}
 
 	Convey("Pair of templates", t, func() {
-		td, err := ioutil.TempDir("", "")
-		So(err, ShouldBeNil)
+		td := tempdir()
 		defer os.RemoveAll(td)
 
 		write(td, "welcome.hdr", "Subject: {{.Subject}}\nReply-To: max@euphoria.io")
@@ -145,9 +157,26 @@ func TestTemplater(t *testing.T) {
 		So(string(result.Text), ShouldEqual, "alert!")
 	})
 
-	Convey("Path not found", t, func() {
-		td, err := ioutil.TempDir("", "")
+	Convey("Attachments", t, func() {
+		td := tempdir()
+		defer os.RemoveAll(td)
+
+		write(filepath.Join(td, "static"), "test.png", "test")
+		write(td, "test.hdr", "")
+		write(td, "test.txt", "")
+		write(td, "test.html", `<img src="{{call .file "test.png"}}">`)
+
+		templater, errs := LoadTemplates(td)
+		So(errs, ShouldBeNil)
+
+		result, err := templater.Evaluate(Template("test"), nil)
 		So(err, ShouldBeNil)
+		So(string(result.HTML), ShouldEqual, `<img src="cid:test.png@localhost">`)
+		So(result.Attachments, ShouldResemble, map[string]string{"test.png": "test.png@localhost"})
+	})
+
+	Convey("Path not found", t, func() {
+		td := tempdir()
 		defer os.RemoveAll(td)
 
 		templater, errs := LoadTemplates(td + "/notfound")
@@ -156,9 +185,52 @@ func TestTemplater(t *testing.T) {
 		So(templater, ShouldBeNil)
 	})
 
+	Convey("Static directory not found", t, func() {
+		td := tempdir()
+		defer os.RemoveAll(td)
+
+		So(os.Remove(filepath.Join(td, "static")), ShouldBeNil)
+		templater, errs := LoadTemplates(td)
+		So(len(errs), ShouldEqual, 1)
+		So(errs[0].Error(), ShouldEndWith, "/static: no such file or directory")
+		So(templater, ShouldBeNil)
+	})
+
+	Convey("Error opening static files", t, func() {
+		td := tempdir()
+		defer os.RemoveAll(td)
+
+		write(filepath.Join(td, "static"), "test1.png", "test")
+		write(filepath.Join(td, "static"), "test2.png", "test")
+		So(os.Chmod(filepath.Join(td, "static", "test1.png"), 0), ShouldBeNil)
+		So(os.Chmod(filepath.Join(td, "static", "test2.png"), 0), ShouldBeNil)
+
+		templater, errs := LoadTemplates(td)
+		So(len(errs), ShouldEqual, 2)
+		So(errs[0].Error(), ShouldEndWith, "/static/test1.png: permission denied")
+		So(errs[1].Error(), ShouldEndWith, "/static/test2.png: permission denied")
+		So(templater, ShouldBeNil)
+	})
+
+	Convey("Attachment not found", t, func() {
+		td := tempdir()
+		defer os.RemoveAll(td)
+
+		write(td, "test.hdr", "")
+		write(td, "test.txt", "")
+		write(td, "test.html", "{{call .file `test.png`}}")
+
+		templater, errs := LoadTemplates(td)
+		So(errs, ShouldBeNil)
+
+		result, err := templater.Evaluate(Template("test"), nil)
+		So(err, ShouldNotBeNil)
+		So(err.Error(), ShouldEndWith, "test.png: file not available")
+		So(result, ShouldBeNil)
+	})
+
 	Convey("Multiple parse errors", t, func() {
-		td, err := ioutil.TempDir("", "")
-		So(err, ShouldBeNil)
+		td := tempdir()
 		defer os.RemoveAll(td)
 
 		write(td, "a.hdr", "{{")
@@ -175,8 +247,7 @@ func TestTemplater(t *testing.T) {
 	})
 
 	Convey("Validators", t, func() {
-		td, err := ioutil.TempDir("", "")
-		So(err, ShouldBeNil)
+		td := tempdir()
 		defer os.RemoveAll(td)
 
 		write(td, "a.hdr", "Subject: {{.Subject}}")
