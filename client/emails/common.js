@@ -38,7 +38,7 @@ module.exports.TopBubbleBox = React.createClass({
     return (
       <Item align="center">
         <Link href="{{SiteURL}}">
-          <Image src={'{{file `' + this.props.logo + '`}}'} width={67} height={90} />
+          <Image src={'{{call .file `' + this.props.logo + '`}}'} width={67} height={90} />
         </Link>
         <Box width="600" cellPadding="2" bgcolor="white" style={{
           borderBottom: '3px solid #ccc',
