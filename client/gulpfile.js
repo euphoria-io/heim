@@ -204,7 +204,7 @@ gulp.task('email-templates', function() {
 })
 
 gulp.task('email-static', function() {
-  return gulp.src(['./emails/*.txt', './emails/*.hdr', './emails/static/*.png'])
+  return gulp.src(['./emails/*.hdr', './emails/static/*.png'])
     .pipe(gulp.dest(emailDest))
 })
 
