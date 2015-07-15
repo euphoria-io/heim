@@ -3,6 +3,7 @@ package cmd
 import (
 	"flag"
 	"fmt"
+	"sort"
 	"strings"
 
 	"euphoria.io/heim/proto"
@@ -54,6 +55,7 @@ func (testmailCmd) listScenarios() string {
 			}
 		}
 	}
+	sort.Strings(scenarios)
 	return strings.Join(scenarios, "\n")
 }
 
