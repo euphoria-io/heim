@@ -16,6 +16,28 @@ import (
 	"euphoria.io/scope"
 )
 
+func NewSMTPEmailer(
+	templatesPath, localAddr, serverAddr, sslHost string, auth smtp.Auth) (*SMTPEmailer, error) {
+
+	templater, errs := LoadTemplates(templatesPath)
+	if errs != nil {
+		return nil, errs[0]
+	}
+
+	emailer := &SMTPEmailer{
+		Templater: templater,
+		addr:      serverAddr,
+		localName: localAddr,
+		auth:      auth,
+	}
+
+	if sslHost != "" {
+		emailer.tlsConfig = &tls.Config{ServerName: sslHost}
+	}
+
+	return emailer, nil
+}
+
 type SMTPEmailer struct {
 	*Templater
 

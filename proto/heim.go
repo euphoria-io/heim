@@ -7,10 +7,6 @@ import (
 	"euphoria.io/scope"
 )
 
-const (
-	WelcomeEmail = emails.Template("welcome")
-)
-
 type Heim struct {
 	Backend Backend
 	Cluster cluster.Cluster
