@@ -1,3 +1,2 @@
 Subject: welcome to euphoria!
-From: {{EmailFromAddress}}
-Reply-To: {{EmailReplyToAddress}}
+Reply-To: {{.ReplyToAddress}}

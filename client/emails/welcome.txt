@@ -1,12 +1,12 @@
-hi, welcome to {{SiteName}}! :)
+hi, welcome to {{.SiteName}}! :)
 
 your account is almost ready. please verify your email address here:
 
-{{VerifyEmailURL}}
+{{.VerifyEmailURL}}
 
-we hope you have a wonderful time here. if you have any questions or comments, feel free to contact us at {{ContactEmailAddress}}.
+we hope you have a wonderful time here. if you have any questions or comments, feel free to contact us at {{.ContactEmailAddress}}.
 
 ---
 
-this message was sent to {{AccountEmailAddress}} because someone signed up for an account on {{SiteURL}} with this email address. if you did not request this
+this message was sent to {{.AccountEmailAddress}} because someone signed up for an account on {{.SiteURL}} with this email address. if you did not request this
 email, please disregard.

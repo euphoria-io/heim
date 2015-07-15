@@ -20,9 +20,9 @@ module.exports = (
     </common.TopBubbleBox>
     <common.BodyBox>
       <Item>
-        <Text {...textDefaults}>hey {'{{AccountName}}'}, we've received a password reset request for your <Link {...textDefaults} href="{{SiteURL}}">{'{{SiteName}}'}</Link> account:</Text>
+        <Text {...textDefaults}>hey {'{{.AccountName}}'}, we've received a password reset request for your <Link {...textDefaults} href="{{.SiteURL}}">{'{{.SiteName}}'}</Link> account:</Text>
       </Item>
-      <common.BigButton color="#dca955" href="{{ResetPasswordURL}}">
+      <common.BigButton color="#dca955" href="{{.ResetPasswordURL}}">
         reset your password
       </common.BigButton>
       <Item>

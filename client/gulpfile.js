@@ -203,9 +203,12 @@ gulp.task('email-templates', function() {
     .pipe(gulp.dest(emailDest))
 })
 
-gulp.task('email-static', function() {
-  return gulp.src(['./emails/*.hdr', './emails/static/*.png'])
-    .pipe(gulp.dest(emailDest))
+gulp.task('email-hdrs', function() {
+  return gulp.src('./emails/*.hdr').pipe(gulp.dest(emailDest))
+})
+
+gulp.task('email-pngs', function() {
+  return gulp.src('./emails/static/*.png').pipe(gulp.dest(emailDest+'/static'))
 })
 
 gulp.task('lint', function() {
@@ -239,7 +242,7 @@ function watchifyTask(name, bundler, outFile, dest) {
 watchifyTask('heim-watchify', heimBundler, 'main.js', heimDest)
 watchifyTask('embed-watchify', embedBundler, 'embed.js', embedDest)
 
-gulp.task('build-emails', ['email-templates', 'email-static'])
+gulp.task('build-emails', ['email-templates', 'email-hdrs', 'email-pngs'])
 gulp.task('build-statics', ['raven-js', 'heim-less', 'emoji-less', 'heim-static', 'embed-static', 'heim-html', 'embed-html'])
 gulp.task('build-browserify', ['heim-js', 'embed-js'])
 
