@@ -1,0 +1,15 @@
+hi {{.AccountName}},
+
+{{.SenderName}} invites you to join &{{.RoomName}}:
+
+{{.RoomURL}}
+
+---
+
+a note from {{.SenderName}}:
+
+{{.SenderMessage}}
+
+---
+
+<%- standardFooter %>
