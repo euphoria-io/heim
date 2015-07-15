@@ -200,15 +200,17 @@ func TestTemplater(t *testing.T) {
 		td := tempdir()
 		defer os.RemoveAll(td)
 
-		write(filepath.Join(td, "static"), "test1.png", "test")
-		write(filepath.Join(td, "static"), "test2.png", "test")
-		So(os.Chmod(filepath.Join(td, "static", "test1.png"), 0), ShouldBeNil)
-		So(os.Chmod(filepath.Join(td, "static", "test2.png"), 0), ShouldBeNil)
+		//write(filepath.Join(td, "static"), "nofile", "test")
+		So(os.Symlink(filepath.Join(td, "static", "nofile"), filepath.Join(td, "static", "test1.png")),
+			ShouldBeNil)
+		So(os.Symlink(filepath.Join(td, "static", "nofile"), filepath.Join(td, "static", "test2.png")),
+			ShouldBeNil)
+		//So(os.Remove(filepath.Join(td, "static", "nofile")), ShouldBeNil)
 
 		templater, errs := LoadTemplates(td)
 		So(len(errs), ShouldEqual, 2)
-		So(errs[0].Error(), ShouldEndWith, "/static/test1.png: permission denied")
-		So(errs[1].Error(), ShouldEndWith, "/static/test2.png: permission denied")
+		So(errs[0].Error(), ShouldEndWith, "/static/test1.png: no such file or directory")
+		So(errs[1].Error(), ShouldEndWith, "/static/test2.png: no such file or directory")
 		So(templater, ShouldBeNil)
 	})
 
