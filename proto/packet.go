@@ -97,6 +97,9 @@ var (
 	UnlockStaffCapabilityType      = PacketType("unlock-staff-capability")
 	UnlockStaffCapabilityReplyType = UnlockStaffCapabilityType.Reply()
 
+	UploadType      = PacketType("upload")
+	UploadReplyType = UploadType.Reply()
+
 	WhoType      = PacketType("who")
 	WhoReplyType = WhoType.Reply()
 
@@ -195,6 +198,9 @@ var (
 
 		UnlockStaffCapabilityType:      reflect.TypeOf(UnlockStaffCapabilityCommand{}),
 		UnlockStaffCapabilityReplyType: reflect.TypeOf(UnlockStaffCapabilityReply{}),
+
+		UploadType:      reflect.TypeOf(UploadCommand{}),
+		UploadReplyType: reflect.TypeOf(UploadReply{}),
 
 		WhoType:      reflect.TypeOf(WhoCommand{}),
 		WhoReplyType: reflect.TypeOf(WhoReply{}),
@@ -609,6 +615,19 @@ type UnlockStaffCapabilityCommand struct {
 type UnlockStaffCapabilityReply struct {
 	Success       bool   `json:"success"`                  // whether staff capability was unlocked
 	FailureReason string `json:"failure_reason,omitempty"` // if `success` was false, the reason why
+}
+
+// TODO: document
+type UploadCommand struct {
+	Type string `json:"type"`
+	Size int    `json:"size"`
+}
+
+// TODO: document
+type UploadReply struct {
+	MediaID string `json:"media_id"`
+	Key     string `json:"key,omitempty"`
+	URL     string `json:"url"`
 }
 
 // The `who` command requests a list of sessions currently joined in the room.
