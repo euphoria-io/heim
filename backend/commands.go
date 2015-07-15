@@ -80,6 +80,21 @@ func (s *session) joinedState(cmd *proto.Packet) *response {
 			return &response{err: err}
 		}
 		return &response{packet: &proto.WhoReply{Listing: listing}}
+	case *proto.UploadCommand:
+		mediaID := make([]byte, 8)
+		if _, err := rand.Read(mediaID); err != nil {
+			return &response{err: err}
+		}
+		key := ""
+		URL := fmt.Sprintf("/media/%032x/upload", mediaID)
+		// err := s.room.NewUpload(s.ctx, string(mediaID), s.roomName, s.identity.Name())
+		if err != nil {
+			return &response{err: err}
+		}
+		return &response{packet: &proto.UploadReply{
+			URL:     URL,
+			MediaID: string(mediaID),
+			Key:     key}}
 	default:
 		if resp := s.handleCoreCommands(payload); resp != nil {
 			return resp
