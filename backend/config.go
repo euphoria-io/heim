@@ -4,6 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"net"
+	"net/smtp"
 	"os"
 	"strings"
 	"time"
@@ -55,6 +57,18 @@ func init() {
 		"path to file containing a 256-bit key for using local key-management instead of AWS")
 
 	flag.BoolVar(&Config.AllowRoomCreation, "allow-room-creation", true, "allow rooms to be created")
+
+	flag.StringVar(&Config.Email.Server, "smtp-server", "", "address of SMTP server to send mail through")
+	flag.StringVar(&Config.Email.AuthMethod, "smtp-auth-method", "",
+		`authenticate when using the SMTP server (must be either "CRAM-MD5" or "PLAIN")`)
+	flag.StringVar(&Config.Email.Username, "smtp-username", "",
+		"authenticate with SMTP server using this username (CRAM-MD5 or PLAIN auth)")
+	flag.StringVar(&Config.Email.Password, "smtp-password", "",
+		"authenticate with SMTP server using this password (CRAM-MD5 or PLAIN auth)")
+	flag.StringVar(&Config.Email.Identity, "smtp-identity", "",
+		"authenticate with SMTP server using this identity (PLAIN auth only)")
+	flag.BoolVar(&Config.Email.UseTLS, "smtp-use-tls", true, "require TLS with SMTP server")
+	flag.StringVar(&Config.Email.Templates, "email-templates", "", "path to email templates")
 }
 
 func RegisterBackend(name string, factory proto.BackendFactory) { backendFactories[name] = factory }
@@ -77,6 +91,7 @@ type ServerConfig struct {
 	Console ConsoleConfig  `yaml:"console,omitempty"`
 	DB      DatabaseConfig `yaml:"database"`
 	KMS     KMSConfig      `yaml:"kms"`
+	Email   EmailConfig    `yaml:"email"`
 }
 
 func (cfg *ServerConfig) String() string {
@@ -131,11 +146,16 @@ func (cfg *ServerConfig) Heim(ctx scope.Context) (*proto.Heim, error) {
 		return nil, err
 	}
 
+	emailer, err := cfg.Email.Get()
+	if err != nil {
+		return nil, err
+	}
+
 	heim := &proto.Heim{
 		Context: ctx,
 		Cluster: c,
 		KMS:     kms,
-		Emailer: &emails.TestEmailer{},
+		Emailer: emailer,
 	}
 
 	backend, err := cfg.GetBackend(heim)
@@ -265,4 +285,44 @@ func (kc *KMSConfig) amazon() (security.KMS, error) {
 		return nil, fmt.Errorf("key-id must be specified")
 	}
 	return kms.New(kc.Amazon.Region, kc.Amazon.KeyID)
+}
+
+type EmailConfig struct {
+	Server     string `yaml:"server"`
+	LocalName  string `yaml:"local_name"`
+	AuthMethod string `yaml:"auth_method"` // must be "", "CRAM-MD5", or "PLAIN"
+	Username   string `yaml:"username"`
+	Password   string `yaml:"password"`
+	Identity   string `yaml:"identity"`
+	UseTLS     bool   `yaml:"use_tls"`
+	Templates  string `yaml:"templates"`
+}
+
+func (ec *EmailConfig) Get() (emails.Emailer, error) {
+	if ec.Server == "" {
+		return &emails.TestEmailer{}, nil
+	}
+
+	var sslHost string
+	if ec.UseTLS {
+		var err error
+		sslHost, _, err = net.SplitHostPort(ec.Server)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	var auth smtp.Auth
+	switch ec.AuthMethod {
+	case "":
+	case "CRAM-MD5":
+		auth = smtp.CRAMMD5Auth(ec.Username, ec.Password)
+	case "PLAIN":
+		if !ec.UseTLS {
+			return nil, fmt.Errorf("PLAIN authentication requires TLS")
+		}
+		auth = smtp.PlainAuth(ec.Identity, ec.Username, ec.Password, sslHost)
+	}
+
+	return emails.NewSMTPEmailer(ec.Templates, ec.LocalName, ec.Server, sslHost, auth)
 }
