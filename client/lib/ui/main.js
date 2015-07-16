@@ -15,6 +15,7 @@ var NotificationList = require('./notification-list')
 var ThreadList = require('./thread-list')
 var Bubble = require('./bubble')
 var FastButton = require('./fast-button')
+var Panner = require('./panner')
 
 
 module.exports = React.createClass({
@@ -197,8 +198,9 @@ module.exports = React.createClass({
   render: function() {
     var threadPanes = this.state.ui.panes.filter((v, k) => /^thread-/.test(k))
     var extraPanes = this.templateHook('thread-panes')
+
     return (
-      <div id="ui" className={classNames({'disconnected': this.state.chat.connected === false, 'info-pane-hidden': this.state.thin || !this.state.ui.infoPaneExpanded, 'info-pane-focused': this.state.ui.focusedPane == 'popup'})} onMouseDownCapture={this.onMouseDown} onClickCapture={this.onClick} onTouchMove={this.onTouchMove} onKeyDown={this.onKeyDown}>
+      <Panner id="ui" snapPoints={[0, 240]} className={classNames({'disconnected': this.state.chat.connected === false, 'info-pane-hidden': this.state.thin || !this.state.ui.infoPaneExpanded, 'info-pane-focused': this.state.ui.focusedPane == 'popup'})} onMouseDownCapture={this.onMouseDown} onClickCapture={this.onClick} onTouchMove={this.onTouchMove} onKeyDown={this.onKeyDown}>
         {this.state.storage && this.state.storage.useOpenDyslexic && <link rel="stylesheet" type="text/css" id="css" href="/static/od.css" />}
           {this.state.chat.authState && this.state.chat.authState != 'trying-stored' && <div className="hatch-shade fill" />}
         <div className="info-pane" onMouseEnter={ui.freezeInfo} onMouseLeave={ui.thawInfo}>
@@ -239,7 +241,7 @@ module.exports = React.createClass({
           <ChatPane pane={this.state.ui.panes.get('popup')} showParent={true} showAllReplies={true} />
         </Bubble>
         {this.templateHook('page-bottom')}
-      </div>
+      </Panner>
     )
   },
 })
