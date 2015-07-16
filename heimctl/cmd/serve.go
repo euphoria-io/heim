@@ -72,6 +72,9 @@ func (cmd *serveCmd) run(ctx scope.Context, args []string) error {
 	defer closeListener()
 
 	heim, err := getHeim(ctx)
+	if err != nil {
+		return fmt.Errorf("configuration error: %s", err)
+	}
 	defer heim.Backend.Close()
 
 	if err := controller(heim, cmd.consoleAddr); err != nil {

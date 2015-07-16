@@ -77,13 +77,13 @@ type Backend struct {
 	logger    *log.Logger
 }
 
-func NewBackend(heim *proto.Heim, dsn string, serverDesc *cluster.PeerDesc) (*Backend, error) {
+func NewBackend(heim *proto.Heim, dsn string) (*Backend, error) {
 	var version string
 
-	if serverDesc == nil {
+	if heim.PeerDesc == nil {
 		version = "dev"
 	} else {
-		version = serverDesc.Version
+		version = heim.PeerDesc.Version
 	}
 
 	parsedDSN, err := url.Parse(dsn)
@@ -104,7 +104,7 @@ func NewBackend(heim *proto.Heim, dsn string, serverDesc *cluster.PeerDesc) (*Ba
 	b := &Backend{
 		DB:        db,
 		dsn:       dsn,
-		desc:      serverDesc,
+		desc:      heim.PeerDesc,
 		version:   version,
 		cluster:   heim.Cluster,
 		peers:     map[string]string{},
@@ -113,8 +113,8 @@ func NewBackend(heim *proto.Heim, dsn string, serverDesc *cluster.PeerDesc) (*Ba
 	}
 	b.logger = log.New(os.Stdout, fmt.Sprintf("[backend %p] ", b), log.LstdFlags)
 
-	if serverDesc != nil {
-		b.peers[serverDesc.ID] = serverDesc.Era
+	if heim.PeerDesc != nil {
+		b.peers[heim.PeerDesc.ID] = heim.PeerDesc.Era
 		for _, desc := range heim.Cluster.Peers() {
 			b.peers[desc.ID] = desc.Era
 		}

@@ -8,11 +8,12 @@ import (
 )
 
 type Heim struct {
-	Backend Backend
-	Cluster cluster.Cluster
-	Context scope.Context
-	Emailer emails.Emailer
-	KMS     security.KMS
+	Backend  Backend
+	Cluster  cluster.Cluster
+	PeerDesc *cluster.PeerDesc
+	Context  scope.Context
+	Emailer  emails.Emailer
+	KMS      security.KMS
 }
 
 func (heim *Heim) OnAccountRegistration(ctx scope.Context, account Account) error {

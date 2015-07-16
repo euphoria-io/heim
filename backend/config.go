@@ -151,10 +151,11 @@ func (cfg *ServerConfig) Heim(ctx scope.Context) (*proto.Heim, error) {
 	}
 
 	heim := &proto.Heim{
-		Context: ctx,
-		Cluster: c,
-		KMS:     kms,
-		Emailer: emailer,
+		Context:  ctx,
+		Cluster:  c,
+		PeerDesc: cfg.Cluster.DescribeSelf(),
+		KMS:      kms,
+		Emailer:  emailer,
 	}
 
 	backend, err := cfg.GetBackend(heim)
@@ -323,5 +324,19 @@ func (ec *EmailConfig) Get() (emails.Emailer, error) {
 		auth = smtp.PlainAuth(ec.Identity, ec.Username, ec.Password, sslHost)
 	}
 
-	return emails.NewSMTPEmailer(ec.Templates, ec.LocalName, ec.Server, sslHost, auth)
+	// Load templates and configure email sender.
+	emailer, err := emails.NewSMTPEmailer(ec.Templates, ec.LocalName, ec.Server, sslHost, auth)
+	if err != nil {
+		return nil, err
+	}
+
+	// Verify templates.
+	if errs := proto.ValidateEmailTemplates(emailer.Templater); errs != nil {
+		for _, err := range errs {
+			fmt.Printf("error: %s", err)
+		}
+		return nil, fmt.Errorf("template validation failed: %s...", errs[0].Error())
+	}
+
+	return emailer, nil
 }

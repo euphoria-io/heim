@@ -65,13 +65,13 @@ func TestBackend(t *testing.T) {
 			// Use a real etcd cluster.
 			// TODO: do we have to?
 			heim.Cluster = etcd.Join("/test", "testcase", "era")
-			desc := &cluster.PeerDesc{
+			heim.PeerDesc = &cluster.PeerDesc{
 				ID:      "testcase",
 				Era:     "era",
 				Version: "testver",
 			}
 
-			b, err = NewBackend(heim, dsn, desc)
+			b, err = NewBackend(heim, dsn)
 			if err != nil {
 				return nil, err
 			}
