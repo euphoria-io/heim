@@ -292,9 +292,9 @@ func TestTemplater(t *testing.T) {
 		})
 
 		Convey("Validation error", func() {
-			err := templater.Validate(Template("b"), nilTest, headerTest)
-			So(err, ShouldNotBeNil)
-			So(err.Error(), ShouldEqual, "test #2: validation error: invalid subject")
+			errs := templater.Validate(Template("b"), nilTest, headerTest)
+			So(len(errs), ShouldEqual, 1)
+			So(errs[0].Error(), ShouldEqual, "b test #2: validation error: invalid subject")
 		})
 	})
 }

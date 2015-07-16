@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"euphoria.io/heim/backend"
+	"euphoria.io/heim/backend/mock"
 	"euphoria.io/heim/backend/psql"
 	"euphoria.io/heim/cluster"
 	"euphoria.io/heim/proto"
@@ -44,6 +45,14 @@ func getConfig(ctx scope.Context) (*backend.ServerConfig, error) {
 			return nil, fmt.Errorf("config: %s", err)
 		}
 	}
+
+	backend.RegisterBackend("mock", func(*proto.Heim) (proto.Backend, error) {
+		return &mock.TestBackend{}, nil
+	})
+	backend.RegisterBackend("psql", func(heim *proto.Heim) (proto.Backend, error) {
+		return psql.NewBackend(heim, backend.Config.DB.DSN)
+	})
+
 	return &backend.Config, nil
 }
 

@@ -89,18 +89,27 @@ type Templater struct {
 	templates   map[Template]*template.Template
 }
 
-func (t *Templater) Validate(tmplName Template, tests ...TemplateTest) error {
+func (t *Templater) Validate(tmplName Template, tests ...TemplateTest) []error {
+	errors := []error{}
 	for i, test := range tests {
 		result, err := t.Evaluate(tmplName, test.Data)
 		if err != nil {
-			return fmt.Errorf("test #%d: evaluation error: %s", i+1, err)
+			errors = append(errors, fmt.Errorf("%s test #%d: evaluation error: %s", tmplName, i+1, err))
+			continue
 		}
 
-		if err := test.Validator(result); err != nil {
-			return fmt.Errorf("test #%d: validation error: %s", i+1, err)
+		if test.Validator != nil {
+			if err := test.Validator(result); err != nil {
+				errors = append(
+					errors, fmt.Errorf("%s test #%d: validation error: %s", tmplName, i+1, err))
+				continue
+			}
 		}
 	}
-	return nil
+	if len(errors) == 0 {
+		return nil
+	}
+	return errors
 }
 
 func (t *Templater) Evaluate(tmplName Template, data map[string]interface{}) (*TemplateResult, error) {

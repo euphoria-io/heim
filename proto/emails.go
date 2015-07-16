@@ -79,3 +79,18 @@ func (cd commonData) And(data map[string]interface{}) map[string]interface{} {
 	}
 	return data
 }
+
+func ValidateEmailTemplates(templater *emails.Templater) []error {
+	errors := []error{}
+	for templateName, testCases := range EmailScenarios {
+		testList := make([]emails.TemplateTest, 0, len(testCases))
+		for _, testCase := range testCases {
+			testList = append(testList, testCase)
+		}
+		errors = append(errors, templater.Validate(templateName, testList...)...)
+	}
+	if len(errors) == 0 {
+		return nil
+	}
+	return errors
+}
