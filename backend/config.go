@@ -86,6 +86,10 @@ type ServerConfig struct {
 	AllowRoomCreation     bool          `yaml:"allow_room_creation"`
 	NewAccountMinAgentAge time.Duration `yaml:"new_account_min_agent_age"`
 	RoomEntryMinAgentAge  time.Duration `yaml:"room_entry_min_agent_age"`
+	SiteName              string        `yaml:"site_name"`
+	SiteURL               string        `yaml:"site_url"`
+	HelpAddress           string        `yaml:"help_address"`
+	SenderAddress         string        `yaml:"sender_address"`
 
 	Cluster ClusterConfig  `yaml:"cluster,omitempty"`
 	Console ConsoleConfig  `yaml:"console,omitempty"`
@@ -146,6 +150,7 @@ func (cfg *ServerConfig) Heim(ctx scope.Context) (*proto.Heim, error) {
 		return nil, err
 	}
 
+	cfg.setEmailCommonData()
 	emailer, err := cfg.Email.Get()
 	if err != nil {
 		return nil, err
@@ -168,6 +173,20 @@ func (cfg *ServerConfig) Heim(ctx scope.Context) (*proto.Heim, error) {
 
 	heim.Backend = backend
 	return heim, nil
+}
+
+func (cfg *ServerConfig) setEmailCommonData() {
+	updates := map[string]interface{}{}
+	updates["SiteName"] = cfg.SiteName
+	updates["SiteURL"] = cfg.SiteURL
+	updates["ReplyToAddress"] = cfg.HelpAddress
+	updates["EmailFromAddress"] = cfg.SenderAddress
+
+	for k, v := range updates {
+		if v != "" {
+			proto.EmailCommonData[k] = v
+		}
+	}
 }
 
 func (cfg *ServerConfig) backendFactory() string {
