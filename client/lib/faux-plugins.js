@@ -99,7 +99,6 @@ module.exports = function(roomName) {
   if (roomName == 'music' || roomName == 'youtube') {
     var Embed = require('./ui/embed')
     var MessageText = require('./ui/message-text')
-    var ChatPane = require('./ui/chat-pane')
 
     var clientTimeOffset = 0
     Heim.socket.store.listen(function(ev) {
@@ -110,9 +109,10 @@ module.exports = function(roomName) {
 
     var TVActions = Reflux.createActions([
       'changeVideo',
+      'changeNotice',
     ])
 
-    var tvPane = Heim.ui.createCustomPane('youtube-tv')
+    Heim.ui.createCustomPane('youtube-tv', {readOnly: true})
 
     var TVStore = Reflux.createStore({
       listenables: [
@@ -121,33 +121,53 @@ module.exports = function(roomName) {
       ],
 
       init: function() {
-        this.state = {
-          time: 0,
-          messageId: null,
-          youtubeId: null,
-          content: '',
-        }
+        this.state = Immutable.fromJS({
+          video: {
+            time: 0,
+            messageId: null,
+            youtubeId: null,
+            title: '',
+          },
+          notice: {
+            time: 0,
+            content: '',
+          },
+        })
       },
 
       getInitialState: function() {
         return this.state
       },
 
-      chatChange: function(state) {
-        this.chatState = state
+      changeVideo: function(video) {
+        this.state = this.state.set('video', Immutable.fromJS(video))
+        this.trigger(this.state)
       },
 
-      changeVideo: function(video) {
-        // FIXME: abstract this process more cleanly
-        var oldMessageId = this.state.messageId
-        if (oldMessageId) {
-          this.chatState.messages.mergeNodes(oldMessageId, {_inCustomPane: false, _collapseCaption: null})
-        }
-        this.state = video
-        tvPane.store._reset({rootId: video.messageId})
-        tvPane.focusMessage(video.messageId)
-        this.chatState.messages.mergeNodes(video.messageId, {_inCustomPane: 'youtube-tv', _collapseCaption: 'playing'})
+      changeNotice: function(notice) {
+        this.state = this.state.set('notice', Immutable.fromJS(notice))
         this.trigger(this.state)
+      },
+    })
+
+    var SyncedEmbed = React.createClass({
+      displayName: 'SyncedEmbed',
+
+      shouldComponentUpdate: function(nextProps) {
+        return nextProps.youtubeId != this.props.youtubeId
+      },
+
+      render: function() {
+        // jshint camelcase: false
+        return (
+          <Embed
+            className={this.props.className}
+            kind="youtube"
+            autoplay="1"
+            start={Math.max(0, Math.floor(Date.now() / 1000 - this.props.startedAt - clientTimeOffset))}
+            youtube_id={this.props.youtubeId}
+          />
+        )
       }
     })
 
@@ -164,18 +184,16 @@ module.exports = function(roomName) {
         return (
           <div className="chat-pane-container youtube-pane">
             <div className="top-bar">
-              <MessageText className="title" content={':notes: :tv: :notes: ' + this.state.tv.content} />
+              <MessageText className="title" content={':notes: :tv: :notes: ' + this.state.tv.getIn(['video', 'title'])} />
             </div>
             <div className="aspect-wrapper">
-              <Embed
+              <SyncedEmbed
                 className="youtube-tv"
-                kind="youtube"
-                autoplay="1"
-                youtube_id={this.state.tv.youtubeId}
-                start={Math.max(0, Math.floor(Date.now() / 1000 - this.state.tv.time - clientTimeOffset))}
+                youtubeId={this.state.tv.getIn(['video', 'youtubeId'])}
+                startedAt={this.state.tv.getIn(['video', 'time'])}
               />
             </div>
-            {this.state.tv.youtubeId && <ChatPane pane={tvPane} showParent={true} showAllReplies={true} />}
+            <MessageText className="notice" content={this.state.tv.getIn(['notice', 'content'])} />
           </div>
         )
       }
@@ -186,28 +204,48 @@ module.exports = function(roomName) {
     })
 
     Heim.chat.messagesChanged.listen(function(ids, state) {
-      var playRe = /!play [^?]*\?v=([-\w]+)/
-
-      var video = Immutable.Seq(ids)
+      var candidates = Immutable.Seq(ids)
         .map(messageId => {
           var msg = state.messages.get(messageId)
-          if (messageId == '__root' || !msg.get('content')) {
-            return
-          }
+          var valid = messageId != '__root' && msg.get('content')
+          return valid && msg
+        })
+        .filter(Boolean)
+
+      var playRe = /!play [^?]*\?v=([-\w]+)/
+      var video = candidates
+        .map(msg => {
           var match = msg.get('content').match(playRe)
           return match && {
             time: msg.get('time'),
-            messageId: messageId,
+            messageId: msg.get('id'),
             youtubeId: match[1],
-            content: msg.get('content'),
+            title: msg.get('content'),
           }
         })
         .filter(Boolean)
         .sortBy(video => video.time)
         .last()
 
-      if (video && video.time > TVStore.state.time) {
+      if (video && video.time > TVStore.state.getIn(['video', 'time'])) {
         TVActions.changeVideo(video)
+      }
+
+      var noticeRe = /^!notice ([^]*)$/
+      var notice = candidates
+        .map(msg => {
+          var match = msg.get('content').match(noticeRe)
+          return match && {
+            time: msg.get('time'),
+            content: match[1],
+          }
+        })
+        .filter(Boolean)
+        .sortBy(notice => notice.time)
+        .last()
+
+      if (notice && notice.time > TVStore.state.getIn(['notice', 'time'])) {
+        TVActions.changeNotice(notice)
       }
     })
 
@@ -219,6 +257,7 @@ module.exports = function(roomName) {
           }
 
           .youtube-pane .aspect-wrapper {
+            flex-shrink: 0;
             position: relative;
             width: 100%;
             box-shadow: 0 0 12px rgba(0, 0, 0, .25);
@@ -240,6 +279,14 @@ module.exports = function(roomName) {
             width: 100%;
             height: 100%;
             border: none;
+          }
+
+          .youtube-pane .notice {
+            background: white;
+            margin-top: 15px;
+            padding: 10px;
+            overflow: auto;
+            white-space: pre-wrap;
           }
         `}} />
       )

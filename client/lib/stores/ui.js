@@ -202,9 +202,11 @@ var store = module.exports.store = Reflux.createStore({
   },
 
   _moveFocusedPane: function(delta) {
-    var idx = this.state.panes.keySeq().indexOf(this.state.focusedPane)
-    idx = clamp(0, idx + delta, this.state.panes.size - 1)
-    var paneId = this.state.panes.entrySeq().get(idx)[0]
+    var focusablePanes = this.state.panes.filterNot(pane => pane.readOnly)
+    var idx = focusablePanes.keySeq().indexOf(this.state.focusedPane)
+    idx = clamp(0, idx + delta, focusablePanes.size - 1)
+
+    var paneId = focusablePanes.entrySeq().get(idx)[0]
 
     if (paneId == 'popup') {
       if (!this.state.threadPopupAnchorEl) {
@@ -256,17 +258,16 @@ var store = module.exports.store = Reflux.createStore({
     })
   },
 
-  _createCustomPane: function(paneId, rootId) {
-    var newPane = createPaneStore(paneId, {rootId: rootId})
+  _createCustomPane: function(paneId, options) {
+    var newPane = createPaneStore(paneId, options)
     this.state.panes = this.state.panes.set(paneId, newPane)
-    this.state.panes.get(paneId).focusMessage(rootId)
     this.trigger(this.state)
     return newPane
   },
 })
 
-module.exports.createCustomPane = function(paneId, rootId) {
-  return store._createCustomPane(paneId, rootId)
+module.exports.createCustomPane = function(paneId, options) {
+  return store._createCustomPane(paneId, options)
 }
 
 var initMessageData = Immutable.Map({
@@ -276,6 +277,8 @@ var initMessageData = Immutable.Map({
 })
 
 function createPaneStore(paneId, createOptions) {
+  createOptions = createOptions || {}
+
   var paneActions = Reflux.createActions([
     'sendMessage',
     'focusMessage',
@@ -339,7 +342,7 @@ function createPaneStore(paneId, createOptions) {
     },
 
     _reset: function(options) {
-      options = options || createOptions || {}
+      options = options || createOptions
       this.state = {
         rootId: options.rootId || '__root',
         focusedMessage: null,
@@ -463,6 +466,7 @@ function createPaneStore(paneId, createOptions) {
 
   paneActions.store = paneStore
   paneActions.id = paneId
+  paneActions.readOnly = Boolean(createOptions.readOnly)
 
   return paneActions
 }
