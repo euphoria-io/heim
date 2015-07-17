@@ -21,12 +21,12 @@ sentry:
   ports:
     - "9000:9000"
   environment:
-    SENTRY_URL_PREFIX: http://euphoria.local:9000
+    SENTRY_URL_PREFIX: http://localhost:9000
     SENTRY_INITIAL_TEAM: euphoria
     SENTRY_INITIAL_PROJECT: heim-client
     SENTRY_INITIAL_PLATFORM: javascript
     SENTRY_INITIAL_KEY: sentry:sentry
-    SENTRY_INITIAL_DOMAINS: euphoria.local
+    SENTRY_INITIAL_DOMAINS: localhost
     SECRET_KEY: onlyfordevelopment
 
 # The frontend container runs an ongoing gulp build.
@@ -42,9 +42,9 @@ frontend:
     - "8081:8081"
   environment:
     NODE_ENV: development
-    SENTRY_ENDPOINT: http://sentry@euphoria.local:9000/2
-    HEIM_ORIGIN: http://euphoria.local:8080
-    EMBED_ORIGIN: http://euphoria.local:8081
+    SENTRY_ENDPOINT: http://sentry@localhost:9000/2
+    HEIM_ORIGIN: http://localhost:8080
+    EMBED_ORIGIN: http://localhost:8081
 
 # The upgradedb container runs the upgradedb command against the psql container.
 upgradedb:
