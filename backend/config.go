@@ -21,7 +21,9 @@ import (
 )
 
 var (
-	Config ServerConfig
+	Config = ServerConfig{
+		CommonEmailParams: proto.DefaultCommonEmailParams,
+	}
 
 	backendFactories = map[string]proto.BackendFactory{}
 )
@@ -83,13 +85,16 @@ func (k *CSV) Set(flags string) error {
 }
 
 type ServerConfig struct {
+	*proto.CommonEmailParams `yaml:"site"`
+
 	AllowRoomCreation     bool          `yaml:"allow_room_creation"`
 	NewAccountMinAgentAge time.Duration `yaml:"new_account_min_agent_age"`
 	RoomEntryMinAgentAge  time.Duration `yaml:"room_entry_min_agent_age"`
-	SiteName              string        `yaml:"site_name"`
-	SiteURL               string        `yaml:"site_url"`
-	HelpAddress           string        `yaml:"help_address"`
-	SenderAddress         string        `yaml:"sender_address"`
+
+	SiteName      string `yaml:"site_name"`
+	SiteURL       string `yaml:"site_url"`
+	HelpAddress   string `yaml:"help_address"`
+	SenderAddress string `yaml:"sender_address"`
 
 	Cluster ClusterConfig  `yaml:"cluster,omitempty"`
 	Console ConsoleConfig  `yaml:"console,omitempty"`
@@ -150,8 +155,7 @@ func (cfg *ServerConfig) Heim(ctx scope.Context) (*proto.Heim, error) {
 		return nil, err
 	}
 
-	cfg.setEmailCommonData()
-	emailer, err := cfg.Email.Get()
+	emailer, err := cfg.Email.Get(cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -173,20 +177,6 @@ func (cfg *ServerConfig) Heim(ctx scope.Context) (*proto.Heim, error) {
 
 	heim.Backend = backend
 	return heim, nil
-}
-
-func (cfg *ServerConfig) setEmailCommonData() {
-	updates := map[string]interface{}{}
-	updates["SiteName"] = cfg.SiteName
-	updates["SiteURL"] = cfg.SiteURL
-	updates["ReplyToAddress"] = cfg.HelpAddress
-	updates["EmailFromAddress"] = cfg.SenderAddress
-
-	for k, v := range updates {
-		if v != "" {
-			proto.EmailCommonData[k] = v
-		}
-	}
 }
 
 func (cfg *ServerConfig) backendFactory() string {
@@ -309,7 +299,6 @@ func (kc *KMSConfig) amazon() (security.KMS, error) {
 
 type EmailConfig struct {
 	Server     string `yaml:"server"`
-	LocalName  string `yaml:"local_name"`
 	AuthMethod string `yaml:"auth_method"` // must be "", "CRAM-MD5", or "PLAIN"
 	Username   string `yaml:"username"`
 	Password   string `yaml:"password"`
@@ -318,7 +307,12 @@ type EmailConfig struct {
 	Templates  string `yaml:"templates"`
 }
 
-func (ec *EmailConfig) Get() (emails.Emailer, error) {
+func (ec *EmailConfig) Get(cfg *ServerConfig) (emails.Emailer, error) {
+	proto.DefaultCommonEmailParams = cfg.CommonEmailParams
+	localDomain := cfg.CommonEmailParams.EmailDomain
+	cfg.CommonEmailParams.TemplateDataCommon.LocalDomain = localDomain
+	fmt.Printf("CommonEmailParams = %#v\n", cfg.CommonEmailParams)
+
 	if ec.Server == "" {
 		return &emails.TestEmailer{}, nil
 	}
@@ -345,7 +339,7 @@ func (ec *EmailConfig) Get() (emails.Emailer, error) {
 	}
 
 	// Load templates and configure email sender.
-	emailer, err := emails.NewSMTPEmailer(ec.Templates, ec.LocalName, ec.Server, sslHost, auth)
+	emailer, err := emails.NewSMTPEmailer(ec.Templates, localDomain, ec.Server, sslHost, auth)
 	if err != nil {
 		return nil, err
 	}
@@ -353,7 +347,7 @@ func (ec *EmailConfig) Get() (emails.Emailer, error) {
 	// Verify templates.
 	if errs := proto.ValidateEmailTemplates(emailer.Templater); errs != nil {
 		for _, err := range errs {
-			fmt.Printf("error: %s", err)
+			fmt.Printf("error: %s\n", err)
 		}
 		return nil, fmt.Errorf("template validation failed: %s...", errs[0].Error())
 	}

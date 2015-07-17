@@ -33,8 +33,11 @@ func (heim *Heim) OnAccountRegistration(ctx scope.Context, account Account) erro
 
 	// If an email is found but no email is verified, send a welcome email.
 	if email != "" && !verified {
-		_, err := heim.Emailer.Send(ctx, email, WelcomeEmail, map[string]interface{}{"account": account})
-		if err != nil {
+		// TODO: verification URL needs to be given
+		params := &WelcomeEmailParams{
+			CommonEmailParams: DefaultCommonEmailParams,
+		}
+		if _, err := heim.Emailer.Send(ctx, email, WelcomeEmail, params); err != nil {
 			return err
 		}
 	}

@@ -14,6 +14,50 @@ import (
 
 type Template string
 
+type emailCommon interface {
+	setToAddress(to string)
+	AccountEmailAddress() string
+	getAttachments() map[string]string
+	setStaticFiles(map[string][]byte)
+}
+
+type TemplateDataCommon struct {
+	LocalDomain string
+
+	// for internal use
+	toAddress   string
+	attachments map[string]string
+	staticFiles map[string][]byte
+}
+
+func (tdc *TemplateDataCommon) AccountEmailAddress() string { return tdc.toAddress }
+
+func (tdc *TemplateDataCommon) File(path string) (template.URL, error) {
+	// Verify file is actually available.
+	if _, ok := tdc.staticFiles[path]; !ok {
+		return "", fmt.Errorf("%s: file not available", path)
+	}
+
+	// Derive Content-ID from path and t.localDomain.
+	cid := fmt.Sprintf("%s@%s", url.QueryEscape(path), tdc.LocalDomain)
+	if tdc.attachments == nil {
+		tdc.attachments = map[string]string{}
+	}
+	tdc.attachments[path] = cid
+	return template.URL("cid:" + cid), nil
+}
+
+func (tdc *TemplateDataCommon) getAttachments() map[string]string { return tdc.attachments }
+
+func (tdc *TemplateDataCommon) setStaticFiles(staticFiles map[string][]byte) {
+	tdc.staticFiles = staticFiles
+	tdc.attachments = map[string]string{}
+}
+
+func (tdc *TemplateDataCommon) setToAddress(to string) {
+	tdc.toAddress = to
+}
+
 type TemplateResult struct {
 	Header      textproto.MIMEHeader
 	Text        []byte
@@ -22,7 +66,7 @@ type TemplateResult struct {
 }
 
 type TemplateTest struct {
-	Data      map[string]interface{}
+	Data      interface{}
 	Validator func(result *TemplateResult) error
 }
 
@@ -92,6 +136,10 @@ type Templater struct {
 func (t *Templater) Validate(tmplName Template, tests ...TemplateTest) []error {
 	errors := []error{}
 	for i, test := range tests {
+		if ec, ok := test.Data.(emailCommon); ok {
+			ec.setToAddress("user@somewhere.invalid")
+		}
+
 		result, err := t.Evaluate(tmplName, test.Data)
 		if err != nil {
 			errors = append(errors, fmt.Errorf("%s test #%d: evaluation error: %s", tmplName, i+1, err))
@@ -112,7 +160,7 @@ func (t *Templater) Validate(tmplName Template, tests ...TemplateTest) []error {
 	return errors
 }
 
-func (t *Templater) Evaluate(tmplName Template, data map[string]interface{}) (*TemplateResult, error) {
+func (t *Templater) Evaluate(tmplName Template, data interface{}) (*TemplateResult, error) {
 	result := &TemplateResult{}
 
 	tmpl, ok := t.templates[tmplName]
@@ -120,10 +168,9 @@ func (t *Templater) Evaluate(tmplName Template, data map[string]interface{}) (*T
 		return nil, fmt.Errorf("no templates found for %s", tmplName)
 	}
 
-	if data == nil {
-		data = map[string]interface{}{}
+	if ec, ok := data.(emailCommon); ok {
+		ec.setStaticFiles(t.staticFiles)
 	}
-	data["file"] = func(path string) (template.URL, error) { return t.addAttachment(result, path) }
 
 	headerBytes, err := evaluate(tmpl, tmplName, "hdr", data)
 	if err != nil {
@@ -144,27 +191,14 @@ func (t *Templater) Evaluate(tmplName Template, data map[string]interface{}) (*T
 		return nil, fmt.Errorf("%s.html: %s", tmplName, err)
 	}
 
+	if ec, ok := data.(emailCommon); ok {
+		result.Attachments = ec.getAttachments()
+	}
+
 	return result, nil
 }
 
-func (t *Templater) addAttachment(result *TemplateResult, path string) (template.URL, error) {
-	// Verify file is actually available.
-	if _, ok := t.staticFiles[path]; !ok {
-		return "", fmt.Errorf("%s: file not available", path)
-	}
-
-	// Derive Content-ID from path and t.localDomain.
-	cid := fmt.Sprintf("%s@%s", url.QueryEscape(path), t.localDomain)
-	if result.Attachments == nil {
-		result.Attachments = map[string]string{}
-	}
-	result.Attachments[path] = cid
-	return template.URL("cid:" + cid), nil
-}
-
-func evaluate(
-	tmpl *template.Template, tmplName Template, ext string, data map[string]interface{}) ([]byte, error) {
-
+func evaluate(tmpl *template.Template, tmplName Template, ext string, data interface{}) ([]byte, error) {
 	w := &bytes.Buffer{}
 	name := fmt.Sprintf("%s.%s", tmplName, ext)
 	if err := tmpl.ExecuteTemplate(w, name, data); err != nil {
@@ -177,4 +211,9 @@ func evaluate(
 		}
 	}
 	return w.Bytes(), nil
+}
+
+func IsEmailCommon(x interface{}) bool {
+	_, ok := x.(emailCommon)
+	return ok
 }

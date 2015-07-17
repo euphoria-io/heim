@@ -164,12 +164,12 @@ func TestTemplater(t *testing.T) {
 		write(filepath.Join(td, "static"), "test.png", "test")
 		write(td, "test.hdr", "")
 		write(td, "test.txt", "")
-		write(td, "test.html", `<img src="{{call .file "test.png"}}">`)
+		write(td, "test.html", `<img src="{{.File "test.png"}}">`)
 
 		templater, errs := LoadTemplates(td)
 		So(errs, ShouldBeNil)
 
-		result, err := templater.Evaluate(Template("test"), nil)
+		result, err := templater.Evaluate(Template("test"), &TemplateDataCommon{LocalDomain: "localhost"})
 		So(err, ShouldBeNil)
 		So(string(result.HTML), ShouldEqual, `<img src="cid:test.png@localhost">`)
 		So(result.Attachments, ShouldResemble, map[string]string{"test.png": "test.png@localhost"})
@@ -220,12 +220,12 @@ func TestTemplater(t *testing.T) {
 
 		write(td, "test.hdr", "")
 		write(td, "test.txt", "")
-		write(td, "test.html", "{{call .file `test.png`}}")
+		write(td, "test.html", "{{.File `test.png`}}")
 
 		templater, errs := LoadTemplates(td)
 		So(errs, ShouldBeNil)
 
-		result, err := templater.Evaluate(Template("test"), nil)
+		result, err := templater.Evaluate(Template("test"), &TemplateDataCommon{LocalDomain: "localhost"})
 		So(err, ShouldNotBeNil)
 		So(err.Error(), ShouldEndWith, "test.png: file not available")
 		So(result, ShouldBeNil)

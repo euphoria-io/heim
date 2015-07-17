@@ -57,9 +57,6 @@ func TestSMTPEmailer(t *testing.T) {
 			"Content-Type": []string{header.Get("Content-Type")},
 		})
 
-		Printf("boundary: %s\n", boundary)
-		Printf("content: %s\n", string(content))
-
 		mpr := multipart.NewReader(bytes.NewReader(content), boundary)
 
 		// Verify text part.

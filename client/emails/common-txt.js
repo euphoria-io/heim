@@ -4,5 +4,5 @@ module.exports.standardFooter = [
   '',
   'to change your email notification preferences, click here:',
   '',
-  '{{.AccountEmailPreferencesURL}}',
+  '{{.EmailPreferencesURL}}',
 ].join('\n')

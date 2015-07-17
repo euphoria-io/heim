@@ -1,2 +1,2 @@
-Subject: welcome to euphoria!
-Reply-To: {{.ReplyToAddress}}
+Subject: {{.Subject}}
+Reply-To: {{.HelpAddress}}

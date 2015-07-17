@@ -21,7 +21,7 @@ var textDefaults = module.exports.textDefaults = {
 module.exports.StandardEmail = React.createClass({
   render: function() {
     return (
-      <Email title="{{.EmailSubject}}" bgcolor="#f0f0f0" cellSpacing="30">
+      <Email title="{{.Subject}}" bgcolor="#f0f0f0" cellSpacing="30">
         {this.props.children}
       </Email>
     )
@@ -38,7 +38,7 @@ module.exports.TopBubbleBox = React.createClass({
     return (
       <Item align="center">
         <Link href="{{.SiteURL}}">
-          <Image src={'{{call .file `' + this.props.logo + '`}}'} width={67} height={90} />
+          <Image src={'{{.File `' + this.props.logo + '`}}'} width={67} height={90} />
         </Link>
         <Box width="600" cellPadding="2" bgcolor="white" style={{
           borderBottom: '3px solid #ccc',
@@ -94,6 +94,6 @@ module.exports.Footer = React.createClass({
 module.exports.standardFooter = (
   <Text {...textDefaults} fontSize={13} color="#7d7d7d">
     this message was sent to <Link {...textDefaults} textDecoration="none" href="mailto:{{.AccountEmailAddress}}">{'{{.AccountEmailAddress}}'}</Link> because an account is registered on <Link {...textDefaults} textDecoration="none" href="{{.SiteURL}}">{'{{.SiteURLShort}}'}</Link> with this email address.
-    would you like to change your <Link {...textDefaults} href="{{.AccountEmailPreferencesURL}}">email notification preferences</Link>?
+    would you like to change your <Link {...textDefaults} href="{{.EmailPreferencesURL}}">email notification preferences</Link>?
   </Text>
 )

@@ -50,7 +50,7 @@ type SMTPEmailer struct {
 func (s *SMTPEmailer) String() string { return fmt.Sprintf("smtp[%s]", s.addr) }
 
 func (s *SMTPEmailer) Send(
-	ctx scope.Context, to string, templateName Template, data map[string]interface{}) (MessageID, error) {
+	ctx scope.Context, to string, templateName Template, data interface{}) (MessageID, error) {
 
 	// Construct email and assign a MessageID.
 	sf, err := snowflake.New()
@@ -58,6 +58,10 @@ func (s *SMTPEmailer) Send(
 		return "", fmt.Errorf("%s: snowflake error: %s", s, err)
 	}
 	msgID := fmt.Sprintf("<%s@%s>", sf, s.localName)
+
+	if ec, ok := data.(emailCommon); ok {
+		ec.setToAddress(to)
+	}
 
 	result, err := s.Evaluate(templateName, data)
 	if err != nil {
@@ -115,6 +119,7 @@ func (s *SMTPEmailer) Send(
 }
 
 func (s *SMTPEmailer) write(w io.Writer, result *TemplateResult) error {
+	//w = io.MultiWriter(w, os.Stdout)
 	mpw := multipart.NewWriter(w)
 
 	// Write top-level headers.

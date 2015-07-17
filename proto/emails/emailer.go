@@ -10,9 +10,7 @@ import (
 type MessageID string
 
 type Emailer interface {
-	Send(
-		ctx scope.Context, to string, templateName Template, data map[string]interface{}) (
-		MessageID, error)
+	Send(ctx scope.Context, to string, templateName Template, data interface{}) (MessageID, error)
 }
 
 type MockEmailer interface {
@@ -30,7 +28,7 @@ type TestEmailer struct {
 }
 
 func (e *TestEmailer) Send(
-	ctx scope.Context, to string, templateName Template, data map[string]interface{}) (MessageID, error) {
+	ctx scope.Context, to string, templateName Template, data interface{}) (MessageID, error) {
 
 	e.Lock()
 	defer e.Unlock()

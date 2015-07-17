@@ -99,7 +99,7 @@ func (cmd *testmailCmd) run(ctx scope.Context, args []string) error {
 		return err
 	}
 
-	emailer, err := cfg.Email.Get()
+	emailer, err := cfg.Email.Get(cfg)
 	if err != nil {
 		return err
 	}

@@ -29,7 +29,7 @@ module.exports = (
         verify your email address
       </common.BigButton>
       <Item>
-        <Text {...textDefaults}>we hope you have a wonderful time on <Link {...textDefaults} href="{{.SiteURL}}">{'{{.SiteName}}'}</Link>. if you have any questions or comments, feel free to <Link {...textDefaults} href="mailto:{{.ContactEmailAddress}}">contact us</Link>.</Text>
+        <Text {...textDefaults}>we hope you have a wonderful time on <Link {...textDefaults} href="{{.SiteURL}}">{'{{.SiteName}}'}</Link>. if you have any questions or comments, feel free to <Link {...textDefaults} href="mailto:{{.HelpAddress}}">contact us</Link>.</Text>
       </Item>
     </common.BodyBox>
     <common.Footer>
