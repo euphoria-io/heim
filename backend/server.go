@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"mime"
 	"net/http"
+	"net/url"
 	"path"
 	"strings"
 	"sync"
@@ -28,6 +29,7 @@ var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
 	Subprotocols:    []string{"heim1"},
+	CheckOrigin:     checkOrigin,
 }
 
 type Server struct {
@@ -269,4 +271,29 @@ func instrumentSocketHandlerFunc(name string, handler http.HandlerFunc) http.Han
 	}
 
 	return saveHijacker
+}
+
+func checkOrigin(r *http.Request) bool {
+	origin := r.Header["Origin"]
+
+	// If no Origin header was given, accept.
+	if len(origin) == 0 {
+		return true
+	}
+
+	// Try to parse Origin, and reject if there's an error.
+	u, err := url.Parse(origin[0])
+	if err != nil {
+		return false
+	}
+
+	// If Origin matches any of these prefix/requested-host combinations, accept.
+	for _, prefix := range []string{"", "www."} {
+		if u.Host == prefix+r.Host {
+			return true
+		}
+	}
+
+	// If we reach this point, reject the Origin.
+	return false
 }
