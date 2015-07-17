@@ -125,6 +125,7 @@ module.exports = function(roomName) {
           time: 0,
           messageId: null,
           youtubeId: null,
+          content: '',
         }
       },
 
@@ -163,7 +164,7 @@ module.exports = function(roomName) {
         return (
           <div className="chat-pane-container youtube-pane">
             <div className="top-bar">
-              <MessageText className="title" content=":notes: :tv: :notes:" />
+              <MessageText className="title" content={':notes: :tv: :notes: ' + this.state.tv.content} />
             </div>
             <div className="aspect-wrapper">
               <Embed
@@ -198,6 +199,7 @@ module.exports = function(roomName) {
             time: msg.get('time'),
             messageId: messageId,
             youtubeId: match[1],
+            content: msg.get('content'),
           }
         })
         .filter(Boolean)
