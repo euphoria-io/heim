@@ -24,10 +24,12 @@ build_release() {
 
   mv ./client/build/heim ${HEIM_GOPATH}/bin/static
   mv ./client/build/embed ${HEIM_GOPATH}/bin/embed
+  mv ./client/build/email ${HEIM_GOPATH}/bin/email
   pushd ${HEIM_GOPATH}/bin
   generate_manifest static
   generate_manifest embed
-  find static embed -type f | xargs heimlich heimctl
+  generate_manifest email
+  find static embed email -type f | xargs heimlich heimctl
 
   s3cmd put heimctl.hzp s3://heim-release/${DRONE_COMMIT}
   if [ ${DRONE_BRANCH} == master ]; then
