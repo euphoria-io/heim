@@ -71,8 +71,6 @@ var Message = module.exports = React.createClass({
     var repliesExpanded = paneData.get('repliesExpanded') || this.props.showAllReplies
     var messagePane = message.get('_inPane')
     var repliesInOtherPane = messagePane && messagePane != this.props.pane.id
-    var customMessagePane = message.get('_inCustomPane')
-    var repliesInCustomPane = customMessagePane && customMessagePane != this.props.pane.id
     var seen = message.get('_seen')
 
     var messageClasses = {
@@ -91,10 +89,10 @@ var Message = module.exports = React.createClass({
     var pane = this.props.pane
     var messageReplies
     var messageIndentedReplies
-    if (repliesInOtherPane || repliesInCustomPane) {
+    if (repliesInOtherPane) {
       messageIndentedReplies = (
         <FastButton component="div" className={classNames('replies', 'in-pane', {'focus-target': focused})} onClick={this.focusOtherPane}>
-          {repliesInCustomPane ? message.get('_collapseCaption') : 'replies in pane'} <div className="pane-icon" />
+          replies in pane <div className="pane-icon" />
         </FastButton>
       )
       if (focused) {
@@ -367,7 +365,7 @@ var Message = module.exports = React.createClass({
   },
 
   focusOtherPane: function(ev) {
-    ui.focusPane(this.state.node.get('_inCustomPane') || this.state.node.get('_inPane'))
+    ui.focusPane(this.state.node.get('_inPane'))
     ev.stopPropagation()
   },
 })
