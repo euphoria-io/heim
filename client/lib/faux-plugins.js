@@ -256,6 +256,10 @@ module.exports = function(roomName) {
             z-index: 9;
           }
 
+          .youtube-pane .title {
+            width: 0;
+          }
+
           .youtube-pane .aspect-wrapper {
             flex-shrink: 0;
             position: relative;
