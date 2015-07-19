@@ -55,6 +55,7 @@ module.exports.store = Reflux.createStore({
       popupsSupported: 'Notification' in window,
       popupsPausedUntil: null,
       notifications: Immutable.OrderedMap(),
+      newMessageCount: 0,
     }
 
     this.active = true
@@ -78,6 +79,7 @@ module.exports.store = Reflux.createStore({
     this.active = true
     this.removeAllAlerts()
     this._updateFavicon()
+    this._updateTitleCount()
   },
 
   onInactive: function() {
@@ -143,6 +145,9 @@ module.exports.store = Reflux.createStore({
   messageReceived: function(message, state) {
     if (!message.get('_own') && message.has('$count')) {
       this._markNotification('new-message', state.roomName, message)
+      if (!this.active && this.joined) {
+        this.state.newMessageCount++
+      }
     } else {
       // dismiss notifications on siblings or parent of sent messages
       var parentId = message.get('parent')
@@ -251,6 +256,7 @@ module.exports.store = Reflux.createStore({
     }
 
     this._updateFavicon()
+    this._updateTitleCount()
 
     var empty = Immutable.OrderedMap()
 
@@ -272,6 +278,10 @@ module.exports.store = Reflux.createStore({
       var alert = this.alerts['new-mention'] || this.alerts['new-message']
       Heim.setFavicon(alert ? alert.favicon : '/static/favicon.png')
     }
+  },
+
+  _updateTitleCount: function() {
+    Heim.setTitleMsg(this.state.newMessageCount || '')
   },
 
   dismissNotification: function(messageId) {
@@ -327,6 +337,7 @@ module.exports.store = Reflux.createStore({
 
   removeAllAlerts: function() {
     _.each(this.alerts, (alert, kind) => this.removeAlert(kind))
+    this.state.newMessageCount = 0
   },
 
   _popupsAreEnabled: function() {

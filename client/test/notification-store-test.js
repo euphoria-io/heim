@@ -20,6 +20,7 @@ describe('notification store', function() {
     sinon.stub(storage, 'set')
     sinon.stub(storage, 'setRoom')
     sinon.stub(Heim, 'setFavicon')
+    sinon.stub(Heim, 'setTitleMsg')
   })
 
   afterEach(function() {
@@ -28,6 +29,7 @@ describe('notification store', function() {
     storage.set.restore()
     storage.setRoom.restore()
     Heim.setFavicon.restore()
+    Heim.setTitleMsg.restore()
   })
 
   describe('when unsupported', function() {
@@ -351,10 +353,11 @@ describe('notification store', function() {
           notification.store.chatStateChange({connected: true, joined: false})
         })
 
-        it('should add a notification and not display a popup', function(done) {
+        it('should add a notification but not display a popup or alter page title', function(done) {
           notification.store.messageReceived(mockChatState.messages.get('id1'), mockChatState)
           support.listenOnce(notification.store, function() {
             sinon.assert.notCalled(Notification)
+            sinon.assert.calledWithExactly(Heim.setTitleMsg, '')
             assert.equal(notification.store.state.notifications.get('id1'), 'new-message')
             done()
           })
@@ -388,6 +391,15 @@ describe('notification store', function() {
               support.listenOnce(notification.store, function() {
                 sinon.assert.calledOnce(Heim.setFavicon)
                 sinon.assert.calledWithExactly(Heim.setFavicon, opts.expectFavicon)
+                done()
+              })
+              clock.tick(0)
+            })
+
+            it('should set page title', function(done) {
+              support.listenOnce(notification.store, function() {
+                sinon.assert.calledOnce(Heim.setTitleMsg)
+                sinon.assert.calledWithExactly(Heim.setTitleMsg, 1)
                 done()
               })
               clock.tick(0)
@@ -565,9 +577,12 @@ describe('notification store', function() {
         })
 
         describe('receiving multiple messages', function() {
-          it('should display a popup for the latest message', function(done) {
+          beforeEach(function() {
             notification.store.messageReceived(mockChatState2Reply3.messages.get(message2Reply1.id), mockChatState2Reply3)
             notification.store.messageReceived(mockChatState2Reply3.messages.get(message2Reply3.id), mockChatState2Reply3)
+          })
+
+          it('should display a popup for the latest message', function(done) {
             support.listenOnce(notification.store, function() {
               sinon.assert.calledOnce(Notification)
               sinon.assert.calledWithExactly(Notification, 'ezzie', {
@@ -577,6 +592,12 @@ describe('notification store', function() {
               done()
             })
             clock.tick(0)
+          })
+
+          it('should set page title', function() {
+            clock.tick(0)
+            sinon.assert.calledOnce(Heim.setTitleMsg)
+            sinon.assert.calledWithExactly(Heim.setTitleMsg, 2)
           })
         })
 
@@ -686,35 +707,56 @@ describe('notification store', function() {
         assert.equal(notification.store.active, false)
       })
 
-      it('should not open popups when active', function() {
-        notification.store.onActive()
-        notification.store.storageChange(storageMock)
-        notification.store.messageReceived(mockChatState.messages.get('id1'), mockChatState)
-        clock.tick(0)
-        sinon.assert.notCalled(Notification)
+      describe('when active and message received', function() {
+        beforeEach(function() {
+          notification.store.onActive()
+          notification.store.storageChange(storageMock)
+          notification.store.messageReceived(mockChatState.messages.get('id1'), mockChatState)
+          Heim.setTitleMsg.reset()
+          clock.tick(0)
+        })
+
+        it('should not open popups', function() {
+          sinon.assert.notCalled(Notification)
+        })
+
+        it('should not alter page title', function() {
+          sinon.assert.calledOnce(Heim.setTitleMsg)
+          sinon.assert.calledWithExactly(Heim.setTitleMsg, '')
+        })
       })
 
-      it('should close popup when window becomes active', function() {
-        notification.store.onInactive()
-        notification.store.storageChange(storageMock)
-        notification.store.messageReceived(mockChatState.messages.get('id1'), mockChatState)
-        clock.tick(0)
-        sinon.assert.calledOnce(Notification)
-        notification.store.onActive()
-        sinon.assert.calledOnce(fakeNotification.close)
-      })
+      describe('when inactive and message received', function() {
+        beforeEach(function() {
+          notification.store.onInactive()
+          notification.store.storageChange(storageMock)
+          notification.store.messageReceived(mockChatState.messages.get('id1'), mockChatState)
+          clock.tick(0)
+        })
 
-      it('should reset favicon when window becomes active', function() {
-        notification.store.onInactive()
-        notification.store.storageChange(storageMock)
-        notification.store.messageReceived(mockChatState.messages.get('id1'), mockChatState)
-        clock.tick(0)
-        sinon.assert.calledOnce(Heim.setFavicon)
-        Heim.setFavicon.reset()
+        it('should close popup when window becomes active', function() {
+          sinon.assert.calledOnce(Notification)
+          notification.store.onActive()
+          sinon.assert.calledOnce(fakeNotification.close)
+        })
 
-        notification.store.onActive()
-        sinon.assert.calledOnce(Heim.setFavicon)
-        sinon.assert.calledWithExactly(Heim.setFavicon, '/static/favicon.png')
+        it('should reset favicon when window becomes active', function() {
+          sinon.assert.calledOnce(Heim.setFavicon)
+          Heim.setFavicon.reset()
+
+          notification.store.onActive()
+          sinon.assert.calledOnce(Heim.setFavicon)
+          sinon.assert.calledWithExactly(Heim.setFavicon, '/static/favicon.png')
+        })
+
+        it('should reset page title when window becomes active', function() {
+          sinon.assert.calledOnce(Heim.setTitleMsg)
+          Heim.setTitleMsg.reset()
+
+          notification.store.onActive()
+          sinon.assert.calledOnce(Heim.setTitleMsg)
+          sinon.assert.calledWithExactly(Heim.setTitleMsg, '')
+        })
       })
     })
 

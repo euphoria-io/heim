@@ -87,6 +87,7 @@ if (!window.frameElement) {
     tabPressed: false,
 
     setFavicon: function(favicon) { Heim._favicon = favicon },
+    setTitleMsg: function(msg) { Heim._titleMsg = msg },
 
     // http://stackoverflow.com/a/6447935
     isTouch: 'ontouchstart' in window,
@@ -159,8 +160,6 @@ if (!window.frameElement) {
     var React = require('react/addons')
     var SyntheticKeyboardEvent = require('react/lib/SyntheticKeyboardEvent')
     var Main = require('./ui/main')
-
-    uidocument.title = roomName
 
     Heim.loadCSS('css')
     Heim.loadCSS('emoji-css')
@@ -260,6 +259,14 @@ if (!window.frameElement) {
     if (Heim._favicon) {
       Heim.setFavicon(Heim._favicon)
       delete Heim._favicon
+    }
+
+    Heim.setTitleMsg = function(msg) {
+      uidocument.title = msg ? roomName + ' (' + msg + ')' : roomName
+    }
+    if (Heim._titleMsg) {
+      Heim.setTitleMsg(Heim._titleMsg)
+      delete Heim._titleMsg
     }
 
     setImmediate(function() {

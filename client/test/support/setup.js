@@ -64,6 +64,7 @@ support.fakeEnv = function(env) {
 
 window.Heim = {
   setFavicon: function() {},
+  setTitleMsg: function() {},
 }
 
 module.exports = support
