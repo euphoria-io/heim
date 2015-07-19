@@ -338,14 +338,27 @@ module.exports.store = Reflux.createStore({
     return !popupsPaused
   },
 
+  _shouldPopup: function(kind, roomName) {
+    var priority = this.priority[kind]
+    var notifyMode = _.get(this._roomStorage, [roomName, 'notifyMode'], 'mention')
+    if (notifyMode == 'none') {
+      return false
+    } else if (priority < this.priority['new-' + notifyMode]) {
+      return false
+    }
+    return true
+  },
+
   _notifyAlert: function(kind, roomName, message, options) {
     if (this.active || !this.joined) {
       return
     }
 
-    var messageId = message.get('id')
+    var shouldPopup = this._shouldPopup(kind, roomName)
 
-    var priority = this.priority[kind]
+    // note: alert state encompasses favicon state too, so we need to replace
+    // the alert regardless of whether we're configured to show a popup
+
     if (kind == 'new-reply') {
       // have new reply notifications replace new messages and vice versa
       kind = 'new-message'
@@ -353,15 +366,13 @@ module.exports.store = Reflux.createStore({
 
     this.removeAlert(kind)
 
+    var messageId = message.get('id')
     var alert = this.alerts[kind] = {}
     alert.messageId = messageId
     alert.favicon = options.favicon
     delete options.favicon
 
-    var notifyMode = _.get(this._roomStorage, [roomName, 'notifyMode'], 'mention')
-    if (notifyMode == 'none') {
-      return
-    } else if (priority < this.priority['new-' + notifyMode]) {
+    if (!shouldPopup) {
       return
     }
 
