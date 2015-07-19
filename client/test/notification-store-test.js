@@ -380,12 +380,8 @@ describe('notification store', function() {
           describe('if notify mode is ' + JSON.stringify(mode) + '', function() {
             beforeEach(function() {
               notification.store.storageChange({notify: true, room: {ezzie: {notifyMode: mode}}})
-              if (opts.messageReceivedId) {
-                notification.store.messageReceived(opts.state.messages.get(opts.messageReceivedId), opts.state)
-              }
-              if (opts.messageChangedId) {
-                notification.store.messagesChanged([opts.messageChangedId], opts.state)
-              }
+              notification.store.messageReceived(opts.state.messages.get(opts.messageId), opts.state)
+              notification.store.messagesChanged([opts.messageId], opts.state)
             })
 
             it('should set favicon', function(done) {
@@ -399,7 +395,7 @@ describe('notification store', function() {
 
             it('should add notification', function(done) {
               support.listenOnce(notification.store, function(state) {
-                assert.equal(state.notifications.get(opts.messageChangedId || opts.messageReceivedId), opts.expectKind)
+                assert.equal(state.notifications.get(opts.messageId), opts.expectKind)
                 done()
               })
               clock.tick(0)
@@ -435,7 +431,7 @@ describe('notification store', function() {
             mention: false,
             none: false,
           },
-          messageReceivedId: 'id1',
+          messageId: 'id1',
           state: mockChatState,
           expectFavicon: notification.favicons.active,
           expectIcon: notification.icons.active,
@@ -483,7 +479,7 @@ describe('notification store', function() {
               mention: false,
               none: false,
             },
-            messageChangedId: message2Reply1.id,
+            messageId: message2Reply1.id,
             state: mockChatState2OwnReply,
             expectFavicon: notification.favicons.active,
             expectIcon: notification.icons.active,
@@ -516,7 +512,7 @@ describe('notification store', function() {
               mention: false,
               none: false,
             },
-            messageChangedId: message2Reply3.id,
+            messageId: message2Reply3.id,
             state: mockChatState2Reply3,
             expectFavicon: notification.favicons.active,
             expectIcon: notification.icons.active,
@@ -535,8 +531,7 @@ describe('notification store', function() {
               mention: true,
               none: false,
             },
-            messageReceivedId: messageMention.id,
-            messageChangedId: messageMention.id,
+            messageId: messageMention.id,
             state: mockChatStateMention,
             expectFavicon: notification.favicons.highlight,
             expectIcon: notification.icons.highlight,
