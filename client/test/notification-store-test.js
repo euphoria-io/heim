@@ -392,6 +392,49 @@ describe('notification store', function() {
         })
       }
 
+      describe('before joined', function() {
+        beforeEach(function() {
+          notification.store.chatStateChange({connected: true, joined: false})
+          Heim.setFavicon.reset()
+        })
+
+        describe('when page inactive', function() {
+          describe('receiving logged messages', function() {
+            beforeEach(function() {
+              notification.store.messagesChanged([message2Reply1.id, message2Reply3.id], mockChatState2Reply3)
+            })
+
+            checkNotify({
+              messageIds: [message2Reply1.id, message2Reply3.id],
+              expectFavicon: notification.favicons.active,
+              expectTitleMsg: 2,
+              expectKind: 'new-reply',
+            })
+          })
+        })
+
+        describe('when page active', function() {
+          beforeEach(function() {
+            notification.store.onActive()
+            Heim.setFavicon.reset()
+            Heim.setTitleMsg.reset()
+          })
+
+          describe('receiving logged messages', function() {
+            beforeEach(function() {
+              notification.store.messagesChanged([message2Reply1.id, message2Reply3.id], mockChatState2Reply3)
+            })
+
+            checkNotify({
+              messageIds: [message2Reply1.id, message2Reply3.id],
+              expectFavicon: null,
+              expectTitleMsg: '',
+              expectKind: 'new-reply',
+            })
+          })
+        })
+      })
+
       describe('receiving a message while notifications paused', function() {
         it('should add a notification and not display a popup', function(done) {
           notification.store.storageChange(_.extend({}, storageMock, {notifyPausedUntil: startTime + 1000}))
@@ -447,6 +490,16 @@ describe('notification store', function() {
           clock.tick(0)
           sinon.assert.calledOnce(Notification)
           assert.equal(notification.store.state.notifications.get(message1.id), 'new-message')
+        })
+      })
+
+      describe('when the same message has 2 changes triggered in the same tick', function() {
+        it('should only increment the page title once', function() {
+          simulateMessages(['id1'], mockChatState)
+          notification.store.messagesChanged(['id1'], mockChatState)
+          clock.tick(0)
+          sinon.assert.calledOnce(Heim.setTitleMsg)
+          sinon.assert.calledWithExactly(Heim.setTitleMsg, 1)
         })
       })
 
@@ -574,26 +627,6 @@ describe('notification store', function() {
                 icon: notification.icons.active,
                 body: 'kitty: mew?',
               })
-              done()
-            })
-            clock.tick(0)
-          })
-
-          it('should set page title', function() {
-            clock.tick(0)
-            sinon.assert.calledOnce(Heim.setTitleMsg)
-            sinon.assert.calledWithExactly(Heim.setTitleMsg, 2)
-          })
-        })
-
-        describe('when not joined', function() {
-          it('should not display a popup', function(done) {
-            notification.store.chatStateChange({connected: true, joined: false})
-            notification.store.messagesChanged([messageMention.id], mockChatStateMention)
-            support.listenOnce(notification.store, function(state) {
-              sinon.assert.notCalled(Notification)
-              sinon.assert.calledWithExactly(Heim.setFavicon, '/static/favicon.png')
-              assert.equal(state.notifications.get(messageMention.id), 'new-mention')
               done()
             })
             clock.tick(0)

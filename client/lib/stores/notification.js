@@ -143,12 +143,7 @@ module.exports.store = Reflux.createStore({
   },
 
   messageReceived: function(message, state) {
-    if (!message.get('_own') && message.has('$count')) {
-      this._markNotification('new-message', state.roomName, message)
-      if (!this.active && this.joined) {
-        this.state.newMessageCount++
-      }
-    } else {
+    if (message.get('_own')) {
       // dismiss notifications on siblings or parent of sent messages
       var parentId = message.get('parent')
       if (!parentId || parentId == '__root') {
@@ -180,6 +175,8 @@ module.exports.store = Reflux.createStore({
         }
       })
       .cacheResult()
+
+    unseen.forEach(msg => this._markNotification('new-message', state.roomName, msg))
 
     unseen
       .filter(msg => {
@@ -232,6 +229,9 @@ module.exports.store = Reflux.createStore({
             }
             notifications.set(newMessageId, newNotification.kind)
             alerts[newNotification.kind] = newNotification
+            if (!this.active && !this._notified[newMessageId]) {
+              this.state.newMessageCount++
+            }
             this._notified[newMessageId] = true
           }
         })
@@ -361,7 +361,7 @@ module.exports.store = Reflux.createStore({
   },
 
   _notifyAlert: function(kind, roomName, message, options) {
-    if (this.active || !this.joined) {
+    if (this.active) {
       return
     }
 
@@ -383,7 +383,7 @@ module.exports.store = Reflux.createStore({
     alert.favicon = options.favicon
     delete options.favicon
 
-    if (!shouldPopup) {
+    if (!this.joined || !shouldPopup) {
       return
     }
 
