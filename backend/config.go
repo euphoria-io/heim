@@ -327,7 +327,7 @@ func (ec *EmailConfig) Get(cfg *ServerConfig) (emails.Emailer, error) {
 	}
 
 	var auth smtp.Auth
-	switch ec.AuthMethod {
+	switch strings.ToUpper(ec.AuthMethod) {
 	case "":
 	case "CRAM-MD5":
 		auth = smtp.CRAMMD5Auth(ec.Username, ec.Password)
