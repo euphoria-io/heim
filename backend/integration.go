@@ -1204,7 +1204,30 @@ func testAccountRegistration(s *serverUnderTest) {
 			`{"success":false,"reason":"personal identity already in use"}`)
 
 		// Registration email should have been sent.
-		So(<-inbox, ShouldEqual, proto.WelcomeEmail)
+		msg := <-inbox
+		So(msg.Template, ShouldEqual, proto.WelcomeEmail)
+		params, ok := msg.Data.(*proto.WelcomeEmailParams)
+		So(ok, ShouldBeTrue)
+
+		// The verification token should be valid.
+		url := fmt.Sprintf("%s/prefs/verify?email=registration@euphoria.io&token=%s",
+			s.server.URL, params.VerificationToken)
+		resp, err := http.Get(url)
+		So(err, ShouldBeNil)
+		So(resp.StatusCode, ShouldEqual, 200)
+
+		// Personal identity should now be verified.
+		ctx := scope.New()
+		account, err := s.backend.AccountManager().Resolve(ctx, "email", "registration@euphoria.io")
+		So(err, ShouldBeNil)
+		verified := false
+		for _, pid := range account.PersonalIdentities() {
+			if pid.Verified() {
+				verified = true
+				break
+			}
+		}
+		So(verified, ShouldBeTrue)
 	})
 
 	Convey("Min agent age prevents account registration", func() {

@@ -3,6 +3,7 @@ package proto
 import (
 	"fmt"
 	"html/template"
+	"net/url"
 
 	"euphoria.io/heim/proto/emails"
 )
@@ -33,13 +34,21 @@ func (p *CommonEmailParams) EmailPreferencesURL() string {
 
 type WelcomeEmailParams struct {
 	*CommonEmailParams
+	VerificationToken string
 }
 
 func (p WelcomeEmailParams) Subject() string { return fmt.Sprintf("welcome to %s!", p.SiteName) }
 
-func (p WelcomeEmailParams) VerifyEmailURL() string {
-	// TODO: incorporate token
-	return fmt.Sprintf("%s/prefs/verify", p.SiteURL)
+func (p *WelcomeEmailParams) VerifyEmailURL() string {
+	v := url.Values{
+		"email": []string{p.AccountEmailAddress()},
+		"token": []string{p.VerificationToken},
+	}
+	u := url.URL{
+		Path:     "/prefs/verify",
+		RawQuery: v.Encode(),
+	}
+	return p.SiteURL + u.String()
 }
 
 type PasswordChangedEmailParams struct {
@@ -114,6 +123,7 @@ var (
 			"default": emails.TemplateTest{
 				Data: &WelcomeEmailParams{
 					CommonEmailParams: DefaultCommonEmailParams,
+					VerificationToken: "token",
 				},
 			},
 		},

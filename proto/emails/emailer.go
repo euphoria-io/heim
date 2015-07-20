@@ -16,15 +16,19 @@ type Emailer interface {
 type MockEmailer interface {
 	Emailer
 
-	Inbox(addr string) <-chan Template
+	Inbox(addr string) <-chan TestMessage
+}
+
+type TestMessage struct {
+	Template
+	ID   MessageID
+	Data interface{}
 }
 
 type TestEmailer struct {
 	sync.Mutex
-	counter    int
-	messages   map[MessageID]TestMessage
-	deliveries map[string][]MessageID
-	channels   map[string]chan Template
+	counter  int
+	channels map[string]chan TestMessage
 }
 
 func (e *TestEmailer) Send(
@@ -35,41 +39,30 @@ func (e *TestEmailer) Send(
 
 	e.counter++
 	msg := TestMessage{
-		ID: MessageID(fmt.Sprintf("%08x", e.counter)),
+		ID:       MessageID(fmt.Sprintf("%08x", e.counter)),
+		Template: templateName,
+		Data:     data,
 	}
-
-	if e.messages == nil {
-		e.messages = map[MessageID]TestMessage{msg.ID: msg}
-	} else {
-		e.messages[msg.ID] = msg
-	}
-
-	if e.deliveries == nil {
-		e.deliveries = map[string][]MessageID{}
-	}
-	e.deliveries[to] = append(e.deliveries[to], msg.ID)
 
 	if ch, ok := e.channels[to]; ok {
-		ch <- templateName
+		ch <- msg
+	} else {
+		fmt.Printf("sending %s to %s: %#v\n", templateName, to, data)
 	}
 
 	return msg.ID, nil
 }
 
-func (e *TestEmailer) Inbox(addr string) <-chan Template {
+func (e *TestEmailer) Inbox(addr string) <-chan TestMessage {
 	e.Lock()
 	defer e.Unlock()
 
 	if e.channels == nil {
-		e.channels = map[string]chan Template{}
+		e.channels = map[string]chan TestMessage{}
 	}
 	if ch, ok := e.channels[addr]; ok {
 		return ch
 	}
-	e.channels[addr] = make(chan Template, 10)
+	e.channels[addr] = make(chan TestMessage, 10)
 	return e.channels[addr]
-}
-
-type TestMessage struct {
-	ID MessageID
 }

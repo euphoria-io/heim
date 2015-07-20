@@ -1,6 +1,12 @@
 package proto
 
 import (
+	"crypto/hmac"
+	"crypto/sha1"
+	"fmt"
+
+	"encoding/hex"
+
 	"euphoria.io/heim/cluster"
 	"euphoria.io/heim/proto/emails"
 	"euphoria.io/heim/proto/security"
@@ -16,7 +22,9 @@ type Heim struct {
 	KMS      security.KMS
 }
 
-func (heim *Heim) OnAccountRegistration(ctx scope.Context, account Account) error {
+func (heim *Heim) OnAccountRegistration(
+	ctx scope.Context, account Account, clientKey *security.ManagedKey) error {
+
 	// Pick an email identity.
 	email := ""
 	verified := false
@@ -33,13 +41,51 @@ func (heim *Heim) OnAccountRegistration(ctx scope.Context, account Account) erro
 
 	// If an email is found but no email is verified, send a welcome email.
 	if email != "" && !verified {
-		// TODO: verification URL needs to be given
+		userKey := account.UserKey()
+		if err := userKey.Decrypt(clientKey); err != nil {
+			return err
+		}
+
+		token, err := emailVerificationToken(&userKey, email)
+		if err != nil {
+			return fmt.Errorf("verification token: %s", err)
+		}
+
 		params := &WelcomeEmailParams{
 			CommonEmailParams: DefaultCommonEmailParams,
+			VerificationToken: hex.EncodeToString(token),
 		}
 		if _, err := heim.Emailer.Send(ctx, email, WelcomeEmail, params); err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+func emailVerificationToken(key *security.ManagedKey, email string) ([]byte, error) {
+	if key.Encrypted() {
+		return nil, security.ErrKeyMustBeDecrypted
+	}
+
+	mac := hmac.New(sha1.New, key.Plaintext)
+	mac.Write([]byte(email))
+	return mac.Sum(nil), nil
+}
+
+func CheckEmailVerificationToken(kms security.KMS, account Account, email string, token []byte) error {
+	systemKey := account.SystemKey()
+	if err := kms.DecryptKey(&systemKey); err != nil {
+		return err
+	}
+
+	expected, err := emailVerificationToken(&systemKey, email)
+	if err != nil {
+		return err
+	}
+
+	if !hmac.Equal(token, expected) {
+		return ErrInvalidVerificationToken
 	}
 
 	return nil

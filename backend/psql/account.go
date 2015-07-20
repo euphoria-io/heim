@@ -96,6 +96,28 @@ func (ab *AccountBinding) KeyPair() security.ManagedKeyPair {
 	}
 }
 
+func (ab *AccountBinding) UserKey() security.ManagedKey {
+	iv := make([]byte, proto.ClientKeyType.BlockSize())
+	copy(iv, ab.Account.Nonce)
+
+	key := &security.ManagedKey{
+		KeyType:    proto.ClientKeyType,
+		IV:         iv,
+		Ciphertext: ab.Account.EncryptedUserKey,
+	}
+	return key.Clone()
+}
+
+func (ab *AccountBinding) SystemKey() security.ManagedKey {
+	key := &security.ManagedKey{
+		KeyType:      proto.ClientKeyType,
+		Ciphertext:   ab.Account.EncryptedSystemKey,
+		ContextKey:   "nonce",
+		ContextValue: base64.URLEncoding.EncodeToString(ab.Account.Nonce),
+	}
+	return key.Clone()
+}
+
 func (ab *AccountBinding) Unlock(clientKey *security.ManagedKey) (*security.ManagedKeyPair, error) {
 	iv := make([]byte, proto.ClientKeyType.BlockSize())
 	copy(iv, ab.Account.Nonce)
@@ -164,6 +186,28 @@ func (ab *AccountBinding) PersonalIdentities() []proto.PersonalIdentity { return
 
 type AccountManagerBinding struct {
 	*Backend
+}
+
+func (b *AccountManagerBinding) VerifyPersonalIdentity(ctx scope.Context, namespace, id string) error {
+	res, err := b.DbMap.Exec(
+		"UPDATE personal_identity SET verified = true WHERE namespace = $1 and id = $2",
+		namespace, id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return proto.ErrAccountNotFound
+		}
+		return err
+	}
+
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return proto.ErrAccountNotFound
+	}
+
+	return nil
 }
 
 func (b *AccountManagerBinding) Register(

@@ -75,23 +75,6 @@ func (s *Server) AllowRoomCreation(allow bool)            { s.allowRoomCreation 
 func (s *Server) NewAccountMinAgentAge(age time.Duration) { s.newAccountMinAgentAge = age }
 func (s *Server) RoomEntryMinAgentAge(age time.Duration)  { s.roomEntryMinAgentAge = age }
 
-func (s *Server) route() {
-	s.r = mux.NewRouter().StrictSlash(true)
-	s.r.Path("/").Methods("OPTIONS").HandlerFunc(s.handleProbe)
-	s.r.Path("/robots.txt").HandlerFunc(s.handleRobotsTxt)
-	s.r.Path("/metrics").Handler(
-		prometheus.InstrumentHandler("metrics", prometheus.UninstrumentedHandler()))
-
-	s.r.PathPrefix("/static/").Handler(
-		prometheus.InstrumentHandler("static", http.StripPrefix("/static", http.HandlerFunc(s.handleStatic))))
-
-	s.r.Handle("/", prometheus.InstrumentHandlerFunc("home", s.handleHomeStatic))
-
-	s.r.HandleFunc("/room/{room:[a-z0-9]+}/ws", instrumentSocketHandlerFunc("ws", s.handleRoom))
-	s.r.Handle(
-		"/room/{room:[a-z0-9]+}/", prometheus.InstrumentHandlerFunc("room_static", s.handleRoomStatic))
-}
-
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.r.ServeHTTP(w, r)
 }

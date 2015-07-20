@@ -466,7 +466,7 @@ func (s *session) handleRegisterAccountCommand(cmd *proto.RegisterAccountCommand
 	}
 
 	// Kick off on-registration tasks.
-	if err := s.heim.OnAccountRegistration(s.ctx, account); err != nil {
+	if err := s.heim.OnAccountRegistration(s.ctx, account, clientKey); err != nil {
 		// Log this error only.
 		Logger(s.ctx).Printf("error on account registration: %s", err)
 	}

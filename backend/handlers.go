@@ -5,11 +5,34 @@ import (
 	"net/http"
 	"path"
 
+	"encoding/hex"
+
 	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/snowflake"
 	"euphoria.io/scope"
 	"github.com/gorilla/mux"
+	"github.com/prometheus/client_golang/prometheus"
 )
+
+func (s *Server) route() {
+	s.r = mux.NewRouter().StrictSlash(true)
+	s.r.Path("/").Methods("OPTIONS").HandlerFunc(s.handleProbe)
+	s.r.Path("/robots.txt").HandlerFunc(s.handleRobotsTxt)
+	s.r.Path("/metrics").Handler(
+		prometheus.InstrumentHandler("metrics", prometheus.UninstrumentedHandler()))
+
+	s.r.PathPrefix("/static/").Handler(
+		prometheus.InstrumentHandler("static", http.StripPrefix("/static", http.HandlerFunc(s.handleStatic))))
+
+	s.r.Handle("/", prometheus.InstrumentHandlerFunc("home", s.handleHomeStatic))
+
+	s.r.HandleFunc("/room/{room:[a-z0-9]+}/ws", instrumentSocketHandlerFunc("ws", s.handleRoom))
+	s.r.Handle(
+		"/room/{room:[a-z0-9]+}/", prometheus.InstrumentHandlerFunc("room_static", s.handleRoomStatic))
+
+	s.r.Handle(
+		"/prefs/verify", prometheus.InstrumentHandlerFunc("prefsVerify", s.handlePrefsVerify))
+}
 
 func (s *Server) handleProbe(w http.ResponseWriter, r *http.Request) {
 	// TODO: determine if we're really healthy
@@ -105,4 +128,51 @@ func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
 		// TODO: error handling
 		return
 	}
+}
+
+func (s *Server) handlePrefsVerify(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	email := r.Form.Get("email")
+	token, err := hex.DecodeString(r.Form.Get("token"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if email == "" || len(token) == 0 {
+		http.Error(w, "missing parameters", http.StatusBadRequest)
+		return
+	}
+
+	ctx := s.rootCtx.Fork()
+	account, err := s.b.AccountManager().Resolve(ctx, "email", email)
+	if err != nil {
+		status := http.StatusInternalServerError
+		if err == proto.ErrAccountNotFound {
+			status = http.StatusNotFound
+		}
+		http.Error(w, err.Error(), status)
+		return
+	}
+
+	if err := proto.CheckEmailVerificationToken(s.kms, account, email, token); err != nil {
+		status := http.StatusInternalServerError
+		if err == proto.ErrInvalidVerificationToken {
+			status = http.StatusForbidden
+		}
+		http.Error(w, err.Error(), status)
+		return
+	}
+
+	if err := s.b.AccountManager().VerifyPersonalIdentity(ctx, "email", email); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// TODO: serve success template
+	w.Header().Set("Content-Type", "text/plain")
+	w.Write([]byte("ok"))
 }

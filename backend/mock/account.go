@@ -44,6 +44,8 @@ func (a *memAccount) KeyFromPassword(password string) *security.ManagedKey {
 }
 
 func (a *memAccount) KeyPair() security.ManagedKeyPair { return a.sec.KeyPair.Clone() }
+func (a *memAccount) UserKey() security.ManagedKey     { return a.sec.UserKey.Clone() }
+func (a *memAccount) SystemKey() security.ManagedKey   { return a.sec.SystemKey.Clone() }
 
 func (a *memAccount) Unlock(clientKey *security.ManagedKey) (*security.ManagedKeyPair, error) {
 	return a.sec.Unlock(clientKey)
@@ -99,6 +101,20 @@ func (pi *personalIdentity) Verified() bool    { return pi.verified }
 
 type accountManager struct {
 	b *TestBackend
+}
+
+func (m *accountManager) VerifyPersonalIdentity(ctx scope.Context, namespace, id string) error {
+	m.b.Lock()
+	defer m.b.Unlock()
+
+	key := fmt.Sprintf("%s:%s", namespace, id)
+	pid, ok := m.b.accountIDs[key]
+	if !ok {
+		return proto.ErrAccountNotFound
+	}
+
+	pid.verified = true
+	return nil
 }
 
 func (m *accountManager) Register(

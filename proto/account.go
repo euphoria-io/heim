@@ -37,6 +37,9 @@ type AccountManager interface {
 
 	// RevokeStaff removes a StaffKMS capability from the identified account.
 	RevokeStaff(ctx scope.Context, accountID snowflake.Snowflake) error
+
+	// VerifyPersonalIdentity marks a personal identity as verified.
+	VerifyPersonalIdentity(ctx scope.Context, namespace, id string) error
 }
 
 type PersonalIdentity interface {
@@ -69,6 +72,8 @@ type Account interface {
 	IsStaff() bool
 	UnlockStaffKMS(clientKey *security.ManagedKey) (security.KMS, error)
 	PersonalIdentities() []PersonalIdentity
+	UserKey() security.ManagedKey
+	SystemKey() security.ManagedKey
 }
 
 // NewAccountSecurity initializes the nonce and account secrets for a new account
