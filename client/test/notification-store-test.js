@@ -253,6 +253,13 @@ describe('notification store', function() {
       room: {ezzie: {notifyMode: 'message'}},
     }
 
+    function simulateMessages(ids, state) {
+      notification.store.messagesChanged(ids, state)
+      _.each(ids, id =>
+        notification.store.messageReceived(state.messages.get(id), state)
+      )
+    }
+
     var fakeNotification
 
     beforeEach(function() {
@@ -305,7 +312,7 @@ describe('notification store', function() {
         notification.store.chatStateChange({connected: true, joined: true})
         notification.store.onInactive()
         notification.store.storageChange(storageMock)
-        notification.store.messageReceived(mockChatState.messages.get('id1'), mockChatState)
+        simulateMessages(['id1'], mockChatState)
         clock.tick(0)
         sinon.assert.calledOnce(Notification)
       })
@@ -348,27 +355,47 @@ describe('notification store', function() {
         notification.store.storageChange(storageMock)
       })
 
-      describe('receiving a message before joined', function() {
-        beforeEach(function() {
-          notification.store.chatStateChange({connected: true, joined: false})
+      function checkNotify(opts) {
+        it('should ' + (opts.expectFavicon ? '' : 'not ') + 'set favicon', function() {
+          clock.tick(0)
+          sinon.assert.calledOnce(Heim.setFavicon)
+          sinon.assert.calledWithExactly(Heim.setFavicon, opts.expectFavicon ? opts.expectFavicon : '/static/favicon.png')
         })
 
-        it('should add a notification but not display a popup or alter page title', function(done) {
-          notification.store.messageReceived(mockChatState.messages.get('id1'), mockChatState)
-          support.listenOnce(notification.store, function() {
-            sinon.assert.notCalled(Notification)
-            sinon.assert.calledWithExactly(Heim.setTitleMsg, '')
-            assert.equal(notification.store.state.notifications.get('id1'), 'new-message')
+        it('should set correct page title', function() {
+          clock.tick(0)
+          sinon.assert.calledOnce(Heim.setTitleMsg)
+          sinon.assert.calledWithExactly(Heim.setTitleMsg, opts.expectTitleMsg)
+        })
+
+        it('should add notification', function(done) {
+          support.listenOnce(notification.store, function(state) {
+            _.each(opts.messageIds, messageId =>
+              assert.equal(state.notifications.get(messageId), opts.expectKind)
+            )
             done()
           })
           clock.tick(0)
         })
-      })
+
+        it('should ' + (opts.expectPopupBody ? '' : 'not ') + 'display a popup', function() {
+          clock.tick(0)
+          if (opts.expectPopupBody) {
+            sinon.assert.calledOnce(Notification)
+            sinon.assert.calledWithExactly(Notification, 'ezzie', {
+              icon: opts.expectPopupIcon,
+              body: opts.expectPopupBody,
+            })
+          } else {
+            sinon.assert.notCalled(Notification)
+          }
+        })
+      }
 
       describe('receiving a message while notifications paused', function() {
         it('should add a notification and not display a popup', function(done) {
           notification.store.storageChange(_.extend({}, storageMock, {notifyPausedUntil: startTime + 1000}))
-          notification.store.messageReceived(mockChatState.messages.get('id1'), mockChatState)
+          simulateMessages(['id1'], mockChatState)
           support.listenOnce(notification.store, function(state) {
             sinon.assert.notCalled(Notification)
             assert.equal(state.notifications.get('id1'), 'new-message')
@@ -383,96 +410,52 @@ describe('notification store', function() {
           describe('if notify mode is ' + JSON.stringify(mode) + '', function() {
             beforeEach(function() {
               notification.store.storageChange({notify: true, room: {ezzie: {notifyMode: mode}}})
-              notification.store.messageReceived(opts.state.messages.get(opts.messageId), opts.state)
-              notification.store.messagesChanged([opts.messageId], opts.state)
+              simulateMessages(opts.messageIds, opts.state)
             })
 
-            it('should set favicon', function(done) {
-              support.listenOnce(notification.store, function() {
-                sinon.assert.calledOnce(Heim.setFavicon)
-                sinon.assert.calledWithExactly(Heim.setFavicon, opts.expectFavicon)
-                done()
-              })
-              clock.tick(0)
-            })
-
-            it('should set page title', function(done) {
-              support.listenOnce(notification.store, function() {
-                sinon.assert.calledOnce(Heim.setTitleMsg)
-                sinon.assert.calledWithExactly(Heim.setTitleMsg, 1)
-                done()
-              })
-              clock.tick(0)
-            })
-
-            it('should add notification', function(done) {
-              support.listenOnce(notification.store, function(state) {
-                assert.equal(state.notifications.get(opts.messageId), opts.expectKind)
-                done()
-              })
-              clock.tick(0)
-            })
-
-            it('should ' + (expectPopup ? '' : 'not ') + 'display a popup', function(done) {
-              support.listenOnce(notification.store, function() {
-                if (expectPopup) {
-                  sinon.assert.calledOnce(Notification)
-                  sinon.assert.calledWithExactly(Notification, 'ezzie', {
-                    icon: opts.expectIcon,
-                    body: opts.expectBody,
-                  })
-                } else {
-                  sinon.assert.notCalled(Notification)
-                }
-                done()
-              })
-              clock.tick(0)
-            })
+            checkNotify(_.assign({}, opts, {expectPopupBody: expectPopup && opts.expectPopupBody}))
           })
         }
-
-        _.each(opts.modes, test)
-        test(opts.modes.mention, undefined)
+        _.each(opts.popupModes, test)
+        test(opts.popupModes.mention, undefined)
       }
 
       describe('receiving a message', function() {
         testNotifyModes({
-          modes: {
+          popupModes: {
             message: true,
             reply: false,
             mention: false,
             none: false,
           },
-          messageId: 'id1',
-          state: mockChatState,
+          messageIds: ['id1'],
           expectFavicon: notification.favicons.active,
-          expectIcon: notification.icons.active,
-          expectBody: 'logan: hello, ezzie!',
+          state: mockChatState,
+          expectTitleMsg: 1,
+          expectPopupIcon: notification.icons.active,
+          expectPopupBody: 'logan: hello, ezzie!',
           expectKind: 'new-message',
         })
       })
 
       describe('receiving the same message again', function() {
-        it('should not display a popup', function(done) {
-          notification.store.messageReceived(mockChatState.messages.get('id1'), mockChatState)
+        it('should not display a popup', function() {
+          simulateMessages(['id1'], mockChatState)
           clock.tick(0)
           fakeNotification.close()
-          notification.store.messageReceived(mockChatState.messages.get('id1'), mockChatState)
-          support.listenOnce(notification.store, function(state) {
-            sinon.assert.calledOnce(Notification)
-            assert.equal(state.notifications.get(message1.id), 'new-message')
-            done()
-          })
+          simulateMessages(['id1'], mockChatState)
           clock.tick(0)
+          sinon.assert.calledOnce(Notification)
+          assert.equal(notification.store.state.notifications.get(message1.id), 'new-message')
         })
       })
 
       describe('closing and receiving a new message', function() {
         it('should display a second popup', function(done) {
-          notification.store.messageReceived(mockChatState.messages.get('id1'), mockChatState)
+          simulateMessages(['id1'], mockChatState)
           clock.tick(0)
           fakeNotification.close()
-          notification.store.messageReceived(mockChatState2.messages.get('id2'), mockChatState2)
+          simulateMessages(['id2'], mockChatState2)
           support.listenOnce(notification.store, function(state) {
             sinon.assert.calledTwice(Notification)
             assert.equal(state.notifications.get(message1.id), 'new-message')
@@ -482,25 +465,26 @@ describe('notification store', function() {
         })
       })
 
-      describe('updating a child reply', function() {
+      describe('receiving a child reply', function() {
         describe('when joined', function() {
           testNotifyModes({
-            modes: {
+            popupModes: {
               message: true,
               reply: true,
               mention: false,
               none: false,
             },
-            messageId: message2Reply1.id,
+            messageIds: [message2Reply1.id],
             state: mockChatState2OwnReply,
             expectFavicon: notification.favicons.active,
-            expectIcon: notification.icons.active,
-            expectBody: 'logan: kitty?',
+            expectTitleMsg: 1,
+            expectPopupIcon: notification.icons.active,
+            expectPopupBody: 'logan: kitty?',
             expectKind: 'new-reply',
           })
 
           it('should replace an existing new-message notification', function() {
-            notification.store.messageReceived(mockChatState.messages.get('id1'), mockChatState)
+            simulateMessages(['id1'], mockChatState)
             clock.tick(0)
             assert.equal(notification.store.alerts['new-message'].messageId, message1.id)
             sinon.assert.calledOnce(Notification)
@@ -515,39 +499,41 @@ describe('notification store', function() {
         })
       })
 
-      describe('updating a sibling reply', function() {
+      describe('receiving a sibling reply', function() {
         describe('when joined', function() {
           testNotifyModes({
-            modes: {
+            popupModes: {
               message: true,
               reply: true,
               mention: false,
               none: false,
             },
-            messageId: message2Reply3.id,
+            messageIds: [message2Reply3.id],
             state: mockChatState2Reply3,
             expectFavicon: notification.favicons.active,
-            expectIcon: notification.icons.active,
-            expectBody: 'kitty: mew?',
+            expectTitleMsg: 1,
+            expectPopupIcon: notification.icons.active,
+            expectPopupBody: 'kitty: mew?',
             expectKind: 'new-reply',
           })
         })
       })
 
-      describe('updating a mention', function() {
+      describe('receiving a mention', function() {
         describe('when joined', function() {
           testNotifyModes({
-            modes: {
+            popupModes: {
               message: true,
               reply: true,
               mention: true,
               none: false,
             },
-            messageId: messageMention.id,
+            messageIds: [messageMention.id],
             state: mockChatStateMention,
             expectFavicon: notification.favicons.highlight,
-            expectIcon: notification.icons.highlight,
-            expectBody: 'tester: hey @ezzie!',
+            expectTitleMsg: 1,
+            expectPopupIcon: notification.icons.highlight,
+            expectPopupBody: 'tester: hey @ezzie!',
             expectKind: 'new-mention',
           })
 
@@ -578,8 +564,7 @@ describe('notification store', function() {
 
         describe('receiving multiple messages', function() {
           beforeEach(function() {
-            notification.store.messageReceived(mockChatState2Reply3.messages.get(message2Reply1.id), mockChatState2Reply3)
-            notification.store.messageReceived(mockChatState2Reply3.messages.get(message2Reply3.id), mockChatState2Reply3)
+            simulateMessages([message2Reply1.id, message2Reply3.id], mockChatState2Reply3)
           })
 
           it('should display a popup for the latest message', function(done) {
@@ -676,13 +661,13 @@ describe('notification store', function() {
       })
 
       it('should dismiss notifications on parent and sibling messages', function() {
-        notification.store.messageReceived(mockChatState2Reply2Own.messages.get('id5'), mockChatState2Reply2Own)
+        simulateMessages(['id5'], mockChatState2Reply2Own)
         sinon.assert.calledWithExactly(notification.dismissNotification, message2.id)
         sinon.assert.calledWithExactly(notification.dismissNotification, message2Reply1.id)
       })
 
       it('should not dismiss notifications on top level messages (children of root)', function() {
-        notification.store.messageReceived(mockChatState2Own.messages.get('id2'), mockChatState2Own)
+        simulateMessages(['id2'], mockChatState2Own)
         sinon.assert.notCalled(notification.dismissNotification)
       })
     })
@@ -711,7 +696,7 @@ describe('notification store', function() {
         beforeEach(function() {
           notification.store.onActive()
           notification.store.storageChange(storageMock)
-          notification.store.messageReceived(mockChatState.messages.get('id1'), mockChatState)
+          simulateMessages(['id1'], mockChatState)
           Heim.setTitleMsg.reset()
           clock.tick(0)
         })
@@ -730,7 +715,7 @@ describe('notification store', function() {
         beforeEach(function() {
           notification.store.onInactive()
           notification.store.storageChange(storageMock)
-          notification.store.messageReceived(mockChatState.messages.get('id1'), mockChatState)
+          simulateMessages(['id1'], mockChatState)
           clock.tick(0)
         })
 
@@ -766,7 +751,7 @@ describe('notification store', function() {
         Heim.setFavicon.reset()
         notification.store.onInactive()
         notification.store.storageChange(storageMock)
-        notification.store.messageReceived(mockChatState.messages.get('id1'), mockChatState)
+        simulateMessages(['id1'], mockChatState)
         clock.tick(0)
         sinon.stub(ui, 'gotoMessageInPane')
         window.uiwindow = {focus: sinon.stub()}
@@ -778,7 +763,7 @@ describe('notification store', function() {
       })
 
       it('should replace with another popup', function() {
-        notification.store.messageReceived(mockChatState2.messages.get('id2'), mockChatState2)
+        simulateMessages(['id2'], mockChatState2)
         clock.tick(0)
         sinon.assert.calledTwice(Notification)
       })
