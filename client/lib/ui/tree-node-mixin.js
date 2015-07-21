@@ -9,6 +9,7 @@ module.exports = function(prefix) {
 
   var mixin = {
     getInitialState: function() {
+      // TODO: es6
       var state = {}
       state[nodeField] = this.props[treeField].get(this.props[nodeIdField])
       return state
@@ -37,6 +38,7 @@ module.exports = function(prefix) {
   }
 
   mixin[onNodeUpdateField] = function(newValue) {
+    // TODO: es6
     var update = {}
     update[nodeField] = newValue
     this.setState(update)
