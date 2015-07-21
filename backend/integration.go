@@ -1070,6 +1070,8 @@ func testAccountChangePassword(s *serverUnderTest) {
 	So(err, ShouldBeNil)
 
 	Convey("Change password", func() {
+		inbox := s.app.heim.Emailer.(emails.MockEmailer).Inbox("logan" + nonce)
+
 		conn := s.Connect("changepass1a")
 		conn.expectPing()
 		conn.expectSnapshot(s.backend.Version(), nil, nil)
@@ -1098,6 +1100,12 @@ func testAccountChangePassword(s *serverUnderTest) {
 		conn.expect("2", "login-reply", `{"success":true,"account_id":"%s"}`, logan.ID())
 		conn.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
 		conn.Close()
+
+		// Password change email should have been sent.
+		msg := <-inbox
+		So(msg.Template, ShouldEqual, proto.PasswordChangedEmail)
+		_, ok := msg.Data.(*proto.PasswordChangedEmailParams)
+		So(ok, ShouldBeTrue)
 	})
 }
 

@@ -22,6 +22,32 @@ type Heim struct {
 	KMS      security.KMS
 }
 
+func (heim *Heim) OnAccountPasswordChanged(ctx scope.Context, account Account) error {
+	// Pick an email identity.
+	email := ""
+	for _, ident := range account.PersonalIdentities() {
+		if ident.Namespace() == "email" {
+			if email == "" {
+				email = ident.ID()
+				break
+			}
+		}
+	}
+
+	if email != "" {
+		// TODO: account names
+		params := &PasswordChangedEmailParams{
+			CommonEmailParams: DefaultCommonEmailParams,
+			AccountName:       email,
+		}
+		if _, err := heim.Emailer.Send(ctx, email, PasswordChangedEmail, params); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (heim *Heim) OnAccountRegistration(
 	ctx scope.Context, account Account, clientKey *security.ManagedKey) error {
 

@@ -450,6 +450,11 @@ func (s *session) handleChangePasswordCommand(msg *proto.ChangePasswordCommand) 
 	}
 
 	// TODO: bounce all other sessions
+
+	if err := s.heim.OnAccountPasswordChanged(s.ctx, s.client.Account); err != nil {
+		return &response{err: err}
+	}
+
 	return &response{packet: &proto.ChangePasswordReply{}}
 }
 
