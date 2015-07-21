@@ -111,6 +111,8 @@ func (s *session) handleCoreCommands(payload interface{}) *response {
 		return s.handleLogoutCommand()
 	case *proto.RegisterAccountCommand:
 		return s.handleRegisterAccountCommand(msg)
+	case *proto.ResetPasswordCommand:
+		return s.handleResetPasswordCommand(msg)
 
 	// room manager commands
 	case *proto.BanCommand:
@@ -456,6 +458,23 @@ func (s *session) handleChangePasswordCommand(msg *proto.ChangePasswordCommand) 
 	}
 
 	return &response{packet: &proto.ChangePasswordReply{}}
+}
+
+func (s *session) handleResetPasswordCommand(msg *proto.ResetPasswordCommand) *response {
+	if s.client.Account != nil {
+		return &response{err: proto.ErrLoggedIn}
+	}
+
+	acc, req, err := s.backend.AccountManager().RequestPasswordReset(s.ctx, s.kms, msg.Namespace, msg.ID)
+	if err != nil {
+		return &response{err: err}
+	}
+
+	if err := s.heim.OnAccountPasswordResetRequest(s.ctx, acc, req); err != nil {
+		return &response{err: err}
+	}
+
+	return &response{packet: &proto.ResetPasswordReply{}}
 }
 
 func (s *session) handleRegisterAccountCommand(cmd *proto.RegisterAccountCommand) *response {

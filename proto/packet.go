@@ -64,6 +64,9 @@ var (
 	RegisterAccountType      = PacketType("register-account")
 	RegisterAccountReplyType = RegisterAccountType.Reply()
 
+	ResetPasswordType      = PacketType("reset-password")
+	ResetPasswordReplyType = ResetPasswordType.Reply()
+
 	RevokeAccessType      = PacketType("revoke-access")
 	RevokeAccessReplyType = RevokeAccessType.Reply()
 
@@ -166,6 +169,9 @@ var (
 
 		RegisterAccountType:      reflect.TypeOf(RegisterAccountCommand{}),
 		RegisterAccountReplyType: reflect.TypeOf(RegisterAccountReply{}),
+
+		ResetPasswordType:      reflect.TypeOf(ResetPasswordCommand{}),
+		ResetPasswordReplyType: reflect.TypeOf(ResetPasswordReply{}),
 
 		RevokeManagerType:      reflect.TypeOf(RevokeManagerCommand{}),
 		RevokeManagerReplyType: reflect.TypeOf(RevokeManagerReply{}),
@@ -480,6 +486,17 @@ type RegisterAccountCommand LoginCommand
 // disconnect-event shortly after. The next connection the client makes
 // will be a logged in session, using the newly created account.
 type RegisterAccountReply LoginReply
+
+// The `reset-password` command generates a password reset request. An email
+// will be sent to the owner of the given personal identifier, with
+// instructions and a confirmation code for resetting the password.
+type ResetPasswordCommand struct {
+	Namespace string `json:"namespace"`
+	ID        string `json:"id"`
+}
+
+// `reset-password-reply` confirms that the password reset is in progress.
+type ResetPasswordReply struct{}
 
 // The `revoke-access` command disables an access grant to a private room.
 // The grant may be to an account or to a passcode.

@@ -4,7 +4,11 @@ import (
 	"database/sql"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"strings"
+	"time"
+
+	"github.com/go-gorp/gorp"
 
 	"euphoria.io/heim/backend"
 	"euphoria.io/heim/proto"
@@ -66,6 +70,16 @@ type PersonalIdentityBinding struct {
 func (pib *PersonalIdentityBinding) Namespace() string { return pib.pid.Namespace }
 func (pib *PersonalIdentityBinding) ID() string        { return pib.pid.ID }
 func (pib *PersonalIdentityBinding) Verified() bool    { return pib.pid.Verified }
+
+type PasswordResetRequest struct {
+	ID          string
+	AccountID   string `db:"account_id"`
+	Key         []byte
+	Requested   time.Time
+	Expires     time.Time
+	Consumed    gorp.NullTime
+	Invalidated gorp.NullTime
+}
 
 type AccountBinding struct {
 	*Backend
@@ -129,6 +143,12 @@ func (ab *AccountBinding) accountSecurity() *proto.AccountSecurity {
 			KeyType:    proto.ClientKeyType,
 			IV:         iv,
 			Ciphertext: ab.Account.EncryptedUserKey,
+		},
+		SystemKey: security.ManagedKey{
+			KeyType:      proto.ClientKeyType,
+			Ciphertext:   ab.Account.EncryptedSystemKey,
+			ContextKey:   "nonce",
+			ContextValue: base64.URLEncoding.EncodeToString(ab.Account.Nonce),
 		},
 		KeyPair: security.ManagedKeyPair{
 			KeyPairType:         security.Curve25519,
@@ -382,11 +402,26 @@ func (b *AccountManagerBinding) Register(
 	return ab, clientKey, nil
 }
 
-func (b *AccountManagerBinding) Resolve(
-	ctx scope.Context, namespace, id string) (proto.Account, error) {
+func (b *AccountManagerBinding) Resolve(ctx scope.Context, namespace, id string) (proto.Account, error) {
+	t, err := b.DbMap.Begin()
+	account, err := b.resolve(t, namespace, id)
+	if err != nil {
+		if rerr := t.Rollback(); rerr != nil {
+			backend.Logger(ctx).Printf("rollback error: %s", err)
+		}
+		return nil, err
+	}
+	if err := t.Commit(); err != nil {
+		return nil, err
+	}
+	return account, nil
+}
+
+func (b *AccountManagerBinding) resolve(
+	db gorp.SqlExecutor, namespace, id string) (*AccountBinding, error) {
 
 	var pid PersonalIdentity
-	err := b.DbMap.SelectOne(
+	err := db.SelectOne(
 		&pid,
 		"SELECT account_id FROM personal_identity WHERE namespace = $1 AND id = $2",
 		namespace, id)
@@ -402,14 +437,29 @@ func (b *AccountManagerBinding) Resolve(
 		return nil, err
 	}
 
-	return b.Get(ctx, accountID)
+	return b.get(db, accountID)
 }
 
-func (b *AccountManagerBinding) Get(
-	ctx scope.Context, id snowflake.Snowflake) (proto.Account, error) {
+func (b *AccountManagerBinding) Get(ctx scope.Context, id snowflake.Snowflake) (proto.Account, error) {
+	t, err := b.DbMap.Begin()
+	account, err := b.get(t, id)
+	if err != nil {
+		if rerr := t.Rollback(); rerr != nil {
+			backend.Logger(ctx).Printf("rollback error: %s", err)
+		}
+		return nil, err
+	}
+	if err := t.Commit(); err != nil {
+		return nil, err
+	}
+	return account, nil
+}
+
+func (b *AccountManagerBinding) get(
+	db gorp.SqlExecutor, id snowflake.Snowflake) (*AccountBinding, error) {
 
 	var row AccountWithStaffCapability
-	err := b.DbMap.SelectOne(
+	err := db.SelectOne(
 		&row,
 		"SELECT a.id, a.nonce, a.mac, a.encrypted_system_key, a.encrypted_user_key,"+
 			" a.encrypted_private_key, a.public_key,"+
@@ -427,7 +477,7 @@ func (b *AccountManagerBinding) Get(
 
 	ab := row.Bind(b.Backend)
 
-	rows, err := b.DbMap.Select(
+	rows, err := db.Select(
 		PersonalIdentity{},
 		"SELECT namespace, id, account_id, verified FROM personal_identity WHERE account_id = $1",
 		id.String())
@@ -542,4 +592,146 @@ func (b *AccountManagerBinding) RevokeStaff(ctx scope.Context, accountID snowfla
 			" WHERE account.id = $1 AND capability.id = account.staff_capability_id",
 		accountID.String())
 	return err
+}
+
+func (b *AccountManagerBinding) RequestPasswordReset(
+	ctx scope.Context, kms security.KMS, namespace, id string) (
+	proto.Account, *proto.PasswordResetRequest, error) {
+
+	t, err := b.DbMap.Begin()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	rollback := func() {
+		if err := t.Rollback(); err != nil {
+			backend.Logger(ctx).Printf("rollback error: %s", err)
+		}
+	}
+
+	account, err := b.resolve(t, namespace, id)
+	if err != nil {
+		rollback()
+		return nil, nil, err
+	}
+
+	req, err := proto.GeneratePasswordResetRequest(kms, account.ID())
+	if err != nil {
+		rollback()
+		return nil, nil, err
+	}
+
+	stored := &PasswordResetRequest{
+		ID:        req.ID.String(),
+		AccountID: req.AccountID.String(),
+		Key:       req.Key,
+		Requested: req.Requested,
+		Expires:   req.Expires,
+	}
+	if err := t.Insert(stored); err != nil {
+		rollback()
+		return nil, nil, err
+	}
+
+	if err := t.Commit(); err != nil {
+		rollback()
+		return nil, nil, err
+	}
+
+	return account, req, nil
+}
+
+func (b *AccountManagerBinding) ConfirmPasswordReset(
+	ctx scope.Context, kms security.KMS, confirmation, password string) error {
+
+	id, mac, err := proto.ParsePasswordResetConfirmation(confirmation)
+	if err != nil {
+		return err
+	}
+
+	t, err := b.DbMap.Begin()
+	if err != nil {
+		return err
+	}
+
+	rollback := func() {
+		if err := t.Rollback(); err != nil {
+			backend.Logger(ctx).Printf("rollback error: %s", err)
+		}
+	}
+
+	req := &proto.PasswordResetRequest{
+		ID: id,
+	}
+
+	var (
+		stored  PasswordResetRequest
+		account *AccountBinding
+	)
+
+	err = t.SelectOne(
+		&stored,
+		"SELECT id, account_id, key FROM password_reset_request"+
+			" WHERE id = $1 AND expires > NOW() AND invalidated IS NULL AND consumed IS NULL",
+		id.String())
+	if err != nil && err != sql.ErrNoRows {
+		rollback()
+		return err
+	}
+
+	if err == nil {
+		req.Key = stored.Key
+		if err := req.AccountID.FromString(stored.AccountID); err == nil {
+			account, err = b.get(t, req.AccountID)
+			if err != nil && err != proto.ErrAccountNotFound {
+				rollback()
+				return err
+			}
+		}
+	}
+
+	if !req.VerifyMAC(mac) || account == nil {
+		rollback()
+		fmt.Printf("invalid mac or no account (%#v)\n", account)
+		return proto.ErrInvalidConfirmationCode
+	}
+
+	sec, err := account.accountSecurity().ResetPassword(kms, password)
+	if err != nil {
+		rollback()
+		fmt.Printf("reset password failed: %s\n", err)
+		return err
+	}
+
+	_, err = t.Exec(
+		"UPDATE account SET mac = $2, encrypted_user_key = $3 WHERE id = $1",
+		account.ID().String(), sec.MAC, sec.UserKey.Ciphertext)
+	if err != nil {
+		rollback()
+		fmt.Printf("update 1 failed: %s\n", err)
+		return err
+	}
+
+	_, err = t.Exec("UPDATE password_reset_request SET consumed = NOW() where id = $1", id.String())
+	if err != nil {
+		rollback()
+		fmt.Printf("update 2 failed: %s\n", err)
+		return err
+	}
+
+	_, err = t.Exec(
+		"UPDATE password_reset_request SET invalidated = NOW() where account_id = $1 AND id != $2",
+		account.ID().String(), id)
+	if err != nil {
+		rollback()
+		fmt.Printf("update 3 failed: %s\n", err)
+		return err
+	}
+
+	if err := t.Commit(); err != nil {
+		fmt.Printf("commit failed: %s\n", err)
+		return err
+	}
+
+	return nil
 }

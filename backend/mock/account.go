@@ -2,6 +2,7 @@ package mock
 
 import (
 	"fmt"
+	"time"
 
 	"encoding/json"
 
@@ -248,5 +249,76 @@ func (m *accountManager) RevokeStaff(ctx scope.Context, accountID snowflake.Snow
 	}
 	memAcc := account.(*memAccount)
 	memAcc.staffCapability = nil
+	return nil
+}
+
+func (m *accountManager) RequestPasswordReset(
+	ctx scope.Context, kms security.KMS, namespace, id string) (
+	proto.Account, *proto.PasswordResetRequest, error) {
+
+	m.b.Lock()
+	defer m.b.Unlock()
+
+	key := fmt.Sprintf("%s:%s", namespace, id)
+	pi, ok := m.b.accountIDs[key]
+	if !ok {
+		return nil, nil, proto.ErrAccountNotFound
+	}
+
+	req, err := proto.GeneratePasswordResetRequest(kms, pi.accountID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if m.b.resetReqs == nil {
+		m.b.resetReqs = map[snowflake.Snowflake]*proto.PasswordResetRequest{req.ID: req}
+	} else {
+		m.b.resetReqs[req.ID] = req
+	}
+
+	return m.b.accounts[pi.accountID], req, nil
+}
+
+func (m *accountManager) ConfirmPasswordReset(
+	ctx scope.Context, kms security.KMS, confirmation, password string) error {
+
+	m.b.Lock()
+	defer m.b.Unlock()
+
+	id, mac, err := proto.ParsePasswordResetConfirmation(confirmation)
+	if err != nil {
+		return err
+	}
+
+	req, ok := m.b.resetReqs[id]
+	if !ok {
+		return proto.ErrInvalidConfirmationCode
+	}
+
+	if !req.VerifyMAC(mac) {
+		return proto.ErrInvalidConfirmationCode
+	}
+
+	if req.Expires.Before(time.Now()) {
+		return proto.ErrInvalidConfirmationCode
+	}
+
+	account, ok := m.b.accounts[req.AccountID]
+	if !ok {
+		return proto.ErrInvalidConfirmationCode
+	}
+
+	sec, err := account.(*memAccount).sec.ResetPassword(kms, password)
+	if err != nil {
+		return err
+	}
+
+	account.(*memAccount).sec = *sec
+	for id, req := range m.b.resetReqs {
+		if req.AccountID == account.ID() {
+			delete(m.b.resetReqs, id)
+		}
+	}
+
 	return nil
 }

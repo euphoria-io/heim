@@ -62,7 +62,8 @@ func (p PasswordChangedEmailParams) Subject() string {
 
 type PasswordResetEmailParams struct {
 	*CommonEmailParams
-	AccountName string
+	AccountName  string
+	Confirmation string
 }
 
 func (p PasswordResetEmailParams) Subject() string {
@@ -70,8 +71,14 @@ func (p PasswordResetEmailParams) Subject() string {
 }
 
 func (p PasswordResetEmailParams) ResetPasswordURL() string {
-	// TODO: incorporate token
-	return fmt.Sprintf("%s/prefs/password/reset", p.SiteURL)
+	v := url.Values{
+		"confirmation": []string{p.Confirmation},
+	}
+	u := url.URL{
+		Path:     "/prefs/reset-password",
+		RawQuery: v.Encode(),
+	}
+	return p.SiteURL + u.String()
 }
 
 type RoomInvitationEmailParams struct {

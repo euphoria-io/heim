@@ -19,6 +19,7 @@ type TestBackend struct {
 	agents         map[string]*proto.Agent
 	agentBans      map[string]time.Time
 	ipBans         map[string]time.Time
+	resetReqs      map[snowflake.Snowflake]*proto.PasswordResetRequest
 	rooms          map[string]proto.Room
 	version        string
 }

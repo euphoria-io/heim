@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"sort"
 	"strings"
 	"sync"
@@ -390,6 +391,7 @@ func IntegrationTest(t *testing.T, factory proto.BackendFactory) {
 	runTest("Account login", testAccountLogin)
 	runTest("Account registration", testAccountRegistration)
 	runTest("Account change password", testAccountChangePassword)
+	runTest("Account reset password", testAccountResetPassword)
 	runTest("Room creation", testRoomCreation)
 	runTest("Room grants", testRoomGrants)
 	runTest("Room not found", testRoomNotFound)
@@ -1106,6 +1108,67 @@ func testAccountChangePassword(s *serverUnderTest) {
 		So(msg.Template, ShouldEqual, proto.PasswordChangedEmail)
 		_, ok := msg.Data.(*proto.PasswordChangedEmailParams)
 		So(ok, ShouldBeTrue)
+	})
+}
+
+func testAccountResetPassword(s *serverUnderTest) {
+	ctx := scope.New()
+	kms := s.app.kms
+	nonce := fmt.Sprintf("%s", time.Now())
+	logan, _, err := s.Account(ctx, kms, "email", "logan"+nonce, "oldpass")
+	So(err, ShouldBeNil)
+
+	Convey("Reset password", func() {
+		inbox := s.app.heim.Emailer.(emails.MockEmailer).Inbox("logan" + nonce)
+
+		// Issue password reset requests.
+		conn := s.Connect("resetpass1")
+		conn.expectPing()
+		conn.expectSnapshot(s.backend.Version(), nil, nil)
+		conn.send("1", "reset-password", `{"namespace":"email","id":"logan%s"}`, nonce)
+		conn.expect("1", "reset-password-reply", `{}`)
+
+		// Receive confirmation code in email.
+		msg := <-inbox
+		So(msg.Template, ShouldEqual, proto.PasswordResetEmail)
+		p, ok := msg.Data.(*proto.PasswordResetEmailParams)
+		So(ok, ShouldBeTrue)
+		firstConfirmation := p.Confirmation
+
+		// Issue a second password reset request and grab confirmation code from email.
+		conn.send("2", "reset-password", `{"namespace":"email","id":"logan%s"}`, nonce)
+		conn.expect("2", "reset-password-reply", `{}`)
+		conn.Close()
+		msg = <-inbox
+		So(msg.Template, ShouldEqual, proto.PasswordResetEmail)
+		p, ok = msg.Data.(*proto.PasswordResetEmailParams)
+		So(ok, ShouldBeTrue)
+
+		// Apply new password with confirmation code.
+		resp, err := http.PostForm(s.server.URL+"/prefs/reset-password", url.Values{
+			"confirmation": []string{p.Confirmation},
+			"password":     []string{"newpass"},
+		})
+		So(err, ShouldBeNil)
+		So(resp.StatusCode, ShouldEqual, 200)
+
+		// Log in with new password.
+		conn = s.Connect("resetpass2")
+		conn.expectPing()
+		conn.expectSnapshot(s.backend.Version(), nil, nil)
+		conn.send("1", "login",
+			`{"namespace":"email","id":"logan%s","password":"newpass"}`, nonce)
+		conn.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, logan.ID())
+		conn.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
+		conn.Close()
+
+		// Attempt to use other confirmation code should fail.
+		resp, err = http.PostForm(s.server.URL+"/prefs/reset-password", url.Values{
+			"confirmation": []string{firstConfirmation},
+			"password":     []string{"newpass2"},
+		})
+		So(err, ShouldBeNil)
+		So(resp.StatusCode, ShouldEqual, http.StatusBadRequest)
 	})
 }
 

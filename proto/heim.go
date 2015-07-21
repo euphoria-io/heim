@@ -48,6 +48,35 @@ func (heim *Heim) OnAccountPasswordChanged(ctx scope.Context, account Account) e
 	return nil
 }
 
+func (heim *Heim) OnAccountPasswordResetRequest(
+	ctx scope.Context, account Account, req *PasswordResetRequest) error {
+
+	// Pick an email identity.
+	email := ""
+	for _, ident := range account.PersonalIdentities() {
+		if ident.Namespace() == "email" {
+			if email == "" {
+				email = ident.ID()
+				break
+			}
+		}
+	}
+
+	if email != "" {
+		// TODO: account names
+		params := &PasswordResetEmailParams{
+			CommonEmailParams: DefaultCommonEmailParams,
+			AccountName:       email,
+			Confirmation:      req.String(),
+		}
+		if _, err := heim.Emailer.Send(ctx, email, PasswordResetEmail, params); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (heim *Heim) OnAccountRegistration(
 	ctx scope.Context, account Account, clientKey *security.ManagedKey) error {
 

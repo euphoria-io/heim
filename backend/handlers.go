@@ -31,6 +31,9 @@ func (s *Server) route() {
 		"/room/{room:[a-z0-9]+}/", prometheus.InstrumentHandlerFunc("room_static", s.handleRoomStatic))
 
 	s.r.Handle(
+		"/prefs/reset-password",
+		prometheus.InstrumentHandlerFunc("prefsResetPassword", s.handleResetPassword))
+	s.r.Handle(
 		"/prefs/verify", prometheus.InstrumentHandlerFunc("prefsVerify", s.handlePrefsVerify))
 }
 
@@ -169,6 +172,45 @@ func (s *Server) handlePrefsVerify(w http.ResponseWriter, r *http.Request) {
 
 	if err := s.b.AccountManager().VerifyPersonalIdentity(ctx, "email", email); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// TODO: serve success template
+	w.Header().Set("Content-Type", "text/plain")
+	w.Write([]byte("ok"))
+}
+
+func (s *Server) handleResetPassword(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	switch r.Method {
+	case "GET":
+		// TODO: serve password reset template
+		w.Header().Set("Content-Type", "text/html")
+		fmt.Fprintf(w, `<form method="POST"><input type="hidden" name="confirmation" value="%s">`,
+			r.Form.Get("confirmation"))
+		fmt.Fprintf(w, `<input type="password" name="password"></form>`)
+	case "POST":
+		s.handleResetPasswordPost(w, r)
+	default:
+		http.Error(w, "invalid method", http.StatusMethodNotAllowed)
+	}
+}
+
+func (s *Server) handleResetPasswordPost(w http.ResponseWriter, r *http.Request) {
+	confirmation := r.PostForm.Get("confirmation")
+	password := r.PostForm.Get("password")
+
+	ctx := s.rootCtx.Fork()
+	if err := s.b.AccountManager().ConfirmPasswordReset(ctx, s.kms, confirmation, password); err != nil {
+		status := http.StatusInternalServerError
+		if err == proto.ErrInvalidConfirmationCode {
+			status = http.StatusBadRequest
+		}
+		http.Error(w, err.Error(), status)
 		return
 	}
 

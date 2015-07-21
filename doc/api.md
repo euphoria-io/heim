@@ -16,6 +16,7 @@
     * [login](#login)
     * [logout](#logout)
     * [register-account](#register-account)
+    * [reset-password](#reset-password)
   * [Room Manager Commands](#room-manager-commands)
     * [ban](#ban)
     * [edit-message](#edit-message)
@@ -596,6 +597,32 @@ will be a logged in session, using the newly created account.
 | `reason` | [string](#string) | *optional* |  if `success` was false, the reason why |
 | `account_id` | [Snowflake](#snowflake) | *optional* |  if `success` was true, the id of the account the session logged into. |
 
+
+
+
+
+
+
+### reset-password
+
+The `reset-password` command generates a password reset request. An email
+will be sent to the owner of the given personal identifier, with
+instructions and a confirmation code for resetting the password.
+
+
+| Field | Type | Required? | Description |
+| :-- | :-- | :-- | :--------- |
+| `namespace` | [string](#string) | required |  |
+| `id` | [string](#string) | required |  |
+
+
+
+
+
+`reset-password-reply` confirms that the password reset is in progress.
+
+
+This packet has no fields.
 
 
 

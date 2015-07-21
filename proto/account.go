@@ -2,9 +2,14 @@ package proto
 
 import (
 	"bytes"
+	"crypto/hmac"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"io"
+	"strings"
+	"time"
 
 	"golang.org/x/crypto/poly1305"
 
@@ -14,8 +19,9 @@ import (
 )
 
 const (
-	MinPasswordLength = 6
-	ClientKeyType     = security.AES128
+	MinPasswordLength            = 6
+	ClientKeyType                = security.AES128
+	PasswordResetRequestLifetime = time.Hour
 )
 
 type AccountManager interface {
@@ -46,6 +52,15 @@ type AccountManager interface {
 	ChangeClientKey(
 		ctx scope.Context, accountID snowflake.Snowflake,
 		oldClientKey, newClientKey *security.ManagedKey) error
+
+	// RequestPasswordReset generates a temporary password-reset record.
+	RequestPasswordReset(
+		ctx scope.Context, kms security.KMS, namespace, id string) (Account, *PasswordResetRequest, error)
+
+	// ConfirmPasswordReset verifies a password reset confirmation code,
+	// and applies the new password to the account referred to by the
+	// confirmation code.
+	ConfirmPasswordReset(ctx scope.Context, kms security.KMS, confirmation, password string) error
 }
 
 type PersonalIdentity interface {
@@ -260,4 +275,68 @@ func (sec *AccountSecurity) ResetPassword(kms security.KMS, password string) (*A
 		KeyPair:   sec.KeyPair,
 	}
 	return nsec, nil
+}
+
+type PasswordResetRequest struct {
+	ID        snowflake.Snowflake
+	AccountID snowflake.Snowflake
+	Key       []byte
+	Requested time.Time
+	Expires   time.Time
+}
+
+func GeneratePasswordResetRequest(
+	kms security.KMS, accountID snowflake.Snowflake) (*PasswordResetRequest, error) {
+
+	id, err := snowflake.New()
+	if err != nil {
+		return nil, err
+	}
+
+	key, err := kms.GenerateNonce(sha256.BlockSize)
+	if err != nil {
+		return nil, err
+	}
+
+	now := time.Now()
+	req := &PasswordResetRequest{
+		ID:        id,
+		AccountID: accountID,
+		Key:       key,
+		Requested: now,
+		Expires:   now.Add(PasswordResetRequestLifetime),
+	}
+	return req, nil
+}
+
+func (req *PasswordResetRequest) MAC() []byte {
+	mac := hmac.New(sha256.New, req.Key)
+	mac.Write([]byte(req.ID.String()))
+	return mac.Sum(nil)
+}
+
+func (req *PasswordResetRequest) VerifyMAC(mac []byte) bool { return hmac.Equal(mac, req.MAC()) }
+
+func (req *PasswordResetRequest) String() string {
+	return fmt.Sprintf("%s-%s", req.ID, hex.EncodeToString(req.MAC()))
+}
+
+func ParsePasswordResetConfirmation(confirmation string) (snowflake.Snowflake, []byte, error) {
+	var id snowflake.Snowflake
+
+	idx := strings.IndexRune(confirmation, '-')
+	if idx < 0 {
+		return id, nil, ErrInvalidConfirmationCode
+	}
+
+	mac, err := hex.DecodeString(confirmation[idx+1:])
+	if err != nil {
+		return id, nil, ErrInvalidConfirmationCode
+	}
+
+	if err := id.FromString(confirmation[:idx]); err != nil {
+		return id, nil, ErrInvalidConfirmationCode
+	}
+
+	return id, mac, nil
 }
