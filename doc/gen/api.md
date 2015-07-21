@@ -12,6 +12,7 @@
     * [send](#send)
     * [who](#who)
   * [Account Management](#account-management)
+    * [change-password](#change-password)
     * [login](#login)
     * [logout](#logout)
     * [register-account](#register-account)
@@ -286,6 +287,10 @@ These commands are available to the client once a session successfully joins a r
 These commands enable a client to register, associate, and dissociate with an account.
 An account allows an identity to be shared across browsers and devices, and is a
 prerequisite for room management.
+
+### change-password
+
+{{template "command.md" "change-password"}}
 
 ### login
 

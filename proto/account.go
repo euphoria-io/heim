@@ -40,6 +40,12 @@ type AccountManager interface {
 
 	// VerifyPersonalIdentity marks a personal identity as verified.
 	VerifyPersonalIdentity(ctx scope.Context, namespace, id string) error
+
+	// ChangeClientKey re-encrypts account keys with a new client key.
+	// The correct former client key must also be given.
+	ChangeClientKey(
+		ctx scope.Context, accountID snowflake.Snowflake,
+		oldClientKey, newClientKey *security.ManagedKey) error
 }
 
 type PersonalIdentity interface {
@@ -162,9 +168,11 @@ type AccountSecurity struct {
 	KeyPair   security.ManagedKeyPair
 }
 
-func (sec *AccountSecurity) Unlock(clientKey *security.ManagedKey) (*security.ManagedKeyPair, error) {
+func (sec *AccountSecurity) unlock(clientKey *security.ManagedKey) (
+	*security.ManagedKey, *security.ManagedKeyPair, error) {
+
 	if clientKey.Encrypted() {
-		return nil, security.ErrKeyMustBeDecrypted
+		return nil, nil, security.ErrKeyMustBeDecrypted
 	}
 
 	var (
@@ -174,20 +182,54 @@ func (sec *AccountSecurity) Unlock(clientKey *security.ManagedKey) (*security.Ma
 	copy(mac[:], sec.MAC)
 	copy(key[:], clientKey.Plaintext)
 	if !poly1305.Verify(&mac, sec.Nonce, &key) {
-		return nil, ErrAccessDenied
+		return nil, nil, ErrAccessDenied
 	}
 
 	kek := sec.UserKey.Clone()
 	if err := kek.Decrypt(clientKey); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	kp := sec.KeyPair.Clone()
 	if err := kp.Decrypt(&kek); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return &kp, nil
+	return &kek, &kp, nil
+}
+
+func (sec *AccountSecurity) Unlock(clientKey *security.ManagedKey) (*security.ManagedKeyPair, error) {
+	_, kp, err := sec.unlock(clientKey)
+	return kp, err
+}
+
+func (sec *AccountSecurity) ChangeClientKey(oldKey, newKey *security.ManagedKey) error {
+	if oldKey.Encrypted() || newKey.Encrypted() {
+		return security.ErrKeyMustBeDecrypted
+	}
+
+	// Extract decrypted UserKey and verify correctness of oldKey.
+	kek, _, err := sec.unlock(oldKey)
+	if err != nil {
+		return err
+	}
+
+	// Encrypt new UserKey.
+	if err := kek.Encrypt(newKey); err != nil {
+		return err
+	}
+
+	// Update MAC and encrypted UserKey.
+	var (
+		mac [16]byte
+		key [32]byte
+	)
+	copy(key[:], newKey.Plaintext)
+	poly1305.Sum(&mac, sec.Nonce, &key)
+	sec.MAC = mac[:]
+	sec.UserKey = *kek
+
+	return nil
 }
 
 func (sec *AccountSecurity) ResetPassword(kms security.KMS, password string) (*AccountSecurity, error) {

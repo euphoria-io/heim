@@ -14,6 +14,7 @@ var (
 	ErrInvalidNick              = fmt.Errorf("invalid nick")
 	ErrInvalidParent            = fmt.Errorf("invalid parent ID")
 	ErrInvalidVerificationToken = fmt.Errorf("invalid verification token")
+	ErrNotLoggedIn              = fmt.Errorf("not logged in")
 	ErrManagerNotFound          = fmt.Errorf("manager not found")
 	ErrMessageNotFound          = fmt.Errorf("message not found")
 	ErrPersonalIdentityInUse    = fmt.Errorf("personal identity already in use")

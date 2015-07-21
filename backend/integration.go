@@ -389,6 +389,7 @@ func IntegrationTest(t *testing.T, factory proto.BackendFactory) {
 	runTest("Deletion", testDeletion)
 	runTest("Account login", testAccountLogin)
 	runTest("Account registration", testAccountRegistration)
+	runTest("Account change password", testAccountChangePassword)
 	runTest("Room creation", testRoomCreation)
 	runTest("Room grants", testRoomGrants)
 	runTest("Room not found", testRoomNotFound)
@@ -1058,6 +1059,45 @@ func testManagersLowLevel(s *serverUnderTest) {
 	Convey("Redundant manager removal should be an error", func() {
 		So(room.RemoveManager(ctx, alice, aliceKey, bob), ShouldBeNil)
 		So(room.RemoveManager(ctx, alice, aliceKey, bob), ShouldEqual, proto.ErrManagerNotFound)
+	})
+}
+
+func testAccountChangePassword(s *serverUnderTest) {
+	ctx := scope.New()
+	kms := s.app.kms
+	nonce := fmt.Sprintf("%s", time.Now())
+	logan, _, err := s.Account(ctx, kms, "email", "logan"+nonce, "oldpass")
+	So(err, ShouldBeNil)
+
+	Convey("Change password", func() {
+		conn := s.Connect("changepass1a")
+		conn.expectPing()
+		conn.expectSnapshot(s.backend.Version(), nil, nil)
+		conn.send("1", "change-password", `{}`)
+		conn.expectError("1", "change-password-reply", "not logged in")
+		conn.send("2", "login",
+			`{"namespace":"email","id":"logan%s","password":"oldpass"}`, nonce)
+		conn.expect("2", "login-reply", `{"success":true,"account_id":"%s"}`, logan.ID())
+		conn.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
+		conn.Close()
+
+		conn = s.Connect("changepass1b", conn.cookies...)
+		conn.expectPing()
+		conn.expectSnapshot(s.backend.Version(), nil, nil)
+		conn.send("1", "change-password", `{"old_password":"wrongpass","new_password":"newpass"}`)
+		conn.expectError("1", "change-password-reply", "access denied")
+		conn.send("2", "change-password", `{"old_password":"oldpass","new_password":"newpass"}`)
+		conn.expect("2", "change-password-reply", `{}`)
+		conn.Close()
+
+		conn = s.Connect("changepass1c")
+		conn.expectPing()
+		conn.expectSnapshot(s.backend.Version(), nil, nil)
+		conn.send("2", "login",
+			`{"namespace":"email","id":"logan%s","password":"newpass"}`, nonce)
+		conn.expect("2", "login-reply", `{"success":true,"account_id":"%s"}`, logan.ID())
+		conn.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
+		conn.Close()
 	})
 }
 

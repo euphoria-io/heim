@@ -117,6 +117,21 @@ func (m *accountManager) VerifyPersonalIdentity(ctx scope.Context, namespace, id
 	return nil
 }
 
+func (m *accountManager) ChangeClientKey(
+	ctx scope.Context, accountID snowflake.Snowflake,
+	oldClientKey, newClientKey *security.ManagedKey) error {
+
+	m.b.Lock()
+	defer m.b.Unlock()
+
+	account, ok := m.b.accounts[accountID]
+	if !ok {
+		return proto.ErrAccountNotFound
+	}
+
+	return account.(*memAccount).sec.ChangeClientKey(oldClientKey, newClientKey)
+}
+
 func (m *accountManager) Register(
 	ctx scope.Context, kms security.KMS, namespace, id, password string,
 	agentID string, agentKey *security.ManagedKey) (

@@ -118,11 +118,11 @@ func (ab *AccountBinding) SystemKey() security.ManagedKey {
 	return key.Clone()
 }
 
-func (ab *AccountBinding) Unlock(clientKey *security.ManagedKey) (*security.ManagedKeyPair, error) {
+func (ab *AccountBinding) accountSecurity() *proto.AccountSecurity {
 	iv := make([]byte, proto.ClientKeyType.BlockSize())
 	copy(iv, ab.Account.Nonce)
 
-	sec := &proto.AccountSecurity{
+	return &proto.AccountSecurity{
 		Nonce: ab.Account.Nonce,
 		MAC:   ab.Account.MAC,
 		UserKey: security.ManagedKey{
@@ -137,7 +137,10 @@ func (ab *AccountBinding) Unlock(clientKey *security.ManagedKey) (*security.Mana
 			PublicKey:           ab.Account.PublicKey,
 		},
 	}
-	return sec.Unlock(clientKey)
+}
+
+func (ab *AccountBinding) Unlock(clientKey *security.ManagedKey) (*security.ManagedKeyPair, error) {
+	return ab.accountSecurity().Unlock(clientKey)
 }
 
 func (ab *AccountBinding) IsStaff() bool { return ab.StaffCapability != nil }
@@ -192,6 +195,91 @@ func (b *AccountManagerBinding) VerifyPersonalIdentity(ctx scope.Context, namesp
 	res, err := b.DbMap.Exec(
 		"UPDATE personal_identity SET verified = true WHERE namespace = $1 and id = $2",
 		namespace, id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return proto.ErrAccountNotFound
+		}
+		return err
+	}
+
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return proto.ErrAccountNotFound
+	}
+
+	return nil
+}
+
+func (b *AccountManagerBinding) ChangeClientKey(
+	ctx scope.Context, accountID snowflake.Snowflake, oldKey, newKey *security.ManagedKey) error {
+
+	t, err := b.DbMap.Begin()
+	if err != nil {
+		return err
+	}
+
+	rollback := func() {
+		if err := t.Rollback(); err != nil {
+			backend.Logger(ctx).Printf("rollback error: %s", err)
+		}
+	}
+
+	var account Account
+	err = t.SelectOne(
+		&account,
+		"SELECT nonce, mac, encrypted_user_key, encrypted_private_key FROM account WHERE id = $1",
+		accountID.String())
+	if err != nil {
+		rollback()
+		if err == sql.ErrNoRows {
+			return proto.ErrAccountNotFound
+		}
+		return err
+	}
+
+	sec := account.Bind(b.Backend).accountSecurity()
+	if err := sec.ChangeClientKey(oldKey, newKey); err != nil {
+		rollback()
+		return err
+	}
+
+	res, err := t.Exec(
+		"UPDATE account SET mac = $2, encrypted_user_key = $3 WHERE id = $1",
+		accountID.String(), sec.MAC, sec.UserKey.Ciphertext)
+	if err != nil {
+		rollback()
+		return err
+	}
+
+	n, err := res.RowsAffected()
+	if err != nil {
+		rollback()
+		return err
+	}
+	if n == 0 {
+		rollback()
+		return proto.ErrAccountNotFound
+	}
+
+	if err := t.Commit(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (b *AccountManagerBinding) SetUserKey(
+	ctx scope.Context, accountID snowflake.Snowflake, key *security.ManagedKey) error {
+
+	if !key.Encrypted() {
+		return security.ErrKeyMustBeEncrypted
+	}
+
+	res, err := b.DbMap.Exec(
+		"UPDATE account SET encrypted_user_key = $2 WHERE id = $1", accountID.String(), key.Ciphertext)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return proto.ErrAccountNotFound

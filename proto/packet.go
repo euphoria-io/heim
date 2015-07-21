@@ -26,6 +26,9 @@ var (
 	SendEventType = SendType.Event()
 	SendReplyType = SendType.Reply()
 
+	ChangePasswordType      = PacketType("change-password")
+	ChangePasswordReplyType = ChangePasswordType.Reply()
+
 	EditMessageType      = PacketType("edit-message")
 	EditMessageEventType = EditMessageType.Event()
 	EditMessageReplyType = EditMessageType.Reply()
@@ -99,6 +102,9 @@ var (
 		SendType:      reflect.TypeOf(SendCommand{}),
 		SendReplyType: reflect.TypeOf(SendReply{}),
 		SendEventType: reflect.TypeOf(SendEvent{}),
+
+		ChangePasswordType:      reflect.TypeOf(ChangePasswordCommand{}),
+		ChangePasswordReplyType: reflect.TypeOf(ChangePasswordReply{}),
 
 		EditMessageType:      reflect.TypeOf(EditMessageCommand{}),
 		EditMessageEventType: reflect.TypeOf(EditMessageEvent{}),
@@ -229,6 +235,15 @@ type EditMessageCommand struct {
 	Delete         bool                `json:"delete"`            // the new deletion status of the message
 	Announce       bool                `json:"announce"`          // if true, broadcast an `edit-message-event` to the room
 }
+
+// The `change-password` command changes the password of the signed in account.
+type ChangePasswordCommand struct {
+	OldPassword string `json:"old_password"` // the current (and soon-to-be former) password
+	NewPassword string `json:"new_password"` // the new password
+}
+
+// The `change-password-reply` packet returns the outcome of changing the password.
+type ChangePasswordReply struct{}
 
 // `edit-message-reply` returns the id of a successful edit.
 type EditMessageReply struct {

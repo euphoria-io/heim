@@ -103,6 +103,8 @@ func (s *session) handleCoreCommands(payload interface{}) *response {
 		return &response{}
 
 	// account management commands
+	case *proto.ChangePasswordCommand:
+		return s.handleChangePasswordCommand(msg)
 	case *proto.LoginCommand:
 		return s.handleLoginCommand(msg)
 	case *proto.LogoutCommand:
@@ -431,6 +433,24 @@ func (s *session) handleLogoutCommand() *response {
 		return &response{err: err}
 	}
 	return &response{packet: &proto.LogoutReply{}}
+}
+
+func (s *session) handleChangePasswordCommand(msg *proto.ChangePasswordCommand) *response {
+	if s.client.Account == nil {
+		return &response{err: proto.ErrNotLoggedIn}
+	}
+
+	oldClientKey := s.client.Account.KeyFromPassword(msg.OldPassword)
+	newClientKey := s.client.Account.KeyFromPassword(msg.NewPassword)
+
+	err := s.backend.AccountManager().ChangeClientKey(
+		s.ctx, s.client.Account.ID(), oldClientKey, newClientKey)
+	if err != nil {
+		return &response{err: err}
+	}
+
+	// TODO: bounce all other sessions
+	return &response{packet: &proto.ChangePasswordReply{}}
 }
 
 func (s *session) handleRegisterAccountCommand(cmd *proto.RegisterAccountCommand) *response {

@@ -12,6 +12,7 @@
     * [send](#send)
     * [who](#who)
   * [Account Management](#account-management)
+    * [change-password](#change-password)
     * [login](#login)
     * [logout](#logout)
     * [register-account](#register-account)
@@ -471,6 +472,30 @@ This packet has no fields.
 These commands enable a client to register, associate, and dissociate with an account.
 An account allows an identity to be shared across browsers and devices, and is a
 prerequisite for room management.
+
+### change-password
+
+The `change-password` command changes the password of the signed in account.
+
+
+| Field | Type | Required? | Description |
+| :-- | :-- | :-- | :--------- |
+| `old_password` | [string](#string) | required |  the current (and soon-to-be former) password |
+| `new_password` | [string](#string) | required |  the new password |
+
+
+
+
+
+The `change-password-reply` packet returns the outcome of changing the password.
+
+
+This packet has no fields.
+
+
+
+
+
 
 ### login
 
