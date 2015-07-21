@@ -46,8 +46,8 @@ module.exports = React.createClass({
   },
 
   componentDidMount: function() {
-    this.updateAnchorPos()
-    this.update()
+    this.scroll({forceTargetInView: true})
+    this.checkScrollbar()
   },
 
   componentWillUnmount: function() {
