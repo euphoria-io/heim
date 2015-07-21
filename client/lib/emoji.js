@@ -20,6 +20,7 @@ index['dealwithit'] = 'dealwithit'
 index['spider'] = 'spider'
 index['indigo_heart'] = 'indigo_heart'
 index['orange_heart'] = 'orange_heart'
+index['bot'] = 'bot'
 
 index['mobile'] = index['iphone']
 delete index['iphone']
