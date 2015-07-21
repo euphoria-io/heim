@@ -9,6 +9,7 @@ var actions = require('../actions')
 var storage = require('./storage')
 var chat = require('./chat')
 var notification = require('./notification')
+var MessageData = require('../message-data')
 
 
 var storeActions = module.exports.actions = Reflux.createActions([
@@ -57,6 +58,8 @@ var store = module.exports.store = Reflux.createStore({
       frozenNotifications: null,
       threadPopupAnchorEl: null,
     }
+
+    this.threadData = new MessageData({selected: false})
 
     this.state.panes.get('popup').escape.listen(this.hideThreadPopup)
     this._thawInfoDebounced = _.debounce(this._thawInfo, 1500)
@@ -117,12 +120,12 @@ var store = module.exports.store = Reflux.createStore({
       var popupPane = this.state.panes.get('popup')
       this.freezeInfo()
       if (this.state.threadPopupRoot && this.state.threadPopupRoot != id) {
-        popupPane.store.setMessageData(this.state.threadPopupRoot, {selected: false})
+        this.threadData.set(this.state.threadPopupRoot, {selected: false})
       }
+      this.threadData.set(id, {selected: true})
       this.state.threadPopupRoot = id
       this.state.threadPopupAnchorEl = el
       popupPane.store._reset({rootId: id})
-      popupPane.setMessageData(id, {selected: true})
       popupPane.focusMessage(id)
       this.focusPane('popup')
       this.trigger(this.state)
@@ -135,7 +138,7 @@ var store = module.exports.store = Reflux.createStore({
     if (!this.state.threadPopupRoot || popupPane.store.state.entryText.length) {
       return
     }
-    popupPane.setMessageData(this.state.threadPopupRoot, {selected: false})
+    this.threadData.set(this.state.threadPopupRoot, {selected: false})
     this.state.threadPopupAnchorEl = null
     this.focusPane('main')
     this.trigger(this.state)
@@ -270,12 +273,6 @@ module.exports.createCustomPane = function(paneId, options) {
   return store._createCustomPane(paneId, options)
 }
 
-var initMessageData = Immutable.Map({
-  focused: false,
-  repliesExpanded: false,
-  contentExpanded: false,
-})
-
 function createPaneStore(paneId, createOptions) {
   createOptions = createOptions || {}
 
@@ -324,16 +321,18 @@ function createPaneStore(paneId, createOptions) {
 
     init: function() {
       this._reset()
-      this.changes = new EventEmitter()
+
+      this.messageData = new MessageData({
+        focused: false,
+        repliesExpanded: false,
+        contentExpanded: false,
+      })
+
       this.messageRenderFinished = _.debounce(paneActions.afterMessagesRendered, 0, {leading: true, trailing: false})
     },
 
     getInitialState: function() {
       return this.state
-    },
-
-    getMessageData: function(messageId) {
-      return this.state.messageData[messageId] || initMessageData
     },
 
     _set: function(data) {
@@ -440,12 +439,7 @@ function createPaneStore(paneId, createOptions) {
     },
 
     setMessageData: function(messageId, data) {
-      React.addons.batchedUpdates(() => {
-        var messageData = this.state.messageData[messageId] || initMessageData
-        messageData = this.state.messageData[messageId] = messageData.merge(data)
-        this.changes.emit(messageId, messageData)
-        this.trigger(this.state)
-      })
+      this.messageData.set(messageId, data)
     },
 
     setEntryText: function(text, selectionStart, selectionEnd) {

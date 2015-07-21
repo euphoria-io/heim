@@ -19,7 +19,7 @@ module.exports = React.createClass({
     return (
       <div className="thread-list" onScroll={this.props.onScroll}>
         {this.state.threadNode.get('children').toSeq().map((threadId) =>
-          <ThreadListItem key={threadId} pane={this.props.pane} threadTree={this.props.threadTree} threadNodeId={threadId} tree={this.props.tree} nodeId={threadId} onClick={this.props.onThreadSelect} />
+          <ThreadListItem key={threadId} threadData={this.props.threadData} threadTree={this.props.threadTree} threadNodeId={threadId} tree={this.props.tree} nodeId={threadId} onClick={this.props.onThreadSelect} />
         ).toArray()}
       </div>
     )

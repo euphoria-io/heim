@@ -14,7 +14,7 @@ var ThreadListItem = module.exports = React.createClass({
     require('react-immutable-render-mixin'),
     require('./tree-node-mixin')('thread'),
     require('./tree-node-mixin')(),
-    require('./pane-message-data-mixin'),
+    require('./message-data-mixin')(props => props.threadData, 'threadData'),
     Reflux.connect(require('../stores/clock').minute, 'now'),
   ],
 
@@ -47,14 +47,14 @@ var ThreadListItem = module.exports = React.createClass({
 
     return (
       <div className="thread">
-        <FastButton component="div" data-thread-id={this.props.threadNodeId} className={classNames('info', {'selected': this.state.paneData.get('selected'), 'active': isActive})} onClick={ev => this.props.onClick(ev, this.props.threadNodeId)}>
+        <FastButton component="div" data-thread-id={this.props.threadNodeId} className={classNames('info', {'selected': this.state.threadData.get('selected'), 'active': isActive})} onClick={ev => this.props.onClick(ev, this.props.threadNodeId)}>
           <MessageText className="title" content={message.get('content')} maxLength={140} />
           {newCount > 0 && <span className={classNames('new-count', {'new-mention': count.get('newMentionDescendants') > 0})}>{newCount}</span>}
           <LiveTimeAgo className="ago" time={timestamp} nowText="active" />
         </FastButton>
         {this.props.depth < 3 && children.size > 0 && <div className="children">
           {children.toSeq().map((threadId) =>
-            <ThreadListItem key={threadId} pane={this.props.pane} threadTree={this.props.threadTree} threadNodeId={threadId} tree={this.props.tree} nodeId={threadId} depth={this.props.depth + 1} onClick={this.props.onClick} />
+            <ThreadListItem key={threadId} threadData={this.props.threadData} threadTree={this.props.threadTree} threadNodeId={threadId} tree={this.props.tree} nodeId={threadId} depth={this.props.depth + 1} onClick={this.props.onClick} />
           ).toArray()}
         </div>}
       </div>

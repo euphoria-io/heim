@@ -19,7 +19,7 @@ var Message = module.exports = React.createClass({
   mixins: [
     require('react-immutable-render-mixin'),
     require('./tree-node-mixin')(),
-    require('./pane-message-data-mixin'),
+    require('./message-data-mixin')(props => props.pane.store.messageData, 'paneData'),
   ],
 
   statics: {
