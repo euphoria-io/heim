@@ -251,7 +251,7 @@ module.exports = React.createClass({
             )
           }).toArray()}
         </div>
-        {!thin && <Bubble ref="threadPopup" className="thread-popup" anchorEl={this.state.ui.threadPopupAnchorEl} visible={!!this.state.ui.threadPopupAnchorEl} onDismiss={this.dismissThreadPopup} offset={() => ({ left: this.getDOMNode().getBoundingClientRect().left, top: 26 })}>
+        {!thin && <Bubble ref="threadPopup" className="thread-popup" anchorEl={this.state.ui.threadPopupAnchorEl} visible={!!this.state.ui.threadPopupAnchorEl} onDismiss={this.dismissThreadPopup} offset={() => ({ left: this.getDOMNode().getBoundingClientRect().left + 5, top: 26 })}>
           <div className="top-line">
             <FastButton className="to-pane" onClick={ui.popupToThreadPane}>new pane</FastButton>
             <FastButton className="scroll-to" onClick={ui.gotoPopupMessage}>go to</FastButton>
