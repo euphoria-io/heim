@@ -222,10 +222,12 @@ module.exports = React.createClass({
         oldPos = this._anchorPos
       }
 
-      var delta = dimensions(posRef, 'bottom') - oldPos
-      if (delta && canScroll) {
-        var scrollDelta = options.ignoreScrollDelta ? 0 : node.scrollTop - this._lastScrollTop
-        this._lastScrollTop = node.scrollTop += delta + scrollDelta
+      if (posRef) {
+        var delta = dimensions(posRef, 'bottom') - oldPos
+        if (delta && canScroll) {
+          var scrollDelta = options.ignoreScrollDelta ? 0 : node.scrollTop - this._lastScrollTop
+          this._lastScrollTop = node.scrollTop += delta + scrollDelta
+        }
       }
       this.updateAnchorPos()
       this._checkScroll()
