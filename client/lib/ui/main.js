@@ -1,6 +1,7 @@
 var _ = require('lodash')
-var React = require('react')
+var React = require('react/addons')
 var classNames = require('classnames')
+var ReactCSSTransitionGroup = React.addons.CSSTransitionGroup
 var Reflux = require('reflux')
 
 var chat = require('../stores/chat')
@@ -15,6 +16,7 @@ var NotificationList = require('./notification-list')
 var ThreadList = require('./thread-list')
 var Bubble = require('./bubble')
 var FastButton = require('./fast-button')
+var Panner = require('./panner')
 
 
 module.exports = React.createClass({
@@ -30,12 +32,12 @@ module.exports = React.createClass({
     Reflux.connect(require('../stores/update').store, 'update'),
     Reflux.connect(require('../stores/storage').store, 'storage'),
     Reflux.listenTo(ui.selectThreadInList, 'selectThreadInList'),
+    Reflux.listenTo(ui.panViewTo, 'panViewTo'),
   ],
 
   componentWillMount: function() {
     this._onResizeThrottled = _.throttle(this.onResize, 1000 / 30)
     Heim.addEventListener(uiwindow, 'resize', this._onResizeThrottled)
-    this.listenTo(this.state.ui.panes.get('popup').afterMessagesRendered, this.afterPopupMessagesRendered)
     this._threadScrollQueued = false
   },
 
@@ -45,14 +47,7 @@ module.exports = React.createClass({
   },
 
   onResize: function() {
-    // TODO
-    //
-    // this.props.onResize(node.offsetWidth, node.offsetHeight)
-    //
-    // update scrollers on resize too
-    this.setState({
-      thin: uiwindow.innerWidth < 500,
-    })
+    ui.setUIMode({thin: uiwindow.innerWidth < 500})
   },
 
   onScrollbarSize: function(width) {
@@ -87,7 +82,7 @@ module.exports = React.createClass({
     }
   },
 
-  showThreadPopup: function(id, itemEl) {
+  selectThread: function(id, itemEl) {
     // poor man's scrollIntoViewIfNeeded
     var parentEl = this.refs.threadList.getDOMNode()
     var itemBox = itemEl.getBoundingClientRect()
@@ -100,26 +95,26 @@ module.exports = React.createClass({
       itemEl.scrollIntoView(false)
     }
 
-    ui.showThreadPopup(id, itemEl)
+    ui.selectThread(id, itemEl)
   },
 
   dismissThreadPopup: function(ev) {
     if (!this.refs.threadList.getDOMNode().contains(ev.target)) {
-      ui.hideThreadPopup()
+      ui.deselectThread()
     }
   },
 
   onThreadSelect: function(ev, id) {
-    if (this.state.ui.threadPopupRoot == id && this.state.ui.threadPopupAnchorEl) {
-      ui.hideThreadPopup()
+    if (this.state.ui.selectedThread == id && this.state.ui.threadPopupAnchorEl) {
+      ui.deselectThread()
     } else {
-      this.showThreadPopup(id, ev.currentTarget)
+      this.selectThread(id, ev.currentTarget)
     }
   },
 
   onThreadsScroll: function() {
-    if (!this._threadScrollQueued) {
-      ui.hideThreadPopup()
+    if (!this._threadScrollQueued && !this.state.ui.thin) {
+      ui.deselectThread()
     }
     this._threadScrollQueued = false
   },
@@ -131,7 +126,11 @@ module.exports = React.createClass({
       el = threadListEl.querySelector('[data-thread-id]')
       id = el.dataset.threadId
     }
-    this.showThreadPopup(id, el)
+    this.selectThread(id, el)
+  },
+
+  panViewTo: function(x) {
+    this.refs.panner.flingTo(x)
   },
 
   onNotificationSelect: function(ev, id) {
@@ -156,7 +155,7 @@ module.exports = React.createClass({
 
         var threadListEl = this.refs.threadList.getDOMNode()
         var threadEls = threadListEl.querySelectorAll('[data-thread-id]')
-        var idx = _.indexOf(threadEls, threadListEl.querySelector('[data-thread-id="' + this.state.ui.threadPopupRoot + '"]'))
+        var idx = _.indexOf(threadEls, threadListEl.querySelector('[data-thread-id="' + this.state.ui.selectedThread + '"]'))
         if (idx == -1) {
           throw new Error('could not locate current thread in list')
         }
@@ -172,9 +171,9 @@ module.exports = React.createClass({
           }
           idx++
         }
-        this.showThreadPopup(threadEls[idx].dataset.threadId, threadEls[idx])
+        this.selectThread(threadEls[idx].dataset.threadId, threadEls[idx])
         return
-      } else if (ev.key == 'Enter' && this.state.ui.focusedPane == 'popup') {
+      } else if (ev.key == 'Enter' && this.state.ui.focusedPane == this.state.ui.popupPane) {
         ui.popupToThreadPane()
         return
       } else if (ev.key == 'Backspace') {
@@ -190,15 +189,25 @@ module.exports = React.createClass({
     ui.keydownOnPage(ev)
   },
 
-  afterPopupMessagesRendered: function() {
-    this.refs.threadPopup.reposition()
-  },
-
   render: function() {
-    var threadPanes = this.state.ui.panes.filter((v, k) => /^thread-/.test(k))
+    var thin = this.state.ui.thin
+    var selectedThread = this.state.ui.selectedThread
+
+    var mainPaneThreadId
+    if (thin && selectedThread) {
+      mainPaneThreadId = 'thread-' + selectedThread
+    }
+
+    var threadPanes = this.state.ui.visiblePanes
+      .filter((v, k) => /^thread-/.test(k))
+      .toKeyedSeq()
+      .map(paneId => this.state.ui.panes.get(paneId))
     var extraPanes = this.templateHook('thread-panes')
+
+    var infoPaneHidden = this.state.ui.thin || !this.state.ui.infoPaneExpanded
+
     return (
-      <div id="ui" className={classNames({'disconnected': this.state.chat.connected === false, 'info-pane-hidden': this.state.thin || !this.state.ui.infoPaneExpanded, 'info-pane-focused': this.state.ui.focusedPane == 'popup'})} onMouseDownCapture={this.onMouseDown} onClickCapture={this.onClick} onTouchMove={this.onTouchMove} onKeyDown={this.onKeyDown}>
+      <Panner ref="panner" id="ui" snapPoints={infoPaneHidden ? {main: 0, info: 240} : {main: 0}} onMove={ui.onViewPan} className={classNames({'disconnected': this.state.chat.connected === false, 'info-pane-hidden': infoPaneHidden, 'info-pane-focused': this.state.ui.focusedPane == this.state.ui.popupPane})} onMouseDownCapture={this.onMouseDown} onClickCapture={this.onClick} onTouchMove={this.onTouchMove} onKeyDown={this.onKeyDown}>
         {this.state.storage && this.state.storage.useOpenDyslexic && <link rel="stylesheet" type="text/css" id="css" href="/static/od.css" />}
           {this.state.chat.authState && this.state.chat.authState != 'trying-stored' && <div className="hatch-shade fill" />}
         <div className="info-pane" onMouseEnter={ui.freezeInfo} onMouseLeave={ui.thawInfo}>
@@ -210,8 +219,19 @@ module.exports = React.createClass({
           <NotificationList tree={this.state.chat.messages} notifications={this.state.ui.frozenNotifications || this.state.notification.notifications} onNotificationSelect={this.onNotificationSelect} />
         </div>
         <div className="chat-pane-container main-pane">
-          <ChatTopBar who={this.state.chat.who} roomName={this.state.chat.roomName} connected={this.state.chat.connected} joined={this.state.chat.joined} authType={this.state.chat.authType} updateReady={this.state.update.get('ready')} working={this.state.chat.loadingLogs} showSidebarButton={!this.state.thin} sidebarExpanded={this.state.ui.infoPaneExpanded} collapseSidebar={ui.collapseInfoPane} expandSidebar={ui.expandInfoPane} />
-          <ChatPane pane={this.state.ui.panes.get('main')} showTimeStamps={!this.state.thin} onScrollbarSize={this.onScrollbarSize} />
+          <ChatTopBar who={this.state.chat.who} roomName={this.state.chat.roomName} connected={this.state.chat.connected} joined={this.state.chat.joined} authType={this.state.chat.authType} updateReady={this.state.update.get('ready')} working={this.state.chat.loadingLogs} showSidebarButton={!this.state.ui.thin} sidebarExpanded={this.state.ui.infoPaneExpanded} collapseSidebar={ui.collapseInfoPane} expandSidebar={ui.expandInfoPane} />
+          <div className="main-pane-stack">
+            <ChatPane pane={this.state.ui.panes.get('main')} showTimeStamps={!this.state.ui.thin} onScrollbarSize={this.onScrollbarSize} disabled={!!mainPaneThreadId} />
+            <ReactCSSTransitionGroup transitionName="slide" transitionLeave={!mainPaneThreadId} transitionEnter={false}>
+              {mainPaneThreadId && <div key={mainPaneThreadId} className="main-pane-thread">
+                <div className="top-bar">
+                  <MessageText className="title" content={this.state.chat.messages.get(selectedThread).get('content')} />
+                  <FastButton className="close" onClick={ui.deselectThread} />
+                </div>
+                <ChatPane key={mainPaneThreadId} pane={this.state.ui.panes.get(mainPaneThreadId)} showTimeStamps={!this.state.ui.thin} showParent={true} showAllReplies={true} onScrollbarSize={this.onScrollbarSize} />
+              </div>}
+            </ReactCSSTransitionGroup>
+          </div>
           <div className="sidebar" style={{marginRight: this.state.scrollbarWidth}}>
             {this.templateHook('main-sidebar')}
           </div>
@@ -231,15 +251,15 @@ module.exports = React.createClass({
             )
           }).toArray()}
         </div>
-        <Bubble ref="threadPopup" className="thread-popup" anchorEl={this.state.ui.threadPopupAnchorEl} visible={!!this.state.ui.threadPopupAnchorEl} onDismiss={this.dismissThreadPopup} offset={() => ({ left: this.getDOMNode().getBoundingClientRect().left, top: 26 })}>
+        {!thin && <Bubble ref="threadPopup" className="thread-popup" anchorEl={this.state.ui.threadPopupAnchorEl} visible={!!this.state.ui.threadPopupAnchorEl} onDismiss={this.dismissThreadPopup} offset={() => ({ left: this.getDOMNode().getBoundingClientRect().left, top: 26 })}>
           <div className="top-line">
             <FastButton className="to-pane" onClick={ui.popupToThreadPane}>new pane</FastButton>
             <FastButton className="scroll-to" onClick={ui.gotoPopupMessage}>go to</FastButton>
           </div>
-          <ChatPane pane={this.state.ui.panes.get('popup')} showParent={true} showAllReplies={true} />
-        </Bubble>
+          {selectedThread && <ChatPane key={this.state.ui.popupPane} pane={this.state.ui.panes.get(this.state.ui.popupPane)} afterMessagesRendered={() => this.refs.threadPopup.reposition()} showParent={true} showAllReplies={true} />}
+        </Bubble>}
         {this.templateHook('page-bottom')}
-      </div>
+      </Panner>
     )
   },
 })

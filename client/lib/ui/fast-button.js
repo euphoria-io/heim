@@ -33,6 +33,15 @@ module.exports = React.createClass({
     }
   },
 
+  onTouchStart: function(ev) {
+    this.getDOMNode().classList.add('touching')
+    this.onClick(ev)
+  },
+
+  onTouchEnd: function() {
+    this.getDOMNode().classList.remove('touching')
+  },
+
   onKeyDown: function(ev) {
     if (ev.key == 'Enter' || ev.key == 'Space') {
       this.props.onClick(ev)
@@ -45,7 +54,9 @@ module.exports = React.createClass({
       this.props.component,
       _.extend({}, this.props, {
         onClick: this.onClick,
-        onTouchStart: this.onClick,
+        onTouchStart: this.onTouchStart,
+        onTouchEnd: this.onTouchEnd,
+        onTouchCancel: this.onTouchEnd,
         onKeyDown: this.onKeyDown,
       }),
       !this.props.empty && <div className="inner">{this.props.children}</div>

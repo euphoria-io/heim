@@ -170,7 +170,6 @@ iframe.js {
   align-items: stretch;
   background: #ccc;
   z-index: 0;
-  transition: transform .1s ease-out;
 
   &.disconnected {
     .info-pane, .main-pane .chat-pane, .thread-panes {
@@ -187,8 +186,6 @@ iframe.js {
     }
 
     &.info-pane-focused {
-      transform: translateX(@info-pane-width);
-
       .chat-pane-container {
         opacity: .25;
       }
@@ -352,7 +349,11 @@ iframe.js {
         padding: 7px 10px;
       }
 
-      &:hover {
+      .touchable-custom({
+        background: fade(white, 75%);
+      });
+
+      body:not(.touch) &:hover {
         background: fade(white, 75%);
       }
 
@@ -563,6 +564,31 @@ iframe.js {
       align-items: flex-end;
       z-index: 5;
     }
+
+    .main-pane-stack {
+      flex: 1;
+      position: relative;
+
+      & > .chat-pane, .main-pane-thread {
+        .fill;
+      }
+    }
+
+    .main-pane-thread {
+      display: flex;
+      flex-direction: column;
+      background: white;
+      transition: all .2s ease-in;
+      z-index: 10;
+
+      &.slide-leave {
+        transform: none;
+
+        &.slide-leave-active {
+          transform: translateX(-1000px);
+        }
+      }
+    }
   }
 
   .chat-pane {
@@ -715,6 +741,24 @@ iframe.js {
   .update-available, .user-count {
     height: 20px;
   }
+
+  .title {
+    flex: 1;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    color: @topic-color;
+    font-weight: bold;
+    font-size: .8em;
+  }
+
+  .close {
+    position: relative;
+    padding: 3px;
+    border-radius: 3px;
+    .touchable-bg(white);
+    .button-icon('../res/close.svg', 14px, 0, 1);
+    .larger-touch-target(10px, 10px);
+  }
 }
 
 .main-pane .top-bar {
@@ -732,7 +776,7 @@ iframe.js {
     margin-left: 10px;
     .button-icon('../res/euphorian.svg', 14px);
     .touchable-bg(@neutral-color);
-    .larger-touch-target(20px, 30px);
+    .larger-touch-target(20px, 10px);
   }
 
   .update-available {
@@ -751,27 +795,7 @@ iframe.js {
     background: lighten(@disconnected-color, 23%);
     transition: background .2s ease-out;
   }
-}
 
-.thread-panes .top-bar {
-  .title {
-    flex: 1;
-    text-overflow: ellipsis;
-    overflow: hidden;
-    color: @topic-color;
-    font-weight: bold;
-    font-size: .8em;
-  }
-
-  .close {
-    padding: 3px;
-    border-radius: 3px;
-    .touchable-bg(white);
-    .button-icon('../res/close.svg', 14px, 0, 1);
-  }
-}
-
-.top-bar {
   .collapse-sidebar, .expand-sidebar {
     padding: 9px;
     margin: -9px;

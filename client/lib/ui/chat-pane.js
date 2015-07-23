@@ -39,7 +39,7 @@ module.exports = React.createClass({
   componentDidMount: function() {
     this.listenTo(this.props.pane.store, state => this.setState({'pane': state}))
     this.listenTo(this.props.pane.scrollToEntry, 'scrollToEntry')
-    this.listenTo(this.props.pane.afterMessagesRendered, 'scrollUpdatePosition')
+    this.listenTo(this.props.pane.afterMessagesRendered, 'afterMessagesRendered')
     this.listenTo(this.props.pane.moveMessageFocus, 'moveMessageFocus')
 
     this.props.pane.scrollToEntry()
@@ -48,6 +48,7 @@ module.exports = React.createClass({
 
   getDefaultProps: function() {
     return {
+      disabled: false,
       nodeId: '__root',
       showParent: false,
       showTimeStamps: false,
@@ -77,7 +78,7 @@ module.exports = React.createClass({
   },
 
   markSeen: function() {
-    if (!this.state.activity.active) {
+    if (!this.state.activity.active || this.props.disabled) {
       return
     }
 
@@ -138,6 +139,13 @@ module.exports = React.createClass({
 
   scrollToEntry: function() {
     this.refs.scroller.scrollToTarget()
+  },
+
+  afterMessagesRendered: function() {
+    if (this.props.afterMessagesRendered) {
+      this.props.afterMessagesRendered()
+    }
+    this.scrollUpdatePosition()
   },
 
   scrollUpdatePosition: function() {
