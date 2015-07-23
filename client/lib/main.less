@@ -387,6 +387,7 @@ iframe.js {
     }
 
     .thread-list {
+      position: relative;  // required to position webkit touch scrollbar properly
       flex: 1;
       overflow-y: auto;
     }
@@ -580,6 +581,11 @@ iframe.js {
       background: white;
       transition: all .2s ease-in;
       z-index: 10;
+
+      .top-bar {
+        background: #f2f2ff;
+        box-shadow: 0 -4px 4px -4px #d2d2e7 inset;
+      }
 
       &.slide-leave {
         transform: none;
@@ -1676,6 +1682,15 @@ iframe.js {
 @media (max-width: 500px) {
   .info-pane {
     margin-top: 0;
+
+    .thread-list-container {
+      border-bottom: none;
+    }
+
+    .notification-list {
+      margin-bottom: -8px;
+      border-top: 1px solid #ccc;
+    }
   }
 
   .chat .messages-container {
