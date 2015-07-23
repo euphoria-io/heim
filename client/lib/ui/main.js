@@ -215,8 +215,8 @@ module.exports = React.createClass({
           <div className="thread-list-container">
             <ThreadList ref="threadList" threadData={ui.store.threadData} threadTree={this.state.ui.frozenThreadList || this.state.chat.messages.threads} tree={this.state.chat.messages} onScroll={this.onThreadsScroll} onThreadSelect={this.onThreadSelect} />
           </div>
-          <NotificationSettings roomName={this.state.chat.roomName} />
-          <NotificationList tree={this.state.chat.messages} notifications={this.state.ui.frozenNotifications || this.state.notification.notifications} onNotificationSelect={this.onNotificationSelect} />
+          {!this.state.ui.thin && <NotificationSettings roomName={this.state.chat.roomName} />}
+          <NotificationList tree={this.state.chat.messages} notifications={this.state.ui.frozenNotifications || this.state.notification.notifications} onNotificationSelect={this.onNotificationSelect} animate={!this.state.ui.thin} />
         </div>
         <div className="chat-pane-container main-pane">
           <ChatTopBar who={this.state.chat.who} roomName={this.state.chat.roomName} connected={this.state.chat.connected} joined={this.state.chat.joined} authType={this.state.chat.authType} updateReady={this.state.update.get('ready')} working={this.state.chat.loadingLogs} showSidebarButton={!this.state.ui.thin} sidebarExpanded={this.state.ui.infoPaneExpanded} collapseSidebar={ui.collapseInfoPane} expandSidebar={ui.expandInfoPane} />

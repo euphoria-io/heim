@@ -284,7 +284,13 @@ var store = module.exports.store = Reflux.createStore({
   },
 
   onViewPan: function(target) {
-    if (!this.state.thin) {
+    if (this.state.thin) {
+      if (target == 'info') {
+        this.freezeInfo()
+      } else {
+        this.thawInfo()
+      }
+    } else {
       if (target == 'info') {
         if (!this.state.selectedThread) {
           storeActions.selectThreadInList(this.state.lastSelectedThread)
