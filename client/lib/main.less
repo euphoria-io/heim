@@ -1206,7 +1206,6 @@ iframe.js {
         width: 100%;
         max-height: 160px;
         overflow-y: hidden;
-        text-indent: 0;
         padding: 5px;
         box-sizing: border-box;
         cursor: pointer;
@@ -1265,7 +1264,6 @@ iframe.js {
     .embeds {
       display: block;
       margin: 0 -4px;
-      text-indent: 0;
 
       a {
         position: relative;
@@ -1708,44 +1706,46 @@ iframe.js {
     }
   }
 
-  .chat .messages-container {
+  .chat-pane .messages-container {
     padding-left: 0;
 
-    .messages {
-      .line {
-        display: block;
-        margin-left: .5em;
-        text-indent: -.5em;
+    .message-node > .line {
+      display: block;
 
-        .content, .message {
-          display: inline;
-        }
-
-        &.mention .message {
-          line-height: 20px;
-        }
-
-        .nick {
-          position: relative;
-          text-indent: 0;
-          z-index: 50;
-        }
-
-        .embeds {
-          display: inline-block;
-          vertical-align: top;
-          width: 0;
-        }
-
-        // if there's text, push embeds to the next line
-        .message + .embeds {
-          display: block;
-        }
-
-        .expando {
-          margin-top: -6px;
-        }
+      &.has-embed {
+        display: flex;
       }
+
+      .content, .content > .message {
+        display: inline;
+      }
+
+      .content {
+        position: relative;
+        left: .5em;
+        margin-left: -.5em;
+      }
+
+      &.mention .message {
+        line-height: 20px;
+      }
+
+      .nick {
+        display: inline-block;
+      }
+
+      // if there's text, push embeds to the next line
+      .message + .embeds {
+        display: block;
+      }
+
+      .expando {
+        margin-top: -6px;
+      }
+    }
+
+    .replies.collapsible > .indent-line {
+      margin-top: 2px;
     }
 
     .welcome > .message {
