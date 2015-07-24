@@ -343,11 +343,24 @@ iframe.js {
       font-size: .8em;
       cursor: default;
       overflow: hidden;
-      text-overflow: ellipsis;
       user-select: none;
 
       .inner {
+        display: flex;
+        align-items: flex-start;
         padding: 7px 10px;
+
+        .title {
+          flex: 1;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: normal;
+        }
+
+        .ago {
+          min-width: 2em;
+          text-align: right;
+        }
       }
 
       .touchable-custom({
@@ -440,15 +453,16 @@ iframe.js {
     overflow-y: auto;
 
     .notification {
+      .inner {
+        align-items: flex-start !important;
+      }
+
       .inner:before {
         // attempt to center vertically with first line of caption
         height: 1rem !important;
-        align-self: flex-start;
       }
 
-      .caption {
-        white-space: normal;
-
+      .title {
         a {
           pointer-events: none;
         }

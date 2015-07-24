@@ -43,10 +43,8 @@ module.exports = React.createClass({
 
     return (
       <FastButton component="div" className={classNames('notification', this.props.kind, {'seen': message.get('_seen')})} onClick={ev => this.props.onClick(ev, this.props.nodeId)}>
-        <div className="caption">
-          <MessageText className="title" content={message.get('content')} maxLength={140} />
-          <LiveTimeAgo className="ago" time={message.get('time')} nowText="active" />
-        </div>
+        <MessageText className="title" content={message.get('content')} maxLength={140} />
+        <LiveTimeAgo className="ago" time={message.get('time')} nowText="active" />
       </FastButton>
     )
   },
