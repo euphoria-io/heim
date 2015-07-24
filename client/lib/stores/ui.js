@@ -179,10 +179,6 @@ var store = module.exports.store = Reflux.createStore({
         if (!this.state.popupPane) {
           return
         }
-        var popupPane = this.state.panes.get(this.state.popupPane)
-        if (popupPane.store.state.entryText.length) {
-          return
-        }
         this.thawInfo()
         this.state.threadPopupAnchorEl = null
         this.state.popupPane = null
