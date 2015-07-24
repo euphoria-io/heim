@@ -39,11 +39,11 @@ module.exports = React.createClass({
     this._onResizeThrottled = _.throttle(this.onResize, 1000 / 30)
     Heim.addEventListener(uiwindow, 'resize', this._onResizeThrottled)
     this._threadScrollQueued = false
+    this.onResize()
   },
 
   componentDidMount: function() {
     ui.focusEntry()
-    this.onResize()
   },
 
   onResize: function() {
