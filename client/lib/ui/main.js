@@ -47,7 +47,7 @@ module.exports = React.createClass({
   },
 
   onResize: function() {
-    ui.setUIMode({thin: uiwindow.innerWidth < 500})
+    ui.setUIWidth(uiwindow.innerWidth)
   },
 
   onScrollbarSize: function(width) {
