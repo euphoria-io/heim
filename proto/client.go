@@ -81,6 +81,9 @@ func (c *Client) AuthenticateWithAgent(
 
 	holderKey, err := account.Unlock(clientKey)
 	if err != nil {
+		if err == ErrAccessDenied {
+			return err
+		}
 		return fmt.Errorf("client key error: %s", err)
 	}
 

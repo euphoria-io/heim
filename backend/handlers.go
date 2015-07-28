@@ -105,11 +105,12 @@ func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
 			fmt.Printf("agent auth failed: %s\n", err)
 			switch err {
 			case proto.ErrAccessDenied:
-				http.Error(w, err.Error(), http.StatusForbidden)
+				// allow session to proceed, but agent will not be logged into account
+				agent.AccountID = ""
 			default:
 				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
 			}
-			return
 		}
 	}
 
