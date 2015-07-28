@@ -306,7 +306,7 @@ module.exports = function(roomName) {
 
           .youtube-tv {
             border: none;
-            height: 100vmin;
+            height: 60vmin;
           }
 
           .youtube-pane .notice {
