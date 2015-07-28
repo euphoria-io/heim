@@ -291,6 +291,7 @@ module.exports = function(roomName) {
             padding: 10px;
             overflow: auto;
             white-space: pre-wrap;
+            flex: 1;
           }
         `}} />
       )
