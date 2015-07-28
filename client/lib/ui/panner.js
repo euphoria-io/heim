@@ -17,7 +17,7 @@ module.exports = React.createClass({
       smoothing: 1,
 
       // multiplier of boosted velocity when extrapolating intertial stopping point
-      sensitivity: 4,
+      sensitivity: 3,
 
       // inverse of minimum movement speed
       friction: 0.02,
