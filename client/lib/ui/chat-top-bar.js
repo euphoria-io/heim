@@ -4,7 +4,6 @@ var ReactCSSTransitionGroup = React.addons.CSSTransitionGroup
 
 var update = require('../stores/update')
 var FastButton = require('./fast-button')
-var UserList = require('./user-list')
 var ToggleBubble = require('./toggle-bubble')
 var RoomTitle = require('./room-title')
 
@@ -13,10 +12,6 @@ module.exports = React.createClass({
   displayName: 'ChatTopBar',
 
   mixins: [require('react-immutable-render-mixin')],
-
-  showUserList: function() {
-    this.refs.userList.toggle()
-  },
 
   showUpdateBubble: function() {
     this.refs.updateBubble.toggle()
@@ -29,16 +24,13 @@ module.exports = React.createClass({
     // bubbles. this makes the bubbles slide from "underneath" the bar.
     return (
       <div className="top-bar">
-        {this.props.showSidebarButton && <FastButton className={classNames(this.props.sidebarExpanded ? 'collapse-sidebar' : 'expand-sidebar')} onClick={this.props.sidebarExpanded ? this.props.collapseSidebar : this.props.expandSidebar} />}
+        {this.props.showInfoPaneButton && <FastButton className={classNames(this.props.infoPaneOpen ? 'collapse-info-pane' : 'expand-info-pane')} onClick={this.props.infoPaneOpen ? this.props.collapseInfoPane : this.props.expandInfoPane} />}
         <RoomTitle name={this.props.roomName} authType={this.props.authType} connected={this.props.connected} joined={this.props.joined} />
         <div className="right">
           <ReactCSSTransitionGroup transitionName="spinner">{this.props.working && <div key="spinner" className="spinner" />}</ReactCSSTransitionGroup>
           {this.props.updateReady && <FastButton fastTouch className="update-available" onClick={this.showUpdateBubble} />}
-          {this.props.joined && <FastButton fastTouch className="user-count" onClick={this.showUserList}>{userCount}</FastButton>}
+          {this.props.joined && <FastButton fastTouch className="user-count" onClick={this.props.toggleUserList}>{userCount}</FastButton>}
         </div>
-        <ToggleBubble ref="userList" className="users" sticky={true}>
-          {userCount > 0 ? <UserList users={this.props.who} /> : <div className="nick">nobody here :(</div>}
-        </ToggleBubble>
         <ToggleBubble ref="updateBubble" className="update">
           <FastButton className="update-button" onClick={update.perform}><p>update ready<em>{Heim.isTouch ? 'tap' : 'click'} to reload</em></p></FastButton>
         </ToggleBubble>

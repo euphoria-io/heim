@@ -146,7 +146,7 @@ a {
 @faded-topic-color: #7070be;
 @disconnected-color: #ff7c7c;
 @focus-green: fade(green, 50%);
-@pane-bg-color: #f2f2f2;
+@pane-bg-color: #f4f4f4;
 
 .hatch-shade {
   background: fade(black, 50%) data-uri('../res/hatching.svg') repeat;
@@ -163,6 +163,7 @@ iframe.js {
 }
 
 @info-pane-width: 240px;
+@sidebar-pane-width: 150px;
 
 #ui {
   // stacking context so z-index: -1 works
@@ -173,7 +174,7 @@ iframe.js {
   z-index: 0;
 
   &.disconnected {
-    .info-pane, .main-pane .chat-pane, .thread-panes {
+    .info-pane, .main-pane .chat-pane, .sidebar-pane, .thread-panes {
       transition: opacity .2s ease;
       opacity: .8;
     }
@@ -187,19 +188,23 @@ iframe.js {
     }
 
     &.info-pane-focused {
-      .chat-pane-container {
+      .chat-pane-container, .sidebar-pane {
         opacity: .25;
       }
     }
   }
+
+  &.sidebar-pane-hidden {
+    margin-right: -@sidebar-pane-width;
+  }
 }
 
-.info-pane, .thread-panes {
+.info-pane, .sidebar-pane {
   margin-top: 20px;
   z-index: -1;
 }
 
-.info-pane, .chat-pane-container {
+.info-pane, .sidebar-pane, .chat-pane-container {
   box-shadow: 0 0 12px fade(black, 20%);
 }
 
@@ -207,10 +212,9 @@ iframe.js {
   display: flex;
 }
 
-.info-pane {
+.info-pane, .sidebar-pane {
   display: flex;
   flex-direction: column;
-  width: @info-pane-width;
   padding: 8px 10px;
   box-sizing: border-box;
   background: @pane-bg-color;
@@ -228,6 +232,10 @@ iframe.js {
   h2 {
     margin: 0;
   }
+}
+
+.info-pane {
+  width: @info-pane-width;
 
   .notification-settings {
     display: flex;
@@ -530,6 +538,35 @@ iframe.js {
   }
 }
 
+.sidebar-pane {
+  width: @sidebar-pane-width;
+  display: flex;
+  flex-direction: column;
+
+  .user-list {
+    flex: 1;
+    margin: 0 -8px;
+    margin-top: 4px;
+    margin-bottom: 8px;
+    padding: 0 8px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    transition: opacity .25s ease;
+
+    .nick {
+      display: block;
+      float: left;
+      clear: both;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: @sidebar-pane-width - 16px;
+      box-sizing: border-box;
+      margin: 2px 0;
+      white-space: nowrap;
+    }
+  }
+}
+
 @time-margin: 70px;
 @messages-padding: 10px;
 @nick-spacing: 6px;
@@ -570,16 +607,6 @@ iframe.js {
   &.main-pane {
     flex: 1.5;
     box-shadow: 0 0 12px fade(black, 40%);
-
-    .sidebar {
-      position: absolute;
-      top: 32px + 10px;
-      right: 10px;
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      z-index: 5;
-    }
 
     .main-pane-stack {
       flex: 1;
@@ -817,7 +844,7 @@ iframe.js {
     transition: background .2s ease-out;
   }
 
-  .collapse-sidebar, .expand-sidebar {
+  .collapse-info-pane, .expand-info-pane {
     padding: 9px;
     margin: -9px;
     padding-left: 0;
@@ -827,11 +854,11 @@ iframe.js {
     .touchable-bg(white);
     opacity: .35;
 
-    &.collapse-sidebar {
+    &.collapse-info-pane {
       .button-icon('../res/collapse-sidebar.svg', 14px, 0, 1);
     }
 
-    &.expand-sidebar {
+    &.expand-info-pane {
       .button-icon('../res/expand-sidebar.svg', 14px, 0, 1);
     }
   }
@@ -887,28 +914,6 @@ iframe.js {
         }
       }
     }
-  }
-}
-
-.user-list {
-  text-align: right;
-  overflow-y: auto;
-  max-height: 80vh;
-  // ensure that the user list is wider than the disappearing [+N more]
-  // line so we don't shrink when expanded.
-  min-width: 6em;
-  transition: opacity .25s ease;
-
-  .nick {
-    display: block;
-    float: right;
-    clear: both;
-    margin: 2px 0;
-    box-shadow: 0 0 5px white;
-    white-space: nowrap;
-    max-width: 30vw;
-    overflow: hidden;
-    user-select: text;
   }
 }
 
@@ -1524,25 +1529,6 @@ iframe.js {
   left: 8px;
 }
 
-.bubble.users {
-  position: absolute;
-  top: 32px;
-  right: 0;
-  background: fade(white, 92%);
-  border-top-left-radius: 0;
-  border-top-right-radius: 0;
-  border-bottom-right-radius: 0;
-  padding: 7px 10px;
-
-  .user-list {
-    min-width: 0;
-
-    .nick {
-      max-width: 50vw;
-    }
-  }
-}
-
 .bubble.update {
   position: absolute;
   top: 40px;
@@ -1692,10 +1678,12 @@ iframe.js {
   }
 }
 
-@media (max-width: 500px) {
-  .info-pane {
+@media (max-width: 650px) {
+  .info-pane, .sidebar-pane, .thread-panes {
     margin-top: 0;
+  }
 
+  .info-pane {
     .thread-list-container {
       border-bottom: none;
     }

@@ -20,6 +20,7 @@ var storeActions = module.exports.actions = Reflux.createActions([
   'focusRightPane',
   'collapseInfoPane',
   'expandInfoPane',
+  'toggleUserList',
   'freezeInfo',
   'thawInfo',
   'selectThread',
@@ -66,6 +67,8 @@ var store = module.exports.store = Reflux.createStore({
       }),
       visiblePanes: Immutable.OrderedSet(['main']),
       popupPane: null,
+      panPos: 'main',
+      sidebarPaneExpanded: false,
       infoPaneExpanded: false,
       frozenThreadList: null,
       frozenNotifications: null,
@@ -88,6 +91,7 @@ var store = module.exports.store = Reflux.createStore({
       return
     }
     this.state.infoPaneExpanded = _.get(data, ['room', this.chatState.roomName, 'infoPaneExpanded'], false)
+    this.state.sidebarPaneExpanded = _.get(data, ['room', this.chatState.roomName, 'sidebarPaneExpanded'], false)
     this.trigger(this.state)
   },
 
@@ -105,11 +109,27 @@ var store = module.exports.store = Reflux.createStore({
   },
 
   collapseInfoPane: function() {
-    storage.setRoom(this.chatState.roomName, 'infoPaneExpanded', false)
+    if (this.state.thin) {
+      storeActions.panViewTo('main')
+    } else {
+      storage.setRoom(this.chatState.roomName, 'infoPaneExpanded', false)
+    }
   },
 
   expandInfoPane: function() {
-    storage.setRoom(this.chatState.roomName, 'infoPaneExpanded', true)
+    if (this.state.thin) {
+      storeActions.panViewTo('info')
+    } else {
+      storage.setRoom(this.chatState.roomName, 'infoPaneExpanded', true)
+    }
+  },
+
+  toggleUserList: function() {
+    if (this.state.thin) {
+      storeActions.panViewTo(this.state.panPos == 'sidebar' ? 'main' : 'sidebar')
+    } else {
+      storage.setRoom(this.chatState.roomName, 'sidebarPaneExpanded', !this.state.sidebarPaneExpanded)
+    }
   },
 
   freezeInfo: function() {
@@ -173,9 +193,7 @@ var store = module.exports.store = Reflux.createStore({
       this.threadData.set(this.state.selectedThread, {selected: false})
       this.state.lastSelectedThread = this.state.selectedThread
       this.state.selectedThread = null
-      if (this.state.thin) {
-        storeActions.focusPane('main', {focusEntry: false})
-      } else {
+      if (!this.state.thin) {
         if (!this.state.popupPane) {
           return
         }
@@ -184,6 +202,7 @@ var store = module.exports.store = Reflux.createStore({
         this.state.popupPane = null
       }
       storeActions.panViewTo('main')
+      storeActions.focusPane('main', {focusEntry: !this.state.thin})
       this.trigger(this.state)
     })
   },
@@ -265,7 +284,11 @@ var store = module.exports.store = Reflux.createStore({
     idx = clamp(-1, idx + delta, focusablePanes.size - 1)
 
     if (idx == -1) {
-      storeActions.panViewTo('info')
+      if (this.state.thin || !this.state.infoPaneExpanded) {
+        storeActions.panViewTo('info')
+      } else {
+        this.onViewPan('info')
+      }
     } else {
       storeActions.panViewTo('main')
       var paneId = focusablePanes.entrySeq().get(idx)[0]
@@ -286,6 +309,8 @@ var store = module.exports.store = Reflux.createStore({
   },
 
   onViewPan: function(target) {
+    this.state.panPos = target
+    this.trigger(this.state)
     if (this.state.thin) {
       if (target == 'info') {
         this.freezeInfo()

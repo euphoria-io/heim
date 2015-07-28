@@ -14,6 +14,7 @@ var MessageText = require('./message-text')
 var NotificationSettings = require('./notification-settings')
 var NotificationList = require('./notification-list')
 var ThreadList = require('./thread-list')
+var UserList = require('./user-list')
 var Bubble = require('./bubble')
 var FastButton = require('./fast-button')
 var Panner = require('./panner')
@@ -60,8 +61,12 @@ module.exports = React.createClass({
     this._isFocusClick = Date.now() - this.state.activity.focusChangedAt < 100
   },
 
+  _ignoreClick: function(ev) {
+    return !uiwindow.getSelection().isCollapsed || ev.target.nodeName == 'BUTTON'
+  },
+
   onClick: function(ev) {
-    if (!uiwindow.getSelection().isCollapsed || ev.target.nodeName == 'BUTTON') {
+    if (this._ignoreClick(ev)) {
       return
     }
 
@@ -72,6 +77,18 @@ module.exports = React.createClass({
 
     if (this._isFocusClick) {
       ui.focusEntry()
+    }
+  },
+
+  onPaneClick: function(paneId, ev) {
+    if (this._ignoreClick(ev)) {
+      return
+    }
+
+    if ((this.state.ui.thin || paneId == 'main') && this.state.ui.panPos != paneId) {
+      ui.focusPane(paneId)
+      ui.panViewTo(paneId)
+      ev.stopPropagation()
     }
   },
 
@@ -204,10 +221,20 @@ module.exports = React.createClass({
       .map(paneId => this.state.ui.panes.get(paneId))
     var extraPanes = this.templateHook('thread-panes')
 
-    var infoPaneHidden = this.state.ui.thin || !this.state.ui.infoPaneExpanded
+    var infoPaneHidden = thin || !this.state.ui.infoPaneExpanded
+    var infoPaneOpen = infoPaneHidden ? this.state.ui.panPos == 'info' : this.state.ui.infoPaneExpanded
+    var sidebarPaneHidden = thin
+
+    var snapPoints = {main: 0}
+    if (infoPaneHidden) {
+      snapPoints.info = 240
+    }
+    if (sidebarPaneHidden) {
+      snapPoints.sidebar = -150
+    }
 
     return (
-      <Panner ref="panner" id="ui" snapPoints={infoPaneHidden ? {main: 0, info: 240} : {main: 0}} onMove={ui.onViewPan} className={classNames({'disconnected': this.state.chat.connected === false, 'info-pane-hidden': infoPaneHidden, 'info-pane-focused': this.state.ui.focusedPane == this.state.ui.popupPane})} onMouseDownCapture={this.onMouseDown} onClickCapture={this.onClick} onTouchMove={this.onTouchMove} onKeyDown={this.onKeyDown}>
+      <Panner ref="panner" id="ui" snapPoints={snapPoints} onMove={ui.onViewPan} className={classNames({'disconnected': this.state.chat.connected === false, 'info-pane-hidden': infoPaneHidden, 'sidebar-pane-hidden': sidebarPaneHidden, 'info-pane-focused': this.state.ui.focusedPane == this.state.ui.popupPane})} onMouseDownCapture={this.onMouseDown} onClickCapture={this.onClick} onTouchMove={this.onTouchMove} onKeyDown={this.onKeyDown}>
         {this.state.storage && this.state.storage.useOpenDyslexic && <link rel="stylesheet" type="text/css" id="css" href="/static/od.css" />}
           {this.state.chat.authState && this.state.chat.authState != 'trying-stored' && <div className="hatch-shade fill" />}
         <div className="info-pane" onMouseEnter={ui.freezeInfo} onMouseLeave={ui.thawInfo}>
@@ -218,8 +245,8 @@ module.exports = React.createClass({
           {!this.state.ui.thin && <NotificationSettings roomName={this.state.chat.roomName} />}
           <NotificationList tree={this.state.chat.messages} notifications={this.state.ui.frozenNotifications || this.state.notification.notifications} onNotificationSelect={this.onNotificationSelect} animate={!this.state.ui.thin} />
         </div>
-        <div className="chat-pane-container main-pane">
-          <ChatTopBar who={this.state.chat.who} roomName={this.state.chat.roomName} connected={this.state.chat.connected} joined={this.state.chat.joined} authType={this.state.chat.authType} updateReady={this.state.update.get('ready')} working={this.state.chat.loadingLogs} showSidebarButton={!this.state.ui.thin} sidebarExpanded={this.state.ui.infoPaneExpanded} collapseSidebar={ui.collapseInfoPane} expandSidebar={ui.expandInfoPane} />
+        <div className="chat-pane-container main-pane" onClickCapture={_.partial(this.onPaneClick, 'main')}>
+          <ChatTopBar who={this.state.chat.who} roomName={this.state.chat.roomName} connected={this.state.chat.connected} joined={this.state.chat.joined} authType={this.state.chat.authType} updateReady={this.state.update.get('ready')} working={this.state.chat.loadingLogs} showInfoPaneButton={!thin || !Heim.isTouch} infoPaneOpen={infoPaneOpen} collapseInfoPane={ui.collapseInfoPane} expandInfoPane={ui.expandInfoPane} toggleUserList={ui.toggleUserList} />
           <div className="main-pane-stack">
             <ChatPane pane={this.state.ui.panes.get('main')} showTimeStamps={!this.state.ui.thin} onScrollbarSize={this.onScrollbarSize} disabled={!!mainPaneThreadId} />
             <ReactCSSTransitionGroup transitionName="slide" transitionLeave={!mainPaneThreadId} transitionEnter={false}>
@@ -232,16 +259,18 @@ module.exports = React.createClass({
               </div>}
             </ReactCSSTransitionGroup>
           </div>
-          <div className="sidebar" style={{marginRight: this.state.scrollbarWidth}}>
-            {this.templateHook('main-sidebar')}
-          </div>
         </div>
-        <div className="thread-panes" style={{flex: threadPanes.size + extraPanes.length}}>
+        {(thin || this.state.ui.sidebarPaneExpanded) && <div className="sidebar-pane">
+          <h2>people</h2>
+          <UserList users={this.state.chat.who} />
+          {this.templateHook('main-sidebar')}
+        </div>}
+        {!thin && <div className="thread-panes" style={{flex: threadPanes.size + extraPanes.length}}>
           {extraPanes}
           {threadPanes.entrySeq().map(([paneId, pane], idx) => {
             var threadId = paneId.substr('thread-'.length)
             return (
-              <div key={paneId} className="chat-pane-container" style={{zIndex: threadPanes.size - idx}}>
+              <div key={paneId} className="chat-pane-container" style={{zIndex: threadPanes.size - idx}} onClickCapture={_.partial(this.onPaneClick, paneId)}>
                 <div className="top-bar">
                   <MessageText className="title" content={this.state.chat.messages.get(threadId).get('content')} />
                   <FastButton className="close" onClick={_.partial(ui.closeThreadPane, threadId)} />
@@ -250,7 +279,7 @@ module.exports = React.createClass({
               </div>
             )
           }).toArray()}
-        </div>
+        </div>}
         {!thin && <Bubble ref="threadPopup" className="thread-popup" anchorEl={this.state.ui.threadPopupAnchorEl} visible={!!this.state.ui.threadPopupAnchorEl} onDismiss={this.dismissThreadPopup} offset={() => ({ left: this.getDOMNode().getBoundingClientRect().left + 5, top: 26 })}>
           <div className="top-line">
             <FastButton className="to-pane" onClick={ui.popupToThreadPane}>new pane</FastButton>
