@@ -65,20 +65,12 @@ module.exports = function(roomName) {
       return (
         <style key="norman-style" dangerouslySetInnerHTML={{__html:`
           .norman {
-            text-align: right;
             opacity: .5;
-          }
-
-          .norman, .norman .embed {
-            transition: transform .15s ease;
+            transition: opacity .15s ease;
           }
 
           .norman:hover {
             opacity: 1;
-          }
-
-          .norman:hover .embed {
-            transform: translate(-50%, 50%) scale(2);
           }
 
           .norman p {
@@ -87,8 +79,8 @@ module.exports = function(roomName) {
           }
 
           .norman .embed {
-            width: 0;
-            height: 100px;
+            width: 100% !important;
+            height: 87px;
             border: none;
           }
         `}} />
