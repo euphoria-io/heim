@@ -255,7 +255,13 @@ var store = module.exports.store = Reflux.createStore({
       .map(paneId => this.state.panes.get(paneId))
       .filterNot(pane => pane.readOnly)
       .cacheResult()
-    var idx = focusablePanes.keySeq().indexOf(this.state.focusedPane)
+
+    var idx
+    if (this.state.focusedPane == this.state.popupPane) {
+      idx = -1
+    } else {
+      idx = focusablePanes.keySeq().indexOf(this.state.focusedPane)
+    }
     idx = clamp(-1, idx + delta, focusablePanes.size - 1)
 
     if (idx == -1) {
