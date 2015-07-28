@@ -171,6 +171,26 @@ module.exports = function(roomName) {
       }
     })
 
+    var YouTubeTV = React.createClass({
+      displayName: 'YouTubeTV',
+
+      mixins: [
+        Reflux.connect(TVStore, 'tv'),
+        React.addons.PureRenderMixin,
+      ],
+
+      render: function() {
+        // jshint camelcase: false
+        return (
+          <SyncedEmbed
+            className="youtube-tv"
+            youtubeId={this.state.tv.getIn(['video', 'youtubeId'])}
+            startedAt={this.state.tv.getIn(['video', 'time'])}
+          />
+        )
+      }
+    })
+
     var YouTubePane = React.createClass({
       displayName: 'YouTubePane',
 
@@ -187,11 +207,7 @@ module.exports = function(roomName) {
               <MessageText className="title" content={':notes: :tv: :notes: ' + this.state.tv.getIn(['video', 'title'])} />
             </div>
             <div className="aspect-wrapper">
-              <SyncedEmbed
-                className="youtube-tv"
-                youtubeId={this.state.tv.getIn(['video', 'youtubeId'])}
-                startedAt={this.state.tv.getIn(['video', 'time'])}
-              />
+              <YouTubeTV />
             </div>
             <MessageText className="notice" content={this.state.tv.getIn(['notice', 'content'])} />
           </div>
@@ -201,6 +217,10 @@ module.exports = function(roomName) {
 
     Heim.hook('thread-panes', function() {
       return <YouTubePane key="youtube-tv" />
+    })
+
+    Heim.hook('main-pane-top', function() {
+      return this.state.ui.thin ? <YouTubeTV key="youtube-tv" /> : null
     })
 
     Heim.chat.messagesChanged.listen(function(ids, state) {
@@ -282,7 +302,11 @@ module.exports = function(roomName) {
             right: 0;
             width: 100%;
             height: 100%;
+          }
+
+          .youtube-tv {
             border: none;
+            height: 100vmin;
           }
 
           .youtube-pane .notice {
