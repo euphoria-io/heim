@@ -287,7 +287,6 @@ module.exports = function(roomName) {
 
           .youtube-pane .notice {
             background: white;
-            margin-top: 15px;
             padding: 10px;
             overflow: auto;
             white-space: pre-wrap;
