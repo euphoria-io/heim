@@ -252,4 +252,9 @@ module.exports = React.createClass({
       </div>
     )
   },
+
+  componentWillUnmount: function() {
+    // FIXME: hack to work around Reflux #156.
+    this.replaceState = function() {}
+  },
 })

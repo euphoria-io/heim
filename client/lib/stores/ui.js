@@ -104,7 +104,11 @@ var store = module.exports.store = Reflux.createStore({
   },
 
   setUIWidth: function(width) {
-    this.state.thin = width < 650
+    var thin = width < 650
+    if (this.state.thin != thin) {
+      this.deselectThread()
+    }
+    this.state.thin = thin
     this.trigger(this.state)
   },
 
