@@ -281,6 +281,11 @@ func checkOrigin(r *http.Request) bool {
 		return true
 	}
 
+	// If Origin is "null", accept.
+	if origin[0] == "null" {
+		return true
+	}
+
 	// Try to parse Origin, and reject if there's an error.
 	u, err := url.Parse(origin[0])
 	if err != nil {
