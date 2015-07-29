@@ -8,7 +8,6 @@ import (
 
 	"euphoria.io/heim/backend"
 	"euphoria.io/heim/cluster"
-	"euphoria.io/heim/cluster/clustertest"
 	"euphoria.io/heim/proto"
 
 	"github.com/rubenv/sql-migrate"
@@ -17,15 +16,6 @@ import (
 var dsn = flag.String("dsn", "postgres://heimtest:heimtest@localhost/heimtest", "")
 
 func TestBackend(t *testing.T) {
-	etcd, err := clustertest.StartEtcd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if etcd == nil {
-		t.Fatal("etcd not available in PATH, can't test backend")
-	}
-	defer etcd.Shutdown()
-
 	dsn := *dsn
 	if env := os.Getenv("DSN"); env != "" {
 		// for running in CI container
@@ -62,9 +52,7 @@ func TestBackend(t *testing.T) {
 	}()
 	factory := func(heim *proto.Heim) (proto.Backend, error) {
 		if b == nil {
-			// Use a real etcd cluster.
-			// TODO: do we have to?
-			heim.Cluster = etcd.Join("/test", "testcase", "era")
+			heim.Cluster = &cluster.TestCluster{}
 			heim.PeerDesc = &cluster.PeerDesc{
 				ID:      "testcase",
 				Era:     "era",

@@ -1,10 +1,10 @@
-package cluster_test
+package etcd_test
 
 import (
 	"testing"
 
 	"euphoria.io/heim/cluster"
-	"euphoria.io/heim/cluster/clustertest"
+	"euphoria.io/heim/cluster/etcd/clustertest"
 	"euphoria.io/heim/proto/security"
 
 	. "github.com/smartystreets/goconvey/convey"

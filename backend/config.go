@@ -14,6 +14,7 @@ import (
 
 	"euphoria.io/heim/aws/kms"
 	"euphoria.io/heim/cluster"
+	"euphoria.io/heim/cluster/etcd"
 	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/emails"
 	"euphoria.io/heim/proto/security"
@@ -208,7 +209,7 @@ func (c *ClusterConfig) EtcdCluster(ctx scope.Context) (cluster.Cluster, error) 
 	if c.EtcdHost == "" {
 		return nil, fmt.Errorf("cluster: etcd-host must be specified")
 	}
-	return cluster.EtcdCluster(ctx, c.EtcdHome, c.EtcdHost, c.DescribeSelf())
+	return etcd.EtcdCluster(ctx, c.EtcdHome, c.EtcdHost, c.DescribeSelf())
 }
 
 func (c *ClusterConfig) DescribeSelf() *cluster.PeerDesc {

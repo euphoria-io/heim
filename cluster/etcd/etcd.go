@@ -1,4 +1,4 @@
-package cluster
+package etcd
 
 import (
 	"encoding/hex"
@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"euphoria.io/heim/cluster"
 	"euphoria.io/heim/proto/security"
 	"euphoria.io/scope"
 
@@ -54,14 +55,14 @@ func init() {
 	prometheus.MustRegister(peerWatchErrors)
 }
 
-func EtcdCluster(ctx scope.Context, root, addr string, desc *PeerDesc) (Cluster, error) {
+func EtcdCluster(ctx scope.Context, root, addr string, desc *cluster.PeerDesc) (cluster.Cluster, error) {
 	fmt.Printf("connecting to %#v\n", addr)
 	e := &etcdCluster{
 		root:  strings.TrimRight(root, "/") + "/",
 		c:     etcd.NewClient([]string{addr}),
-		ch:    make(chan PeerEvent),
+		ch:    make(chan cluster.PeerEvent),
 		stop:  make(chan bool),
-		peers: map[string]PeerDesc{},
+		peers: map[string]cluster.PeerDesc{},
 		ctx:   ctx,
 	}
 	idx, err := e.init()
@@ -83,9 +84,9 @@ type etcdCluster struct {
 	c     *etcd.Client
 	root  string
 	me    string
-	ch    chan PeerEvent
+	ch    chan cluster.PeerEvent
 	stop  chan bool
-	peers map[string]PeerDesc
+	peers map[string]cluster.PeerDesc
 	ctx   scope.Context
 }
 
@@ -112,7 +113,7 @@ func (e *etcdCluster) init() (uint64, error) {
 
 	latestIndex := uint64(0)
 	for _, child := range node.Nodes {
-		var desc PeerDesc
+		var desc cluster.PeerDesc
 		if err := json.Unmarshal([]byte(child.Value), &desc); err != nil {
 			return 0, fmt.Errorf("cluster error: init: bad node %s: %s\n", child.Key, err)
 		}
@@ -140,7 +141,7 @@ func (e *etcdCluster) GetDir(key string) (map[string]string, error) {
 	resp, err := e.c.Get(prefix, false, false)
 	if err != nil {
 		if etcdErr, ok := err.(*etcd.EtcdError); ok && etcdErr.ErrorCode == 100 {
-			return nil, ErrNotFound
+			return nil, cluster.ErrNotFound
 		}
 		return nil, err
 	}
@@ -154,7 +155,7 @@ func (e *etcdCluster) GetValue(key string) (string, error) {
 	resp, err := e.c.Get(e.key("%s", key), false, false)
 	if err != nil {
 		if etcdErr, ok := err.(*etcd.EtcdError); ok && etcdErr.ErrorCode == 100 {
-			return "", ErrNotFound
+			return "", cluster.ErrNotFound
 		}
 		return "", err
 	}
@@ -169,10 +170,10 @@ func (e *etcdCluster) SetValue(key, value string) error {
 	return nil
 }
 
-func (e *etcdCluster) Peers() []PeerDesc {
+func (e *etcdCluster) Peers() []cluster.PeerDesc {
 	e.m.RLock()
 	defer e.m.RUnlock()
-	peers := make(PeerList, 0, len(e.peers))
+	peers := make(cluster.PeerList, 0, len(e.peers))
 	for _, desc := range e.peers {
 		peers = append(peers, desc)
 	}
@@ -180,21 +181,21 @@ func (e *etcdCluster) Peers() []PeerDesc {
 	return peers
 }
 
-func (e *etcdCluster) Update(desc *PeerDesc) error {
+func (e *etcdCluster) Update(desc *cluster.PeerDesc) error {
 	if _, err := e.update(desc); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (e *etcdCluster) update(desc *PeerDesc) (uint64, error) {
+func (e *etcdCluster) update(desc *cluster.PeerDesc) (uint64, error) {
 	valueBytes, err := json.Marshal(desc)
 	if err != nil {
 		return 0, err
 	}
 	fmt.Printf("writing %s to %s\n", string(valueBytes), desc.ID)
 	e.me = e.key("/peers/%s", desc.ID)
-	resp, err := e.c.Set(e.me, string(valueBytes), uint64(TTL/time.Second))
+	resp, err := e.c.Set(e.me, string(valueBytes), uint64(cluster.TTL/time.Second))
 	if err != nil {
 		return 0, fmt.Errorf("set on %s: %s", e.me, err)
 	}
@@ -210,7 +211,7 @@ func (e *etcdCluster) Part() {
 	e.c.Delete(e.me, false)
 }
 
-func (e *etcdCluster) Watch() <-chan PeerEvent { return e.ch }
+func (e *etcdCluster) Watch() <-chan cluster.PeerEvent { return e.ch }
 
 func (e *etcdCluster) watch(waitIndex uint64) {
 	defer close(e.ch)
@@ -249,7 +250,7 @@ func (e *etcdCluster) watch(waitIndex uint64) {
 
 		switch resp.Action {
 		case "set":
-			var desc PeerDesc
+			var desc cluster.PeerDesc
 			if err := json.Unmarshal([]byte(resp.Node.Value), &desc); err != nil {
 				fmt.Printf("cluster error: set: %s\n", err)
 				peerWatchErrors.Inc()
@@ -263,10 +264,10 @@ func (e *etcdCluster) watch(waitIndex uint64) {
 				if prev.Era != desc.Era {
 					fmt.Printf("peer watch: update %s\n", desc.ID)
 				}
-				e.ch <- &PeerAliveEvent{desc}
+				e.ch <- &cluster.PeerAliveEvent{desc}
 			} else {
 				fmt.Printf("peer watch: set %s\n", desc.ID)
-				e.ch <- &PeerJoinedEvent{desc}
+				e.ch <- &cluster.PeerJoinedEvent{desc}
 			}
 			peerEvents.Inc()
 		case "expire", "delete":
@@ -274,7 +275,7 @@ func (e *etcdCluster) watch(waitIndex uint64) {
 			e.m.Lock()
 			delete(e.peers, peerID)
 			e.m.Unlock()
-			e.ch <- &PeerLostEvent{PeerDesc{ID: peerID}}
+			e.ch <- &cluster.PeerLostEvent{cluster.PeerDesc{ID: peerID}}
 			peerEvents.Inc()
 		default:
 			fmt.Printf("peer watch: ignoring watch event: %v\n", resp)
