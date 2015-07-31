@@ -62,6 +62,8 @@ function render() {
       var w = frozenCanvas.width = img.naturalWidth
       var h = frozenCanvas.height = img.naturalHeight
       frozenCanvas.getContext('2d').drawImage(img, 0, 0, w, h)
+      frozenCanvas.style.width = img.style.width
+      frozenCanvas.style.height = img.style.height
       document.body.appendChild(frozenCanvas)
       document.body.classList.add('frozen')
     }
