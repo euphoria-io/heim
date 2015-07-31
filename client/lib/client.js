@@ -79,6 +79,7 @@ if (!window.frameElement) {
   require('setimmediate')
 
   var isTextInput = require('./is-text-input')
+  var BatchTransition = require('./batch-transition')
 
   Heim = {
     addEventListener: evs.addEventListener.bind(evs),
@@ -88,6 +89,8 @@ if (!window.frameElement) {
 
     setFavicon: function(favicon) { Heim._favicon = favicon },
     setTitleMsg: function(msg) { Heim._titleMsg = msg },
+
+    transition: new BatchTransition(),
 
     // http://stackoverflow.com/a/6447935
     isTouch: 'ontouchstart' in window,

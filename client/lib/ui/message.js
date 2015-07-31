@@ -13,6 +13,10 @@ var LiveTimeAgo = require('./live-time-ago')
 var KeyboardActionHandler = require('./keyboard-action-handler')
 
 
+var linearEasing = t => t
+var snapEasing = t => (Math.pow(2 * t - 1.071, 17) + t) / 4.5 + 0.714
+var colorShouldStep = (x, last) => x - last > 0.01
+
 var Message = module.exports = React.createClass({
   displayName: 'Message',
 
@@ -73,10 +77,11 @@ var Message = module.exports = React.createClass({
     var repliesInOtherPane = messagePane && messagePane != this.props.pane.id
     var seen = message.get('_seen')
 
+    this._sinceNew = Date.now() - time < Message.newFadeDuration
     var messageClasses = {
       'mention': message.get('_mention'),
       'unseen': !seen,
-      'new': Date.now() - time < Message.newFadeDuration,
+      'new': this._sinceNew,
     }
 
     var lineClasses = {
@@ -292,10 +297,66 @@ var Message = module.exports = React.createClass({
   },
 
   componentDidMount: function() {
+    var node = this.getDOMNode()
+
+    if (node.classList.contains('new') && this._sinceNew < Message.newFadeDuration) {
+      var lineEl = node.querySelector('.line')
+      Heim.transition.add({
+        startOffset: -this._sinceNew,
+        step: x => {
+          if (x < 1) {
+            lineEl.style.background = 'rgba(0, 128, 0, ' + (1 - x) * 0.075 + ')'
+          } else {
+            lineEl.style.background = ''
+          }
+        },
+        shouldStep: colorShouldStep,
+        ease: linearEasing,
+        duration: 60 * 1000,
+        fps: 10,
+      })
+    }
+
     this.afterRender()
   },
 
-  componentDidUpdate: function() {
+  componentDidUpdate: function(prevProps, prevState) {
+    if (this.state.node.get('_seen') && !prevState.node.get('_seen')) {
+      var node = this.getDOMNode()
+
+      var lineEl = node.querySelector('.line')
+      Heim.transition.add({
+        step: x => {
+          if (x < 1) {
+            lineEl.style.borderLeftColor = 'rgba(0, 128, 0, ' + (1 - x) * 0.75 + ')'
+          } else {
+            lineEl.style.borderLeftColor = ''
+          }
+        },
+        shouldStep: colorShouldStep,
+        ease: snapEasing,
+        duration: 15 * 1000,
+        fps: 30,
+      })
+
+      if (this.props.showTimeStamps) {
+        var timestampEl = node.querySelector('.timestamp')
+        Heim.transition.add({
+          step: x => {
+            if (x < 1) {
+              timestampEl.style.color = 'rgb(170, ' + Math.round(170 + (241 - 170) * (1 - x)) + ', 170)'
+            } else {
+              timestampEl.style.color = ''
+            }
+          },
+          shouldStep: colorShouldStep,
+          ease: snapEasing,
+          duration: 60 * 1000,
+          fps: 30,
+        })
+      }
+    }
+
     this.afterRender()
   },
 
@@ -304,23 +365,6 @@ var Message = module.exports = React.createClass({
       var msgNode = this.refs.message.getDOMNode()
       if (msgNode.getBoundingClientRect().height > 200) {
         this.setState({contentTall: true})
-      }
-    }
-
-    var node = this.getDOMNode()
-
-    // reflow the node to force the transition to start -- it seems possible
-    // for the transition to not take effect when an emote replies to a
-    // top-level emote. (!?)
-    _.identity(node.offsetHeight)
-
-    var sinceNew = Date.now() - this.state.node.get('time') * 1000
-    if (node.classList.contains('new') && sinceNew < Message.newFadeDuration) {
-      node.classList.add('fading')
-      var transitionAdvance = -Math.floor(sinceNew / 1000) + 's, 0'
-      node.querySelector('.line').style.transitionDelay = transitionAdvance
-      if (this.props.showTimeStamps) {
-        node.querySelector('.timestamp').style.transitionDelay = transitionAdvance
       }
     }
 
