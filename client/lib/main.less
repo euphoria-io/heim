@@ -928,23 +928,6 @@ iframe.js {
       border-left: @width solid transparent;
       margin-left: -@messages-padding + @inset;
       padding-left: @messages-padding - @width - @inset;
-      transition: background 60s linear, border-color 15s @seen-fade;
-    }
-
-    & > .timestamp {
-      transition: color 60s @seen-fade;
-    }
-
-    &.new {
-      & > .line {
-        background: fade(green, 7.5%);
-      }
-
-      &.fading {
-        & > .line {
-          background: transparent;
-        }
-      }
     }
 
     &.unseen {
