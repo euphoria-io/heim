@@ -56,6 +56,7 @@ function render() {
 
     img.onload = function() {
       sendImageSize()
+      document.body.classList.add('loaded')
 
       // inspired by http://stackoverflow.com/a/4276742
       var frozenCanvas = document.createElement('canvas')
