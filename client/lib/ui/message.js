@@ -57,19 +57,26 @@ var Message = module.exports = React.createClass({
     var messageEmbeds
     var embeds = []
     content = content.replace(/(?:https?:\/\/)?(?:www\.|i\.|m\.)?imgur\.com\/(\w+)(\.\w+)?(\S*)/g, (match, id, ext, rest, offset, string) => {
+      // jshint camelcase: false
       if (rest) {
         return string
       }
       embeds.push({
         link: '//imgur.com/' + id,
-        img: '//i.imgur.com/' + id + (ext || '.jpg'),
+        props: {
+          kind: 'imgur',
+          imgur_id: id,
+        },
       })
       return ''
     })
     content = content.replace(/(?:https?:\/\/)?(imgs\.xkcd\.com\/comics\/.*\.(?:png|jpg)|i\.ytimg\.com\/.*\.jpg)/g, (match, imgUrl) => {
       embeds.push({
         link: '//' + imgUrl,
-        img: '//' + imgUrl,
+        props: {
+          kind: 'img',
+          url: '//' + imgUrl,
+        },
       })
       return ''
     })
@@ -77,7 +84,7 @@ var Message = module.exports = React.createClass({
       messageEmbeds = (
         <div className="embeds">{_.map(embeds, (embed, idx) =>
           <a key={idx} href={embed.link} target="_blank" onMouseEnter={() => this.unfreezeEmbed(idx)} onMouseLeave={() => this.freezeEmbed(idx)}>
-            <Embed ref={'embed' + idx} kind="img" url={embed.img} />
+            <Embed ref={'embed' + idx} {...embed.props} />
           </a>
         )}</div>
       )

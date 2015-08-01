@@ -8,11 +8,7 @@
     html, body, iframe { width: 100%; height: 100% }
     iframe { border: none }
     img, canvas { height: 100% }
-    body > canvas { display: none }
-    body.loaded.frozen > canvas { display: block; position: absolute; left: 0; top: 0; z-index: 10 }
-    body.loaded.frozen > img { display: none }
-    body.loaded.frozen:hover > canvas { display: none }
-    body.loaded.frozen:hover > img { display: block }
+    .cover { display: block; position: absolute; left: 0; top: 0; z-index: 10 }
   </style>
 </head>
 <body>
