@@ -48,10 +48,11 @@ module.exports = function(roomName) {
 
   if (roomName == 'space') {
     Heim.hook('sidebar-bottom', function() {
+      // jshint camelcase: false
       return (
         <div key="norman" className="norman">
           <p>norman</p>
-          <Embed kind="img" url="//i.imgur.com/UKbitCO.jpg" />
+          <Embed kind="imgur" imgur_id="UKbitCO" />
         </div>
       )
     })
