@@ -89,8 +89,6 @@ var Message = module.exports = React.createClass({
       'expanded': contentExpanded,
     }
 
-    var content = message.get('content').trim()
-
     var pane = this.props.pane
     var messageReplies
     var messageIndentedReplies
@@ -201,6 +199,7 @@ var Message = module.exports = React.createClass({
       }
     }
 
+    var content = message.get('content')
     var embeds = []
     content = content.replace(/(?:https?:\/\/)?(?:www\.|i\.|m\.)?imgur\.com\/(\w+)(\.\w+)?(\S*)/g, (match, id, ext, rest, offset, string) => {
       // jshint camelcase: false
@@ -226,14 +225,15 @@ var Message = module.exports = React.createClass({
       })
       return ''
     })
+    content = _.trim(content)
 
     var messageAgo = (this.props.showTimeAgo || children.size >= 3) && <LiveTimeAgo className="ago" time={time} />
 
     var messageRender
-    if (!_.trim(content)) {
+    if (!content) {
       messageRender = null
     } else if (/^\/me/.test(content) && content.length < 240) {
-      content = content.replace(/^\/me ?/, '')
+      content = _.trim(content.replace(/^\/me ?/, ''))
       messageRender = (
         <div className="message">
           <MessageText content={content} className="message-emote" style={{background: 'hsl(' + message.getIn(['sender', 'hue']) + ', 65%, 95%)'}} />
