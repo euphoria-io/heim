@@ -14,7 +14,7 @@ var KeyboardActionHandler = require('./keyboard-action-handler')
 
 
 var linearEasing = t => t
-var snapEasing = t => (Math.pow(2 * t - 1.071, 17) + t) / 4.5 + 0.714
+var snapEasing = t => (Math.pow(2.02 * t - 1.0303, 17) + t) / 3.5 + 0.475
 var colorShouldStep = (x, last) => x - last > 0.01
 
 var Message = module.exports = React.createClass({
