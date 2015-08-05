@@ -974,6 +974,10 @@ iframe.js {
       z-index: 100;
     }
 
+    .inner {
+      width: 100%;
+    }
+
     .inner:before, .inner * {
       flex-shrink: 0;
     }
@@ -991,6 +995,16 @@ iframe.js {
       white-space: nowrap;
       filter: grayscale(100%);
       opacity: .5;
+    }
+
+    .spacer {
+      display: flex;
+      flex: 1;
+      justify-content: flex-end;
+    }
+
+    .drag-handle {
+      margin-right: 2px;
     }
   }
 
@@ -1390,6 +1404,12 @@ iframe.js {
     .nick-box {
       padding-right: @nick-spacing;
     }
+
+    .drag-handle {
+      align-self: flex-start;
+      margin-right: 8px;
+      margin-top: 7px;
+    }
   }
 
   .replies .entry {
@@ -1405,6 +1425,10 @@ iframe.js {
       height: 32px;
       padding-top: 7px;
       padding-bottom: 7px;
+    }
+
+    .drag-handle {
+      margin-top: 6px;
     }
   }
 
@@ -1433,6 +1457,21 @@ iframe.js {
     input.nick {
       box-shadow: none;
     }
+  }
+
+  .drag-handle {
+    width: 15px;
+    height: 15px;
+    padding: 3px;
+    box-sizing: content-box;
+    .icon('../res/move-entry.svg', 15px, 0, .6);
+    .touchable-bg(#fff);
+    box-shadow: 0 0 2px fade(black, 50%);
+    cursor: move;
+  }
+
+  &.entry-dragging .drag-handle {
+    background: darken(desaturate(#fff, 15%), 25%);
   }
 }
 

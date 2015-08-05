@@ -204,6 +204,7 @@ module.exports = React.createClass({
           </div>
           <textarea key="msg" ref="input" className="entry-text" onChange={this.onChange} onKeyDown={this.saveEntryState} onClick={this.saveEntryState} />
           <textarea key="measure" ref="measure" className="measure" />
+          <button className="drag-handle" />
         </form>
       </KeyboardActionHandler>
     )

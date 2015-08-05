@@ -16,6 +16,26 @@ var NickEntry = require('./nick-entry')
 var PasscodeEntry = require('./passcode-entry')
 
 
+var SCROLL_EDGE_SPACE = 156
+
+function boxMiddle(el) {
+  if (_.isNumber(el)) {
+    return el
+  }
+  var box = el.getBoundingClientRect()
+  return box.top + box.height / 2
+}
+
+function closestIdx(array, value, iterator) {
+  var idx = _.sortedIndex(array, value, iterator)
+  // reminder: sortedIndex can return an index after the last index if
+  // the element belongs at the end of the array.
+  if (idx > 0 && idx < array.length && value - iterator(array[idx - 1]) < iterator(array[idx]) - value) {
+    idx--
+  }
+  return idx
+}
+
 module.exports = React.createClass({
   displayName: 'ChatPane',
 
@@ -33,6 +53,9 @@ module.exports = React.createClass({
   ],
 
   componentWillMount: function() {
+    this._dragMatch = null
+    this._dragY = null
+    this._dragInterval = null
     this._markSeen = _.debounce(this.markSeen, 250)
   },
 
@@ -58,6 +81,15 @@ module.exports = React.createClass({
 
   getInitialState: function() {
     return {pane: this.props.pane.store.getInitialState()}
+  },
+
+  componentDidUpdate: function() {
+    if (this.state.pane.draggingEntry && !this._dragInterval) {
+      this._dragInterval = setInterval(this.onDragUpdate, 1000 / 10)
+    } else if (!this.state.pane.draggingEntry && this._dragInterval) {
+      clearInterval(this.onDragUpdate)
+      this._dragInterval = null
+    }
   },
 
   onActive: function() {
@@ -204,6 +236,87 @@ module.exports = React.createClass({
     })
   },
 
+  // since the entry buttons are transient within the context of changing the
+  // entry focus, we'll handle the dragging events and state where they bubble
+  // up here.
+
+  onMessageMouseDown: function(ev) {
+    if (ev.button === 0 && ev.target.classList.contains('drag-handle')) {
+      this._dragMatch = {button: ev.button}
+      this.props.pane.startEntryDrag()
+    }
+  },
+
+  onMessageMouseUp: function(ev) {
+    if (_.isMatch(ev, this._dragMatch)) {
+      this._dragMatch = null
+      this._dragY = null
+      this.props.pane.finishEntryDrag()
+      this.props.pane.focusEntry()
+    }
+  },
+
+  onMessageMouseMove: function(ev) {
+    this._dragY = ev.clientY
+    this.onMessageMouseUp(ev)
+  },
+
+  onDragUpdate: function() {
+    if (this._dragY) {
+      this.focusMessageFromPos(this._dragY)
+    }
+  },
+
+  focusMessageFromPos: function(yPos) {
+    var node = this.getDOMNode()
+    var anchors = node.querySelectorAll('.focus-anchor, .focus-target')
+
+    var messagesEl = this.refs.messages.getDOMNode()
+    var endPos = messagesEl.getBoundingClientRect().bottom
+    anchors = _.toArray(anchors)
+    anchors.push(endPos)
+
+    var idx = closestIdx(anchors, yPos, boxMiddle)
+
+    if (idx >= anchors.length - 1) {
+      this.props.pane.focusMessage(null)
+      return
+    }
+
+    // weight the current position towards nearby focus anchors
+    var totalPos = yPos
+    var count = 1
+    for (var i = -3; i <= 3; i++) {
+      var a = anchors[idx + i]
+      if (!a) {
+        continue
+      }
+
+      var pos = boxMiddle(a)
+      var factor = 2 - Math.pow(Math.abs(yPos - pos) / 40, 2)
+      if (factor > 0) {
+        totalPos += pos * factor
+        count += factor
+      }
+    }
+
+    var weighted = totalPos / count
+    idx = closestIdx(anchors, weighted, boxMiddle)
+
+    var choiceId = anchors[idx].dataset.messageId
+    // check if already focused, force scroll if necessary
+    if (!choiceId || choiceId == this.state.pane.focusedMessage) {
+      var scrollPos = this.refs.scroller.getPosition()
+      if (yPos < SCROLL_EDGE_SPACE && scrollPos > 0) {
+        this.moveMessageFocus('up')
+      } else if (yPos >= node.getBoundingClientRect().bottom - SCROLL_EDGE_SPACE && scrollPos < 1) {
+        this.moveMessageFocus('down')
+      }
+    } else {
+      this.props.pane.focusMessage(choiceId)
+    }
+  },
+
   onClick: function(ev) {
     if (!uiwindow.getSelection().isCollapsed || ev.target.nodeName == 'BUTTON' || ev.target.nodeName == 'A') {
       return
@@ -235,7 +348,7 @@ module.exports = React.createClass({
         <Scroller
           ref="scroller"
           target=".focus-target"
-          edgeSpace={156}
+          edgeSpace={SCROLL_EDGE_SPACE}
           className="messages-container"
           onScrollbarSize={this.props.onScrollbarSize}
           onResize={this.onResize}
@@ -243,7 +356,7 @@ module.exports = React.createClass({
           onNearTop={this.state.pane.rootId == '__root' && actions.loadMoreLogs}
         >
           <div className="messages-content">
-            <div className={classNames('messages', {'entry-focus': entryFocus})}>
+            <div ref="messages" className={classNames('messages', {'entry-focus': entryFocus, 'entry-dragging': this.state.pane.draggingEntry})} onMouseDown={this.onMessageMouseDown} onMouseUp={this.onMessageMouseUp} onMouseMove={this.state.pane.draggingEntry && this.onMessageMouseMove}>
               <MessageComponent key={this.state.pane.rootId} pane={this.props.pane} tree={this.state.chat.messages} nodeId={this.state.pane.rootId} showTimeStamps={this.props.showTimeStamps} showAllReplies={this.props.showAllReplies} roomSettings={this.state.chat.roomSettings} />
               {this.state.pane.rootId == '__root' && entry}
             </div>

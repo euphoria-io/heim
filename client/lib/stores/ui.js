@@ -388,6 +388,8 @@ function createPaneStore(paneId, createOptions) {
     'afterMessagesRendered',
     'setMessageData',
     'setEntryText',
+    'startEntryDrag',
+    'finishEntryDrag',
     'keydownOnPane',
     'openFocusedMessageInPane',
   ])
@@ -425,6 +427,7 @@ function createPaneStore(paneId, createOptions) {
         entryText: '',
         entrySelectionStart: null,
         entrySelectionEnd: null,
+        draggingEntry: false,
         messageData: {},
       }
 
@@ -541,6 +544,16 @@ function createPaneStore(paneId, createOptions) {
       this.state.entrySelectionEnd = selectionEnd
       // Note: no need to trigger here as nothing updates from this; this data is
       // used to persist entry state across focus changes.
+    },
+
+    startEntryDrag: function() {
+      this.state.draggingEntry = true
+      this.trigger(this.state)
+    },
+
+    finishEntryDrag: function() {
+      this.state.draggingEntry = false
+      this.trigger(this.state)
     },
 
     openFocusedMessageInPane: function() {
