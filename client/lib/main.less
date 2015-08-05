@@ -1333,7 +1333,7 @@ iframe.js {
     // work around weird webkit trailing text render glitch.
     -webkit-transform: translate3d(0, 0, 0);
 
-    & > * {
+    .nick-box, .entry-text, .measure, label {
       height: @entry-height;
       padding: 8px 10px;
       box-sizing: border-box;
@@ -1346,14 +1346,11 @@ iframe.js {
       resize: none;
     }
 
-    textarea {
-      overflow-y: hidden;
-    }
-
-    & > input, & > textarea, & > button {
+    .entry-text {
       background: none;
       padding-left: 0;
       padding-right: 10px;
+      overflow-y: hidden;
     }
 
     label {
@@ -1404,7 +1401,7 @@ iframe.js {
       padding-right: @nick-spacing;
     }
 
-    & > * {
+    .nick-box, .entry-text, .measure {
       height: 32px;
       padding-top: 7px;
       padding-bottom: 7px;

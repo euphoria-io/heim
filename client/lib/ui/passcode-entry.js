@@ -64,7 +64,7 @@ module.exports = React.createClass({
               : this.state.authState == 'failed' ? 'no dice. try again:'
                 : 'passcode:'
           }</label>
-          <input key="passcode" ref="input" type="password" autoFocus valueLink={this.linkState('value')} disabled={this.state.connected === false} />
+          <input key="passcode" ref="input" type="password" className="entry-text" autoFocus valueLink={this.linkState('value')} disabled={this.state.connected === false} />
         </form>
       </div>
     )

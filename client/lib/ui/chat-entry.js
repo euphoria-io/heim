@@ -202,7 +202,7 @@ module.exports = React.createClass({
               <span className="nick">{nick}</span>
             </div>
           </div>
-          <textarea key="msg" ref="input" onChange={this.onChange} onKeyDown={this.saveEntryState} onClick={this.saveEntryState} />
+          <textarea key="msg" ref="input" className="entry-text" onChange={this.onChange} onKeyDown={this.saveEntryState} onClick={this.saveEntryState} />
           <textarea key="measure" ref="measure" className="measure" />
         </form>
       </KeyboardActionHandler>

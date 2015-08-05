@@ -40,7 +40,7 @@ module.exports = React.createClass({
         </div>
         <form className="entry" onSubmit={this.setNick}>
           <label>choose your name to begin:</label>
-          <input key="nick" ref="input" type="text" autoFocus valueLink={this.linkState('value')} disabled={this.state.chat.connected === false} />
+          <input key="nick" ref="input" type="text" className="entry-text" autoFocus valueLink={this.linkState('value')} disabled={this.state.chat.connected === false} />
         </form>
       </div>
     )
