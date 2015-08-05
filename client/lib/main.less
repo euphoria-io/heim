@@ -94,7 +94,7 @@ a {
   }
 }
 
-.icon(@url, @size, @right-spacing: 0) {
+.icon(@url, @size, @right-spacing: 0, @opacity: 1) {
   &:before {
     flex-shrink: 0;
     display: inline-block;
@@ -104,6 +104,7 @@ a {
     margin-right: @right-spacing;
     background: data-uri(@url) no-repeat center center;
     background-size: contain;
+    opacity: @opacity;
   }
 }
 
@@ -112,11 +113,7 @@ a {
     display: flex;
     align-items: center;
     white-space: pre;
-    .icon(@url, @size, @spacing);
-
-    &:before {
-      opacity: @opacity;
-    }
+    .icon(@url, @size, @spacing, @opacity);
   }
 }
 
