@@ -16,6 +16,22 @@ var NickEntry = require('./nick-entry')
 var PasscodeEntry = require('./passcode-entry')
 
 
+function boxMiddle(el) {
+  if (_.isNumber(el)) {
+    return el
+  }
+  var box = el.getBoundingClientRect()
+  return box.top + box.height / 2
+}
+
+function closestIdx(array, value, iterator) {
+  var idx = _.sortedIndex(array, value, iterator)
+  if (idx > 0 && value - iterator(array[idx - 1]) < iterator(array[idx]) - value) {
+    idx--
+  }
+  return idx
+}
+
 module.exports = React.createClass({
   displayName: 'ChatPane',
 
@@ -204,6 +220,48 @@ module.exports = React.createClass({
     })
   },
 
+  onMessageOver: function(ev) {
+    var node = this.getDOMNode()
+    var anchors = node.querySelectorAll('.focus-anchor, .focus-target')
+
+    var messagesEl = this.refs.messages.getDOMNode()
+    var endPos = messagesEl.getBoundingClientRect().bottom
+    anchors = _.toArray(anchors)
+    anchors.push(endPos)
+
+    var yPos = ev.clientY
+    var idx = closestIdx(anchors, yPos, boxMiddle)
+
+    var totalPos = yPos
+    var count = 1
+    for (i = -3; i <= 3; i++) {
+      var a = anchors[idx + i]
+      if (!a) {
+        continue
+      }
+
+      var pos = boxMiddle(a)
+      var factor = 2 - Math.pow(Math.abs(yPos - pos) / 40, 2)
+      if (factor > 0) {
+        totalPos += pos * factor
+        count += factor
+      }
+    }
+
+    var weighted = totalPos / count
+    var idx = closestIdx(anchors, weighted, boxMiddle)
+
+    if (idx == anchors.length - 1) {
+      this.props.pane.focusMessage(null)
+      return
+    }
+
+    var choice = anchors[idx]
+    if (choice && !choice.classList.contains('focus-target')) {
+      this.props.pane.focusMessage(choice.dataset.messageId)
+    }
+  },
+
   onClick: function(ev) {
     if (!uiwindow.getSelection().isCollapsed || ev.target.nodeName == 'BUTTON' || ev.target.nodeName == 'A') {
       return
@@ -243,7 +301,7 @@ module.exports = React.createClass({
           onNearTop={this.state.pane.rootId == '__root' && actions.loadMoreLogs}
         >
           <div className="messages-content">
-            <div className={classNames('messages', {'entry-focus': entryFocus})}>
+            <div ref="messages" className={classNames('messages', {'entry-focus': entryFocus})} onMouseMove={this.onMessageOver}>
               <MessageComponent key={this.state.pane.rootId} pane={this.props.pane} tree={this.state.chat.messages} nodeId={this.state.pane.rootId} showTimeStamps={this.props.showTimeStamps} showAllReplies={this.props.showAllReplies} roomSettings={this.state.chat.roomSettings} />
               {this.state.pane.rootId == '__root' && entry}
             </div>
