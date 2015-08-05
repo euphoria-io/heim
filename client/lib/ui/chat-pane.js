@@ -46,6 +46,8 @@ module.exports = React.createClass({
     Reflux.connect(activity.store, 'activity'),
     Reflux.listenTo(chat.logsReceived, 'scrollUpdatePosition'),
     Reflux.listenTo(activity.becameActive, 'onActive'),
+    Reflux.listenTo(ui.globalMouseUp, 'onMessageMouseUp'),
+    Reflux.listenTo(ui.globalMouseMove, 'onMessageMouseMove'),
 
     // when a new pane is added, all of the other panes get squished and
     // need to update their scroll position
@@ -248,6 +250,9 @@ module.exports = React.createClass({
   },
 
   onMessageMouseUp: function(ev) {
+    if (!this.state.pane.draggingEntry) {
+      return
+    }
     if (_.isMatch(ev, this._dragMatch)) {
       this._dragMatch = null
       this._dragY = null
@@ -257,8 +262,10 @@ module.exports = React.createClass({
   },
 
   onMessageMouseMove: function(ev) {
+    if (!this.state.pane.draggingEntry) {
+      return
+    }
     this._dragY = ev.clientY
-    this.onMessageMouseUp(ev)
   },
 
   onDragUpdate: function() {
@@ -356,7 +363,7 @@ module.exports = React.createClass({
           onNearTop={this.state.pane.rootId == '__root' && actions.loadMoreLogs}
         >
           <div className="messages-content">
-            <div ref="messages" className={classNames('messages', {'entry-focus': entryFocus, 'entry-dragging': this.state.pane.draggingEntry})} onMouseDown={this.onMessageMouseDown} onMouseUp={this.onMessageMouseUp} onMouseMove={this.state.pane.draggingEntry && this.onMessageMouseMove}>
+            <div ref="messages" className={classNames('messages', {'entry-focus': entryFocus, 'entry-dragging': this.state.pane.draggingEntry})} onMouseDown={this.onMessageMouseDown}>
               <MessageComponent key={this.state.pane.rootId} pane={this.props.pane} tree={this.state.chat.messages} nodeId={this.state.pane.rootId} showTimeStamps={this.props.showTimeStamps} showAllReplies={this.props.showAllReplies} roomSettings={this.state.chat.roomSettings} />
               {this.state.pane.rootId == '__root' && entry}
             </div>

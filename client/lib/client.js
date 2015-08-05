@@ -240,6 +240,15 @@ if (!window.frameElement) {
       }
     })
 
+    // helpers for catching those pesky mouse-escaped-window-and-released cases
+    Heim.addEventListener(uiwindow, 'mouseup', function(ev) {
+      Heim.ui.globalMouseUp(ev)
+    }, false)
+
+    Heim.addEventListener(uiwindow, 'mousemove', function(ev) {
+      Heim.ui.globalMouseMove(ev)
+    }, false)
+
     if (Heim.isTouch) {
       React.initializeTouchEvents()
       uidocument.body.classList.add('touch')

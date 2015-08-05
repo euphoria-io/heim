@@ -34,6 +34,8 @@ var storeActions = module.exports.actions = Reflux.createActions([
   'closeFocusedThreadPane',
   'gotoMessageInPane',
   'gotoPopupMessage',
+  'globalMouseUp',
+  'globalMouseMove',
 ])
 _.extend(module.exports, storeActions)
 
