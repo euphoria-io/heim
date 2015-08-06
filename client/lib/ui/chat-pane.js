@@ -16,8 +16,6 @@ var NickEntry = require('./nick-entry')
 var PasscodeEntry = require('./passcode-entry')
 
 
-var SCROLL_EDGE_SPACE = 156
-
 function boxMiddle(el) {
   if (_.isNumber(el)) {
     return el
@@ -362,9 +360,10 @@ module.exports = React.createClass({
     // check if already focused, force scroll if necessary
     if (!choiceId || choiceId == this.state.pane.focusedMessage) {
       var scrollPos = this.refs.scroller.getPosition()
-      if (yPos < SCROLL_EDGE_SPACE && scrollPos > 0) {
+      var scrollEdgeSpace = this.state.ui.scrollEdgeSpace
+      if (yPos < scrollEdgeSpace && scrollPos > 0) {
         this.moveMessageFocus('up', {focusEntry: false})
-      } else if (yPos >= node.getBoundingClientRect().bottom - SCROLL_EDGE_SPACE && scrollPos < 1) {
+      } else if (yPos >= node.getBoundingClientRect().bottom - scrollEdgeSpace && scrollPos < 1) {
         this.moveMessageFocus('down', {focusEntry: false})
       }
     } else {
@@ -414,7 +413,7 @@ module.exports = React.createClass({
         <Scroller
           ref="scroller"
           target=".focus-target"
-          edgeSpace={SCROLL_EDGE_SPACE}
+          edgeSpace={this.state.ui.scrollEdgeSpace}
           className="messages-container"
           onScrollbarSize={this.props.onScrollbarSize}
           onResize={this.onResize}

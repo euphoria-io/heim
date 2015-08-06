@@ -13,7 +13,7 @@ var MessageData = require('../message-data')
 
 var storeActions = module.exports.actions = Reflux.createActions([
   'keydownOnPage',
-  'setUIWidth',
+  'setUISize',
   'focusEntry',
   'focusPane',
   'focusLeftPane',
@@ -43,7 +43,7 @@ _.extend(module.exports, storeActions)
 storeActions.keydownOnPage.sync = true
 
 // sync so UI mode changes don't flicker on load
-storeActions.setUIWidth.sync = true
+storeActions.setUISize.sync = true
 
 // sync so that UI pans start animating immediately
 storeActions.panViewTo.sync = true
@@ -63,6 +63,7 @@ var store = module.exports.store = Reflux.createStore({
   init: function() {
     this.state = {
       thin: false,
+      scrollEdgeSpace: 156,
       focusedPane: 'main',
       panes: Immutable.Map({
         main: createPaneStore('main'),
@@ -105,12 +106,13 @@ var store = module.exports.store = Reflux.createStore({
     this.notificationState = state
   },
 
-  setUIWidth: function(width) {
+  setUISize: function(width, height) {
     var thin = width < 650
     if (this.state.thin != thin) {
       this.deselectThread()
     }
     this.state.thin = thin
+    this.state.scrollEdgeSpace = height < 650 ? 50 : 156
     this.trigger(this.state)
   },
 

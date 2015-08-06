@@ -48,7 +48,7 @@ module.exports = React.createClass({
   },
 
   onResize: function() {
-    ui.setUIWidth(uiwindow.innerWidth)
+    ui.setUISize(uiwindow.innerWidth, uiwindow.innerHeight)
   },
 
   onScrollbarSize: function(width) {
