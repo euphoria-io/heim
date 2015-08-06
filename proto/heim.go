@@ -8,18 +8,19 @@ import (
 	"encoding/hex"
 
 	"euphoria.io/heim/cluster"
-	"euphoria.io/heim/proto/emails"
+	"euphoria.io/heim/emails"
 	"euphoria.io/heim/proto/security"
 	"euphoria.io/scope"
 )
 
 type Heim struct {
-	Backend  Backend
-	Cluster  cluster.Cluster
-	PeerDesc *cluster.PeerDesc
-	Context  scope.Context
-	Emailer  emails.Emailer
-	KMS      security.KMS
+	Backend    Backend
+	Cluster    cluster.Cluster
+	PeerDesc   *cluster.PeerDesc
+	Context    scope.Context
+	Emailer    emails.Emailer
+	KMS        security.KMS
+	StaticPath string
 }
 
 func (heim *Heim) OnAccountPasswordChanged(ctx scope.Context, account Account) error {

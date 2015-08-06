@@ -5,19 +5,21 @@ import (
 	"html/template"
 	"net/url"
 
-	"euphoria.io/heim/proto/emails"
+	"euphoria.io/heim/emails"
+	"euphoria.io/heim/templates"
 )
 
 const (
-	PasswordChangedEmail       = emails.Template("password-changed")
-	PasswordResetEmail         = emails.Template("password-reset")
-	RoomInvitationEmail        = emails.Template("room-invitation")
-	RoomInvitationWelcomeEmail = emails.Template("room-invitation-welcome")
-	WelcomeEmail               = emails.Template("welcome")
+	PasswordChangedEmail       = "password-changed"
+	PasswordResetEmail         = "password-reset"
+	RoomInvitationEmail        = "room-invitation"
+	RoomInvitationWelcomeEmail = "room-invitation-welcome"
+	WelcomeEmail               = "welcome"
 )
 
 type CommonEmailParams struct {
-	emails.TemplateDataCommon
+	emails.CommonData
+
 	EmailDomain   string `yaml:"email_domain"`
 	SiteName      string `yaml:"site_name"`
 	SiteURL       string `yaml:"site_url"`
@@ -25,7 +27,7 @@ type CommonEmailParams struct {
 	SenderAddress string `yaml:"sender_address"`
 }
 
-func (p *CommonEmailParams) SiteURLShort() string { return p.TemplateDataCommon.LocalDomain }
+func (p *CommonEmailParams) SiteURLShort() string { return p.CommonData.LocalDomain }
 
 func (p *CommonEmailParams) EmailPreferencesURL() string {
 	// TODO: incorporate token
@@ -41,7 +43,7 @@ func (p WelcomeEmailParams) Subject() string { return fmt.Sprintf("welcome to %s
 
 func (p *WelcomeEmailParams) VerifyEmailURL() string {
 	v := url.Values{
-		"email": []string{p.AccountEmailAddress()},
+		"email": []string{p.AccountEmailAddress},
 		"token": []string{p.VerificationToken},
 	}
 	u := url.URL{
@@ -116,7 +118,7 @@ func (p RoomInvitationWelcomeEmailParams) RoomURL() string {
 
 var (
 	DefaultCommonEmailParams = &CommonEmailParams{
-		TemplateDataCommon: emails.TemplateDataCommon{
+		CommonData: emails.CommonData{
 			LocalDomain: "heim.invalid",
 		},
 		SenderAddress: "noreply@heim.invalid",
@@ -125,9 +127,9 @@ var (
 		SiteURL:       "https://heim.invalid",
 	}
 
-	EmailScenarios = map[emails.Template]map[string]emails.TemplateTest{
-		WelcomeEmail: map[string]emails.TemplateTest{
-			"default": emails.TemplateTest{
+	EmailScenarios = map[string]map[string]templates.TemplateTest{
+		WelcomeEmail: map[string]templates.TemplateTest{
+			"default": templates.TemplateTest{
 				Data: &WelcomeEmailParams{
 					CommonEmailParams: DefaultCommonEmailParams,
 					VerificationToken: "token",
@@ -135,8 +137,8 @@ var (
 			},
 		},
 
-		PasswordChangedEmail: map[string]emails.TemplateTest{
-			"default": emails.TemplateTest{
+		PasswordChangedEmail: map[string]templates.TemplateTest{
+			"default": templates.TemplateTest{
 				Data: &PasswordChangedEmailParams{
 					CommonEmailParams: DefaultCommonEmailParams,
 					AccountName:       "yourname",
@@ -144,8 +146,8 @@ var (
 			},
 		},
 
-		PasswordResetEmail: map[string]emails.TemplateTest{
-			"default": emails.TemplateTest{
+		PasswordResetEmail: map[string]templates.TemplateTest{
+			"default": templates.TemplateTest{
 				Data: &PasswordResetEmailParams{
 					CommonEmailParams: DefaultCommonEmailParams,
 					AccountName:       "yourname",
@@ -153,8 +155,8 @@ var (
 			},
 		},
 
-		RoomInvitationEmail: map[string]emails.TemplateTest{
-			"default": emails.TemplateTest{
+		RoomInvitationEmail: map[string]templates.TemplateTest{
+			"default": templates.TemplateTest{
 				Data: &RoomInvitationEmailParams{
 					CommonEmailParams: DefaultCommonEmailParams,
 					SenderName:        "(‿|‿)",
@@ -164,8 +166,8 @@ var (
 			},
 		},
 
-		RoomInvitationWelcomeEmail: map[string]emails.TemplateTest{
-			"default": emails.TemplateTest{
+		RoomInvitationWelcomeEmail: map[string]templates.TemplateTest{
+			"default": templates.TemplateTest{
 				Data: &RoomInvitationWelcomeEmailParams{
 					CommonEmailParams: DefaultCommonEmailParams,
 					SenderName:        "thatguy",
@@ -178,10 +180,10 @@ var (
 	}
 )
 
-func ValidateEmailTemplates(templater *emails.Templater) []error {
+func ValidateEmailTemplates(templater *templates.Templater) []error {
 	errors := []error{}
 	for templateName, testCases := range EmailScenarios {
-		testList := make([]emails.TemplateTest, 0, len(testCases))
+		testList := make([]templates.TemplateTest, 0, len(testCases))
 		for _, testCase := range testCases {
 			testList = append(testList, testCase)
 		}

@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"euphoria.io/heim/proto"
-	"euphoria.io/heim/proto/emails"
+	"euphoria.io/heim/templates"
 	"euphoria.io/scope"
 )
 
@@ -59,7 +59,7 @@ func (testmailCmd) listScenarios() string {
 	return strings.Join(scenarios, "\n")
 }
 
-func (testmailCmd) resolveScenario(scenario string) (emails.Template, emails.TemplateTest, error) {
+func (testmailCmd) resolveScenario(scenario string) (string, templates.TemplateTest, error) {
 	for templateName, testCases := range proto.EmailScenarios {
 		if strings.HasPrefix(scenario, string(templateName)) {
 			if len(testCases) == 1 && string(templateName) == scenario {
@@ -74,7 +74,7 @@ func (testmailCmd) resolveScenario(scenario string) (emails.Template, emails.Tem
 			}
 		}
 	}
-	return "", emails.TemplateTest{}, fmt.Errorf("unknown scenario: %s", scenario)
+	return "", templates.TemplateTest{}, fmt.Errorf("unknown scenario: %s", scenario)
 }
 
 func (cmd *testmailCmd) flags() *flag.FlagSet { return flag.NewFlagSet("testemail", flag.ExitOnError) }

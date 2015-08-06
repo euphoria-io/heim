@@ -15,8 +15,8 @@ import (
 	"time"
 
 	"euphoria.io/heim/cluster"
+	"euphoria.io/heim/emails"
 	"euphoria.io/heim/proto"
-	"euphoria.io/heim/proto/emails"
 	"euphoria.io/heim/proto/security"
 	"euphoria.io/heim/proto/snowflake"
 	"euphoria.io/scope"
@@ -352,7 +352,7 @@ func IntegrationTest(t *testing.T, factory proto.BackendFactory) {
 		heim.Backend = backend
 		defer heim.Backend.Close()
 
-		app, err := NewServer(heim, "test1", "era1", "")
+		app, err := NewServer(heim, "test1", "era1")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -592,7 +592,7 @@ func testPresence(factory proto.BackendFactory) {
 	heim.Backend = backend
 	defer heim.Backend.Close()
 
-	app, err := NewServer(heim, "test1", "era1", "")
+	app, err := NewServer(heim, "test1", "era1")
 	So(err, ShouldBeNil)
 	app.AllowRoomCreation(true)
 	app.agentIDGenerator = func() ([]byte, error) {
@@ -682,7 +682,7 @@ func testPresence(factory proto.BackendFactory) {
 
 		backend2 := factory()
 		kms := security.LocalKMS()
-		app2, err := NewServer(scope.New(), backend2, &cluster.TestCluster{}, kms, "test2", "", "")
+		app2, err := NewServer(scope.New(), backend2, &cluster.TestCluster{}, kms, "test2", "")
 		So(err, ShouldBeNil)
 		app2.AllowRoomCreation(true)
 		server2 := httptest.NewServer(app2)
@@ -1105,7 +1105,7 @@ func testAccountChangePassword(s *serverUnderTest) {
 
 		// Password change email should have been sent.
 		msg := <-inbox
-		So(msg.Template, ShouldEqual, proto.PasswordChangedEmail)
+		So(msg.TemplateName, ShouldEqual, proto.PasswordChangedEmail)
 		_, ok := msg.Data.(*proto.PasswordChangedEmailParams)
 		So(ok, ShouldBeTrue)
 	})
@@ -1130,7 +1130,7 @@ func testAccountResetPassword(s *serverUnderTest) {
 
 		// Receive confirmation code in email.
 		msg := <-inbox
-		So(msg.Template, ShouldEqual, proto.PasswordResetEmail)
+		So(msg.TemplateName, ShouldEqual, proto.PasswordResetEmail)
 		p, ok := msg.Data.(*proto.PasswordResetEmailParams)
 		So(ok, ShouldBeTrue)
 		firstConfirmation := p.Confirmation
@@ -1140,7 +1140,7 @@ func testAccountResetPassword(s *serverUnderTest) {
 		conn.expect("2", "reset-password-reply", `{}`)
 		conn.Close()
 		msg = <-inbox
-		So(msg.Template, ShouldEqual, proto.PasswordResetEmail)
+		So(msg.TemplateName, ShouldEqual, proto.PasswordResetEmail)
 		p, ok = msg.Data.(*proto.PasswordResetEmailParams)
 		So(ok, ShouldBeTrue)
 
@@ -1316,7 +1316,7 @@ func testAccountRegistration(s *serverUnderTest) {
 
 		// Registration email should have been sent.
 		msg := <-inbox
-		So(msg.Template, ShouldEqual, proto.WelcomeEmail)
+		So(msg.TemplateName, ShouldEqual, proto.WelcomeEmail)
 		params, ok := msg.Data.(*proto.WelcomeEmailParams)
 		So(ok, ShouldBeTrue)
 

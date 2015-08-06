@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/smtp"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -15,8 +16,8 @@ import (
 	"euphoria.io/heim/aws/kms"
 	"euphoria.io/heim/cluster"
 	"euphoria.io/heim/cluster/etcd"
+	"euphoria.io/heim/emails"
 	"euphoria.io/heim/proto"
-	"euphoria.io/heim/proto/emails"
 	"euphoria.io/heim/proto/security"
 	"euphoria.io/scope"
 )
@@ -37,6 +38,8 @@ func init() {
 		}
 		return val
 	}
+
+	flag.StringVar(&Config.StaticPath, "static", "", "path to static files")
 
 	flag.StringVar(&Config.Cluster.ServerID, "id", env("HEIM_ID", ""), "")
 	flag.StringVar(&Config.Cluster.EtcdHome, "etcd", env("HEIM_ETCD_HOME", ""),
@@ -92,6 +95,7 @@ type ServerConfig struct {
 	NewAccountMinAgentAge time.Duration `yaml:"new_account_min_agent_age"`
 	RoomEntryMinAgentAge  time.Duration `yaml:"room_entry_min_agent_age"`
 
+	StaticPath    string `yaml:"static_path"`
 	SiteName      string `yaml:"site_name"`
 	SiteURL       string `yaml:"site_url"`
 	HelpAddress   string `yaml:"help_address"`
@@ -162,11 +166,12 @@ func (cfg *ServerConfig) Heim(ctx scope.Context) (*proto.Heim, error) {
 	}
 
 	heim := &proto.Heim{
-		Context:  ctx,
-		Cluster:  c,
-		PeerDesc: cfg.Cluster.DescribeSelf(),
-		KMS:      kms,
-		Emailer:  emailer,
+		Context:    ctx,
+		Cluster:    c,
+		PeerDesc:   cfg.Cluster.DescribeSelf(),
+		KMS:        kms,
+		Emailer:    emailer,
+		StaticPath: cfg.StaticPath,
 	}
 
 	backend, err := cfg.GetBackend(heim)
@@ -311,8 +316,7 @@ type EmailConfig struct {
 func (ec *EmailConfig) Get(cfg *ServerConfig) (emails.Emailer, error) {
 	proto.DefaultCommonEmailParams = cfg.CommonEmailParams
 	localDomain := cfg.CommonEmailParams.EmailDomain
-	cfg.CommonEmailParams.TemplateDataCommon.LocalDomain = localDomain
-	fmt.Printf("CommonEmailParams = %#v\n", cfg.CommonEmailParams)
+	cfg.CommonEmailParams.CommonData.LocalDomain = localDomain
 
 	if ec.Server == "" {
 		return &emails.TestEmailer{}, nil
@@ -340,7 +344,7 @@ func (ec *EmailConfig) Get(cfg *ServerConfig) (emails.Emailer, error) {
 	}
 
 	// Load templates and configure email sender.
-	emailer, err := emails.NewSMTPEmailer(ec.Templates, localDomain, ec.Server, sslHost, auth)
+	emailer, err := emails.NewSMTPEmailer(filepath.Join(cfg.StaticPath, "email"), localDomain, ec.Server, sslHost, auth)
 	if err != nil {
 		return nil, err
 	}

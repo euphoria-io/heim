@@ -49,7 +49,7 @@ type Server struct {
 	agentIDGenerator func() ([]byte, error)
 }
 
-func NewServer(heim *proto.Heim, id, era, staticPath string) (*Server, error) {
+func NewServer(heim *proto.Heim, id, era string) (*Server, error) {
 	mime.AddExtensionType(".map", "application/json")
 
 	cookieSecret, err := heim.Cluster.GetSecret(heim.KMS, "cookie", cookieKeySize)
@@ -63,7 +63,7 @@ func NewServer(heim *proto.Heim, id, era, staticPath string) (*Server, error) {
 		heim:       heim,
 		b:          heim.Backend,
 		kms:        heim.KMS,
-		staticPath: staticPath,
+		staticPath: heim.StaticPath,
 		sc:         securecookie.New(cookieSecret, nil),
 		rootCtx:    heim.Context,
 	}

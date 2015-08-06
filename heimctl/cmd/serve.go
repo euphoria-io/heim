@@ -48,7 +48,6 @@ func (serveCmd) longdesc() string {
 func (cmd *serveCmd) flags() *flag.FlagSet {
 	flags := flag.NewFlagSet("serve", flag.ExitOnError)
 	flags.StringVar(&cmd.addr, "http", ":8080", "address to serve http on")
-	flags.StringVar(&cmd.static, "static", "", "path to static files")
 	flags.StringVar(&cmd.consoleAddr, "console", "", "")
 	return flags
 }
@@ -82,7 +81,7 @@ func (cmd *serveCmd) run(ctx scope.Context, args []string) error {
 	}
 
 	serverDesc := backend.Config.Cluster.DescribeSelf()
-	server, err := backend.NewServer(heim, serverDesc.ID, serverDesc.Era, cmd.static)
+	server, err := backend.NewServer(heim, serverDesc.ID, serverDesc.Era)
 	if err != nil {
 		return fmt.Errorf("server error: %s", err)
 	}
