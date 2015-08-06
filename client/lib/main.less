@@ -1006,7 +1006,7 @@ iframe.js {
       justify-content: flex-end;
     }
 
-    .drag-handle {
+    .drag-handle-container {
       margin-right: 2px;
     }
   }
@@ -1408,7 +1408,7 @@ iframe.js {
       padding-right: @nick-spacing;
     }
 
-    .drag-handle {
+    .drag-handle-container {
       align-self: flex-start;
       margin-right: 8px;
       margin-top: 7px;
@@ -1430,7 +1430,7 @@ iframe.js {
       padding-bottom: 7px;
     }
 
-    .drag-handle {
+    .drag-handle-container {
       margin-top: 6px;
     }
   }
@@ -1462,21 +1462,47 @@ iframe.js {
     }
   }
 
-  .drag-handle {
+  .drag-handle-container {
     position: relative;
-    width: 15px;
-    height: 15px;
-    padding: 3px;
-    box-sizing: content-box;
-    .icon('../res/move-entry.svg', 15px, 0, .6);
-    .touchable-bg(#fff);
-    .larger-touch-target(15px, 30px);
-    box-shadow: 0 0 2px fade(black, 50%);
-    cursor: move;
-  }
 
-  &.entry-dragging .drag-handle {
-    background: darken(desaturate(#fff, 15%), 25%);
+    .drag-handle {
+      width: 15px;
+      height: 15px;
+      padding: 3px;
+      box-sizing: content-box;
+      .icon('../res/move-entry.svg', 15px, 0, .6);
+      .touchable-bg(#fff);
+      .larger-touch-target(15px, 30px);
+      box-shadow: 0 0 2px fade(black, 50%);
+      cursor: move;
+    }
+
+    .jump-to-bottom {
+      position: absolute;
+      top: (19px - 42px) / 2;
+      left: -55px;
+      width: 36px;
+      height: 36px;
+      padding: 3px;
+      background: white;
+      border-radius: 100%;
+      box-sizing: content-box;
+      .icon('../res/jump-to-bottom.svg', 20px, 0, .3);
+      .touchable-custom({
+        background: lighten(@topic-color, 47%);
+        box-shadow: 0 0 4px 3px fade(@topic-color, 50%);
+        &:before {
+          opacity: 1;
+        }
+      });
+      .larger-touch-target(15px, 30px);
+      box-shadow: 0 0 4px 1px fade(black, 50%);
+      cursor: move;
+
+      body.touch & {
+        left: -100px;
+      }
+    }
   }
 }
 

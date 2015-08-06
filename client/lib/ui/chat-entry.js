@@ -5,6 +5,7 @@ var actions = require('../actions')
 var chat = require('../stores/chat')
 var hueHash = require('../hue-hash')
 var KeyboardActionHandler = require('./keyboard-action-handler')
+var EntryDragHandle = require('./entry-drag-handle')
 
 module.exports = React.createClass({
   displayName: 'ChatEntry',
@@ -204,7 +205,7 @@ module.exports = React.createClass({
           </div>
           <textarea key="msg" ref="input" className="entry-text" onChange={this.onChange} onKeyDown={this.saveEntryState} onClick={this.saveEntryState} />
           <textarea key="measure" ref="measure" className="measure" />
-          <button className="drag-handle" />
+          <EntryDragHandle pane={this.props.pane} />
         </form>
       </KeyboardActionHandler>
     )

@@ -394,6 +394,7 @@ function createPaneStore(paneId, createOptions) {
     'setEntryText',
     'startEntryDrag',
     'finishEntryDrag',
+    'setEntryDragCommand',
     'keydownOnPane',
     'openFocusedMessageInPane',
   ])
@@ -432,6 +433,7 @@ function createPaneStore(paneId, createOptions) {
         entrySelectionStart: null,
         entrySelectionEnd: null,
         draggingEntry: false,
+        draggingEntryCommand: null,
         messageData: {},
       }
 
@@ -557,6 +559,15 @@ function createPaneStore(paneId, createOptions) {
 
     finishEntryDrag: function() {
       this.state.draggingEntry = false
+      this.state.draggingEntryCommand = null
+      this.trigger(this.state)
+    },
+
+    setEntryDragCommand: function(command) {
+      if (command == this.state.draggingEntryCommand) {
+        return
+      }
+      this.state.draggingEntryCommand = command
       this.trigger(this.state)
     },
 

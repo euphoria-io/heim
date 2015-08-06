@@ -11,6 +11,7 @@ var MessageText = require('./message-text')
 var ChatEntry = require('./chat-entry')
 var LiveTimeAgo = require('./live-time-ago')
 var KeyboardActionHandler = require('./keyboard-action-handler')
+var EntryDragHandle = require('./entry-drag-handle')
 
 
 var linearEasing = t => t
@@ -96,7 +97,7 @@ var Message = module.exports = React.createClass({
       messageIndentedReplies = (
         <FastButton component="div" className={classNames('replies', 'in-pane', {'focus-target': focused})} onClick={this.focusOtherPane}>
           replies in pane <div className="pane-icon" />
-          {focused && <div className="spacer"><button className="drag-handle" onClick={ev => ev.stopPropagation()} /></div>}
+          {focused && <div className="spacer" onClick={ev => ev.stopPropagation()}><EntryDragHandle pane={this.props.pane} /></div>}
         </FastButton>
       )
       if (focused) {
@@ -130,7 +131,7 @@ var Message = module.exports = React.createClass({
               {childNewCount > 0 && <span className={classNames('new-count', {'new-mention': count.get('newMentionDescendants') > 0})}>{childNewCount}</span>}
               {childCount > 0 && <LiveTimeAgo className="ago" time={count.get('latestDescendantTime')} nowText="active" />}
               {<MessageText className="message-preview" content={this.props.tree.get(count.get('latestDescendant')).get('content').trim()} />}
-              {focused && <div className="spacer"><button className="drag-handle" onClick={ev => ev.stopPropagation()} /></div>}
+              {focused && <div className="spacer" onClick={ev => ev.stopPropagation()}><EntryDragHandle pane={this.props.pane} /></div>}
             </FastButton>
           </div>
         )
@@ -163,7 +164,7 @@ var Message = module.exports = React.createClass({
               {childNewCount > 0 && <span className={classNames('new-count', {'new-mention': count.get('newMentionDescendants') > 0})}>{childNewCount}</span>}
               <LiveTimeAgo className="ago" time={count.get('latestDescendantTime')} nowText="active" />
               {<MessageText className="message-preview" content={this.props.tree.get(count.get('latestDescendant')).get('content').trim()} />}
-              {focused && <div className="spacer"><button className="drag-handle" onClick={ev => ev.stopPropagation()} /></div>}
+              {focused && <div className="spacer" onClick={ev => ev.stopPropagation()}><EntryDragHandle pane={this.props.pane} /></div>}
             </FastButton>
           )
           if (focused) {

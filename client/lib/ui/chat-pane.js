@@ -52,7 +52,7 @@ module.exports = React.createClass({
 
   componentWillMount: function() {
     this._dragMatch = null
-    this._dragY = null
+    this._dragPos = null
     this._dragInterval = null
     this._markSeen = _.debounce(this.markSeen, 250)
   },
@@ -267,7 +267,10 @@ module.exports = React.createClass({
     if (!this.state.pane.draggingEntry) {
       return
     }
-    this._dragY = ev.clientY
+    this._dragPos = {
+      x: ev.clientX,
+      y: ev.clientY,
+    }
   },
 
   onMessageTouchStart: function(ev) {
@@ -304,18 +307,33 @@ module.exports = React.createClass({
       return
     }
     ev.preventDefault()
-    this._dragY = touch.clientY
+    this._dragPos = {
+      x: touch.clientX,
+      y: touch.clientY,
+    }
   },
 
   onDragUpdate: function() {
-    if (this._dragY) {
-      this.focusMessageFromPos(this._dragY)
+    var pos = this._dragPos
+    if (pos) {
+      this.focusMessageFromPos(pos.y)
+
+      var over = uidocument.elementFromPoint(pos.x, pos.y)
+      if (over && over.classList.contains('jump-to-bottom')) {
+        this.props.pane.setEntryDragCommand('to-bottom')
+      } else {
+        this.props.pane.setEntryDragCommand(null)
+      }
     }
   },
 
   _finishDrag: function() {
+    if (this.state.pane.draggingEntryCommand == 'to-bottom') {
+      this.props.pane.focusMessage(null)
+    }
+
     this._dragMatch = null
-    this._dragY = null
+    this._dragPos = null
     this.props.pane.finishEntryDrag()
     this.props.pane.focusEntry()
   },
