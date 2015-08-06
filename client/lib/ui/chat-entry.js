@@ -1,4 +1,5 @@
 var React = require('react/addons')
+var classNames = require('classnames')
 var Reflux = require('reflux')
 
 var actions = require('../actions')
@@ -196,7 +197,7 @@ module.exports = React.createClass({
         Backspace: this.proxyKeyDown,
         Tab: this.complete,
       }}>
-        <form className="entry focus-target" onSubmit={ev => ev.preventDefault()}>
+        <form className={classNames('entry', 'focus-target', {'empty': this.state.empty})} onSubmit={ev => ev.preventDefault()}>
           <div className="nick-box">
             <div className="auto-size-container">
               <input className="nick" ref="nick" value={nick} onFocus={this.onNickFocus} onBlur={this.onNickBlur} onChange={this.onNickChange} onKeyDown={this.onNickKeyDown} />
