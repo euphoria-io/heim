@@ -915,6 +915,9 @@ iframe.js {
 }
 
 .messages {
+  // extended drag handle touch area can extend below bottom
+  overflow: hidden;
+
   @seen-fade: cubic-bezier(0, 1, .4, .2);
   .message-node {
     padding: 1px 0;
@@ -1460,12 +1463,14 @@ iframe.js {
   }
 
   .drag-handle {
+    position: relative;
     width: 15px;
     height: 15px;
     padding: 3px;
     box-sizing: content-box;
     .icon('../res/move-entry.svg', 15px, 0, .6);
     .touchable-bg(#fff);
+    .larger-touch-target(15px, 30px);
     box-shadow: 0 0 2px fade(black, 50%);
     cursor: move;
   }

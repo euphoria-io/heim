@@ -46,8 +46,6 @@ module.exports = React.createClass({
     Reflux.connect(activity.store, 'activity'),
     Reflux.listenTo(chat.logsReceived, 'scrollUpdatePosition'),
     Reflux.listenTo(activity.becameActive, 'onActive'),
-    Reflux.listenTo(ui.globalMouseUp, 'onMessageMouseUp'),
-    Reflux.listenTo(ui.globalMouseMove, 'onMessageMouseMove'),
 
     // when a new pane is added, all of the other panes get squished and
     // need to update their scroll position
@@ -66,6 +64,11 @@ module.exports = React.createClass({
     this.listenTo(this.props.pane.scrollToEntry, 'scrollToEntry')
     this.listenTo(this.props.pane.afterMessagesRendered, 'afterMessagesRendered')
     this.listenTo(this.props.pane.moveMessageFocus, 'moveMessageFocus')
+
+    if (!this.isTouch) {
+      this.listenTo(ui.globalMouseUp, 'onMessageMouseUp')
+      this.listenTo(ui.globalMouseMove, 'onMessageMouseMove')
+    }
 
     this.props.pane.scrollToEntry()
     this._markSeen()
@@ -192,7 +195,9 @@ module.exports = React.createClass({
     }
   },
 
-  moveMessageFocus: function(dir) {
+  moveMessageFocus: function(dir, opts) {
+    opts = opts || {}
+
     // FIXME: quick'n'dirty hack. a real tree traversal in the store
     // would be more efficient and testable.
     var node = this.getDOMNode()
@@ -232,9 +237,11 @@ module.exports = React.createClass({
 
     React.addons.batchedUpdates(() => {
       this.props.pane.focusMessage(anchor && anchor.dataset.messageId)
-      require('react/lib/ReactUpdates').asap(() => {
-        this.props.pane.focusEntry()
-      })
+      if (opts.focusEntry !== false) {
+        require('react/lib/ReactUpdates').asap(() => {
+          this.props.pane.focusEntry()
+        })
+      }
     })
   },
 
@@ -254,10 +261,7 @@ module.exports = React.createClass({
       return
     }
     if (_.isMatch(ev, this._dragMatch)) {
-      this._dragMatch = null
-      this._dragY = null
-      this.props.pane.finishEntryDrag()
-      this.props.pane.focusEntry()
+      this._finishDrag()
     }
   },
 
@@ -268,10 +272,54 @@ module.exports = React.createClass({
     this._dragY = ev.clientY
   },
 
+  onMessageTouchStart: function(ev) {
+    if (ev.target.classList.contains('drag-handle')) {
+      ev.preventDefault()
+      ev.stopPropagation()
+      // touch events originate from the original target. when the entry gets
+      // removed from the page, touch events will stop bubbling from it, so we
+      // need to subscribe directly.
+      // http://bl.ocks.org/mbostock/770ae19ca830a4ce87f5
+      ev.target.addEventListener('touchend', this.onMessageTouchEnd, false)
+      ev.target.addEventListener('touchcancel', this.onMessageTouchEnd, false)
+      ev.target.addEventListener('touchmove', this.onMessageTouchMove, false)
+      this._dragMatch = {identifier: ev.targetTouches[0].identifier}
+      this.props.pane.startEntryDrag()
+    }
+  },
+
+  onMessageTouchEnd: function(ev) {
+    ev.target.removeEventListener('touchend', this.onMessageTouchEnd, false)
+    ev.target.removeEventListener('touchcancel', this.onMessageTouchEnd, false)
+    ev.target.removeEventListener('touchmove', this.onMessageTouchMove, false)
+    if (!_.find(ev.touches, this._dragMatch)) {
+      this._finishDrag()
+    }
+  },
+
+  onMessageTouchMove: function(ev) {
+    if (!this.state.pane.draggingEntry) {
+      return
+    }
+    var touch = _.find(ev.touches, this._dragMatch)
+    if (!touch) {
+      return
+    }
+    ev.preventDefault()
+    this._dragY = touch.clientY
+  },
+
   onDragUpdate: function() {
     if (this._dragY) {
       this.focusMessageFromPos(this._dragY)
     }
+  },
+
+  _finishDrag: function() {
+    this._dragMatch = null
+    this._dragY = null
+    this.props.pane.finishEntryDrag()
+    this.props.pane.focusEntry()
   },
 
   focusMessageFromPos: function(yPos) {
@@ -315,9 +363,9 @@ module.exports = React.createClass({
     if (!choiceId || choiceId == this.state.pane.focusedMessage) {
       var scrollPos = this.refs.scroller.getPosition()
       if (yPos < SCROLL_EDGE_SPACE && scrollPos > 0) {
-        this.moveMessageFocus('up')
+        this.moveMessageFocus('up', {focusEntry: false})
       } else if (yPos >= node.getBoundingClientRect().bottom - SCROLL_EDGE_SPACE && scrollPos < 1) {
-        this.moveMessageFocus('down')
+        this.moveMessageFocus('down', {focusEntry: false})
       }
     } else {
       this.props.pane.focusMessage(choiceId)
@@ -350,6 +398,17 @@ module.exports = React.createClass({
 
     var MessageComponent = this.props.showParent ? Message : MessageList
 
+    var messageDragEvents
+    if (Heim.isTouch) {
+      messageDragEvents = {
+        onTouchStart: this.onMessageTouchStart,
+      }
+    } else {
+      messageDragEvents = {
+        onMouseDown: this.onMessageMouseDown,
+      }
+    }
+
     return (
       <div className={classNames('chat-pane', {'timestamps-visible': this.props.showTimeStamps})} onClickCapture={this.onClick}>
         <Scroller
@@ -363,7 +422,7 @@ module.exports = React.createClass({
           onNearTop={this.state.pane.rootId == '__root' && actions.loadMoreLogs}
         >
           <div className="messages-content">
-            <div ref="messages" className={classNames('messages', {'entry-focus': entryFocus, 'entry-dragging': this.state.pane.draggingEntry})} onMouseDown={this.onMessageMouseDown}>
+            <div ref="messages" className={classNames('messages', {'entry-focus': entryFocus, 'entry-dragging': this.state.pane.draggingEntry})} {...messageDragEvents}>
               <MessageComponent key={this.state.pane.rootId} pane={this.props.pane} tree={this.state.chat.messages} nodeId={this.state.pane.rootId} showTimeStamps={this.props.showTimeStamps} showAllReplies={this.props.showAllReplies} roomSettings={this.state.chat.roomSettings} />
               {this.state.pane.rootId == '__root' && entry}
             </div>
