@@ -79,6 +79,9 @@ func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
 	// TODO: support room creation?
 	roomName := mux.Vars(r)["room"]
 	room, err := s.b.GetRoom(ctx, roomName)
+	if s.allowRoomCreation && err == proto.ErrRoomNotFound {
+		room, err = s.b.CreateRoom(ctx, s.kms, false, roomName)
+	}
 	if err != nil {
 		if err == proto.ErrRoomNotFound {
 			http.Error(w, "404 page not found", http.StatusNotFound)
