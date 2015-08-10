@@ -159,9 +159,8 @@ module.exports.store = Reflux.createStore({
 
   messagesChanged: function(ids, state) {
     var unseen = Immutable.Seq(ids)
-      .map(id => state.messages.get(id))
-      .filterNot(msg => {
-        var id = msg.get('id')
+      .map(id => {
+        var msg = state.messages.get(id)
 
         // if the root node changed, scan for no longer existing messages
         if (id == '__root') {
@@ -170,28 +169,31 @@ module.exports.store = Reflux.createStore({
               this._removeNotification(nid)
             }
           })
-          return true
+          return
         }
 
         if (msg.get('deleted')) {
           this._removeNotification(id)
-          return true
+          return
         }
 
         // exclude already notified
         if (_.has(this._notified, id)) {
-          return true
+          return
         }
 
         if (msg.get('_own') || msg.get('_seen')) {
-          return true
+          return
         }
 
         // exclude orphan messages
         if (!msg.has('$count')) {
-          return true
+          return
         }
+
+        return msg
       })
+      .filter(Boolean)
       .cacheResult()
 
     unseen.forEach(msg => this._markNotification('new-message', state.roomName, msg))
