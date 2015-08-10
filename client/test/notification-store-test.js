@@ -134,6 +134,10 @@ describe('notification store', function() {
       '_seen': true,
     })
 
+    var messageMentionDeleted = _.merge({}, messageMention, {
+      'deleted': true,
+    })
+
     var message2Reply1 = {
       'id': 'id4',
       'time': 123458,
@@ -166,6 +170,11 @@ describe('notification store', function() {
         'name': 'kitty',
       },
       'content': 'mew?',
+    }
+
+    var emptyChatState = {
+      roomName: 'ezzie',
+      messages: new ChatTree(),
     }
 
     var mockChatState = {
@@ -206,6 +215,15 @@ describe('notification store', function() {
         message1,
         message2,
         messageMentionSeen,
+      ])
+    }
+
+    var mockChatStateMentionDeleted = {
+      roomName: 'ezzie',
+      messages: new ChatTree().reset([
+        message1,
+        message2,
+        messageMentionDeleted,
       ])
     }
 
@@ -609,6 +627,44 @@ describe('notification store', function() {
                 clock.tick(0)
                 assert(!notification.store.state.notifications.has(messageMention.id))
                 done()
+              })
+              clock.tick(0)
+            })
+          })
+
+          describe('and reconnecting later (with the message no longer loaded)', function() {
+            it('should remove the notification and alert', function(done) {
+              notification.store.messagesChanged([messageMention.id], mockChatStateMention)
+              support.listenOnce(notification.store, function(state) {
+                assert.equal(state.notifications.get(messageMention.id), 'new-mention')
+                sinon.assert.calledOnce(Notification)
+                var mentionNotification = fakeNotification
+                notification.store.messagesChanged(['__root'], emptyChatState)
+                notification.store.messagesChanged([message1.id], mockChatState)
+                support.listenOnce(notification.store, function(state) {
+                  assert(!state.notifications.has(messageMention.id))
+                  sinon.assert.calledOnce(mentionNotification.close)
+                  done()
+                })
+                clock.tick(0)
+              })
+              clock.tick(0)
+            })
+          })
+
+          describe('which is then deleted', function() {
+            it('should remove the notification and alert', function(done) {
+              notification.store.messagesChanged([messageMention.id], mockChatStateMention)
+              support.listenOnce(notification.store, function(state) {
+                assert.equal(state.notifications.get(messageMention.id), 'new-mention')
+                sinon.assert.calledOnce(Notification)
+                notification.store.messagesChanged([messageMention.id], mockChatStateMentionDeleted)
+                support.listenOnce(notification.store, function(state) {
+                  assert(!state.notifications.has(messageMention.id))
+                  sinon.assert.calledOnce(fakeNotification.close)
+                  done()
+                })
+                clock.tick(0)
               })
               clock.tick(0)
             })

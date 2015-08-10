@@ -70,6 +70,7 @@ module.exports.store = Reflux.createStore({
     }
 
     this._newNotifications = []
+    this._removedNotifications = []
     this._queueUpdateNotifications = _.debounce(this._updateNotifications, 0)
 
     window.addEventListener('unload', this.removeAllAlerts)
@@ -160,12 +161,29 @@ module.exports.store = Reflux.createStore({
     var unseen = Immutable.Seq(ids)
       .map(id => state.messages.get(id))
       .filterNot(msg => {
-        if (msg.get('_own') || msg.get('_seen')) {
+        var id = msg.get('id')
+
+        // if the root node changed, scan for no longer existing messages
+        if (id == '__root') {
+          this.state.notifications.forEach((kind, nid) => {
+            if (!state.messages.get(nid)) {
+              this._removeNotification(nid)
+            }
+          })
+          return true
+        }
+
+        if (msg.get('deleted')) {
+          this._removeNotification(id)
           return true
         }
 
         // exclude already notified
-        if (_.has(this._notified, msg.get('id'))) {
+        if (_.has(this._notified, id)) {
+          return true
+        }
+
+        if (msg.get('_own') || msg.get('_seen')) {
           return true
         }
 
@@ -213,6 +231,11 @@ module.exports.store = Reflux.createStore({
     this._queueUpdateNotifications()
   },
 
+  _removeNotification: function(id) {
+    this._removedNotifications.push(id)
+    this._queueUpdateNotifications()
+  },
+
   _updateNotifications: function() {
     var alerts = {}
 
@@ -234,6 +257,15 @@ module.exports.store = Reflux.createStore({
             }
             this._notified[newMessageId] = true
           }
+        })
+
+        _.each(this._removedNotifications, id => {
+          var existingNotificationKind = notifications.get(id)
+          if (existingNotificationKind) {
+            delete alerts[existingNotificationKind]
+            this.removeAlert(existingNotificationKind, id)
+          }
+          notifications.delete(id)
         })
       })
       .groupBy(kind => kind)
@@ -267,6 +299,7 @@ module.exports.store = Reflux.createStore({
     )
 
     this._newNotifications = []
+    this._removedNotifications = []
 
     this.trigger(this.state)
   },
