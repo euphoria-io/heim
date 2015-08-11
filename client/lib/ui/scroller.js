@@ -114,7 +114,11 @@ module.exports = React.createClass({
       this._anchorPos = targetPos
     } else {
       var box = dimensions(this.getDOMNode())
-      anchor = uidocument.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2)
+      var bodyBox = dimensions(uidocument.body)
+      var boxLeft = Math.max(box.left, bodyBox.left)
+      var boxRight = Math.min(box.right, bodyBox.right)
+      var boxWidth = boxRight - boxLeft
+      anchor = uidocument.elementFromPoint(boxLeft + boxWidth / 2, box.top + box.height / 2)
       if (!anchor) {
         console.warn('scroller: unable to find anchor')  // jshint ignore:line
       }
