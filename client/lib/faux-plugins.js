@@ -243,14 +243,15 @@ module.exports = function(roomName) {
         TVActions.changeVideo(video)
       }
 
-      var noticeRe = /^!notice ([^]*)$/
+      var noticeRe = /^!notice(\S*?) ([^]*)$/
       var notices = candidates
         .map(msg => {
           var match = msg.get('content').match(noticeRe)
           return match && {
             id: msg.get('id'),
             time: msg.get('time'),
-            content: match[1],
+            display: !match[1].length,
+            content: match[2],
           }
         })
         .filter(Boolean)
@@ -268,6 +269,7 @@ module.exports = function(roomName) {
       })
 
       var latestNotice = notices
+        .filter(n => n.display)
         .sortBy(notice => notice.time)
         .last()
 
