@@ -244,20 +244,35 @@ module.exports = function(roomName) {
       }
 
       var noticeRe = /^!notice ([^]*)$/
-      var notice = candidates
+      var notices = candidates
         .map(msg => {
           var match = msg.get('content').match(noticeRe)
           return match && {
+            id: msg.get('id'),
             time: msg.get('time'),
             content: match[1],
           }
         })
         .filter(Boolean)
+        .cacheResult()
+
+      var noticeMaxSummaryLength = 80
+      notices.forEach(notice => {
+        var content = notice.content.split('\n')[0]
+        if (content.length >= noticeMaxSummaryLength) {
+          content = content.substr(0, noticeMaxSummaryLength) + '…'
+        }
+        state.messages.mergeNodes(notice.id, {
+          content: '/me changed the notice to: "' + content + '"',
+        })
+      })
+
+      var latestNotice = notices
         .sortBy(notice => notice.time)
         .last()
 
-      if (notice && notice.time > TVStore.state.getIn(['notice', 'time'])) {
-        TVActions.changeNotice(notice)
+      if (latestNotice && latestNotice.time > TVStore.state.getIn(['notice', 'time'])) {
+        TVActions.changeNotice(latestNotice)
       }
     })
 
