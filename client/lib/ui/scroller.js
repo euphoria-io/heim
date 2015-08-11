@@ -49,8 +49,14 @@ module.exports = React.createClass({
 
   _chromeRAFHack: function(id, callback, immediate) {
     if (!immediate && Heim.isChrome && Heim.isTouch) {
-      uiwindow.cancelAnimationFrame(this._animationFrames[id])
-      this._animationFrames[id] = uiwindow.requestAnimationFrame(callback)
+      if (this._animationFrames[id]) {
+        return
+      }
+
+      this._animationFrames[id] = uiwindow.requestAnimationFrame(() => {
+        this._animationFrames[id] = null
+        callback()
+      })
     } else {
       callback()
     }
