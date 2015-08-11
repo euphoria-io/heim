@@ -196,6 +196,9 @@ module.exports.store = Reflux.createStore({
     this._loadingLogs = false
     this._resetLoadingLogsDebounced()
     if (!data.log.length) {
+      if (data.before) {
+        this.state.earliestLog = false
+      }
       return
     }
     this.state.earliestLog = data.log[0].id
