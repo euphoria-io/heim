@@ -286,7 +286,7 @@ module.exports = React.createClass({
             <FastButton className="to-pane" onClick={ui.popupToThreadPane}>new pane</FastButton>
             <FastButton className="scroll-to" onClick={ui.gotoPopupMessage}>go to</FastButton>
           </div>
-          {selectedThread && <ChatPane key={this.state.ui.popupPane} pane={this.state.ui.panes.get(this.state.ui.popupPane)} afterMessagesRendered={() => this.refs.threadPopup.reposition()} showParent={true} showAllReplies={true} />}
+          {selectedThread && <ChatPane key={this.state.ui.popupPane} pane={this.state.ui.panes.get(this.state.ui.popupPane)} afterRender={() => this.refs.threadPopup.reposition()} showParent={true} showAllReplies={true} />}
         </Bubble>}
         {this.templateHook('page-bottom')}
       </Panner>

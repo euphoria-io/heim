@@ -42,8 +42,10 @@ module.exports = React.createClass({
     Reflux.connect(ui.store, 'ui'),
     Reflux.connect(chat.store, 'chat'),
     Reflux.connect(activity.store, 'activity'),
-    Reflux.listenTo(chat.logsReceived, 'scrollUpdatePosition'),
     Reflux.listenTo(activity.becameActive, 'onActive'),
+
+    // scroll when page size changes
+    Reflux.listenTo(ui.setUISize, 'scrollUpdatePosition'),
 
     // when a new pane is added, all of the other panes get squished and
     // need to update their scroll position
@@ -60,7 +62,7 @@ module.exports = React.createClass({
   componentDidMount: function() {
     this.listenTo(this.props.pane.store, state => this.setState({'pane': state}))
     this.listenTo(this.props.pane.scrollToEntry, 'scrollToEntry')
-    this.listenTo(this.props.pane.afterMessagesRendered, 'afterMessagesRendered')
+    this.listenTo(this.props.pane.afterMessagesRendered, 'scrollUpdatePosition')
     this.listenTo(this.props.pane.moveMessageFocus, 'moveMessageFocus')
 
     if (!this.isTouch) {
@@ -93,6 +95,8 @@ module.exports = React.createClass({
       clearInterval(this.onDragUpdate)
       this._dragInterval = null
     }
+
+    this.scrollUpdatePosition()
   },
 
   onActive: function() {
@@ -176,16 +180,13 @@ module.exports = React.createClass({
     this.refs.scroller.scrollToTarget()
   },
 
-  afterMessagesRendered: function() {
-    if (this.props.afterMessagesRendered) {
-      this.props.afterMessagesRendered()
-    }
-    this.scrollUpdatePosition()
-  },
-
   scrollUpdatePosition: function() {
     this.refs.scroller.update()
     this._markSeen()
+
+    if (this.props.afterRender) {
+      this.props.afterRender()
+    }
 
     // if the entry has disappeared, reset message focus
     if (!this.getDOMNode().querySelector('.focus-target')) {
