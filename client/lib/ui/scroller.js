@@ -63,11 +63,13 @@ module.exports = React.createClass({
   },
 
   onScroll: function() {
-    this._checkScroll()
-    this.updateAnchorPos()
-    if (this.props.onScroll) {
-      this.props.onScroll(this._isTouching())
-    }
+    this._chromeRAFHack('onScroll', () => {
+      this._checkScroll()
+      this.updateAnchorPos()
+      if (this.props.onScroll) {
+        this.props.onScroll(this._isTouching())
+      }
+    })
   },
 
   onFocusCapture: function() {
