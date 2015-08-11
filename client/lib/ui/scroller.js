@@ -47,8 +47,8 @@ module.exports = React.createClass({
     this._checkScroll.cancel()
   },
 
-  _chromeRAFHack: function(id, callback) {
-    if (Heim.isChrome && Heim.isTouch) {
+  _chromeRAFHack: function(id, callback, immediate) {
+    if (!immediate && Heim.isChrome && Heim.isTouch) {
       uiwindow.cancelAnimationFrame(this._animationFrames[id])
       this._animationFrames[id] = uiwindow.requestAnimationFrame(callback)
     } else {
@@ -223,11 +223,13 @@ module.exports = React.createClass({
       }
       this.updateAnchorPos()
       this._checkScroll()
-    })
+    }, options.immediate)
   },
 
-  scrollToTarget: function() {
-    this.scroll({forceTargetInView: true})
+  scrollToTarget: function(options) {
+    options = options || {}
+    options.forceTargetInView = true
+    this.scroll(options)
   },
 
   onTouchStart: function() {

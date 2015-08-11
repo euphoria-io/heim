@@ -70,7 +70,7 @@ module.exports = React.createClass({
       this.listenTo(ui.globalMouseMove, 'onMessageMouseMove')
     }
 
-    this.props.pane.scrollToEntry()
+    this.scrollToEntry({immediate: true})
     this._markSeen()
   },
 
@@ -176,8 +176,8 @@ module.exports = React.createClass({
     chat.markMessagesSeen(ids)
   },
 
-  scrollToEntry: function() {
-    this.refs.scroller.scrollToTarget()
+  scrollToEntry: function(options) {
+    this.refs.scroller.scrollToTarget(options)
   },
 
   scrollUpdatePosition: function() {
