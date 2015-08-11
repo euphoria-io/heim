@@ -43,6 +43,8 @@ module.exports.store = Reflux.createStore({
 
   timeout: 3 * 1000,
 
+  seenExpirationTime: 30 * 1000,
+
   priority: {
     'new-message': 1,
     'new-reply': 2,
@@ -71,12 +73,15 @@ module.exports.store = Reflux.createStore({
 
     this._newNotifications = []
     this._removedNotifications = []
+    this._seenNotifications = {}
     this._queueUpdateNotifications = _.debounce(this._updateNotifications, 0)
+    this._inactiveUpdateNotificationsTimeout = null
 
     window.addEventListener('unload', this.removeAllAlerts)
   },
 
   onActive: function() {
+    clearTimeout(this._inactiveUpdateNotificationsTimeout)
     this.active = true
     this.removeAllAlerts()
     this._updateFavicon()
@@ -85,6 +90,7 @@ module.exports.store = Reflux.createStore({
 
   onInactive: function() {
     this.active = false
+    this._inactiveUpdateNotificationsTimeout = setTimeout(this._updateNotifications, this.seenExpirationTime)
   },
 
   getInitialState: function() {
@@ -177,12 +183,20 @@ module.exports.store = Reflux.createStore({
           return
         }
 
+        var seen = msg.get('_seen')
+        if (seen) {
+          if (this.state.notifications.has(id)) {
+            this._seenNotifications[id] = seen
+          }
+          return
+        }
+
         // exclude already notified
         if (_.has(this._notified, id)) {
           return
         }
 
-        if (msg.get('_own') || msg.get('_seen')) {
+        if (msg.get('_own')) {
           return
         }
 
@@ -268,6 +282,13 @@ module.exports.store = Reflux.createStore({
             this.removeAlert(existingNotificationKind, id)
           }
           notifications.delete(id)
+        })
+
+        _.each(this._seenNotifications, (seen, id) => {
+          if (seen === true || seen <= Date.now() - this.seenExpirationTime) {
+            notifications.delete(id)
+            delete this._seenNotifications[id]
+          }
         })
       })
       .groupBy(kind => kind)

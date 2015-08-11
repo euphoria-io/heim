@@ -886,6 +886,54 @@ describe('notification store', function() {
       })
     })
 
+    describe('old seen notifications', function() {
+      beforeEach(function() {
+        notification.store.chatStateChange({connected: true, joined: true})
+        notification.store.storageChange(storageMock)
+      })
+
+      function test(expectRemoved, done, seenTime, action) {
+          var mockChatStateSeen = {
+            roomName: 'ezzie',
+            messages: new ChatTree().reset([
+              message1,
+            ])
+          }
+          simulateMessages([message1.id], mockChatStateSeen)
+          support.listenOnce(notification.store, function(state) {
+            assert.equal(state.notifications.get(message1.id), 'new-message')
+            mockChatStateSeen.messages.mergeNodes(message1.id, {_seen: Date.now()})
+            notification.store.messagesChanged([message1.id], mockChatStateSeen)
+            clock.tick(seenTime)
+            action(mockChatStateSeen)
+            support.listenOnce(notification.store, function(state) {
+              assert.equal(expectRemoved, !state.notifications.has(message1.id))
+              done()
+            })
+            clock.tick(seenTime)
+          })
+          clock.tick(0)
+      }
+
+      it('should be removed when becoming inactive', function(done) {
+        test(true, done, 40 * 1000, notification.store.onInactive)
+      })
+
+      it('should be removed if seen more than 30s ago when new messages come in', function(done) {
+        test(true, done, 60 * 1000, state => {
+          state.messages.add(message2)
+          simulateMessages([message2.id], state)
+        })
+      })
+
+      it('should not be removed if seen less than 30s ago', function(done) {
+        test(false, done, 20 * 1000, state => {
+          state.messages.add(message2)
+          simulateMessages([message2.id], state)
+        })
+      })
+    })
+
     describe('dismissing a nonexistent notification', function() {
       it('should have no effect', function() {
         assert(!notification.store.state.notifications.has('nonexistent'))
