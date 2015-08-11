@@ -434,7 +434,6 @@ module.exports = React.createClass({
           edgeSpace={this.state.ui.scrollEdgeSpace}
           className="messages-container"
           onScrollbarSize={this.props.onScrollbarSize}
-          onResize={this.onResize}
           onScroll={this.onScroll}
           onNearTop={this.state.pane.rootId == '__root' && actions.loadMoreLogs}
         >
