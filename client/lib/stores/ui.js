@@ -182,7 +182,7 @@ var store = module.exports.store = Reflux.createStore({
       this.state.selectedThread = id
       if (this.state.thin) {
         storeActions.panViewTo('main')
-        this.focusPane(pane.id, {focusEntry: false})
+        this.focusPane(pane.id)
       } else {
         this.freezeInfo()
         this.state.popupPane = pane.id
@@ -210,7 +210,7 @@ var store = module.exports.store = Reflux.createStore({
         this.state.popupPane = null
       }
       storeActions.panViewTo('main')
-      storeActions.focusPane('main', {focusEntry: !this.state.thin})
+      storeActions.focusPane('main')
       this.trigger(this.state)
     })
   },
@@ -252,12 +252,11 @@ var store = module.exports.store = Reflux.createStore({
     return this.state.panes.get(this.state.focusedPane)
   },
 
-  focusPane: function(id, opts) {
+  focusPane: function(id) {
     if (this.state.focusedPane == id) {
       return
     }
 
-    opts = opts || {}
     React.addons.batchedUpdates(() => {
       var lastFocused = this.state.focusedPane
       this.state.focusedPane = id
@@ -269,7 +268,7 @@ var store = module.exports.store = Reflux.createStore({
           // the pane has been removed while the batching occurred
           lastFocusedPane.blurEntry()
         }
-        if (opts.focusEntry !== false) {
+        if (!Heim.isTouch) {
           this.state.panes.get(id).focusEntry()
         }
       })

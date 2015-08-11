@@ -194,9 +194,7 @@ module.exports = React.createClass({
     }
   },
 
-  moveMessageFocus: function(dir, opts) {
-    opts = opts || {}
-
+  moveMessageFocus: function(dir) {
     // FIXME: quick'n'dirty hack. a real tree traversal in the store
     // would be more efficient and testable.
     var node = this.getDOMNode()
@@ -236,7 +234,7 @@ module.exports = React.createClass({
 
     React.addons.batchedUpdates(() => {
       this.props.pane.focusMessage(anchor && anchor.dataset.messageId)
-      if (opts.focusEntry !== false) {
+      if (!Heim.isTouch) {
         require('react/lib/ReactUpdates').asap(() => {
           this.props.pane.focusEntry()
         })
@@ -336,7 +334,10 @@ module.exports = React.createClass({
     this._dragMatch = null
     this._dragPos = null
     this.props.pane.finishEntryDrag()
-    this.props.pane.focusEntry()
+
+    if (!Heim.isTouch) {
+      this.props.pane.focusEntry()
+    }
   },
 
   focusMessageFromPos: function(yPos) {
@@ -381,9 +382,9 @@ module.exports = React.createClass({
       var scrollPos = this.refs.scroller.getPosition()
       var scrollEdgeSpace = this.state.ui.scrollEdgeSpace
       if (yPos < scrollEdgeSpace && scrollPos > 0) {
-        this.moveMessageFocus('up', {focusEntry: false})
+        this.moveMessageFocus('up')
       } else if (yPos >= node.getBoundingClientRect().bottom - scrollEdgeSpace && scrollPos < 1) {
-        this.moveMessageFocus('down', {focusEntry: false})
+        this.moveMessageFocus('down')
       }
     } else {
       this.props.pane.focusMessage(choiceId)
