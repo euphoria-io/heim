@@ -116,7 +116,11 @@ module.exports = React.createClass({
         initX: -this._drag.x,
       })
     } else {
-      this._drag.active = false
+      if (this._drag.direction) {
+        this._drag.active = false
+      } else {
+        this._drag = null
+      }
     }
   },
 
