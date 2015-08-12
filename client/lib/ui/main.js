@@ -93,8 +93,20 @@ module.exports = React.createClass({
   },
 
   onTouchMove: function(ev) {
-    // prevent inertial scrolling of the top level in Mobile Safari
-    if (Heim.isiOS && !this.refs.scroller.getDOMNode().contains(ev.target)) {
+    // prevent inertial scrolling of non-scrollable elements in Mobile Safari
+    if (Heim.isiOS) {
+      var el = ev.target
+      while (el && el != uidocument.body) {
+        if (el.classList.contains('top-bar')) {
+          ev.preventDefault()
+          return
+        }
+
+        if (el.clientHeight < el.scrollHeight) {
+          return
+        }
+        el = el.parentNode
+      }
       ev.preventDefault()
     }
   },
