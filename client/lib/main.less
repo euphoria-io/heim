@@ -494,10 +494,17 @@ iframe.js {
   width: 1.25em;
   height: 1.25em;
   background-repeat: no-repeat;
+  background-position: center center;
   text-indent: 100%;
   white-space: nowrap;
   overflow: hidden;
   vertical-align: bottom;
+}
+
+.nick {
+  .emoji {
+    height: 100%;
+  }
 }
 
 .chat-pane-container {
@@ -569,12 +576,6 @@ iframe.js {
 
     .messages-container {
       padding-left: @time-margin;
-    }
-  }
-
-  .nick {
-    .emoji {
-      vertical-align: middle;
     }
   }
 
