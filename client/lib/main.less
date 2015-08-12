@@ -1686,6 +1686,10 @@ iframe.js {
 
       .nick {
         display: inline-block;
+
+        // show on top of message expandos
+        position: relative;
+        z-index: 10;
       }
 
       // if there's text, push embeds to the next line
