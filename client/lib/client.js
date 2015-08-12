@@ -153,6 +153,10 @@ if (!window.frameElement) {
   }
 
   Heim.attachUI = function() {
+    if (window.onReady) {
+      uiwindow.location.reload()
+    }
+
     setupCrashHandler(evs)
 
     var Reflux = require('reflux')
