@@ -1131,6 +1131,9 @@ iframe.js {
         z-index: 0;
         .box-outline;
 
+        // prevent Mobile Safari from making this scrolly
+        -webkit-overflow-scrolling: auto;
+
         &:before, &:after {
           pointer-events: none;
         }
