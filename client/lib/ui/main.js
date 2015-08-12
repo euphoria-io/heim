@@ -122,7 +122,9 @@ module.exports = React.createClass({
   },
 
   onThreadSelect: function(ev, id) {
-    if (this.state.ui.selectedThread == id && this.state.ui.threadPopupAnchorEl) {
+    if (ev.button == 1) {
+      ui.openThreadPane(id)
+    } else if (this.state.ui.selectedThread == id && this.state.ui.threadPopupAnchorEl) {
       ui.deselectThread()
     } else {
       this.selectThread(id, ev.currentTarget)
