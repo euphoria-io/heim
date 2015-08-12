@@ -902,9 +902,16 @@ iframe.js {
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-      filter: grayscale(100%);
       opacity: .5;
       pointer-events: none;
+
+      a {
+        color: black;
+      }
+
+      .emoji {
+        filter: grayscale(100%);
+      }
     }
 
     .spacer {
