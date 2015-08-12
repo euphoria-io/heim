@@ -1,0 +1,96 @@
+@mobile-breakpoint: 650px;
+
+.touchable {
+  transition: all .25s ease;
+
+  &.touching, body:not(.touch) &:active {
+    transition: all 0s ease;
+  }
+}
+
+.touchable-bg(@bgcolor) {
+  .touchable;
+
+  &.touching, body:not(.touch) &:active {
+    background: darken(desaturate(@bgcolor, 15%), 25%);
+  }
+}
+
+.touchable-opacity(@opacity: .65) {
+  .touchable;
+
+  &.touching, body:not(.touch) &:active {
+    opacity: @opacity;
+  }
+}
+
+.touchable-custom(@rules) {
+  .touchable;
+
+  &.touching, body:not(.touch) &:active {
+    @rules();
+  }
+}
+
+.larger-touch-target(@width, @height) {
+  // note: requires element to be positioned.
+  body.touch &:after {
+    content: '';
+    position: absolute;
+    left: -@width;
+    right: -@width;
+    top: -@height;
+    bottom: -@height;
+  }
+}
+
+.icon(@url, @size, @right-spacing: 0, @opacity: 1) {
+  &:before {
+    flex-shrink: 0;
+    display: inline-block;
+    content: '';
+    width: @size;
+    height: @size;
+    margin-right: @right-spacing;
+    background: data-uri(@url) no-repeat center center;
+    background-size: contain;
+    opacity: @opacity;
+  }
+}
+
+.button-icon(@url, @size, @spacing: 3px, @opacity: .75) {
+  .inner {
+    display: flex;
+    align-items: center;
+    white-space: pre;
+    .icon(@url, @size, @spacing, @opacity);
+  }
+}
+
+.fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+}
+
+.box-outline {
+  &:before {
+    content: '';
+    .fill;
+    border-radius: 3px;
+    box-shadow: 0 0 1px fade(black, 65%) inset;
+    z-index: 10;
+  }
+}
+
+@neutral-color: #e8e8e8;
+@public-color: lighten(blue, 43%);
+@welcome-color: #e5f2e5;
+@passcode-color: #eedba0;
+@topic-color: #4040a8;
+@faded-topic-color: #7070be;
+@disconnected-color: #ff7c7c;
+@focus-green: fade(green, 50%);
+@pane-bg-color: #f4f4f4;

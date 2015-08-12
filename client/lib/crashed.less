@@ -1,3 +1,6 @@
+@import "defs.less";
+
+
 // a bit archaic to increase browser compatibility
 
 .crash-dialog() {
@@ -109,7 +112,7 @@
   .crash-dialog() !important;
 }
 
-@media (max-width: 650px) {
+@media (max-width: @mobile-breakpoint) {
   #crash-dialog {
     .crash-dialog-mobile() !important;
   }
