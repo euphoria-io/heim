@@ -20,11 +20,12 @@ module.exports = React.createClass({
           navigator.vibrate(7)
         }
 
-        if (!this.props.fastTouch) {
+        if (this.props.fastTouch) {
+          // prevent emulated click event
+          ev.preventDefault()
+        } else {
           return
         }
-      } else if (this.props.fastTouch) {
-        return
       }
     }
 
