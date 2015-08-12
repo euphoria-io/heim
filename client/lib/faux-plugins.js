@@ -259,8 +259,9 @@ module.exports = function(roomName) {
 
       var noticeMaxSummaryLength = 80
       notices.forEach(notice => {
-        var content = notice.content.split('\n')[0]
-        if (content.length >= noticeMaxSummaryLength) {
+        var lines = notice.content.split('\n')
+        var content = lines[0]
+        if (content.length >= noticeMaxSummaryLength || lines.length > 1) {
           content = content.substr(0, noticeMaxSummaryLength) + '…'
         }
         state.messages.mergeNodes(notice.id, {
