@@ -1,0 +1,79 @@
+// a bit archaic to increase browser compatibility
+
+.crash-dialog() {
+  font: 16px Droid Sans, sans-serif;
+
+  .mask {
+    display: table;
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(70, 70, 70, .5);
+  }
+
+  .container {
+    display: table-cell;
+    vertical-align: middle;
+    text-align: center;
+  }
+
+  .crash-message {
+    display: inline-block;
+    width: 75%;
+    max-width: 570px;
+    box-sizing: border-box;
+    padding: 30px 60px;
+    line-height: 1.35em;
+    background: rgba(240, 240, 240, .95);
+    border-radius: 10px;
+    box-shadow: 0 3px 20px rgba(0, 0, 0, .15);
+  }
+
+  .logo {
+    width: 64px;
+    height: 64px;
+  }
+
+  h1 {
+    font-size: 22px;
+    color: #a20000;
+    margin: 10px;
+  }
+
+  .raven-status-container {
+    height: 4em;
+
+    p {
+      color: gray;
+
+      &.saved {
+        color: green;
+      }
+
+      &.failed {
+        color: #a20000;
+      }
+    }
+  }
+
+  button {
+    font-size: 24px;
+    background: #ddd;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 3px;
+
+    &.reload {
+      margin-right: 10px;
+      background: #ccc;
+    }
+  }
+}
+
+#crash-dialog {
+  .crash-dialog() !important;
+}

@@ -63,7 +63,7 @@ function embedBundler(args) {
     }))
 }
 
-gulp.task('heim-js', function() {
+gulp.task('heim-js', ['heim-less'], function() {
   return heimBundler({debug: true})
     // share some libraries with the global namespace
     // doing this here because these exposes trip up watchify atm
@@ -121,7 +121,7 @@ gulp.task('raven-js', ['heim-js'], function() {
 })
 
 gulp.task('heim-less', function() {
-  return gulp.src(['./lib/main.less', './lib/od.less', './lib/home.less'])
+  return gulp.src(['./lib/main.less', './lib/crashed.less', './lib/od.less', './lib/home.less'])
     .pipe(less({compress: true}))
     .on('error', handleError('LESS error'))
     .pipe(autoprefixer({cascade: false}))
