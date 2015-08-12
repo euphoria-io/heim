@@ -74,6 +74,43 @@
   }
 }
 
+.crash-dialog-mobile() {
+  font-size: 14px;
+
+  .crash-message {
+    width: 95%;
+    padding: 15px;
+  }
+
+  h1 {
+    font-size: 17px;
+  }
+
+  .raven-status-container {
+    height: 5em;
+  }
+
+  code {
+    font-size: 12px;
+  }
+
+  button {
+    font-size: 22px;
+    width: 100%;
+
+    &.reload {
+      margin-right: 0;
+      margin-bottom: 10px;
+    }
+  }
+}
+
 #crash-dialog {
   .crash-dialog() !important;
+}
+
+@media (max-width: 650px) {
+  #crash-dialog {
+    .crash-dialog-mobile() !important;
+  }
 }

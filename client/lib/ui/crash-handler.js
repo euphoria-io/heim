@@ -11,7 +11,7 @@ var CrashDialog = React.createClass({
   render: function() {
     var ravenStatus
     if (this.props.ravenEventId) {
-      ravenStatus = <p className="saved">saved an error report. please send us this code: <strong><code>{this.props.ravenEventId}</code></strong></p>
+      ravenStatus = <p className="saved">saved an error report. <span style={{whiteSpace: 'nowrap'}}>please send us this code:</span> <strong><code>{this.props.ravenEventId}</code></strong></p>
     } else if (this.props.ravenEventId === false) {
       ravenStatus = <p className="failed">failed to send an error report.</p>
     } else {
