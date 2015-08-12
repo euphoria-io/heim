@@ -53,6 +53,7 @@ module.exports = React.createClass({
   ],
 
   componentWillMount: function() {
+    this._dragEl = null
     this._dragMatch = null
     this._dragPos = null
     this._dragInterval = null
@@ -283,6 +284,7 @@ module.exports = React.createClass({
       ev.target.addEventListener('touchend', this.onMessageTouchEnd, false)
       ev.target.addEventListener('touchcancel', this.onMessageTouchEnd, false)
       ev.target.addEventListener('touchmove', this.onMessageTouchMove, false)
+      this._dragEl = ev.target  // prevent Mobile Safari from garbage collecting our touch event emitter
       this._dragMatch = {identifier: ev.targetTouches[0].identifier}
       this.props.pane.startEntryDrag()
     }
@@ -331,6 +333,7 @@ module.exports = React.createClass({
       this.props.pane.focusMessage(null)
     }
 
+    this._dragEl = null
     this._dragMatch = null
     this._dragPos = null
     this.props.pane.finishEntryDrag()
