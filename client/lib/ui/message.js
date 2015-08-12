@@ -77,10 +77,11 @@ var Message = module.exports = React.createClass({
     var messagePane = message.get('_inPane')
     var repliesInOtherPane = messagePane && messagePane != this.props.pane.id
     var seen = message.get('_seen')
+    var mention = message.get('_mention')
 
     this._sinceNew = Date.now() - time < Message.newFadeDuration
     var messageClasses = {
-      'mention': message.get('_mention'),
+      'mention': mention,
       'unseen': !seen,
       'new': this._sinceNew,
     }
@@ -231,7 +232,7 @@ var Message = module.exports = React.createClass({
     })
     content = _.trim(content)
 
-    var messageAgo = (this.props.showTimeAgo || children.size >= 3) && <LiveTimeAgo className="ago" time={time} />
+    var messageAgo = (this.props.showTimeAgo || children.size >= 3 || mention) && <LiveTimeAgo className="ago" time={time} />
 
     var messageRender
     if (!content) {
