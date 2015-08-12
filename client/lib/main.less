@@ -871,6 +871,7 @@ iframe.js {
     font-weight: bold;
     line-height: normal;
     cursor: pointer;
+    border-radius: 2px;
 
     &:before {
       vertical-align: -2px;
@@ -884,6 +885,12 @@ iframe.js {
       margin-right: 5px;
       border-radius: 4px;
       z-index: 100;
+    }
+
+    &, &.focus-target {
+      .touchable-custom({
+        background: fade(@topic-color, 15%);
+      });
     }
 
     .inner {
