@@ -350,6 +350,7 @@ var store = module.exports.store = Reflux.createStore({
     React.addons.batchedUpdates(() => {
       parentPane.revealMessage(messageId)
       parentPane.focusMessage(messageId)
+      parentPane.scrollToEntry()
     })
   },
 
