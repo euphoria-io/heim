@@ -37,8 +37,8 @@ module.exports = React.createClass({
 
     if (!_.isEqual(this.props.snapPoints, nextProps.snapPoints)) {
       var node = this.getDOMNode()
-      node.style.transition = 'none'
-      node.style.transform = 'translateX(' + this._clamp(this._getCurrentX()) + 'px)'
+      node.style.transition = node.style.webkitTransition = 'none'
+      node.style.transform = node.style.webkitTransform = 'translateX(' + this._clamp(this._getCurrentX()) + 'px)'
     }
   },
 
@@ -162,8 +162,8 @@ module.exports = React.createClass({
     var duration = Math.abs(vx) / this.props.friction
 
     // use parabolic easing curve (see http://stackoverflow.com/a/16883488)
-    node.style.transition = 'transform ' + (duration / 1000) + 's cubic-bezier(0.33333, 0.66667, 0.66667, 1)'
-    node.style.transform = 'translateX(' + point + 'px)'
+    node.style.transition = node.style.webkitTransition = 'all ' + (duration / 1000) + 's cubic-bezier(0.33333, 0.66667, 0.66667, 1)'
+    node.style.transform = node.style.webkitTransform = 'translateX(' + point + 'px)'
     _.identity(node.offsetHeight)  // reflow so transition starts immediately
 
     if (this.props.onMove) {
@@ -189,8 +189,9 @@ module.exports = React.createClass({
       var vx = deltaX / dt
       this._drag.vx = (vx + this.props.smoothing * this._drag.vx) / (1 + this.props.smoothing)
 
-      node.style.transition = 'none'
-      node.style.transform = 'translateX(' + this._x + 'px)'
+      // iOS Safari requires webkit prefixes :(
+      node.style.transition = node.style.webkitTransition = 'none'
+      node.style.transform = node.style.webkitTransform = 'translateX(' + this._x + 'px)'
 
       if (this._drag.active) {
         this._drag.lastX = this._drag.x

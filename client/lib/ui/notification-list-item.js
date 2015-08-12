@@ -19,11 +19,11 @@ module.exports = React.createClass({
   componentWillEnter: function(callback) {
     var node = this.getDOMNode()
     var height = this.getDOMNode().clientHeight
-    node.style.transition = 'none'
+    node.style.transition = node.style.webkitTransition = 'none'
     node.style.height = 0
     node.style.opacity = 0
     _.identity(node.offsetHeight)  // reflow so transition starts
-    node.style.transition = 'all .25s ease'
+    node.style.transition = node.style.webkitTransition = 'all .25s ease'
     node.style.height = height + 'px'
     node.style.opacity = 1
     callback()
