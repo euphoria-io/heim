@@ -13,7 +13,7 @@ body {
 
   &, input, textarea, button {
     font-family: Droid Sans, sans-serif;
-    font-size: 12pt;
+    font-size: @base-font-size;
     margin: 0;
   }
 }
@@ -1280,6 +1280,8 @@ iframe.js {
     -webkit-transform: translate3d(0, 0, 0);
 
     .nick-box, .entry-text, .measure, label {
+      font-size: @base-font-size;
+      line-height: @base-font-size + 2.5pt;
       height: @entry-height;
       padding: 8px 10px;
       box-sizing: border-box;
