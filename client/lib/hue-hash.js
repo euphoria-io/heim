@@ -1,4 +1,5 @@
 var Immutable = require('immutable')
+var emoji = require('./emoji')
 
 
 module.exports.stripSpaces = function(text) {
@@ -6,6 +7,7 @@ module.exports.stripSpaces = function(text) {
 }
 
 module.exports.normalize = function(text) {
+  text = text.replace(emoji.namesRe, '')
   return text.replace(/[^\w_-]/g, '').toLowerCase()
 }
 

@@ -8,9 +8,6 @@ var chat = require('../stores/chat')
 var hueHash = require('../hue-hash')
 
 
-var emojiNames = _.filter(_.map(emoji.index, (v, k) => v && _.escapeRegExp(k)))
-var emojiNamesRe = new RegExp(':(' + emojiNames.join('|') + '):', 'g')
-
 var autolinker = new Autolinker({
   twitter: false,
   truncate: 40,
@@ -65,7 +62,7 @@ module.exports = React.createClass({
       })
     }
 
-    html = html.replace(emojiNamesRe, function(match, name) {
+    html = html.replace(emoji.namesRe, function(match, name) {
       return React.renderToStaticMarkup(<div className={'emoji emoji-' + emoji.index[name]} title={match}>{match}</div>)
     })
 

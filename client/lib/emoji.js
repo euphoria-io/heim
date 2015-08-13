@@ -27,3 +27,8 @@ delete index['iphone']
 module.exports.names = _.invert(index)
 
 module.exports.codes = _.uniq(_.values(index))
+
+var emojiNames = _.filter(_.map(index, function(code, name) {
+  return code && _.escapeRegExp(name)
+}))
+module.exports.namesRe = new RegExp(':(' + emojiNames.join('|') + '):', 'g')
