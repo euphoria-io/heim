@@ -171,7 +171,8 @@ module.exports.store = Reflux.createStore({
         // if the root node changed, scan for no longer existing messages
         if (id == '__root') {
           this.state.notifications.forEach((kind, nid) => {
-            if (!state.messages.get(nid)) {
+            var notificationMsg = state.messages.get(nid)
+            if (!notificationMsg || !notificationMsg.has('$count')) {
               this._removeNotification(nid)
             }
           })
