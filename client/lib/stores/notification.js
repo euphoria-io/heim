@@ -264,6 +264,15 @@ module.exports.store = Reflux.createStore({
           var newPriority = this.priority[newNotification.kind]
           var oldPriority = this.priority[existingNotificationKind] || 0
           if (newPriority > oldPriority) {
+            if (existingNotificationKind && !alerts[existingNotificationKind]) {
+              Raven.captureMessage('existing notififcation priority seen again?!', {
+                extra: {
+                  existing: existingNotificationKind,
+                  new: newNotification.kind,
+                  value: alerts[existingNotificationKind],
+                }
+              })
+            }
             if (existingNotificationKind && newMessageId == alerts[existingNotificationKind].message.get('id')) {
               delete alerts[existingNotificationKind]
             }
