@@ -115,6 +115,26 @@ describe('notification store', function() {
       'content': 'woof!',
     }
 
+    var message3 = {
+      'id': 'id3',
+      'time': 123458,
+      'sender': {
+        'id': '32.64.96.128:12345',
+        'name': 'max',
+      },
+      'content': 'whoa',
+    }
+
+    var messageOld = {
+      'id': 'id0',
+      'time': 123450,
+      'sender': {
+        'id': '32.64.96.128:12345',
+        'name': 'ezzie',
+      },
+      'content': '/me yawns',
+    }
+
     var message2Own = _.merge({}, message2, {
       '_own': true,
     })
@@ -195,6 +215,25 @@ describe('notification store', function() {
       messages: new ChatTree().reset([
         message1,
         message2,
+      ])
+    }
+
+    var mockChatState3 = {
+      roomName: 'ezzie',
+      messages: new ChatTree().reset([
+        message1,
+        message2,
+        message3,
+      ])
+    }
+
+    var mockChatState3Old = {
+      roomName: 'ezzie',
+      messages: new ChatTree().reset([
+        messageOld,
+        message1,
+        message2,
+        message3,
       ])
     }
 
@@ -551,6 +590,21 @@ describe('notification store', function() {
         })
       })
 
+      describe('receiving old messages', function() {
+        it('should not replace existing newer notifications', function(done) {
+          simulateMessages([message1.id, message2.id, message3.id], mockChatState3)
+          clock.tick(0)
+          simulateMessages([messageOld.id], mockChatState3Old)
+          support.listenOnce(notification.store, function(state) {
+            assert.equal(state.notifications.get(message1.id), 'new-message')
+            assert.equal(state.notifications.get(message2.id), 'new-message')
+            assert.equal(state.notifications.get(message3.id), 'new-message')
+            done()
+          })
+          clock.tick(0)
+        })
+      })
+
       describe('receiving a child reply', function() {
         describe('when joined', function() {
           testNotifyModes({
@@ -637,7 +691,8 @@ describe('notification store', function() {
               support.listenOnce(notification.store, function(state) {
                 assert.equal(state.notifications.get(messageMention.id), 'new-mention')
                 notification.store.dismissNotification(messageMention.id)
-                assert(!state.notifications.has(messageMention.id))
+                clock.tick(0)
+                assert(!notification.store.state.notifications.has(messageMention.id))
                 notification.store.messagesChanged([messageMention.id], mockChatStateMention)
                 clock.tick(0)
                 assert(!notification.store.state.notifications.has(messageMention.id))
@@ -647,33 +702,50 @@ describe('notification store', function() {
             })
           })
 
-          function testReset(resetState, done) {
-            notification.store.messagesChanged([messageMention.id], mockChatStateMention)
-            support.listenOnce(notification.store, function(state) {
-              assert.equal(state.notifications.get(messageMention.id), 'new-mention')
-              sinon.assert.calledOnce(Notification)
-              var mentionNotification = fakeNotification
-              notification.store.messagesChanged(['__root'], resetState)
-              notification.store.messagesChanged([message1.id], mockChatState)
+          describe('and reconnecting later', function() {
+            function testReset(expectHas, done, resetCallback) {
+              notification.store.messagesChanged([messageMention.id], mockChatStateMention)
               support.listenOnce(notification.store, function(state) {
-                assert(!state.notifications.has(messageMention.id))
-                sinon.assert.calledOnce(mentionNotification.close)
-                done()
+                assert.equal(state.notifications.get(messageMention.id), 'new-mention')
+                sinon.assert.calledOnce(Notification)
+                var mentionNotification = fakeNotification
+                resetCallback()
+                support.listenOnce(notification.store, function(state) {
+                  assert.equal(state.notifications.has(messageMention.id), expectHas)
+                  sinon.assert.calledOnce(mentionNotification.close)
+                  done()
+                })
+                clock.tick(0)
               })
               clock.tick(0)
-            })
-            clock.tick(0)
-          }
+            }
 
-          describe('and reconnecting later (with the message no longer loaded)', function() {
-            it('should remove the notification and alert', function(done) {
-              testReset(emptyChatState, done)
+            describe('with the message no longer loaded', function() {
+              it('should remove the notification and alert', function(done) {
+                testReset(false, done, () => {
+                  notification.store.messagesChanged(['__root'], emptyChatState)
+                  notification.store.messagesChanged([message1.id], mockChatState)
+                })
+              })
             })
-          })
 
-          describe('and reconnecting later (with the message as a shadow node)', function() {
-            it('should remove the notification and alert', function(done) {
-              testReset(mockChatStateMentionShadow, done)
+            describe('with the message as a shadow node', function() {
+              it('should remove the notification and alert', function(done) {
+                testReset(false, done, () => {
+                  notification.store.messagesChanged(['__root'], mockChatStateMentionShadow)
+                  notification.store.messagesChanged([message1.id], mockChatState)
+                })
+              })
+            })
+
+            describe('with the message re-loaded', function() {
+              it('should remove the notification and alert', function(done) {
+                testReset(true, done, () => {
+                  notification.store.messagesChanged(['__root'], emptyChatState)
+                  clock.tick(0)
+                  notification.store.messagesChanged([messageMention.id], mockChatStateMention)
+                })
+              })
             })
           })
 

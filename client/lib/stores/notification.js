@@ -56,6 +56,7 @@ module.exports.store = Reflux.createStore({
       popupsEnabled: null,
       popupsSupported: 'Notification' in window,
       popupsPausedUntil: null,
+      latestNotifications: Immutable.OrderedMap(),
       notifications: Immutable.OrderedMap(),
       newMessageCount: 0,
     }
@@ -64,16 +65,16 @@ module.exports.store = Reflux.createStore({
     this.joined = false
     this.connected = false
     this.alerts = {}
-    this._notified = {}
     this._roomStorage = null
 
     if (this.state.popupsSupported) {
       this.state.popupsPermission = Notification.permission == 'granted'
     }
 
+    this._messages = null
+    this._notified = {}
+    this._dismissed = {}
     this._newNotifications = []
-    this._removedNotifications = []
-    this._seenNotifications = {}
     this._queueUpdateNotifications = _.debounce(this._updateNotifications, 0)
     this._inactiveUpdateNotificationsTimeout = null
 
@@ -164,32 +165,13 @@ module.exports.store = Reflux.createStore({
   },
 
   messagesChanged: function(ids, state) {
+    this._messages = state.messages
     var unseen = Immutable.Seq(ids)
       .map(id => {
         var msg = state.messages.get(id)
 
-        // if the root node changed, scan for no longer existing messages
-        if (id == '__root') {
-          this.state.notifications.forEach((kind, nid) => {
-            var notificationMsg = state.messages.get(nid)
-            if (!notificationMsg || !notificationMsg.has('$count')) {
-              this._removeNotification(nid)
-            }
-          })
-          return
-        }
-
-        if (msg.get('deleted')) {
-          this._removeNotification(id)
-          return
-        }
-
-        var seen = msg.get('_seen')
-        if (seen) {
-          if (this.state.notifications.has(id)) {
-            this._seenNotifications[id] = seen
-          }
-          return
+        if (id == '__root' || this.state.latestNotifications.has(id)) {
+          this._queueUpdateNotifications()
         }
 
         // exclude already notified
@@ -197,12 +179,11 @@ module.exports.store = Reflux.createStore({
           return
         }
 
-        if (msg.get('_own')) {
+        if (!this._shouldShowNotification(msg, Date.now())) {
           return
         }
 
-        // exclude orphan messages
-        if (!msg.has('$count')) {
+        if (msg.get('_own')) {
           return
         }
 
@@ -248,35 +229,52 @@ module.exports.store = Reflux.createStore({
     this._queueUpdateNotifications()
   },
 
-  _removeNotification: function(id) {
-    this._removedNotifications.push(id)
-    this._queueUpdateNotifications()
+  _shouldShowNotification: function(msg, now) {
+    if (!msg) {
+      return false
+    }
+
+    if (_.has(this._dismissed, msg.get('id'))) {
+      return false
+    }
+
+    if (msg.get('deleted') || !msg.has('$count')) {
+      return false
+    }
+
+    var seen = msg.get('_seen')
+    if (seen === true || seen && seen <= now - this.seenExpirationTime) {
+      return false
+    }
+
+    return true
   },
 
   _updateNotifications: function() {
+    var now = Date.now()
     var alerts = {}
 
-    var groups = this.state.notifications
+    var groups = this.state.latestNotifications
       .withMutations(notifications => {
         _.each(this._newNotifications, newNotification => {
           var newMessageId = newNotification.message.get('id')
-          var existingNotificationKind = notifications.get(newMessageId)
+          var existingNotification = notifications.get(newMessageId)
           var newPriority = this.priority[newNotification.kind]
-          var oldPriority = this.priority[existingNotificationKind] || 0
+          var oldPriority = existingNotification && this.priority[existingNotification.kind] || 0
           if (newPriority > oldPriority) {
-            if (existingNotificationKind && !alerts[existingNotificationKind]) {
+            if (existingNotification && !alerts[existingNotification.kind]) {
               Raven.captureMessage('existing notififcation priority seen again?!', {
                 extra: {
-                  existing: existingNotificationKind,
+                  existing: existingNotification.kind,
                   new: newNotification.kind,
-                  value: alerts[existingNotificationKind],
+                  value: alerts[existingNotification.kind],
                 }
               })
             }
-            if (existingNotificationKind && newMessageId == alerts[existingNotificationKind].message.get('id')) {
-              delete alerts[existingNotificationKind]
+            if (existingNotification && newMessageId == alerts[existingNotification.kind].message.get('id')) {
+              delete alerts[existingNotification.kind]
             }
-            notifications.set(newMessageId, newNotification.kind)
+            notifications.set(newMessageId, newNotification)
             alerts[newNotification.kind] = newNotification
             if (!this.active && !this._notified[newMessageId]) {
               this.state.newMessageCount++
@@ -284,24 +282,9 @@ module.exports.store = Reflux.createStore({
             this._notified[newMessageId] = true
           }
         })
-
-        _.each(this._removedNotifications, id => {
-          var existingNotificationKind = notifications.get(id)
-          if (existingNotificationKind) {
-            delete alerts[existingNotificationKind]
-            this.removeAlert(existingNotificationKind, id)
-          }
-          notifications.delete(id)
-        })
-
-        _.each(this._seenNotifications, (seen, id) => {
-          if (seen === true || seen <= Date.now() - this.seenExpirationTime) {
-            notifications.delete(id)
-            delete this._seenNotifications[id]
-          }
-        })
       })
-      .groupBy(kind => kind)
+      .sortBy(notification => notification.message.get('time'))
+      .groupBy(notification => notification.kind)
 
     var newMention = alerts['new-mention']
     if (newMention) {
@@ -325,14 +308,24 @@ module.exports.store = Reflux.createStore({
 
     var empty = Immutable.OrderedMap()
 
-    this.state.notifications = empty.concat(
+    this.state.latestNotifications = empty.concat(
       groups.get('new-mention', empty),
       groups.get('new-reply', empty).takeLast(6),
       groups.get('new-message', empty).takeLast(3)
     )
 
+    this.state.notifications = this.state.latestNotifications
+      .filterNot((notification, id) => {
+        if (!this._shouldShowNotification(this._messages.get(id), now)) {
+          if (this.state.notifications.has(id)) {
+            this.removeAlert(notification.kind, id)
+          }
+          return true
+        }
+      })
+      .map(notification => notification.kind)
+
     this._newNotifications = []
-    this._removedNotifications = []
 
     this.trigger(this.state)
   },
@@ -354,7 +347,8 @@ module.exports.store = Reflux.createStore({
     var kind = this.state.notifications.get(messageId)
     if (kind) {
       this.removeAlert(kind, messageId)
-      this.state.notifications = this.state.notifications.delete(messageId)
+      this._dismissed[messageId] = true
+      this._queueUpdateNotifications()
       this.trigger(this.state)
     }
   },
