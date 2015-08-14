@@ -31,6 +31,7 @@ module.exports = React.createClass({
 
   componentWillLeave: function(callback) {
     var node = this.getDOMNode()
+    node.style.transition = node.style.webkitTransition = 'all .25s ease'
     node.style.height = 0
     setTimeout(() => {
       node.style.transition = 'none'
