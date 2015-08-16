@@ -63,6 +63,7 @@ func (k *CSV) Set(flags string) error {
 type ServerConfig struct {
 	AllowRoomCreation     bool          `yaml:"allow_room_creation"`
 	NewAccountMinAgentAge time.Duration `yaml:"new_account_min_agent_age"`
+	RoomEntryMinAgentAge  time.Duration `yaml:"room_entry_min_agent_age"`
 
 	Cluster ClusterConfig  `yaml:"cluster,omitempty"`
 	Console ConsoleConfig  `yaml:"console,omitempty"`

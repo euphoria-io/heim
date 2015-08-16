@@ -44,6 +44,7 @@ type Server struct {
 
 	allowRoomCreation     bool
 	newAccountMinAgentAge time.Duration
+	roomEntryMinAgentAge  time.Duration
 
 	m sync.Mutex
 
@@ -76,6 +77,7 @@ func NewServer(
 
 func (s *Server) AllowRoomCreation(allow bool)            { s.allowRoomCreation = allow }
 func (s *Server) NewAccountMinAgentAge(age time.Duration) { s.newAccountMinAgentAge = age }
+func (s *Server) RoomEntryMinAgentAge(age time.Duration)  { s.roomEntryMinAgentAge = age }
 
 func (s *Server) route() {
 	s.r = mux.NewRouter().StrictSlash(true)

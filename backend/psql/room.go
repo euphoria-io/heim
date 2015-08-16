@@ -28,6 +28,7 @@ type Room struct {
 	EncryptedManagementKey []byte `db:"encrypted_management_key"`
 	EncryptedPrivateKey    []byte `db:"encrypted_private_key"`
 	PublicKey              []byte `db:"public_key"`
+	MinAgentAge            int64  `db:"min_agent_age"`
 }
 
 func (r *Room) Bind(b *Backend) *RoomBinding {
@@ -537,3 +538,5 @@ func (rb *RoomBinding) RemoveManager(
 
 	return nil
 }
+
+func (rb *RoomBinding) MinAgentAge() time.Duration { return time.Duration(rb.Room.MinAgentAge) }

@@ -40,7 +40,7 @@ func TestBackend(t *testing.T) {
 
 	// Drop all tables.
 	for _, item := range schema {
-		if _, err := db.Exec("DROP TABLE IF EXISTS " + item.Name); err != nil {
+		if _, err := db.Exec("DROP TABLE IF EXISTS " + item.Name + " CASCADE"); err != nil {
 			t.Fatalf("failed to drop table %s: %s", item.Name, err)
 		}
 	}

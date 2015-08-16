@@ -455,6 +455,8 @@ func (r *memRoom) RemoveManager(
 	return nil
 }
 
+func (r *memRoom) MinAgentAge() time.Duration { return 0 }
+
 type roomMessageKey struct {
 	*proto.GrantManager
 	id        string

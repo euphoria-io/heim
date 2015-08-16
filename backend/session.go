@@ -211,6 +211,13 @@ func (s *session) serve() error {
 		return err
 	}
 
+	// Verify agent age against site and room settings.
+	agentAge := time.Now().Sub(s.client.Agent.Created)
+	if s.client.Account == nil && !s.client.Agent.Blessed && (agentAge < s.server.roomEntryMinAgentAge || agentAge < s.room.MinAgentAge()) {
+		s.sendBounce("room not open")
+		s.state = s.ignoreState
+	}
+
 	// TODO: have user explicitly unlock staff KMS
 	if s.client.Account != nil && s.client.Account.IsStaff() {
 		kms, err := s.client.Account.UnlockStaffKMS(s.client.Authorization.ClientKey)

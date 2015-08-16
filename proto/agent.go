@@ -83,6 +83,7 @@ type Agent struct {
 	EncryptedClientKey *security.ManagedKey
 	AccountID          string
 	Created            time.Time
+	Blessed            bool
 }
 
 func (a *Agent) IDString() string { return base64.URLEncoding.EncodeToString(a.ID) }

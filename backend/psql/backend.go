@@ -51,14 +51,14 @@ var schema = []struct {
 	// Sessions.
 	{"session_log", SessionLog{}, []string{"SessionID"}},
 
+	// Accounts, keys and capabilities.
+	{"master_key", MessageKey{}, []string{"ID"}},
+	{"capability", Capability{}, []string{"ID"}},
+
 	// Accounts.
 	{"agent", Agent{}, []string{"ID"}},
 	{"personal_identity", PersonalIdentity{}, []string{"Namespace", "ID"}},
 	{"account", Account{}, []string{"ID"}},
-
-	// Keys and capabilities.
-	{"master_key", MessageKey{}, []string{"ID"}},
-	{"capability", Capability{}, []string{"ID"}},
 }
 
 type Backend struct {

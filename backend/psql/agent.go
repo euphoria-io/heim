@@ -24,6 +24,7 @@ type Agent struct {
 	EncryptedClientKey []byte         `db:"encrypted_client_key"`
 	AccountID          sql.NullString `db:"account_id"`
 	Created            time.Time
+	Blessed            bool
 }
 
 type AgentTrackerBinding struct {
@@ -102,6 +103,7 @@ func (atb *AgentTrackerBinding) getFromDB(agentID string, db gorp.SqlExecutor) (
 		},
 		AccountID: agentRow.AccountID.String,
 		Created:   agentRow.Created,
+		Blessed:   agentRow.Blessed,
 	}
 	return agent, nil
 }

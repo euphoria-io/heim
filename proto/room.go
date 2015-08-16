@@ -102,6 +102,8 @@ type Room interface {
 
 	// ManagerCapability returns the manager capablity for the given account.
 	ManagerCapability(ctx scope.Context, manager Account) (security.Capability, error)
+
+	MinAgentAge() time.Duration
 }
 
 type RoomMessageKey interface {
