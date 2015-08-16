@@ -102,7 +102,7 @@ module.exports.store = Reflux.createStore({
             this.state.authState = 'needs-passcode'
           }
         } else if (reason == 'room not open') {
-          this.state.authType = 'closed'
+          this.state.authType = this.state.authState = 'closed'
         }
       } else if (ev.body.type == 'auth-reply') {
         this._handleAuthReply(ev.body.error, ev.body.data)
@@ -384,7 +384,7 @@ module.exports.store = Reflux.createStore({
   },
 
   loadMoreLogs: function() {
-    if (!this.state.earliestLog || this._loadingLogs) {
+    if (this.state.authState || !this.state.earliestLog || this._loadingLogs) {
       return
     }
 
