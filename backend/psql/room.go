@@ -539,4 +539,6 @@ func (rb *RoomBinding) RemoveManager(
 	return nil
 }
 
-func (rb *RoomBinding) MinAgentAge() time.Duration { return time.Duration(rb.Room.MinAgentAge) }
+func (rb *RoomBinding) MinAgentAge() time.Duration {
+	return time.Duration(time.Duration(rb.Room.MinAgentAge) * time.Second)
+}
