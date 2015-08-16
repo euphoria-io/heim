@@ -94,9 +94,15 @@ module.exports.store = Reflux.createStore({
         this._handleLogReply(ev.body.data)
       } else if (ev.body.type == 'bounce-event') {
         this.state.canJoin = false
-        this.state.authType = 'passcode'
-        if (this.state.authState != 'trying-stored') {
-          this.state.authState = 'needs-passcode'
+
+        var reason = ev.body.data.reason
+        if (reason == 'authentication required') {
+          this.state.authType = 'passcode'
+          if (this.state.authState != 'trying-stored') {
+            this.state.authState = 'needs-passcode'
+          }
+        } else if (reason == 'room not open') {
+          this.state.authType = 'closed'
         }
       } else if (ev.body.type == 'auth-reply') {
         this._handleAuthReply(ev.body.error, ev.body.data)

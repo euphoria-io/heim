@@ -251,6 +251,29 @@ module.exports = React.createClass({
       <Panner ref="panner" id="ui" snapPoints={snapPoints} onMove={ui.onViewPan} className={classNames({'disconnected': this.state.chat.connected === false, 'info-pane-hidden': infoPaneHidden, 'sidebar-pane-hidden': sidebarPaneHidden, 'info-pane-focused': this.state.ui.focusedPane == this.state.ui.popupPane})} onMouseDownCapture={this.onMouseDown} onClickCapture={this.onClick} onTouchMove={this.onTouchMove} onKeyDown={this.onKeyDown}>
         {this.state.storage && this.state.storage.useOpenDyslexic && <link rel="stylesheet" type="text/css" id="css" href="/static/od.css" />}
         {this.state.chat.authState && this.state.chat.authState != 'trying-stored' && <div className="hatch-shade fill" />}
+        {this.state.chat.authType == 'closed' && (
+          <div className="closed-msg-box">
+            <div className="closed-msg">
+              <h1>Hi Hacker News!</h1>
+              <h2>we're not quite ready for you yet. :)</h2>
+              <p>
+                <strong>Euphoria</strong> is a new real-time community platform
+                under active development. You've found our developer preview a
+                little sooner than anticipated &mdash; while we welcome you into our
+                spaces, we're not ready for the mass influx yet.
+              </p>
+
+              <p>
+                We believe the internet needs more safe, accessible, diverse online
+                spaces. The platform we are building is completely open source.  If
+                you are interested in this, contact us at <a
+                href="mailto:hi@euphoria.io">hi@euphoria.io</a>, <a
+                href="https://github.com/euphoria-io/heim">star us on GitHub</a>, or
+                come back in a little bit once we can lower the draw bridge. :)
+              </p>
+            </div>
+          </div>
+        )}
         <div className="info-pane" onMouseEnter={ui.freezeInfo} onMouseLeave={ui.thawInfo}>
           <h2>discussions</h2>
           <div className="thread-list-container">
