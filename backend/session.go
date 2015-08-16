@@ -212,8 +212,10 @@ func (s *session) serve() error {
 	}
 
 	// Verify agent age against site and room settings.
+	allowed := true
 	agentAge := time.Now().Sub(s.client.Agent.Created)
 	if s.client.Account == nil && !s.client.Agent.Blessed && (agentAge < s.server.roomEntryMinAgentAge || agentAge < s.room.MinAgentAge()) {
+		allowed = false
 		s.sendBounce("room not open")
 		s.state = s.ignoreState
 	}
@@ -236,11 +238,13 @@ func (s *session) serve() error {
 	}
 	switch key {
 	case nil:
-		if err := s.join(); err != nil {
-			// TODO: send an error packet
-			return err
+		if allowed {
+			if err := s.join(); err != nil {
+				// TODO: send an error packet
+				return err
+			}
+			s.state = s.joinedState
 		}
-		s.state = s.joinedState
 	default:
 		if _, ok := s.client.Authorization.MessageKeys[key.KeyID()]; ok {
 			s.client.Authorization.CurrentMessageKeyID = key.KeyID()
