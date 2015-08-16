@@ -1,8 +1,9 @@
 # ◓
 
-Heim is the backend and frontend of [euphoria](https://euphoria.io). The
-backend is a Go server that speaks JSON over WebSockets, persisting data to
-PostgreSQL. Our web client is built in React/Reflux.
+Heim is the backend and frontend of [euphoria](https://euphoria.io), a
+real-time community platform. The backend is a Go server that speaks JSON over
+WebSockets, persisting data to PostgreSQL. Our web client is built in
+React/Reflux.
 
 **Currently, heim is released in a pre-alpha state**. Please be advised that
 new development is currently being prioritized over stability. We're releasing
