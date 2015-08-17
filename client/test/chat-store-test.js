@@ -216,9 +216,9 @@ describe('chat store', function() {
     })
 
     it('should connect socket with room name', function() {
-      chat.store.connect('ezzie')
+      chat.store.connect('ezzie', undefined)
       sinon.assert.calledOnce(socket.connect)
-      sinon.assert.calledWithExactly(socket.connect, 'ezzie')
+      sinon.assert.calledWithExactly(socket.connect, 'ezzie', undefined)
     })
 
     it('should save room name', function(done) {

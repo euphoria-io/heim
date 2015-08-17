@@ -337,7 +337,7 @@ if (!window.frameElement) {
           Heim.update.setReady(false)
         }
       })
-      context.Heim.actions.connect(roomName)
+      context.Heim.actions.connect(roomName, hashFlags.connect)
     }
     writeEnv(context.document, hash)
   }
@@ -345,7 +345,7 @@ if (!window.frameElement) {
   Heim.plugins.load(roomName)
 
   if (!window.onReady) {
-    Heim.actions.connect(roomName)
+    Heim.actions.connect(roomName, hashFlags.connect)
     Heim.actions.joinRoom()
   }
 

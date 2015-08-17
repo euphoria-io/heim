@@ -330,8 +330,8 @@ module.exports.store = Reflux.createStore({
     }
   },
 
-  connect: function(roomName) {
-    socket.connect(roomName)
+  connect: function(roomName, connect) {
+    socket.connect(roomName, connect)
     this.state.roomName = roomName
     storage.load()
     this.trigger(this.state)
