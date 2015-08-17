@@ -6,7 +6,7 @@ etcd:
 psql:
   build: containers/psql
   volumes:
-    - _psqldata/data:/var/lib/postgresql/data
+    - ./_psqldata/data:/var/lib/postgresql/data
 
 # The psqlclient container provides a client connection to the psql container.
 # TODO: add volume for persistent readline history, sql dumps, etc.
@@ -35,8 +35,8 @@ frontend:
   build: client
   volumes:
     - .:/srv/heim/
-    - deps/node_modules:/srv/heim/client/node_modules
-    - client/build:/srv/heim/client/build
+    - ./deps/node_modules:/srv/heim/client/node_modules
+    - ./client/build:/srv/heim/client/build
   environment:
     NODE_ENV: development
     SENTRY_ENDPOINT: http://sentry@euphoria.local:9000/2
@@ -49,7 +49,7 @@ upgradedb:
   links:
     - psql
   volumes:
-    - backend/psql/migrations:/migrations
+    - ./backend/psql/migrations:/migrations
 
 # The backend container runs the backend server against the psql container.
 backend:
@@ -59,9 +59,9 @@ backend:
     - psql
   volumes:
     - .:/go/src/euphoria.io/heim
-    - deps/godeps:/godeps
-    - client/build:/srv/heim/client/src/build
-    - backend/console/keys:/keys
+    - ./deps/godeps:/godeps
+    - ./client/build:/srv/heim/client/src/build
+    - ./backend/console/keys:/keys
   ports:
     - "8080:80"
     - "2222:2222"
@@ -77,8 +77,8 @@ embed:
   build: backend
   volumes:
     - .:/go/src/euphoria.io/heim
-    - deps/godeps:/godeps
-    - client/build:/srv/heim/client/src/build
+    - ./deps/godeps:/godeps
+    - ./client/build:/srv/heim/client/src/build
   ports:
     - "8081:80"
   command: run.sh heimctl serve-embed -http :80 -static /srv/heim/client/src/build/embed
@@ -90,7 +90,7 @@ presence:
     - psql
   volumes:
     - .:/go/src/euphoria.io/heim
-    - deps/godeps:/godeps
+    - ./deps/godeps:/godeps
   ports:
     - "8082:80"
   environment:
@@ -106,7 +106,7 @@ retention:
     - psql
   volumes:
     - .:/go/src/euphoria.io/heim
-    - deps/godeps:/godeps
+    - ./deps/godeps:/godeps
   ports:
     - "8082:80"
   environment:
@@ -122,7 +122,7 @@ activity:
     - psql
   volumes:
     - .:/go/src/euphoria.io/heim
-    - deps/godeps:/godeps
+    - ./deps/godeps:/godeps
   ports:
     - "8082:80"
   environment:
@@ -136,6 +136,6 @@ haproxy:
   links:
     - backend
   volumes:
-    - containers/haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg
+    - ./containers/haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg
   ports:
     - "8888:80"
