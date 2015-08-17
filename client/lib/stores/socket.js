@@ -33,6 +33,8 @@ module.exports.store = Reflux.createStore({
 
   init: function() {
     this.roomName = null
+    this.customOrigin = null
+    this.customPrefix = null
     this.ws = null
     this.seq = 0
     this.pingTimeout = null
@@ -54,13 +56,18 @@ module.exports.store = Reflux.createStore({
     return scheme + '://' + parsedOrigin.host + prefix + '/room/' + roomName + '/ws'
   },
 
-  connect: function(roomName) {
+  connect: function(roomName, customConnect) {
+    if (customConnect) {
+      var parsedConnect = url.parse(customConnect)
+      this.customOrigin = parsedConnect.protocol + '//' + parsedConnect.host
+      this.customPrefix = parsedConnect.pathname
+    }
     this.roomName = this.roomName || roomName
     this._connect()
   },
 
   _connect: function() {
-    var wsurl = this._wsurl(process.env.HEIM_ORIGIN, process.env.HEIM_PREFIX, this.roomName)
+    var wsurl = this._wsurl(this.customOrigin || process.env.HEIM_ORIGIN, this.customPrefix || process.env.HEIM_PREFIX, this.roomName)
     this.ws = new WebSocket(wsurl, 'heim1')
     this.ws.onopen = this._open
     this.ws.onclose = this._closeReconnectSlow

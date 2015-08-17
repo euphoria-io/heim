@@ -41,9 +41,15 @@ describe('socket store', function() {
   })
 
   describe('connect action', function() {
-    it('should connect to ws://host/room/name/ws with heim1 protocol', function() {
+    it('should by default connect to ws://host/room/name/ws with heim1 protocol', function() {
       socket.store.connect('ezzie')
       var expectedPath = 'wss://heimhost/test/room/ezzie/ws'
+      sinon.assert.calledWithExactly(fakeWebSocketContructor, expectedPath, 'heim1')
+    })
+
+    it('should connect to a custom url if specified', function() {
+      socket.store.connect('ezzie', 'https://euphoria.io/dev/chromakode')
+      var expectedPath = 'wss://euphoria.io/dev/chromakode/room/ezzie/ws'
       sinon.assert.calledWithExactly(fakeWebSocketContructor, expectedPath, 'heim1')
     })
 
