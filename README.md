@@ -23,13 +23,24 @@ complex pull requests while we get our core building blocks in place.
     1. Clone [heim-deps](https://github.com/euphoria-io/heim-deps).
     2. `./heim-deps/deps.sh link ./path/to/heim/repo`
 
-3. Build the client static files: `docker-compose run frontend`.
+### Running a server
 
-4. Init your db: `docker-compose run upgradedb sql-migrate up`.
+1. Build the client static files: `docker-compose run frontend`.
 
-5. Start the server: `docker-compose up backend`.
+2. Init your db: `docker-compose run upgradedb sql-migrate up`.
+
+3. Start the server: `docker-compose up backend`.
 
 Heim is now running on port 8080. \o/
+
+### Developing the client (connected to euphoria.io)
+
+1. Launch the standalone static server and build watcher:  
+   `docker-compose run --service-ports frontend gulp develop`
+
+2. To connect to [&test](https://euphoria.io/room/test) on euphoria.io
+   using your local client, open:
+   http://localhost:8080/room/test/#connect=https://euphoria.io
 
 ## Discussion
 

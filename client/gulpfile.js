@@ -15,6 +15,7 @@ var browserify = require('browserify')
 var envify = require('envify/custom')
 var react = require('gulp-react')
 var jshint = require('gulp-jshint')
+var serve = require('gulp-serve')
 var fs = require('fs')
 var path = require('path')
 var exec = require('child_process').exec
@@ -183,7 +184,7 @@ gulp.task('lint', function() {
 })
 
 function watchifyTask(name, bundler, outFile, dest) {
-  gulp.task(name, function() {
+  gulp.task(name, ['build-statics'], function() {
     // via https://github.com/gulpjs/gulp/blob/master/docs/recipes/fast-browserify-builds-with-watchify.md
     bundler = watchify(bundler(watchify.args))
     bundler.on('log', gutil.log.bind(gutil, gutil.colors.green('JS (' + name + ')')))
@@ -218,3 +219,23 @@ gulp.task('watch', function() {
 
 gulp.task('build', ['build-statics', 'build-browserify'])
 gulp.task('default', ['build-statics', 'watch', 'heim-watchify', 'embed-watchify'])
+
+gulp.task('serve-heim', serve({
+  port: 8080,
+  root: heimDest,
+  middleware: function(req, res, next) {
+    req.url = req.url.replace(/^\/static|^\/room\/\w+/, '')
+    next()
+  },
+}))
+
+gulp.task('serve-embed', serve({
+  port: 8081,
+  root: embedDest,
+  middleware: function(req, res, next) {
+    req.url = req.url.replace(/^\/\?\S+/, '/embed.html')
+    next()
+  },
+}))
+
+gulp.task('develop', ['serve-heim', 'serve-embed', 'default'])

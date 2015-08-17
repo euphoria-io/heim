@@ -37,6 +37,9 @@ frontend:
     - .:/srv/heim/
     - ./deps/node_modules:/srv/heim/client/node_modules
     - ./client/build:/srv/heim/client/build
+  ports:
+    - "8080:8080"
+    - "8081:8081"
   environment:
     NODE_ENV: development
     SENTRY_ENDPOINT: http://sentry@euphoria.local:9000/2
