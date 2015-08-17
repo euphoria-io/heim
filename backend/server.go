@@ -301,6 +301,10 @@ func checkOrigin(r *http.Request) bool {
 		}
 	}
 
+	if u.Host == "localhost:8080" || u.Host == "euphoria.local:8080" {
+		return true
+	}
+
 	// If we reach this point, reject the Origin.
 	return false
 }
