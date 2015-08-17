@@ -64,6 +64,7 @@ var store = module.exports.store = Reflux.createStore({
     this.state = {
       thin: false,
       scrollEdgeSpace: 156,
+      showTimestamps: true,
       focusedPane: 'main',
       panes: Immutable.Map({
         main: createPaneStore('main'),
@@ -113,6 +114,7 @@ var store = module.exports.store = Reflux.createStore({
     }
     this.state.thin = thin
     this.state.scrollEdgeSpace = height < 650 ? 50 : 156
+    this.state.showTimestamps = width > 525
     this.trigger(this.state)
   },
 
