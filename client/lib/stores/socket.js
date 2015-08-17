@@ -32,6 +32,7 @@ module.exports.store = Reflux.createStore({
   pingLimit: 2000,
 
   init: function() {
+    this.roomName = null
     this.ws = null
     this.seq = 0
     this.pingTimeout = null
