@@ -444,6 +444,7 @@ module.exports = React.createClass({
         >
           <div className="messages-content">
             <div ref="messages" className={classNames('messages', {'entry-focus': entryFocus, 'entry-dragging': this.state.pane.draggingEntry})} {...messageDragEvents}>
+              {this.state.chat.authState && this.state.chat.authState != 'trying-stored' && <div className="hatch-shade fill" />}
               <MessageComponent key={this.state.pane.rootId} pane={this.props.pane} tree={this.state.chat.messages} nodeId={this.state.pane.rootId} showTimeStamps={this.props.showTimeStamps} showAllReplies={this.props.showAllReplies} roomSettings={this.state.chat.roomSettings} />
               {this.state.pane.rootId == '__root' && entry}
             </div>
