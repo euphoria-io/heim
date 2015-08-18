@@ -60,7 +60,7 @@ module.exports.store = Reflux.createStore({
     if (customConnect) {
       var parsedConnect = url.parse(customConnect)
       this.customOrigin = parsedConnect.protocol + '//' + parsedConnect.host
-      this.customPrefix = parsedConnect.pathname
+      this.customPrefix = parsedConnect.pathname == '/' ? '' : parsedConnect.pathname
     }
     this.roomName = this.roomName || roomName
     this._connect()
