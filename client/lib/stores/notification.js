@@ -267,7 +267,13 @@ module.exports.store = Reflux.createStore({
                 extra: {
                   existing: existingNotification.kind,
                   new: newNotification.kind,
-                  value: alerts[existingNotification.kind],
+                  equal: Immutable.is(existingNotification.message, newNotification.message),
+                  ide: existingNotification.message.get('id'),
+                  idn: newNotification.message.get('id'),
+                  exn: existingNotification.message.get('_mention'),
+                  count: _.countBy(this._newNotifications, n => n.message.get('id') == newMessageId),
+                  nick: chat.store.state.nick,
+                  tentativeNick: chat.store.state.tentativeNick,
                 }
               })
             }
