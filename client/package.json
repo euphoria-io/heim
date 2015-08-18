@@ -25,7 +25,7 @@
     "envify": "~3.0.0",
     "brfs": "~1.4.0",
     "gulp": "~3.8.7",
-    "gulp-util": "~3.0.1",
+    "gulp-util": "~3.0.6",
     "gulp-file": "~0.2.0",
     "gulp-template": "~3.0.0",
     "vinyl-source-stream": "~0.1.1",
