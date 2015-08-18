@@ -40,7 +40,7 @@ Heim is now running on port 8080. \o/
 
 2. To connect to [&test](https://euphoria.io/room/test) on euphoria.io
    using your local client, open:
-   http://localhost:8080/room/test/#connect=https://euphoria.io
+   <http://localhost:8080/room/test/#connect=https://euphoria.io>
 
 ## Discussion
 
