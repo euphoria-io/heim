@@ -19,9 +19,7 @@ complex pull requests while we get our core building blocks in place.
 1. Install `git`, [`docker`](https://docs.docker.com/installation/), and
    [`docker-compose`](https://docs.docker.com/compose/install/).
 
-2. Link in our dependencies repository:
-    1. Clone [heim-deps](https://github.com/euphoria-io/heim-deps).
-    2. `./heim-deps/deps.sh link ./path/to/heim/repo`
+2. Fetch dependencies: run `./fetch-deps.sh` in this repo directory.
 
 ### Running a server
 
