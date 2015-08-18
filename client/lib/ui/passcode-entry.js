@@ -58,7 +58,7 @@ module.exports = React.createClass({
     return (
       <div className="entry-box passcode">
         <p className="message">This room requires a passcode.</p>
-        <form className="entry" onSubmit={this.tryPasscode}>
+        <form className="entry focus-target" onSubmit={this.tryPasscode}>
           <label>{
             this.state.authState == 'trying' ? 'trying...'
               : this.state.authState == 'failed' ? 'no dice. try again:'

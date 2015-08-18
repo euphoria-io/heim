@@ -38,7 +38,7 @@ module.exports = React.createClass({
           <h1><strong>Hello{this.state.value ? ' ' + this.state.value : ''}!</strong> <span className="no-break">Welcome to our discussion.</span></h1>
           <p>To reply to a message directly, {Heim.isTouch ? 'tap' : 'use the arrow keys or click on'} it.</p>
         </div>
-        <form className="entry" onSubmit={this.setNick}>
+        <form className="entry focus-target" onSubmit={this.setNick}>
           <label>choose your name to begin:</label>
           <input key="nick" ref="input" type="text" className="entry-text" autoFocus valueLink={this.linkState('value')} disabled={this.state.chat.connected === false} />
         </form>
