@@ -134,7 +134,7 @@ func TestTemplater(t *testing.T) {
 		data := &StaticFiles{}
 		content, err := templater.Evaluate("test.html", data)
 		So(err, ShouldBeNil)
-		So(string(content), ShouldEqual, `<img src="a.png@localhost">`)
+		So(string(content), ShouldEqual, `<img src="cid:a.png@localhost">`)
 		So(data.Attachments(), ShouldResemble, map[string]Attachment{
 			"a.png": Attachment{
 				Name:      "a.png",

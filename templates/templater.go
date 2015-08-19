@@ -150,5 +150,5 @@ func (sf *StaticFiles) File(path string) (template.URL, error) {
 		ContentID: fmt.Sprintf("%s@%s", url.QueryEscape(path), domain),
 		Content:   content,
 	}
-	return template.URL(sf.attached[path].ContentID), nil
+	return template.URL("cid:" + sf.attached[path].ContentID), nil
 }

@@ -148,7 +148,7 @@ func TestEmail(t *testing.T) {
 		So(e, ShouldResemble, &Email{
 			Header: textproto.MIMEHeader{"Subject": []string{"test"}},
 			Text:   []byte("text"),
-			HTML:   []byte(`<img src="a.png@localhost">`),
+			HTML:   []byte(`<img src="cid:a.png@localhost">`),
 			Attachments: []Attachment{
 				{
 					Name:      "a.png",
