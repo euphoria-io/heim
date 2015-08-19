@@ -48,6 +48,7 @@ func (serveCmd) longdesc() string {
 func (cmd *serveCmd) flags() *flag.FlagSet {
 	flags := flag.NewFlagSet("serve", flag.ExitOnError)
 	flags.StringVar(&cmd.addr, "http", ":8080", "address to serve http on")
+	flags.StringVar(&cmd.static, "static", "", "path to static files")
 	flags.StringVar(&cmd.consoleAddr, "console", "", "")
 	return flags
 }
@@ -75,6 +76,10 @@ func (cmd *serveCmd) run(ctx scope.Context, args []string) error {
 		return fmt.Errorf("configuration error: %s", err)
 	}
 	defer heim.Backend.Close()
+
+	if cmd.static != "" {
+		heim.StaticPath = cmd.static
+	}
 
 	if err := controller(heim, cmd.consoleAddr); err != nil {
 		return fmt.Errorf("controller error: %s", err)
