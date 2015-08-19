@@ -234,6 +234,7 @@ module.exports = React.createClass({
       .toKeyedSeq()
       .map(paneId => this.state.ui.panes.get(paneId))
     var extraPanes = this.templateHook('thread-panes')
+    var threadPanesFlex = threadPanes.size + extraPanes.length
 
     var infoPaneHidden = thin || !this.state.ui.infoPaneExpanded
     var infoPaneOpen = infoPaneHidden ? this.state.ui.panPos == 'info' : this.state.ui.infoPaneExpanded
@@ -302,7 +303,7 @@ module.exports = React.createClass({
           <UserList users={this.state.chat.who} />
           {this.templateHook('main-sidebar')}
         </div>}
-        {!thin && <div className="thread-panes" style={{flex: threadPanes.size + extraPanes.length}}>
+        {!thin && <div className="thread-panes" style={{flex: threadPanesFlex, WebkitFlex: threadPanesFlex}}>
           {extraPanes}
           {threadPanes.entrySeq().map(([paneId, pane], idx) => {
             var threadId = paneId.substr('thread-'.length)
