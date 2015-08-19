@@ -262,24 +262,6 @@ module.exports.store = Reflux.createStore({
           var newPriority = this.priority[newNotification.kind]
           var oldPriority = existingNotification && this.priority[existingNotification.kind] || 0
           if (newPriority > oldPriority) {
-            if (existingNotification && !alerts[existingNotification.kind]) {
-              Raven.captureMessage('existing notififcation priority seen again?!', {
-                extra: {
-                  existing: existingNotification.kind,
-                  new: newNotification.kind,
-                  equal: Immutable.is(existingNotification.message, newNotification.message),
-                  ide: existingNotification.message.get('id'),
-                  idn: newNotification.message.get('id'),
-                  exn: existingNotification.message.get('_mention'),
-                  count: _.countBy(this._newNotifications, n => n.message.get('id') == newMessageId),
-                  nick: chat.store.state.nick,
-                  tentativeNick: chat.store.state.tentativeNick,
-                }
-              })
-            }
-            if (existingNotification && newMessageId == alerts[existingNotification.kind].message.get('id')) {
-              delete alerts[existingNotification.kind]
-            }
             notifications.set(newMessageId, newNotification)
             alerts[newNotification.kind] = newNotification
             if (!this.active && !this._notified[newMessageId]) {
@@ -294,6 +276,8 @@ module.exports.store = Reflux.createStore({
 
     var newMention = alerts['new-mention']
     if (newMention) {
+      var newMentionId = newMention.message.get('id')
+      alerts = _.reject(alerts, a => a.message.get('id') == newMentionId)
       this._notifyAlert('new-mention', newMention.roomName, newMention.message, {
         favicon: favicons.highlight,
         icon: icons.highlight,
