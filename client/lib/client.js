@@ -178,6 +178,66 @@ if (!window.frameElement) {
       Heim.activity.windowFocused()
     }
 
+    Heim.addEventListener(uidocument, 'copy', function(ev) {
+      var findParent = require('./find-parent')
+      var domWalkForward = require('./dom-walk-forward')
+      var emoji = require('./emoji')
+
+      var selection = uiwindow.getSelection()
+      var range = selection.getRangeAt(0)
+
+      // first, if the selection start and end are within the same message
+      // line, do nothing.
+      function findParentMessage(el) {
+        return findParent(el, el => el.classList && el.classList.contains('message-node'))
+      }
+      var startMessageEl = findParentMessage(range.startContainer)
+      var endMessageEl = findParentMessage(range.endContainer)
+      if (startMessageEl && startMessageEl.querySelector('.line').contains(range.endContainer)) {
+        return
+      }
+
+      // if the selection start and end aren't within the same message list, do
+      // nothing.
+      var messagesEl = findParent(startMessageEl, el => el.classList && el.classList.contains('messages'))
+      if (!messagesEl || !messagesEl.contains(range.endContainer)) {
+        return
+      }
+
+      var messageEls = []
+      var minDepth
+      domWalkForward(startMessageEl, endMessageEl, function (el) {
+        if (!el.classList || !el.classList.contains('message-node')) {
+          return
+        }
+        messageEls.push(el)
+        if (!minDepth || el.dataset.depth < minDepth) {
+          minDepth = el.dataset.depth
+        }
+      })
+
+      var textParts = []
+      _.each(messageEls, el => {
+        var messageId = el.dataset.messageId
+        var message = Heim.chat.store.state.messages.get(messageId)
+        var preContent = []
+        preContent.push(_.repeat(' ', 2 * (el.dataset.depth - minDepth)))
+        preContent.push('[')
+        preContent.push(message.getIn(['sender', 'name']))
+        preContent.push('] ')
+        preContent = preContent.join('')
+        textParts.push(preContent)
+        textParts.push(message.get('content').replace(/\n/g, '\n' + _.repeat(' ', preContent.length)))
+        textParts.push('\n')
+      })
+
+      var text = textParts.join('')
+      text = text.replace(emoji.namesRe, (match, name) => emoji.nameToUnicode(name) || match)
+
+      ev.clipboardData.setData('text/plain', text)
+      ev.preventDefault()
+    }, false)
+
     Heim.addEventListener(uiwindow, 'message', function(ev) {
       if (ev.origin == process.env.EMBED_ORIGIN) {
         Heim.actions.embedMessage(ev.data)

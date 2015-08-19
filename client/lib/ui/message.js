@@ -283,7 +283,7 @@ var Message = module.exports = React.createClass({
     }
 
     return (
-      <div data-message-id={message.get('id')} className={classNames('message-node', messageClasses)}>
+      <div data-message-id={message.get('id')} data-depth={this.props.depth} className={classNames('message-node', messageClasses)}>
         {this.props.showTimeStamps && <time ref="time" className="timestamp" dateTime={time.toISOString()} title={time.format('MMMM Do YYYY, h:mm:ss a')}>
           {time.format('h:mma')}
         </time>}
