@@ -27,11 +27,13 @@ type CommonEmailParams struct {
 	SenderAddress string `yaml:"sender_address"`
 }
 
-func (p *CommonEmailParams) SiteURLShort() string { return p.CommonData.LocalDomain }
+func (p *CommonEmailParams) SiteURLShort() template.HTML {
+	return template.HTML(p.CommonData.LocalDomain)
+}
 
-func (p *CommonEmailParams) EmailPreferencesURL() string {
+func (p *CommonEmailParams) EmailPreferencesURL() template.HTML {
 	// TODO: incorporate token
-	return fmt.Sprintf("%s/prefs/emails", p.SiteURL)
+	return template.HTML(fmt.Sprintf("%s/prefs/emails", p.SiteURL))
 }
 
 type WelcomeEmailParams struct {
@@ -39,9 +41,11 @@ type WelcomeEmailParams struct {
 	VerificationToken string
 }
 
-func (p WelcomeEmailParams) Subject() string { return fmt.Sprintf("welcome to %s!", p.SiteName) }
+func (p WelcomeEmailParams) Subject() template.HTML {
+	return template.HTML(fmt.Sprintf("welcome to %s!", p.SiteName))
+}
 
-func (p *WelcomeEmailParams) VerifyEmailURL() string {
+func (p *WelcomeEmailParams) VerifyEmailURL() template.HTML {
 	v := url.Values{
 		"email": []string{p.AccountEmailAddress},
 		"token": []string{p.VerificationToken},
@@ -50,7 +54,7 @@ func (p *WelcomeEmailParams) VerifyEmailURL() string {
 		Path:     "/prefs/verify",
 		RawQuery: v.Encode(),
 	}
-	return p.SiteURL + u.String()
+	return template.HTML(p.SiteURL + u.String())
 }
 
 type PasswordChangedEmailParams struct {
@@ -58,8 +62,8 @@ type PasswordChangedEmailParams struct {
 	AccountName string
 }
 
-func (p PasswordChangedEmailParams) Subject() string {
-	return fmt.Sprintf("your %s account password has been changed", p.SiteName)
+func (p PasswordChangedEmailParams) Subject() template.HTML {
+	return template.HTML(fmt.Sprintf("your %s account password has been changed", p.SiteName))
 }
 
 type PasswordResetEmailParams struct {
@@ -68,11 +72,11 @@ type PasswordResetEmailParams struct {
 	Confirmation string
 }
 
-func (p PasswordResetEmailParams) Subject() string {
-	return fmt.Sprintf("password reset request for your %s account", p.SiteName)
+func (p PasswordResetEmailParams) Subject() template.HTML {
+	return template.HTML(fmt.Sprintf("password reset request for your %s account", p.SiteName))
 }
 
-func (p PasswordResetEmailParams) ResetPasswordURL() string {
+func (p PasswordResetEmailParams) ResetPasswordURL() template.HTML {
 	v := url.Values{
 		"confirmation": []string{p.Confirmation},
 	}
@@ -80,7 +84,7 @@ func (p PasswordResetEmailParams) ResetPasswordURL() string {
 		Path:     "/prefs/reset-password",
 		RawQuery: v.Encode(),
 	}
-	return p.SiteURL + u.String()
+	return template.HTML(p.SiteURL + u.String())
 }
 
 type RoomInvitationEmailParams struct {
@@ -95,8 +99,8 @@ func (p RoomInvitationEmailParams) Subject() template.HTML {
 	return template.HTML(fmt.Sprintf("%s invites you to join &%s", p.SenderName, p.RoomName))
 }
 
-func (p RoomInvitationEmailParams) RoomURL() string {
-	return fmt.Sprintf("%s/room/%s", p.SiteURL, p.RoomName)
+func (p RoomInvitationEmailParams) RoomURL() template.HTML {
+	return template.HTML(fmt.Sprintf("%s/room/%s", p.SiteURL, p.RoomName))
 }
 
 type RoomInvitationWelcomeEmailParams struct {
@@ -108,12 +112,12 @@ type RoomInvitationWelcomeEmailParams struct {
 	SenderMessage string
 }
 
-func (p RoomInvitationWelcomeEmailParams) Subject() string {
-	return fmt.Sprintf("%s invites you to join a chatroom on %s", p.SenderName, p.SiteName)
+func (p RoomInvitationWelcomeEmailParams) Subject() template.HTML {
+	return template.HTML(fmt.Sprintf("%s invites you to join a chatroom on %s", p.SenderName, p.SiteName))
 }
 
-func (p RoomInvitationWelcomeEmailParams) RoomURL() string {
-	return fmt.Sprintf("%s/room/%s", p.SiteURL, p.RoomName)
+func (p RoomInvitationWelcomeEmailParams) RoomURL() template.HTML {
+	return template.HTML(fmt.Sprintf("%s/room/%s", p.SiteURL, p.RoomName))
 }
 
 var (
