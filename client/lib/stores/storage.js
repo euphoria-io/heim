@@ -18,7 +18,7 @@ module.exports.store = Reflux.createStore({
   init: function() {
     this.state = null
     this._dirtyChanges = {}
-    this._saveThrottled = _.throttle(this._save, 1000)
+    this._saveThrottled = _.throttle(this._save, 1000, {leading: false})
   },
 
   getInitialState: function() {
