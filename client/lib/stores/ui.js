@@ -441,7 +441,7 @@ function createPaneStore(paneId, createOptions) {
 
       this.messageData = new MessageData({
         focused: false,
-        repliesExpanded: false,
+        repliesExpanded: null,
         contentExpanded: false,
       })
 

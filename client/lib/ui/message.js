@@ -71,9 +71,20 @@ var Message = module.exports = React.createClass({
 
     var children = message.get('children')
     var paneData = this.state.paneData
+    var count = this.props.tree.getCount(this.props.nodeId)
     var focused = paneData.get('focused')
     var contentExpanded = paneData.get('contentExpanded')
-    var repliesExpanded = paneData.get('repliesExpanded') || this.props.showAllReplies
+
+    var repliesExpanded
+    if (this.props.showAllReplies) {
+      repliesExpanded = true
+    } else {
+      repliesExpanded = paneData.get('repliesExpanded')
+      if (repliesExpanded === null) {
+        repliesExpanded = count.get('ownDescendants') > 0
+      }
+    }
+
     var messagePane = message.get('_inPane')
     var repliesInOtherPane = messagePane && messagePane != this.props.pane.id
     var seen = message.get('_seen')
@@ -118,9 +129,8 @@ var Message = module.exports = React.createClass({
     } else if (children.size > 0 || focused) {
       var composingReply = focused && children.size === 0
       var inlineReplies = composingReply || this.props.visibleCount > 0 || this.props.showAllReplies
-      var count, childCount, childNewCount
+      var childCount, childNewCount
       if (!inlineReplies && !repliesExpanded) {
-        count = this.props.tree.getCount(this.props.nodeId)
         childCount = count.get('descendants')
         childNewCount = count.get('newDescendants')
         messageIndentedReplies = (
@@ -156,15 +166,15 @@ var Message = module.exports = React.createClass({
         var expandRestOfReplies
         var canCollapse = !this.props.showAllReplies && children.size > this.props.visibleCount
         if (canCollapse && !repliesExpanded) {
-          count = this.props.tree.calculateDescendantCount(this.props.nodeId, this.props.visibleCount)
-          childCount = count.get('descendants')
-          childNewCount = count.get('newDescendants')
+          var descCount = this.props.tree.calculateDescendantCount(this.props.nodeId, this.props.visibleCount)
+          childCount = descCount.get('descendants')
+          childNewCount = descCount.get('newDescendants')
           expandRestOfReplies = (
             <FastButton key="replies" component="div" className={classNames('expand-rest', {'focus-target': focused})} onClick={this.expandReplies}>
               {childCount} more
-              {childNewCount > 0 && <span className={classNames('new-count', {'new-mention': count.get('newMentionDescendants') > 0})}>{childNewCount}</span>}
-              <LiveTimeAgo className="ago" time={count.get('latestDescendantTime')} nowText="active" />
-              {<MessageText className="message-preview" content={this.props.tree.get(count.get('latestDescendant')).get('content').trim()} />}
+              {childNewCount > 0 && <span className={classNames('new-count', {'new-mention': descCount.get('newMentionDescendants') > 0})}>{childNewCount}</span>}
+              <LiveTimeAgo className="ago" time={descCount.get('latestDescendantTime')} nowText="active" />
+              {<MessageText className="message-preview" content={this.props.tree.get(descCount.get('latestDescendant')).get('content').trim()} />}
               {focused && <div className="spacer" onClick={ev => ev.stopPropagation()}><EntryDragHandle pane={this.props.pane} /></div>}
             </FastButton>
           )
