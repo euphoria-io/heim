@@ -16,14 +16,15 @@ import (
 type memRoom struct {
 	m sync.Mutex
 
-	name       string
-	version    string
-	log        *memLog
-	agentBans  map[proto.UserID]time.Time
-	ipBans     map[string]time.Time
-	identities map[proto.UserID]proto.Identity
-	live       map[proto.UserID][]proto.Session
-	clients    map[string]*proto.Client
+	name        string
+	version     string
+	log         *memLog
+	agentBans   map[proto.UserID]time.Time
+	ipBans      map[string]time.Time
+	identities  map[proto.UserID]proto.Identity
+	live        map[proto.UserID][]proto.Session
+	clients     map[string]*proto.Client
+	partWaiters map[string]chan struct{}
 
 	sec        *proto.RoomSecurity
 	messageKey *roomMessageKey
@@ -174,7 +175,7 @@ func (r *memRoom) Part(ctx scope.Context, session proto.Session) error {
 		delete(r.identities, id)
 	}
 	delete(r.clients, session.ID())
-	return r.broadcast(ctx, proto.PartType,
+	return r.broadcast(ctx, proto.PartEventType,
 		proto.PresenceEvent(*session.View()), session)
 }
 
@@ -199,6 +200,9 @@ func (r *memRoom) Send(ctx scope.Context, session proto.Session, message proto.M
 func (r *memRoom) EditMessage(
 	ctx scope.Context, session proto.Session, edit proto.EditMessageCommand) (
 	proto.EditMessageReply, error) {
+
+	r.m.Lock()
+	defer r.m.Unlock()
 
 	editID, err := snowflake.New()
 	if err != nil {
@@ -248,6 +252,16 @@ func (r *memRoom) broadcast(
 			}
 		}
 	}
+
+	if cmdType == proto.PartEventType {
+		if presence, ok := payload.(proto.PresenceEvent); ok {
+			if waiter, ok := r.partWaiters[presence.SessionID]; ok {
+				r.m.Unlock()
+				waiter <- struct{}{}
+				r.m.Lock()
+			}
+		}
+	}
 	return nil
 }
 
@@ -264,6 +278,9 @@ func (r *memRoom) Listing(ctx scope.Context) (proto.Listing, error) {
 
 func (r *memRoom) RenameUser(
 	ctx scope.Context, session proto.Session, formerName string) (*proto.NickEvent, error) {
+
+	r.m.Lock()
+	defer r.m.Unlock()
 
 	backend.Logger(ctx).Printf(
 		"renaming %s from %s to %s\n", session.ID(), formerName, session.Identity().Name())
@@ -456,6 +473,29 @@ func (r *memRoom) RemoveManager(
 }
 
 func (r *memRoom) MinAgentAge() time.Duration { return 0 }
+
+func (r *memRoom) WaitForPart(sessionID string) error {
+	r.m.Lock()
+	defer r.m.Unlock()
+
+	for _, ss := range r.live {
+		for _, s := range ss {
+			if s.ID() == sessionID {
+				c := make(chan struct{})
+				if r.partWaiters == nil {
+					r.partWaiters = map[string]chan struct{}{}
+				}
+				r.partWaiters[sessionID] = c
+				r.m.Unlock()
+				<-c
+				r.m.Lock()
+				delete(r.partWaiters, sessionID)
+				return nil
+			}
+		}
+	}
+	return nil
+}
 
 type roomMessageKey struct {
 	*proto.GrantManager

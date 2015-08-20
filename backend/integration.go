@@ -62,9 +62,10 @@ func (s *serverUnderTest) Close() {
 	s.backend.Close()
 }
 
-func (s *serverUnderTest) openWebsocket(roomName string, cookies []*http.Cookie) (*websocket.Conn, *http.Response) {
-	if _, err := s.backend.GetRoom(scope.New(), roomName); err == proto.ErrRoomNotFound {
-		_, err = s.backend.CreateRoom(scope.New(), s.app.kms, false, roomName)
+func (s *serverUnderTest) openWebsocket(roomName string, cookies []*http.Cookie) (proto.Room, *websocket.Conn, *http.Response) {
+	room, err := s.backend.GetRoom(scope.New(), roomName)
+	if err == proto.ErrRoomNotFound {
+		room, err = s.backend.CreateRoom(scope.New(), s.app.kms, false, roomName)
 		So(err, ShouldBeNil)
 	}
 	headers := http.Header{}
@@ -80,12 +81,12 @@ func (s *serverUnderTest) openWebsocket(roomName string, cookies []*http.Cookie)
 		}
 	}
 	So(err, ShouldBeNil)
-	return conn, resp
+	return room, conn, resp
 }
 
 func (s *serverUnderTest) Connect(roomName string) *testConn {
-	conn, resp := s.openWebsocket(roomName, nil)
-	tc := &testConn{Conn: conn, cookies: resp.Cookies(), roomName: roomName}
+	room, conn, resp := s.openWebsocket(roomName, nil)
+	tc := &testConn{Conn: conn, cookies: resp.Cookies(), roomName: roomName, room: room}
 	tc.expectHello()
 	return tc
 }
@@ -94,7 +95,8 @@ func (s *serverUnderTest) Reconnect(tc *testConn, roomNames ...string) *testConn
 	if roomNames != nil {
 		tc.roomName = roomNames[0]
 	}
-	conn, resp := s.openWebsocket(tc.roomName, tc.cookies)
+	room, conn, resp := s.openWebsocket(tc.roomName, tc.cookies)
+	tc.room = room
 	tc.Conn = conn
 	tc.cookies = resp.Cookies()
 	tc.expectHello()
@@ -171,6 +173,7 @@ func (s *serverUnderTest) RoomAndManager(
 
 type testConn struct {
 	*websocket.Conn
+	room      proto.Room
 	cookies   []*http.Cookie
 	roomName  string
 	sessionID string
@@ -354,6 +357,7 @@ func (tc *testConn) Close() {
 	tc.Conn.WriteMessage(
 		websocket.CloseMessage,
 		websocket.FormatCloseMessage(websocket.CloseNormalClosure, "normal closure"))
+	So(tc.room.WaitForPart(tc.sessionID), ShouldBeNil)
 }
 
 func IntegrationTest(t *testing.T, factory proto.BackendFactory) {

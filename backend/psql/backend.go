@@ -67,15 +67,16 @@ type Backend struct {
 	*sql.DB
 	*gorp.DbMap
 
-	dsn       string
-	cancel    func()
-	cluster   cluster.Cluster
-	desc      *cluster.PeerDesc
-	version   string
-	peers     map[string]string
-	listeners map[string]ListenerMap
-	ctx       scope.Context
-	logger    *log.Logger
+	dsn         string
+	cancel      func()
+	cluster     cluster.Cluster
+	desc        *cluster.PeerDesc
+	version     string
+	peers       map[string]string
+	listeners   map[string]ListenerMap
+	partWaiters map[string]chan struct{}
+	ctx         scope.Context
+	logger      *log.Logger
 }
 
 func NewBackend(heim *proto.Heim, dsn string) (*Backend, error) {
@@ -248,18 +249,25 @@ func (b *Backend) background(wg *sync.WaitGroup) {
 				continue
 			}
 
+			// TODO: if room name is empty, broadcast globally
 			if lm, ok := b.listeners[msg.Room]; ok {
 				logger.Printf("broadcasting %s to %s", msg.Event.Type, msg.Room)
 				if err := lm.Broadcast(ctx, msg.Event, msg.Exclude...); err != nil {
 					logger.Printf("error: pq listen: broadcast error on %s: %s", msg.Room, err)
 				}
-				continue
 			}
 
-			logger.Printf("pq listen: dropping notification %s to %s because no listeners",
-				msg.Event.Type, msg.Room)
-
-			// TODO: if room name is empty, broadcast globally
+			if msg.Event.Type == proto.PartEventType {
+				payload, err := msg.Event.Payload()
+				if err != nil {
+					continue
+				}
+				if presence, ok := payload.(*proto.PresenceEvent); ok {
+					if c, ok := b.partWaiters[presence.SessionID]; ok {
+						c <- struct{}{}
+					}
+				}
+			}
 		}
 	}
 }

@@ -104,6 +104,8 @@ type Room interface {
 	ManagerCapability(ctx scope.Context, manager Account) (security.Capability, error)
 
 	MinAgentAge() time.Duration
+
+	WaitForPart(sessionID string) error
 }
 
 type RoomMessageKey interface {
