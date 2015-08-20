@@ -77,84 +77,68 @@ body {
 
     .a {
       background: #d95d3f;
+      animation-delay: (-1 / 5) * @animation-duration;
     }
 
     .b {
       background: #f29526;
+      animation-delay: (-2 / 5) * @animation-duration;
     }
 
     .c {
       background: #5abe6b;
+      animation-delay: (-3 / 5) * @animation-duration;
     }
 
     .d {
       background: #4d97cb;
+      animation-delay: (-4 / 5) * @animation-duration;
     }
 
     .e {
       background: #7f62b6;
+      animation-delay: (-5 / 5) * @animation-duration;
     }
   }
 
-  &:hover {
-    .logo {
-      background-image: data-uri('../res/home-outline.svg');
-      transform: scale(1.05);
-      transition-duration: .2s;
+  @keyframes scramble {
+    0% {
+      background: #d95d3f;
     }
 
-    .colors {
-      opacity: 1;
+    20% {
+      background: #f29526;
+    }
 
-      @keyframes scramble {
-        0% {
-          background: #d95d3f;
-        }
+    40% {
+      background: #5abe6b;
+    }
 
-        20% {
-          background: #f29526;
-        }
+    60% {
+      background: #4d97cb;
+    }
 
-        40% {
-          background: #5abe6b;
-        }
+    80% {
+      background: #7f62b6;
+    }
 
-        60% {
-          background: #4d97cb;
-        }
+    100% {
+      background: #d95d3f;
+    }
+  }
 
-        80% {
-          background: #7f62b6;
-        }
+  &:hover .logo, .logo:focus {
+    background-image: data-uri('../res/home-outline.svg');
+    transform: scale(1.05);
+    transition-duration: .2s;
+    outline: none;
+  }
 
-        100% {
-          background: #d95d3f;
-        }
-      }
+  &:hover .colors, .logo:focus + .colors {
+    opacity: 1;
 
-      & > div {
-        animation-name: scramble;
-      }
-
-      .a {
-        animation-delay: (-1 / 5) * @animation-duration;
-      }
-
-      .b {
-        animation-delay: (-2 / 5) * @animation-duration;
-      }
-
-      .c {
-        animation-delay: (-3 / 5) * @animation-duration;
-      }
-
-      .d {
-        animation-delay: (-4 / 5) * @animation-duration;
-      }
-
-      .e {
-        animation-delay: (-5 / 5) * @animation-duration;
-      }
+    & > div {
+      animation-name: scramble;
     }
   }
 
