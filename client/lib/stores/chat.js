@@ -6,6 +6,7 @@ var Immutable = require('immutable')
 var actions = require('../actions')
 var ChatTree = require('../chat-tree')
 var storage = require('./storage')
+var activity = require('./activity')
 var socket = require('./socket')
 var plugins = require('./plugins')
 var hueHash = require('../hue-hash')
@@ -30,7 +31,8 @@ module.exports.store = Reflux.createStore({
     storeActions,
     {socketEvent: socket.store},
     {storageChange: storage.store},
-    {onActive: require('./activity').becameActive},
+    {activityChange: activity.store},
+    {onActive: activity.becameActive},
   ],
 
   seenTTL: 12 * 60 * 60 * 1000,
@@ -55,12 +57,13 @@ module.exports.store = Reflux.createStore({
       earliestLog: null,
       nickHues: {},
       who: Immutable.Map(),
-      lastVisit: null,
     }
 
     this._loadingLogs = false
     this._seenMessages = Immutable.Map()
     this._joinWhenReady = false
+
+    this.lastVisit = null
 
     this.state.messages.changes.on('__all', ids => {
       storeActions.messagesChanged(ids, this.state)
@@ -312,16 +315,19 @@ module.exports.store = Reflux.createStore({
       this.state.authType = roomStorage.auth.type
       this.state.authData = roomStorage.auth.data
     }
-    if (roomStorage.lastVisit != this.state.lastVisit) {
-      this.state.lastVisit = roomStorage.lastVisit
+    this._seenMessages = Immutable.Map(roomStorage.seenMessages || {})
+    this.trigger(this.state)
+  },
+
+  activityChange: function(data) {
+    if (data.lastVisit[this.state.roomName] != this.lastVisit) {
+      this.lastVisit = data.lastVisit[this.state.roomName]
       this.state.messages.add({
         id: '__lastVisit',
-        time: this.state.lastVisit / 1000,
+        time: this.lastVisit / 1000,
         content: 'last visit',
       })
     }
-    this._seenMessages = Immutable.Map(roomStorage.seenMessages || {})
-    this.trigger(this.state)
   },
 
   onActive: function() {

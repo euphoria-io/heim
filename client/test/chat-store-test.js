@@ -186,9 +186,14 @@ describe('chat store', function() {
           type: 'passcode',
           data: 'hunter2',
         },
-        lastVisit: startTime - 60 * 1000,
       }
     }
+  }
+
+  var mockActivity = {
+    lastVisit: {
+      ezzie: startTime - 60 * 1000,
+    },
   }
 
   it('should initialize with null connected and false joined state', function() {
@@ -437,14 +442,18 @@ describe('chat store', function() {
       chat.store.storageChange(mockStorage)
       assert.equal(chat.store.state.tentativeNick, 'unchanged')
     })
+  })
 
-    it('should set lastVisit and create tree node if not set', function() {
-      assert.equal(chat.store.state.lastVisit, null)
-      chat.store.storageChange(mockStorage)
-      assert.equal(chat.store.state.lastVisit, mockStorage.room.ezzie.lastVisit)
+  describe('on activity change', function() {
+    beforeEach(function() {
+      chat.store.state.roomName = 'ezzie'
+    })
+
+    it('should create last visit tree node', function() {
+      chat.store.activityChange(mockActivity)
       var lastVisitNode = chat.store.state.messages.get('__lastVisit')
       assert(lastVisitNode)
-      assert.equal(lastVisitNode.get('time'), mockStorage.room.ezzie.lastVisit / 1000)
+      assert.equal(lastVisitNode.get('time'), mockActivity.lastVisit.ezzie / 1000)
     })
   })
 
