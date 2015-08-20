@@ -34,6 +34,10 @@ support.setupClock = function() {
   // remove erroneous entry from coverage listing
   Date.now()
 
+  // start with an initial time (_.throttle seems to need the starting
+  // clock to be greater than the throttle period)
+  clock.tick(60 * 60 * 1000)
+
   return clock
 }
 
