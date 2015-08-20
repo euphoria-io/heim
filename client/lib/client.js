@@ -227,7 +227,7 @@ if (!window.frameElement) {
         preContent.push('] ')
         preContent = preContent.join('')
         textParts.push(preContent)
-        textParts.push(message.get('content').replace(/\n/g, '\n' + _.repeat(' ', preContent.length)))
+        textParts.push(message.get('content').trim().replace(/\n/g, '\n' + _.repeat(' ', preContent.length)))
         textParts.push('\n')
       })
 
