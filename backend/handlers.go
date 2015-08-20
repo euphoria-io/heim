@@ -87,6 +87,7 @@ func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "404 page not found", http.StatusNotFound)
 			return
 		}
+		Logger(ctx).Printf("room error: %s", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -94,6 +95,7 @@ func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
 	// Tag the agent. We use an authenticated but un-encrypted cookie.
 	agent, cookie, agentKey, err := getAgent(ctx, s, r)
 	if err != nil {
+		Logger(ctx).Printf("get agent error: %s", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -124,6 +126,7 @@ func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
 	}
 	conn, err := upgrader.Upgrade(w, r, headers)
 	if err != nil {
+		Logger(ctx).Printf("upgrade error: %s", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -133,6 +136,7 @@ func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
 	session := newSession(ctx, s, conn, roomName, room, client, agentKey)
 	if err = session.serve(); err != nil {
 		// TODO: error handling
+		Logger(ctx).Printf("session serve error: %s", err)
 		return
 	}
 }
