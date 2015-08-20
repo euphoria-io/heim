@@ -36,6 +36,7 @@
   * [bounce-event](#bounce-event)
   * [disconnect-event](#disconnect-event)
   * [edit-message-event](#edit-message-event)
+  * [hello-event](#hello-event)
   * [join-event](#join-event)
   * [network-event](#network-event)
   * [nick-event](#nick-event)
@@ -385,9 +386,16 @@ The following events may be sent from the server to the client at any time.
 {{(packet "disconnect-event").Doc}}
 {{template "fields.md" (packet "disconnect-event")}}
 
+## hello-event
+
+A `hello-event` is sent by the server to the client when a session is started.
+It includes information about the client's authentication and associated identity.
+
+{{template "fields.md" (object "PresenceEvent")}}
+
 ## join-event
 
-A join-event indicates a session just joined the room.
+A `join-event` indicates a session just joined the room.
 
 {{template "fields.md" (object "PresenceEvent")}}
 
@@ -408,7 +416,7 @@ A join-event indicates a session just joined the room.
 
 ## part-event
 
-A part-event indicates a session just disconnected from the room.
+A `part-event` indicates a session just disconnected from the room.
 
 {{template "fields.md" (object "PresenceEvent")}}
 

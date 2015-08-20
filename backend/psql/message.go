@@ -21,6 +21,8 @@ type Message struct {
 	SessionID       string `db:"session_id"`
 	SenderID        string `db:"sender_id"`
 	SenderName      string `db:"sender_name"`
+	SenderIsManager bool   `db:"sender_is_manager"`
+	SenderIsStaff   bool   `db:"sender_is_staff"`
 	ServerID        string `db:"server_id"`
 	ServerEra       string `db:"server_era"`
 	Content         string
@@ -44,6 +46,8 @@ func NewMessage(
 		msg.SenderName = sessionView.Name
 		msg.ServerID = sessionView.ServerID
 		msg.ServerEra = sessionView.ServerEra
+		msg.SenderIsManager = sessionView.IsManager
+		msg.SenderIsStaff = sessionView.IsStaff
 	}
 	if keyID != "" {
 		msg.EncryptionKeyID = sql.NullString{
@@ -65,6 +69,8 @@ func (m *Message) ToBackend() proto.Message {
 				ServerEra: m.ServerEra,
 			},
 			SessionID: m.SessionID,
+			IsManager: m.SenderIsManager,
+			IsStaff:   m.SenderIsStaff,
 		},
 		Content: m.Content,
 	}

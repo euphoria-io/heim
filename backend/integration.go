@@ -62,7 +62,7 @@ func (s *serverUnderTest) Close() {
 	s.backend.Close()
 }
 
-func (s *serverUnderTest) Connect(roomName string, cookies ...*http.Cookie) *testConn {
+func (s *serverUnderTest) openWebsocket(roomName string, cookies []*http.Cookie) (*websocket.Conn, *http.Response) {
 	if _, err := s.backend.GetRoom(scope.New(), roomName); err == proto.ErrRoomNotFound {
 		_, err = s.backend.CreateRoom(scope.New(), s.app.kms, false, roomName)
 		So(err, ShouldBeNil)
@@ -80,7 +80,25 @@ func (s *serverUnderTest) Connect(roomName string, cookies ...*http.Cookie) *tes
 		}
 	}
 	So(err, ShouldBeNil)
-	return &testConn{Conn: conn, cookies: resp.Cookies()}
+	return conn, resp
+}
+
+func (s *serverUnderTest) Connect(roomName string) *testConn {
+	conn, resp := s.openWebsocket(roomName, nil)
+	tc := &testConn{Conn: conn, cookies: resp.Cookies(), roomName: roomName}
+	tc.expectHello()
+	return tc
+}
+
+func (s *serverUnderTest) Reconnect(tc *testConn, roomNames ...string) *testConn {
+	if roomNames != nil {
+		tc.roomName = roomNames[0]
+	}
+	conn, resp := s.openWebsocket(tc.roomName, tc.cookies)
+	tc.Conn = conn
+	tc.cookies = resp.Cookies()
+	tc.expectHello()
+	return tc
 }
 
 func (s *serverUnderTest) Account(
@@ -154,8 +172,11 @@ func (s *serverUnderTest) RoomAndManager(
 type testConn struct {
 	*websocket.Conn
 	cookies   []*http.Cookie
+	roomName  string
 	sessionID string
 	userID    string
+	isStaff   bool
+	isManager bool
 }
 
 func (tc *testConn) id() string { return tc.userID }
@@ -231,15 +252,6 @@ func (tc *testConn) expect(id, cmdType, data string, args ...interface{}) map[st
 	}
 	So(nil, func(interface{}, ...interface{}) string { return result })
 
-	// Side-effect on snapshot-event: capture some session state.
-	if packet.Type == proto.SnapshotEventType {
-		payload, err := packet.Payload()
-		So(err, ShouldBeNil)
-		snapshot := payload.(*proto.SnapshotEvent)
-		tc.sessionID = snapshot.SessionID
-		tc.userID = string(snapshot.Identity)
-	}
-
 	return captures
 }
 
@@ -310,6 +322,19 @@ func (tc *testConn) expectError(id, cmdType, errFormat string, errArgs ...interf
 	err, ok := payload.(error)
 	So(ok, ShouldBeTrue)
 	So(err.Error(), ShouldEqual, errMsg)
+}
+
+func (tc *testConn) expectHello() {
+	isParts := ""
+	if tc.isStaff {
+		isParts = isParts + `,"is_staff":true`
+	}
+	if tc.isManager {
+		isParts = isParts + `,"is_manager":true`
+	}
+	capture := tc.expect("", "hello-event", `{"id":"*","name":"","server_id":"*","server_era":"*","session_id":"*"%s}`, isParts)
+	tc.sessionID = capture["session_id"].(string)
+	tc.userID = capture["id"].(string)
 }
 
 func (tc *testConn) expectPing() *proto.PingEvent {
@@ -769,7 +794,8 @@ func testAuthentication(s *serverUnderTest) {
 		conn.Close()
 
 		// Reconnect with authentication.
-		conn = s.Connect("private", conn.cookies...)
+		conn.isManager = true
+		s.Reconnect(conn)
 		conn.expectPing()
 		conn.expectSnapshot(s.backend.Version(), nil, nil)
 	})
@@ -815,10 +841,11 @@ func testDeletion(s *serverUnderTest) {
 		conn.Close()
 
 		// Connect to deletion room as manager.
-		conn = s.Connect("deletion", conn.cookies...)
+		conn.isManager = true
+		s.Reconnect(conn, "deletion")
 		defer conn.Close()
 
-		server := `"name":"speaker","server_id":"test1","server_era":"era1"`
+		server := `"name":"speaker","server_id":"test1","server_era":"era1","is_manager":true`
 
 		conn.expectPing()
 		conn.expectSnapshot(s.backend.Version(), nil, nil)
@@ -1085,7 +1112,7 @@ func testAccountChangePassword(s *serverUnderTest) {
 		conn.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
 		conn.Close()
 
-		conn = s.Connect("changepass1b", conn.cookies...)
+		s.Reconnect(conn, "changepass1b")
 		conn.expectPing()
 		conn.expectSnapshot(s.backend.Version(), nil, nil)
 		conn.send("1", "change-password", `{"old_password":"wrongpass","new_password":"newpass"}`)
@@ -1216,7 +1243,7 @@ func testAccountLogin(s *serverUnderTest) {
 			conn.sessionID, conn.userID)
 
 		// Verify logged in on reconnect.
-		conn = s.Connect("login", conn.cookies...)
+		s.Reconnect(conn)
 		conn.expectPing()
 		conn.expectSnapshot(
 			s.backend.Version(),
@@ -1292,7 +1319,7 @@ func testAccountRegistration(s *serverUnderTest) {
 			conn.sessionID, conn.userID)
 
 		// Verify logged in on reconnect.
-		conn = s.Connect("registration", conn.cookies...)
+		s.Reconnect(conn)
 		conn.expectPing()
 		conn.expectSnapshot(
 			s.backend.Version(),
@@ -1375,10 +1402,11 @@ func testRoomCreation(s *serverUnderTest) {
 			`{"namespace":"email","id":"logan%s","password":"loganpass"}`, nonce)
 		conn.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, logan.ID())
 		conn.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
+		conn.isStaff = true
 		conn.Close()
 
 		// Reconnect, and fail to create room because staff capability is locked.
-		conn = s.Connect("createroom", conn.cookies...)
+		s.Reconnect(conn, "createroom")
 		conn.expectPing()
 		conn.expectSnapshot(s.backend.Version(), nil, nil)
 		/* TODO: require unlock-staff-capability
@@ -1430,7 +1458,8 @@ func testRoomGrants(s *serverUnderTest) {
 		loganConn.Close()
 
 		// Reconnect manager to private room and grant access to passcode.
-		loganConn = s.Connect("passcodegrants", loganConn.cookies...)
+		loganConn.isManager = true
+		s.Reconnect(loganConn, "passcodegrants")
 		defer loganConn.Close()
 		loganConn.expectPing()
 		loganConn.expectSnapshot(s.backend.Version(), nil, nil)
@@ -1487,7 +1516,8 @@ func testRoomGrants(s *serverUnderTest) {
 		loganConn.Close()
 
 		// Reconnect manager to private room.
-		loganConn = s.Connect("grants", loganConn.cookies...)
+		loganConn.isManager = true
+		s.Reconnect(loganConn, "grants")
 		loganConn.expectPing()
 		loganConn.expectSnapshot(s.backend.Version(), nil, nil)
 
@@ -1499,7 +1529,7 @@ func testRoomGrants(s *serverUnderTest) {
 		maxConn.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, max.ID())
 		maxConn.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
 		maxConn.Close()
-		maxConn = s.Connect("grants", maxConn.cookies...)
+		s.Reconnect(maxConn)
 		maxConn.expectPing()
 		maxConn.expect("", "bounce-event", `{"reason":"authentication required"}`)
 		maxConn.Close()
@@ -1509,13 +1539,13 @@ func testRoomGrants(s *serverUnderTest) {
 		loganConn.expect("1", "grant-access-reply", `{}`)
 
 		// Connect with access account.
-		maxConn = s.Connect("grants", maxConn.cookies...)
+		s.Reconnect(maxConn)
 		maxConn.expectPing()
 		maxConn.expectSnapshot(
 			s.backend.Version(),
 			[]string{
 				fmt.Sprintf(
-					`{"session_id":"%s","id":"%s","name":"","server_id":"test1","server_era":"era1"}`,
+					`{"session_id":"%s","id":"%s","name":"","server_id":"test1","server_era":"era1","is_manager":true}`,
 					loganConn.sessionID, loganConn.userID)},
 			nil)
 
@@ -1531,7 +1561,7 @@ func testRoomGrants(s *serverUnderTest) {
 		loganConn.expect("2", "revoke-access-reply", `{}`)
 		loganConn.Close()
 
-		maxConn = s.Connect("grants", maxConn.cookies...)
+		s.Reconnect(maxConn)
 		maxConn.expectPing()
 		maxConn.expect("", "bounce-event", `{"reason":"authentication required"}`)
 		maxConn.Close()
@@ -1562,14 +1592,15 @@ func testRoomGrants(s *serverUnderTest) {
 		loganConn.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
 		loganConn.Close()
 
-		loganConn = s.Connect("staffmanagergrants", loganConn.cookies...)
+		loganConn.isStaff = true
+		s.Reconnect(loganConn)
 		loganConn.expectPing()
 		loganConn.expectSnapshot(s.backend.Version(), nil, nil)
 		loganConn.send("1", "staff-lock-room", `{}`)
 		loganConn.expect("1", "staff-lock-room-reply", `{}`)
 		loganConn.Close()
 
-		loganConn = s.Connect("staffmanagergrants", loganConn.cookies...)
+		s.Reconnect(loganConn)
 		loganConn.expectPing()
 		loganConn.expect("", "bounce-event", `{"reason":"authentication required"}`)
 		loganConn.send("1", "unlock-staff-capability", `{"password":"loganpass"}`)
@@ -1579,7 +1610,8 @@ func testRoomGrants(s *serverUnderTest) {
 		loganConn.Close()
 
 		// Reconnect to verify.
-		loganConn = s.Connect("staffmanagergrants", loganConn.cookies...)
+		loganConn.isManager = true
+		s.Reconnect(loganConn)
 		loganConn.expectPing()
 		loganConn.expectSnapshot(s.backend.Version(), nil, nil)
 
@@ -1594,7 +1626,8 @@ func testRoomGrants(s *serverUnderTest) {
 		loganConn.expect("3", "staff-revoke-access-reply", `{}`)
 		loganConn.Close()
 
-		loganConn = s.Connect("staffmanagergrants", loganConn.cookies...)
+		loganConn.isManager = false
+		s.Reconnect(loganConn)
 		loganConn.expectPing()
 		loganConn.expect("", "bounce-event", `{"reason":"authentication required"}`)
 	})
@@ -1625,7 +1658,8 @@ func testRoomGrants(s *serverUnderTest) {
 		loganConn.Close()
 
 		// Reconnect manager to private room.
-		loganConn = s.Connect("managergrants", loganConn.cookies...)
+		loganConn.isManager = true
+		s.Reconnect(loganConn, "managergrants")
 		defer loganConn.Close()
 		loganConn.expectPing()
 		loganConn.expectSnapshot(s.backend.Version(), nil, nil)
@@ -1690,7 +1724,8 @@ func testBans(s *serverUnderTest) {
 		mconn.Close()
 
 		// Connect manager to managed room and wait for victim.
-		mconn = s.Connect("bans", mconn.cookies...)
+		mconn.isManager = true
+		s.Reconnect(mconn, "bans")
 		mconn.expectPing()
 		mconn.expectSnapshot(s.backend.Version(), nil, nil)
 
@@ -1716,7 +1751,7 @@ func testBans(s *serverUnderTest) {
 			`{"session_id":"*","id":"%s","name":"","server_id":"test1","server_era":"era1"}`, agentID)
 
 		// Agent should be unable to reconnect.
-		vconn = s.Connect("bans", vconn.cookies...)
+		s.Reconnect(vconn)
 		vconn.expectPing()
 		_, _, err = vconn.Conn.ReadMessage()
 		So(err, ShouldNotBeNil)
@@ -1727,7 +1762,7 @@ func testBans(s *serverUnderTest) {
 		mconn.expect("2", "unban-reply", `{}`)
 		mconn.Close()
 
-		vconn = s.Connect("bans", vconn.cookies...)
+		s.Reconnect(vconn)
 		vconn.expectPing()
 		vconn.expectSnapshot(s.backend.Version(), nil, nil)
 	})
@@ -1750,7 +1785,8 @@ func testBans(s *serverUnderTest) {
 		mconn.Close()
 
 		// Connect manager to managed room and wait for victim.
-		mconn = s.Connect("acctbans", mconn.cookies...)
+		mconn.isManager = true
+		s.Reconnect(mconn, "acctbans")
 		mconn.expectPing()
 		mconn.expectSnapshot(s.backend.Version(), nil, nil)
 
@@ -1767,7 +1803,7 @@ func testBans(s *serverUnderTest) {
 		vconn.Close()
 
 		// Connect victim.
-		vconn = s.Connect("acctbans", vconn.cookies...)
+		s.Reconnect(vconn, "acctbans")
 		vconn.expectPing()
 		vconn.expectSnapshot(s.backend.Version(), nil, nil)
 
@@ -1788,7 +1824,7 @@ func testBans(s *serverUnderTest) {
 			victim.ID())
 
 		// Account should be unable to reconnect.
-		vconn = s.Connect("acctbans", vconn.cookies...)
+		s.Reconnect(vconn)
 		vconn.expectPing()
 		_, _, err = vconn.Conn.ReadMessage()
 		So(err, ShouldNotBeNil)
@@ -1799,7 +1835,7 @@ func testBans(s *serverUnderTest) {
 		mconn.expect("2", "unban-reply", `{}`)
 		mconn.Close()
 
-		vconn = s.Connect("acctbans", vconn.cookies...)
+		s.Reconnect(vconn)
 		vconn.expectPing()
 		vconn.expectSnapshot(s.backend.Version(), nil, nil)
 	})

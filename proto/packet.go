@@ -96,6 +96,7 @@ var (
 
 	BounceEventType     = PacketType("bounce").Event()
 	DisconnectEventType = PacketType("disconnect").Event()
+	HelloEventType      = PacketType("hello").Event()
 	NetworkEventType    = PacketType("network").Event()
 	SnapshotEventType   = PacketType("snapshot").Event()
 
@@ -158,6 +159,7 @@ var (
 
 		BounceEventType:     reflect.TypeOf(BounceEvent{}),
 		DisconnectEventType: reflect.TypeOf(DisconnectEvent{}),
+		HelloEventType:      reflect.TypeOf(HelloEvent{}),
 		NetworkEventType:    reflect.TypeOf(NetworkEvent{}),
 		SnapshotEventType:   reflect.TypeOf(SnapshotEvent{}),
 
@@ -414,6 +416,10 @@ type DisconnectEvent struct {
 	Reason string `json:"reason"` // the reason for disconnection
 }
 
+// A `hello-event` is sent by the server to the client when a session is started.
+// It includes information about the client's authentication and associated identity.
+type HelloEvent SessionView
+
 // A `snapshot-event` indicates that a session has successfully joined a room.
 // It also offers a snapshot of the room's state and recent history.
 type SnapshotEvent struct {
@@ -650,6 +656,8 @@ func MakeEvent(payload interface{}) (*Packet, error) {
 		packet.Type = NetworkEventType
 	case *SnapshotEvent:
 		packet.Type = SnapshotEventType
+	case *HelloEvent:
+		packet.Type = HelloEventType
 	default:
 		return nil, fmt.Errorf("don't know how to make event from %T", payload)
 	}

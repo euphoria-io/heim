@@ -33,5 +33,7 @@ type Session interface {
 // SessionView describes a session and its identity.
 type SessionView struct {
 	*IdentityView
-	SessionID string `json:"session_id"` // id of the session, unique across all sessions globally
+	SessionID string `json:"session_id"`           // id of the session, unique across all sessions globally
+	IsStaff   bool   `json:"is_staff,omitempty"`   // if true, this session belongs to a member of staff
+	IsManager bool   `json:"is_manager,omitempty"` // if true, this session belongs to a manager of the room
 }

@@ -36,6 +36,7 @@
   * [bounce-event](#bounce-event)
   * [disconnect-event](#disconnect-event)
   * [edit-message-event](#edit-message-event)
+  * [hello-event](#hello-event)
   * [join-event](#join-event)
   * [network-event](#network-event)
   * [nick-event](#nick-event)
@@ -257,6 +258,8 @@ SessionView describes a session and its identity.
 | `server_id` | [string](#string) | required |  the id of the server that captured this view |
 | `server_era` | [string](#string) | required |  the era of the server that captured this view |
 | `session_id` | [string](#string) | required |  id of the session, unique across all sessions globally |
+| `is_staff` | [bool](#bool) | *optional* |  if true, this session belongs to a member of staff |
+| `is_manager` | [bool](#bool) | *optional* |  if true, this session belongs to a manager of the room |
 
 
 
@@ -1034,9 +1037,10 @@ immediately reconnect.
 
 
 
-## join-event
+## hello-event
 
-A join-event indicates a session just joined the room.
+A `hello-event` is sent by the server to the client when a session is started.
+It includes information about the client's authentication and associated identity.
 
 
 | Field | Type | Required? | Description |
@@ -1046,6 +1050,26 @@ A join-event indicates a session just joined the room.
 | `server_id` | [string](#string) | required |  the id of the server that captured this view |
 | `server_era` | [string](#string) | required |  the era of the server that captured this view |
 | `session_id` | [string](#string) | required |  id of the session, unique across all sessions globally |
+| `is_staff` | [bool](#bool) | *optional* |  if true, this session belongs to a member of staff |
+| `is_manager` | [bool](#bool) | *optional* |  if true, this session belongs to a manager of the room |
+
+
+
+
+## join-event
+
+A `join-event` indicates a session just joined the room.
+
+
+| Field | Type | Required? | Description |
+| :-- | :-- | :-- | :--------- |
+| `id` | [UserID](#userid) | required |  the id of an agent or account |
+| `name` | [string](#string) | required |  the name-in-use at the time this view was captured |
+| `server_id` | [string](#string) | required |  the id of the server that captured this view |
+| `server_era` | [string](#string) | required |  the era of the server that captured this view |
+| `session_id` | [string](#string) | required |  id of the session, unique across all sessions globally |
+| `is_staff` | [bool](#bool) | *optional* |  if true, this session belongs to a member of staff |
+| `is_manager` | [bool](#bool) | *optional* |  if true, this session belongs to a manager of the room |
 
 
 
@@ -1112,7 +1136,7 @@ The event packet includes a snapshot of the message post-edit.
 
 ## part-event
 
-A part-event indicates a session just disconnected from the room.
+A `part-event` indicates a session just disconnected from the room.
 
 
 | Field | Type | Required? | Description |
@@ -1122,6 +1146,8 @@ A part-event indicates a session just disconnected from the room.
 | `server_id` | [string](#string) | required |  the id of the server that captured this view |
 | `server_era` | [string](#string) | required |  the era of the server that captured this view |
 | `session_id` | [string](#string) | required |  id of the session, unique across all sessions globally |
+| `is_staff` | [bool](#bool) | *optional* |  if true, this session belongs to a member of staff |
+| `is_manager` | [bool](#bool) | *optional* |  if true, this session belongs to a manager of the room |
 
 
 

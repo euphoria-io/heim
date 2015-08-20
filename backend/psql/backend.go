@@ -657,11 +657,11 @@ func (b *Backend) latest(ctx scope.Context, room *Room, n int, before snowflake.
 	if nDays == 0 {
 		if before.IsZero() {
 			query = ("SELECT room, id, previous_edit_id, parent, posted, edited, deleted," +
-				" session_id, sender_id, sender_name, server_id, server_era, content, encryption_key_id" +
+				" session_id, sender_id, sender_name, sender_is_manager, sender_is_staff, server_id, server_era, content, encryption_key_id" +
 				" FROM message WHERE room = $1 AND deleted IS NULL ORDER BY id DESC LIMIT $2")
 		} else {
 			query = ("SELECT room, id, previous_edit_id, parent, posted, edited, deleted," +
-				" session_id, sender_id, sender_name, server_id, server_era, content, encryption_key_id" +
+				" session_id, sender_id, sender_name, sender_is_manager, sender_is_staff, server_id, server_era, content, encryption_key_id" +
 				" FROM message WHERE room = $1 AND id < $3 AND deleted IS NULL ORDER BY id DESC LIMIT $2")
 			args = append(args, before.String())
 		}
@@ -669,11 +669,11 @@ func (b *Backend) latest(ctx scope.Context, room *Room, n int, before snowflake.
 		threshold := time.Now().Add(time.Duration(-nDays) * 24 * time.Hour)
 		if before.IsZero() {
 			query = ("SELECT room, id, previous_edit_id, parent, posted, edited, deleted," +
-				" session_id, sender_id, sender_name, server_id, server_era, content, encryption_key_id" +
+				" session_id, sender_id, sender_name, sender_is_manager, sender_is_staff, server_id, server_era, content, encryption_key_id" +
 				" FROM message WHERE room = $1 AND posted > $3 AND deleted IS NULL ORDER BY id DESC LIMIT $2")
 		} else {
 			query = ("SELECT room, id, previous_edit_id, parent, posted, edited, deleted," +
-				" session_id, sender_id, sender_name, server_id, server_era, content, encryption_key_id" +
+				" session_id, sender_id, sender_name, sender_is_manager, sender_is_staff, server_id, server_era, content, encryption_key_id" +
 				" FROM message WHERE room = $1 AND id < $3 AND deleted IS NULL AND posted > $4 ORDER BY id DESC LIMIT $2")
 			args = append(args, before.String())
 		}

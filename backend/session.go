@@ -171,6 +171,8 @@ func (s *session) View() *proto.SessionView {
 	return &proto.SessionView{
 		IdentityView: s.identity.View(),
 		SessionID:    s.id,
+		IsStaff:      s.client.Account != nil && s.client.Account.IsStaff(),
+		IsManager:    s.client.Authorization.ManagerKeyPair != nil,
 	}
 }
 
@@ -208,6 +210,10 @@ func (s *session) serve() error {
 
 	logger := Logger(s.ctx)
 	logger.Printf("client connected")
+
+	if err := s.sendHello(); err != nil {
+		return err
+	}
 
 	if err := s.sendPing(); err != nil {
 		return err
@@ -477,6 +483,27 @@ func (s *session) join() error {
 	}
 
 	s.joined = true
+	return nil
+}
+
+func (s *session) sendHello() error {
+	logger := Logger(s.ctx)
+	cmd, err := proto.MakeEvent((*proto.HelloEvent)(s.View()))
+	if err != nil {
+		logger.Printf("error: hello event: %s", err)
+		return err
+	}
+	data, err := cmd.Encode()
+	if err != nil {
+		logger.Printf("error: hello event encode: %s", err)
+		return err
+	}
+
+	if err := s.conn.WriteMessage(websocket.TextMessage, data); err != nil {
+		logger.Printf("error: write hello event: %s", err)
+		return err
+	}
+
 	return nil
 }
 
