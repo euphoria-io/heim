@@ -34,7 +34,7 @@ module.exports.store = Reflux.createStore({
       lastVisit: {},
     }
     this._active = {}
-    this._flushActivityThrottled = _.throttle(this._flushActivity, this.flushTime)
+    this._flushActivityThrottled = _.throttle(this._flushActivity, this.flushTime, {leading: false})
     this._setIdleDebounced = _.debounce(this._setInactive, this.idleTime)
   },
 
