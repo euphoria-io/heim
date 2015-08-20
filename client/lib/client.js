@@ -216,10 +216,16 @@ if (!window.frameElement) {
         }
       })
 
+      function formatEmoji(content) {
+        return content.replace(emoji.namesRe, (match, name) => emoji.nameToUnicode(name) || match)
+      }
+
       var textParts = []
+      var htmlLines = []
       _.each(messageEls, el => {
         var messageId = el.dataset.messageId
         var message = Heim.chat.store.state.messages.get(messageId)
+
         var preContent = []
         preContent.push(_.repeat(' ', 2 * (el.dataset.depth - minDepth)))
         preContent.push('[')
@@ -229,12 +235,27 @@ if (!window.frameElement) {
         textParts.push(preContent)
         textParts.push(message.get('content').trim().replace(/\n/g, '\n' + _.repeat(' ', preContent.length)))
         textParts.push('\n')
+
+        htmlLines.push(
+          <div key={message.get('id')} data-message-id={message.get('id')} style={{
+            padding: '2px 0',
+            marginLeft: 16 * (el.dataset.depth - minDepth),
+            lineHeight: '1.25em',
+          }}>
+            <span className="nick" style={{
+              display: 'inline-block',
+              padding: '0 4px',
+              marginRight: '6px',
+              background: 'hsl(' + message.getIn(['sender', 'hue']) + ', 65%, 85%)',
+              borderRadius: '2px',
+            }}>{formatEmoji(message.getIn(['sender', 'name']))} </span>
+            {formatEmoji(message.get('content').trim())}
+          </div>
+        )
       })
 
-      var text = textParts.join('')
-      text = text.replace(emoji.namesRe, (match, name) => emoji.nameToUnicode(name) || match)
-
-      ev.clipboardData.setData('text/plain', text)
+      ev.clipboardData.setData('text/plain', formatEmoji(textParts.join('')))
+      ev.clipboardData.setData('text/html', React.renderToStaticMarkup(<div className="heim-messages">{htmlLines}</div>))
       ev.preventDefault()
     }, false)
 
