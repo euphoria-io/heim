@@ -11,12 +11,12 @@ describe('notification store', function() {
   var ui = require('../lib/stores/ui')
   var clock
   var _Notification = window.Notification
-
-  var startTime = 10 * 1000
+  var startTime
 
   beforeEach(function() {
     clock = support.setupClock()
-    clock.tick(startTime)
+    clock.tick()
+    startTime = Date.now()
     sinon.stub(storage, 'set')
     sinon.stub(storage, 'setRoom')
     sinon.stub(Heim, 'setFavicon')
