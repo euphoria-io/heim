@@ -256,7 +256,7 @@ module.exports = React.createClass({
           <div className="thread-list-container">
             <ThreadList ref="threadList" threadData={ui.store.threadData} threadTree={this.state.ui.frozenThreadList || this.state.chat.messages.threads} tree={this.state.chat.messages} onScroll={this.onThreadsScroll} onThreadSelect={this.onThreadSelect} />
           </div>
-          {!this.state.ui.thin && <NotificationSettings roomName={this.state.chat.roomName} />}
+          {!(this.state.ui.thin && Heim.isTouch) && <NotificationSettings roomName={this.state.chat.roomName} />}
           <NotificationList tree={this.state.chat.messages} notifications={this.state.ui.frozenNotifications || this.state.notification.notifications} onNotificationSelect={this.onNotificationSelect} animate={!this.state.ui.thin} />
         </div>
         <div className="chat-pane-container main-pane" onClickCapture={_.partial(this.onPaneClick, 'main')}>
