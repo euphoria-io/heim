@@ -4,7 +4,7 @@ var ReactCSSTransitionGroup = React.addons.CSSTransitionGroup
 
 var update = require('../stores/update')
 var FastButton = require('./fast-button')
-var ToggleBubble = require('./toggle-bubble')
+var Bubble = require('./toggle-bubble')
 var RoomTitle = require('./room-title')
 
 
@@ -28,12 +28,11 @@ module.exports = React.createClass({
         <RoomTitle name={this.props.roomName} authType={this.props.authType} connected={this.props.connected} joined={this.props.joined} />
         <div className="right">
           <ReactCSSTransitionGroup transitionName="spinner">{this.props.working && <div key="spinner" className="spinner" />}</ReactCSSTransitionGroup>
-          {this.props.updateReady && <FastButton fastTouch className="update-available" onClick={this.showUpdateBubble} />}
           {this.props.joined && <FastButton fastTouch className="user-count" onClick={this.props.toggleUserList}>{userCount}</FastButton>}
         </div>
-        <ToggleBubble ref="updateBubble" className="update">
+        <Bubble ref="updateBubble" className="update" visible={this.props.updateReady}>
           <FastButton className="update-button" onClick={update.perform}><p>update ready<em>{Heim.isTouch ? 'tap' : 'click'} to reload</em></p></FastButton>
-        </ToggleBubble>
+        </Bubble>
       </div>
     )
   },
