@@ -21,7 +21,7 @@ module.exports.store = Reflux.createStore({
     {storageChange: storage.store},
   ],
 
-  flushTime: 60 * 1000,
+  flushTime: 10 * 1000,
   idleTime: 2 * 60 * 1000,
   absenceTime: 30 * 60 * 1000,
 
