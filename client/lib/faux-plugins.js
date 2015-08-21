@@ -243,7 +243,7 @@ module.exports = function(roomName) {
         TVActions.changeVideo(video)
       }
 
-      var noticeRe = /^!notice(\S*?) ([^]*)$/
+      var noticeRe = /^!notice(\S*?)\s([^]*)$/
       var notices = candidates
         .map(msg => {
           var match = msg.get('content').match(noticeRe)
