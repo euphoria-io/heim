@@ -53,6 +53,8 @@ module.exports.store = Reflux.createStore({
       authType: null,
       authState: null,
       authData: null,
+      isManager: null,
+      isStaff: null,
       messages: new ChatTree(),
       earliestLog: null,
       nickHues: {},
@@ -89,9 +91,12 @@ module.exports.store = Reflux.createStore({
             storeActions.messageReceived(this.state.messages.get(message.id), this.state)
           )
         }
+      } else if (ev.body.type == 'hello-event') {
+        this.state.id = ev.body.data.id
+        this.state.isManager = ev.body.data.is_manager
+        this.state.isStaff = ev.body.data.is_staff
       } else if (ev.body.type == 'snapshot-event') {
         this.state.serverVersion = ev.body.data.version
-        this.state.id = ev.body.data.identity
         this.state.sessionId = ev.body.data.session_id
         this._joinReady()
         this._handleWhoReply(ev.body.data)

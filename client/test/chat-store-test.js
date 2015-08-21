@@ -40,6 +40,15 @@ describe('chat store', function() {
     chat.store.socketEvent(ev)
   }
 
+  var helloEvent = {
+    'type': 'hello-event',
+    'data': {
+      'id': 'agent:tester1',
+      'is_manager': true,
+      'is_staff': false,
+    }
+  }
+
   var message1 = {
     'id': 'id1',
     'time': startTime / 1000 - 2,
@@ -482,6 +491,18 @@ describe('chat store', function() {
         chat.store.state.connected = false
         chat.store.onActive()
         sinon.assert.notCalled(socket.pingIfIdle)
+      })
+    })
+  })
+
+  describe('received hello events', function() {
+    it('should store user id, manager status, and staff status', function(done) {
+      handleSocket({status: 'receive', body: helloEvent}, function(state) {
+        // jshint camelcase: false
+        assert.equal(state.id, helloEvent.data.id)
+        assert.equal(state.isManager, helloEvent.data.is_manager)
+        assert.equal(state.isStaff, helloEvent.data.is_staff)
+        done()
       })
     })
   })
@@ -934,6 +955,7 @@ describe('chat store', function() {
     }
 
     beforeEach(function() {
+      chat.store.socketEvent({status: 'receive', body: helloEvent})
       chat.store.socketEvent({status: 'receive', body: snapshotReply})
     })
 
