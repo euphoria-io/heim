@@ -420,7 +420,8 @@ type DisconnectEvent struct {
 // It includes information about the client's authentication and associated identity.
 type HelloEvent struct {
 	SessionView
-	Version string `json:"version"`
+	RoomIsPrivate bool   `json:"room_is_private,omitempty"`
+	Version       string `json:"version"`
 }
 
 // A `snapshot-event` indicates that a session has successfully joined a room.

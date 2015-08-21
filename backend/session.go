@@ -211,7 +211,12 @@ func (s *session) serve() error {
 	logger := Logger(s.ctx)
 	logger.Printf("client connected")
 
-	if err := s.sendHello(); err != nil {
+	key, err := s.room.MessageKey(s.ctx)
+	if err != nil {
+		return err
+	}
+
+	if err := s.sendHello(key != nil); err != nil {
 		return err
 	}
 
@@ -240,10 +245,6 @@ func (s *session) serve() error {
 	}
 
 	// TODO: check room auth
-	key, err := s.room.MessageKey(s.ctx)
-	if err != nil {
-		return err
-	}
 	switch key {
 	case nil:
 		if allowed {
@@ -486,11 +487,12 @@ func (s *session) join() error {
 	return nil
 }
 
-func (s *session) sendHello() error {
+func (s *session) sendHello(roomIsPrivate bool) error {
 	logger := Logger(s.ctx)
 	cmd, err := proto.MakeEvent(&proto.HelloEvent{
-		SessionView: *s.View(),
-		Version:     s.room.Version(),
+		SessionView:   *s.View(),
+		RoomIsPrivate: roomIsPrivate,
+		Version:       s.room.Version(),
 	})
 	if err != nil {
 		logger.Printf("error: hello event: %s", err)

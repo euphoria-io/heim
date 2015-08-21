@@ -335,6 +335,11 @@ func (tc *testConn) expectHello() {
 	if tc.isManager {
 		isParts = isParts + `,"is_manager":true`
 	}
+	key, err := tc.room.MessageKey(scope.New())
+	So(err, ShouldBeNil)
+	if key != nil {
+		isParts = isParts + `,"room_is_private":true`
+	}
 	capture := tc.expect(
 		"", "hello-event", `{"id":"*","name":"","server_id":"*","server_era":"*","session_id":"*"%s,"version":"*"}`, isParts)
 	tc.sessionID = capture["session_id"].(string)
