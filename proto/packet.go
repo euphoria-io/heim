@@ -418,7 +418,10 @@ type DisconnectEvent struct {
 
 // A `hello-event` is sent by the server to the client when a session is started.
 // It includes information about the client's authentication and associated identity.
-type HelloEvent SessionView
+type HelloEvent struct {
+	SessionView
+	Version string `json:"version"`
+}
 
 // A `snapshot-event` indicates that a session has successfully joined a room.
 // It also offers a snapshot of the room's state and recent history.

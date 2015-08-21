@@ -488,7 +488,10 @@ func (s *session) join() error {
 
 func (s *session) sendHello() error {
 	logger := Logger(s.ctx)
-	cmd, err := proto.MakeEvent((*proto.HelloEvent)(s.View()))
+	cmd, err := proto.MakeEvent(&proto.HelloEvent{
+		SessionView: *s.View(),
+		Version:     s.room.Version(),
+	})
 	if err != nil {
 		logger.Printf("error: hello event: %s", err)
 		return err

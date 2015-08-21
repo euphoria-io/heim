@@ -335,7 +335,8 @@ func (tc *testConn) expectHello() {
 	if tc.isManager {
 		isParts = isParts + `,"is_manager":true`
 	}
-	capture := tc.expect("", "hello-event", `{"id":"*","name":"","server_id":"*","server_era":"*","session_id":"*"%s}`, isParts)
+	capture := tc.expect(
+		"", "hello-event", `{"id":"*","name":"","server_id":"*","server_era":"*","session_id":"*"%s,"version":"*"}`, isParts)
 	tc.sessionID = capture["session_id"].(string)
 	tc.userID = capture["id"].(string)
 }
