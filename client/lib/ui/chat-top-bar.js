@@ -13,10 +13,6 @@ module.exports = React.createClass({
 
   mixins: [require('react-immutable-render-mixin')],
 
-  showUpdateBubble: function() {
-    this.refs.updateBubble.toggle()
-  },
-
   render: function() {
     var userCount = this.props.who.filter(user => user.get('name')).size
 
