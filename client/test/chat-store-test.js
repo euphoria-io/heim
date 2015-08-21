@@ -191,6 +191,9 @@ describe('chat store', function() {
   }
 
   var mockActivity = {
+    lastActive: {
+      ezzie: startTime - 20 * 1000,
+    },
     lastVisit: {
       ezzie: startTime - 60 * 1000,
     },

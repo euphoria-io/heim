@@ -5,6 +5,7 @@ var Immutable = require('immutable')
 var moment = require('moment')
 
 var ui = require('../stores/ui')
+var chat = require('../stores/chat')
 var FastButton = require('./fast-button')
 var Embed = require('./embed')
 var MessageText = require('./message-text')
@@ -90,10 +91,17 @@ var Message = module.exports = React.createClass({
     var seen = message.get('_seen')
     var mention = message.get('_mention')
 
+    if (!chat.store.lastActive) {
+      // hack: if the room hasn't been visited before (we're within the first
+      // flush interval of the activity store), do not display seen indicators.
+      // this prevents a wall of fading green lines on first visits.
+      this._hideSeen = true
+    }
+
     this._sinceNew = Date.now() - time < Message.newFadeDuration
     var messageClasses = {
       'mention': mention,
-      'unseen': !seen,
+      'unseen': !seen && !this._hideSeen,
       'new': this._sinceNew,
     }
 
@@ -336,7 +344,7 @@ var Message = module.exports = React.createClass({
   },
 
   componentDidUpdate: function(prevProps, prevState) {
-    if (this.state.node.get('_seen') && !prevState.node.get('_seen')) {
+    if (this.state.node.get('_seen') && !prevState.node.get('_seen') && !this._hideSeen) {
       var node = this.getDOMNode()
 
       var lineEl = node.querySelector('.line')

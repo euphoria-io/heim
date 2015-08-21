@@ -63,6 +63,7 @@ module.exports.store = Reflux.createStore({
     this._seenMessages = Immutable.Map()
     this._joinWhenReady = false
 
+    this.lastActive = null
     this.lastVisit = null
 
     this.state.messages.changes.on('__all', ids => {
@@ -320,6 +321,7 @@ module.exports.store = Reflux.createStore({
   },
 
   activityChange: function(data) {
+    this.lastActive = data.lastActive[this.state.roomName]
     if (data.lastVisit[this.state.roomName] != this.lastVisit) {
       this.lastVisit = data.lastVisit[this.state.roomName]
       this.state.messages.add({
