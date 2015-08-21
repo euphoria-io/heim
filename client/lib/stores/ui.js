@@ -37,6 +37,8 @@ var storeActions = module.exports.actions = Reflux.createActions([
   'globalMouseUp',
   'globalMouseMove',
   'toggleManagerMode',
+  'startMessageSelectionDrag',
+  'finishMessageSelectionDrag',
 ])
 _.extend(module.exports, storeActions)
 
@@ -81,6 +83,8 @@ var store = module.exports.store = Reflux.createStore({
       lastSelectedThread: null,
       threadPopupAnchorEl: null,
       managerMode: false,
+      draggingMessageSelection: false,
+      draggingMessageSelectionToggle: null,
     }
 
     this.threadData = new MessageData({selected: false})
@@ -376,6 +380,20 @@ var store = module.exports.store = Reflux.createStore({
 
   toggleManagerMode: function() {
     this.state.managerMode = !this.state.managerMode
+    if (!this.state.managerMode) {
+      chat.deselectAll()
+    }
+    this.trigger(this.state)
+  },
+
+  startMessageSelectionDrag: function(toggleState) {
+    this.state.draggingMessageSelection = true
+    this.state.draggingMessageSelectionToggle = toggleState
+    this.trigger(this.state)
+  },
+
+  finishMessageSelectionDrag: function() {
+    this.state.draggingMessageSelection = false
     this.trigger(this.state)
   },
 })

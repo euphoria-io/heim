@@ -41,6 +41,8 @@ module.exports = React.createClass({
     Heim.addEventListener(uiwindow, 'resize', this._onResizeThrottled)
     this._threadScrollQueued = false
     this.onResize()
+
+    this.listenTo(ui.globalMouseUp, 'globalMouseUp')
   },
 
   componentDidMount: function() {
@@ -220,6 +222,12 @@ module.exports = React.createClass({
     ui.keydownOnPage(ev)
   },
 
+  globalMouseUp: function() {
+    if (this.state.ui.draggingMessageSelection) {
+      ui.finishMessageSelectionDrag()
+    }
+  },
+
   render: function() {
     var thin = this.state.ui.thin
     var selectedThread = this.state.ui.selectedThread
@@ -249,7 +257,7 @@ module.exports = React.createClass({
     }
 
     return (
-      <Panner ref="panner" id="ui" snapPoints={snapPoints} onMove={ui.onViewPan} className={classNames({'disconnected': this.state.chat.connected === false, 'info-pane-hidden': infoPaneHidden, 'sidebar-pane-hidden': sidebarPaneHidden, 'info-pane-focused': this.state.ui.focusedPane == this.state.ui.popupPane})} onMouseDownCapture={this.onMouseDown} onClickCapture={this.onClick} onTouchMove={this.onTouchMove} onKeyDown={this.onKeyDown}>
+      <Panner ref="panner" id="ui" snapPoints={snapPoints} onMove={ui.onViewPan} className={classNames({'disconnected': this.state.chat.connected === false, 'info-pane-hidden': infoPaneHidden, 'sidebar-pane-hidden': sidebarPaneHidden, 'info-pane-focused': this.state.ui.focusedPane == this.state.ui.popupPane, 'manager-mode': this.state.ui.managerMode})} onMouseDownCapture={this.onMouseDown} onClickCapture={this.onClick} onTouchMove={this.onTouchMove} onKeyDown={this.onKeyDown}>
         {this.state.storage && this.state.storage.useOpenDyslexic && <link rel="stylesheet" type="text/css" id="css" href="/static/od.css" />}
         <div className="info-pane" onMouseEnter={ui.freezeInfo} onMouseLeave={ui.thawInfo}>
           <h2>discussions</h2>

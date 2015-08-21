@@ -44,12 +44,31 @@ var Message = module.exports = React.createClass({
     }
   },
 
-  focusMessage: function() {
+  onClick: function() {
+    if (ui.store.state.managerMode) {
+      return
+    }
+
     if (!uiwindow.getSelection().isCollapsed) {
       return
     }
 
     this.props.pane.toggleFocusMessage(this.props.nodeId, this.state.node.get('parent'))
+  },
+
+  onMouseDown: function(ev) {
+    if (ui.store.state.managerMode) {
+      var selected = this.state.node.get('_selected')
+      chat.setSelected(this.props.nodeId, !selected)
+      ui.startMessageSelectionDrag(!selected)
+      ev.preventDefault()
+    }
+  },
+
+  onMouseEnter: function() {
+    if (ui.store.state.managerMode && ui.store.state.draggingMessageSelection) {
+      chat.setSelected(this.props.nodeId, ui.store.state.draggingMessageSelectionToggle)
+    }
   },
 
   render: function() {
@@ -103,6 +122,7 @@ var Message = module.exports = React.createClass({
       'mention': mention,
       'unseen': !seen && !this._hideSeen,
       'new': this._sinceNew,
+      'selected': message.get('_selected'),
     }
 
     var lineClasses = {
@@ -305,7 +325,7 @@ var Message = module.exports = React.createClass({
         {this.props.showTimeStamps && <time ref="time" className="timestamp" dateTime={time.toISOString()} title={time.format('MMMM Do YYYY, h:mm:ss a')}>
           {time.format('h:mma')}
         </time>}
-        <div className={classNames(lineClasses)} onClick={this.focusMessage}>
+        <div className={classNames(lineClasses)} onClick={this.onClick} onMouseDown={this.onMouseDown} onMouseEnter={this.onMouseEnter}>
           <MessageText className="nick" onlyEmoji={true} style={{background: 'hsl(' + message.getIn(['sender', 'hue']) + ', 65%, 85%)'}} content={message.getIn(['sender', 'name'])} />
           <span className="content">
             {messageRender}

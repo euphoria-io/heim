@@ -20,6 +20,8 @@ var storeActions = module.exports.actions = Reflux.createActions([
   'messagesChanged',
   'setRoomSettings',
   'markMessagesSeen',
+  'setSelected',
+  'deselectAll',
 ])
 storeActions.setRoomSettings.sync = true
 storeActions.messagesChanged.sync = true
@@ -59,6 +61,7 @@ module.exports.store = Reflux.createStore({
       earliestLog: null,
       nickHues: {},
       who: Immutable.Map(),
+      selectedMessages: Immutable.Set(),
     }
 
     this._loadingLogs = false
@@ -430,6 +433,18 @@ module.exports.store = Reflux.createStore({
     if (!Immutable.is(seenMessages, this._seenMessages)) {
       storage.setRoom(this.state.roomName, 'seenMessages', seenMessages.toJS())
     }
+  },
+
+  setSelected: function(id, value) {
+    this.state.messages.mergeNodes(id, {_selected: value})
+    this.state.selectedMessages = this.state.selectedMessages[value ? 'add' : 'delete'](id)
+    this.trigger(this.state)
+  },
+
+  deselectAll: function() {
+    this.state.messages.mergeNodes(this.state.selectedMessages.toArray(), {_selected: false})
+    this.state.selectedMessages = this.state.selectedMessages.clear()
+    this.trigger(this.state)
   },
 
   sendMessage: function(content, parent) {

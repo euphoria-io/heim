@@ -1491,6 +1491,18 @@ iframe.js {
   }
 }
 
+.manager-mode {
+  .message-node {
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .message-node.selected > .line {
+    background: fade(@manager-color, 45%);
+    border-radius: 4px;
+  }
+}
+
 .replies.collapsed, .expand-rest, .message-node .content, .thread-list, .notification-list {
   .ago {
     font-weight: normal;
