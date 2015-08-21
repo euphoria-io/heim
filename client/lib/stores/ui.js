@@ -36,6 +36,7 @@ var storeActions = module.exports.actions = Reflux.createActions([
   'gotoPopupMessage',
   'globalMouseUp',
   'globalMouseMove',
+  'toggleManagerMode',
 ])
 _.extend(module.exports, storeActions)
 
@@ -79,6 +80,7 @@ var store = module.exports.store = Reflux.createStore({
       selectedThread: null,
       lastSelectedThread: null,
       threadPopupAnchorEl: null,
+      managerMode: false,
     }
 
     this.threadData = new MessageData({selected: false})
@@ -370,6 +372,11 @@ var store = module.exports.store = Reflux.createStore({
     this.state.panes = this.state.panes.set(paneId, newPane)
     this.trigger(this.state)
     return newPane
+  },
+
+  toggleManagerMode: function() {
+    this.state.managerMode = !this.state.managerMode
+    this.trigger(this.state)
   },
 })
 

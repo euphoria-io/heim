@@ -822,6 +822,55 @@ iframe.js {
       }
     }
   }
+
+  .manager-toggle {
+    @active-color: darken(desaturate(@manager-color, 15%), 25%);
+
+    .bgcolor(@color) {
+      background: @color;
+      .hex {
+        fill: @color;
+      }
+    }
+
+    position: relative;
+    font-size: .8em;
+    padding: 2px 4px;
+    margin-left: 2px;
+    .bgcolor(@manager-color);
+    .larger-touch-target(10px, 10px);
+    .touchable-custom({
+      .bgcolor(@active-color);
+      .hex {
+        transition: all 0s ease;
+      }
+    });
+
+    .hex {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 7px;
+      transition: all .25s ease;
+
+      &.left {
+        left: -6px;
+      }
+
+      &.right {
+        right: -6px;
+      }
+    }
+
+    &.on {
+      color: white;
+      font-weight: bold;
+      .bgcolor(@active-color);
+      .touchable-custom({
+        .bgcolor(darken(desaturate(@active-color, 35%), 15%));
+      });
+    }
+  }
 }
 
 .messages {
