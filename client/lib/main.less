@@ -128,7 +128,7 @@ iframe.js {
     flex-shrink: 0;
   }
 
-  h2, .notification-settings .notification-toggle .inner {
+  h2, .notification-settings .notification-toggle .inner, .toolbox-button .inner {
     font-size: .85rem;
     font-weight: bold;
     color: #777;
@@ -141,6 +141,17 @@ iframe.js {
 
 .info-pane {
   width: @info-pane-width;
+
+  .notification-list, .thread-list-container, .toolbox-button {
+    margin-top: 4px;
+    margin-left: -10px;
+    margin-right: -10px;
+  }
+
+  .toolbox-button, .thread-list-container {
+    border-bottom: 1px solid #ccc;
+    margin-bottom: 8px;
+  }
 
   .notification-settings {
     display: flex;
@@ -248,9 +259,6 @@ iframe.js {
   }
 
   .notification-list, .thread-list-container {
-    margin-top: 4px;
-    margin-left: -10px;
-    margin-right: -10px;
     -webkit-overflow-scrolling: touch;
 
     .notification, .thread .info {
@@ -302,8 +310,6 @@ iframe.js {
     display: flex;
     flex: 1;
     overflow: hidden;
-    border-bottom: 1px solid #ccc;
-    margin-bottom: 8px;
 
     &:after {
       @size: 12px;
@@ -355,6 +361,26 @@ iframe.js {
           }
         }
       }
+    }
+  }
+
+  .toolbox-button {
+    margin-top: -8px;
+    padding: 10px;
+    text-align: left;
+    background: fade(@manager-color, 45%);
+
+    .inner {
+      color: fade(darken(desaturate(@manager-color, 15%), 50%), 70%);
+    }
+
+    .count {
+      display: inline-block;
+      background: @manager-dark-color;
+      color: white;
+      padding: 0 6px;
+      border-radius: 2px;
+      float: right;
     }
   }
 
@@ -824,8 +850,6 @@ iframe.js {
   }
 
   .manager-toggle {
-    @active-color: darken(desaturate(@manager-color, 15%), 25%);
-
     .bgcolor(@color) {
       background: @color;
       .hex {
@@ -840,7 +864,7 @@ iframe.js {
     .bgcolor(@manager-color);
     .larger-touch-target(10px, 10px);
     .touchable-custom({
-      .bgcolor(@active-color);
+      .bgcolor(@manager-dark-color);
       .hex {
         transition: all 0s ease;
       }
@@ -865,9 +889,9 @@ iframe.js {
     &.on {
       color: white;
       font-weight: bold;
-      .bgcolor(@active-color);
+      .bgcolor(@manager-dark-color);
       .touchable-custom({
-        .bgcolor(darken(desaturate(@active-color, 35%), 15%));
+        .bgcolor(darken(desaturate(@manager-dark-color, 35%), 15%));
       });
     }
   }
