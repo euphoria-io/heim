@@ -62,8 +62,8 @@ module.exports = React.createClass({
 
       if (this.props.offset) {
         var offsetBox = this.props.offset()
-        left -= offsetBox.left
-        top -= offsetBox.top
+        left -= offsetBox.left || 0
+        top -= offsetBox.top || 0
       }
 
       node.style.left = left + 'px'
