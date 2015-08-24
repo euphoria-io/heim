@@ -1536,7 +1536,8 @@ iframe.js {
   }
 
   .message-node.selected > .line {
-    background: fade(@manager-color, 45%);
+    // !important to override fading green background
+    background: fade(@manager-color, 45%) !important;
     border-radius: 4px;
   }
 }
