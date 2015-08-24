@@ -1649,15 +1649,7 @@ iframe.js {
   color: white;
 }
 
-.thread-popup {
-  @top-line-height: 26px;
-  left: -9999px;
-  width: 40vw;
-  min-width: 400px;
-  padding: 0;
-  z-index: 1000;
-  box-shadow: 0 3px 24px fade(black, 25%);
-
+.bubble-from-left {
   &.bubble-enter {
     opacity: 0;
     transform: translateX(-10px);
@@ -1677,6 +1669,16 @@ iframe.js {
       transform: translateX(-10px);
     }
   }
+}
+
+.thread-popup {
+  @top-line-height: 26px;
+  left: -9999px;
+  width: 40vw;
+  min-width: 400px;
+  padding: 0;
+  z-index: 1000;
+  box-shadow: 0 3px 24px fade(black, 25%);
 
   .top-line {
     display: flex;
