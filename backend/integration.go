@@ -875,7 +875,9 @@ func testDeletion(s *serverUnderTest) {
 
 		// Delete message.
 		conn.send("4", "edit-message", `{"id":"%s","delete":true,"announce":true}`, capture["id"])
-		conn.expect("4", "edit-message-reply", `{"edit_id":"*","deleted":true}`)
+		conn.expect("4", "edit-message-reply",
+			`{"edit_id":"*","id":"*","time":"*","sender":{"session_id":"*","id":"*",%s},"content":"@#$!","edited":"*","deleted":"*"}`,
+			server)
 
 		conn2 := s.Connect("deletion")
 		defer conn2.Close()

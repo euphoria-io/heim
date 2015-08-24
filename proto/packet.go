@@ -255,8 +255,8 @@ type ChangePasswordReply struct{}
 
 // `edit-message-reply` returns the id of a successful edit.
 type EditMessageReply struct {
-	EditID  snowflake.Snowflake `json:"edit_id"`           // the unique id of the edit that was applied
-	Deleted bool                `json:"deleted,omitempty"` // the new deletion status of the edited message
+	EditID snowflake.Snowflake `json:"edit_id"` // the unique id of the edit that was applied
+	Message
 }
 
 // An `edit-message-event` indicates that a message in the room has been
@@ -266,8 +266,8 @@ type EditMessageReply struct {
 //
 // The event packet includes a snapshot of the message post-edit.
 type EditMessageEvent struct {
-	Message
 	EditID snowflake.Snowflake `json:"edit_id"` // the id of the edit
+	Message
 }
 
 // The `grant-access` command may be used by an active manager in a private room

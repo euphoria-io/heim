@@ -226,7 +226,7 @@ func (r *memRoom) EditMessage(
 
 	reply := proto.EditMessageReply{
 		EditID:  editID,
-		Deleted: edit.Delete,
+		Message: *msg,
 	}
 	return reply, nil
 }

@@ -164,7 +164,7 @@ func (rb *RoomBinding) EditMessage(
 	err = t.SelectOne(
 		&msg,
 		"SELECT room, id, previous_edit_id, parent, posted, edited, deleted,"+
-			" session_id, sender_id, sender_name, server_id, server_era, content, encryption_key_id"+
+			" session_id, sender_id, sender_name, sender_is_manager, sender_is_staff, server_id, server_era, content, encryption_key_id"+
 			" FROM message WHERE room = $1 AND id = $2",
 		rb.Name, edit.ID.String())
 	if err != nil {
@@ -246,7 +246,7 @@ func (rb *RoomBinding) EditMessage(
 	}
 
 	reply.EditID = editID
-	reply.Deleted = edit.Delete
+	reply.Message = msg.ToBackend()
 	return reply, nil
 }
 

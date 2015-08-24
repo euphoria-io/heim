@@ -702,7 +702,15 @@ TODO: support reparenting
 | Field | Type | Required? | Description |
 | :-- | :-- | :-- | :--------- |
 | `edit_id` | [Snowflake](#snowflake) | required |  the unique id of the edit that was applied |
-| `deleted` | [bool](#bool) | *optional* |  the new deletion status of the edited message |
+| `id` | [Snowflake](#snowflake) | required |  the id of the message (unique within a room) |
+| `parent` | [Snowflake](#snowflake) | *optional* |  the id of the message's parent, or null if top-level |
+| `previous_edit_id` | [Snowflake](#snowflake) | *optional* |  the edit id of the most recent edit of this message, or null if it's never been edited |
+| `time` | [Time](#time) | required |  the unix timestamp of when the message was posted |
+| `sender` | [SessionView](#sessionview) | required |  the view of the sender's session |
+| `content` | [string](#string) | required |  the content of the message (client-defined) |
+| `encryption_key_id` | [string](#string) | *optional* |  the id of the key that encrypts the message in storage |
+| `edited` | [Time](#time) | *optional* |  the unix timestamp of when the message was last edited |
+| `deleted` | [Time](#time) | *optional* |  the unix timestamp of when the message was deleted |
 
 
 
@@ -1120,6 +1128,7 @@ The event packet includes a snapshot of the message post-edit.
 
 | Field | Type | Required? | Description |
 | :-- | :-- | :-- | :--------- |
+| `edit_id` | [Snowflake](#snowflake) | required |  the id of the edit |
 | `id` | [Snowflake](#snowflake) | required |  the id of the message (unique within a room) |
 | `parent` | [Snowflake](#snowflake) | *optional* |  the id of the message's parent, or null if top-level |
 | `previous_edit_id` | [Snowflake](#snowflake) | *optional* |  the edit id of the most recent edit of this message, or null if it's never been edited |
@@ -1129,7 +1138,6 @@ The event packet includes a snapshot of the message post-edit.
 | `encryption_key_id` | [string](#string) | *optional* |  the id of the key that encrypts the message in storage |
 | `edited` | [Time](#time) | *optional* |  the unix timestamp of when the message was last edited |
 | `deleted` | [Time](#time) | *optional* |  the unix timestamp of when the message was deleted |
-| `edit_id` | [Snowflake](#snowflake) | required |  the id of the edit |
 
 
 
