@@ -372,6 +372,11 @@ iframe.js {
     text-align: left;
     background: fade(@manager-color, 45%);
 
+    &.selected {
+      box-shadow: 0 1px 5px fade(black, 25%);
+      background: fade(@manager-color, 55%);
+    }
+
     .inner {
       color: fade(darken(desaturate(@manager-color, 15%), 50%), 70%);
     }
@@ -1700,6 +1705,109 @@ iframe.js {
     max-height: 80vh;
     padding: 10px;
     padding-left: 14px;
+  }
+}
+
+.manager-toolbox-popup {
+  z-index: 1001;
+  border-bottom: 5px solid @manager-dark-color;
+}
+
+.manager-toolbox {
+  user-select: none;
+
+  .items {
+    min-width: 380px;
+    width: 40vw;
+    min-height: 150px;
+
+    &.empty {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      opacity: .5;
+    }
+
+    .item {
+      display: inline-flex;
+      align-items: center;
+      padding: 1px 4px;
+      margin-right: 3px;
+      margin-bottom: 3px;
+      height: 19px;
+      border-radius: 2px;
+      background: @neutral-color;
+      opacity: .5;
+      transition: opacity .15s ease;
+      user-select: text;
+
+      &.active {
+        opacity: 1;
+      }
+
+      &.message {
+        .icon('../res/message.svg', 12px, 4px, .5);
+      }
+
+      &.user {
+        .icon('../res/euphorian.svg', 12px, 4px, .5);
+      }
+
+      .name {
+        margin-right: 4px;
+      }
+
+      .id {
+        font-size: .75em;
+        font-family: monospace;
+        color: gray;
+      }
+    }
+  }
+
+  .action {
+    display: flex;
+    align-items: center;
+    background: fade(@manager-color, 25%);
+    padding: 8px;
+    margin: 0 -8px -4px;
+
+    &, select {
+      font-size: 1em;
+    }
+
+    select, button {
+      background: white;
+      border: none;
+      padding: 2px;
+      box-shadow: 0 0 2px black;
+      box-sizing: border-box;
+      height: 22px;
+    }
+
+    .preview {
+      margin: 0 10px;
+      color: @manager-dark-color;
+      font-size: 1.05em;
+    }
+
+    .spacer {
+      flex: 1;
+    }
+
+    .apply {
+      display: flex;
+      padding: 0 6px;
+      .touchable-bg(white);
+
+      .inner {
+        display: flex;
+      }
+
+      .emoji {
+        margin-right: 3px;
+      }
+    }
   }
 }
 

@@ -171,6 +171,10 @@ module.exports = React.createClass({
     ui.gotoMessageInPane(id)
   },
 
+  openManagerToolbox: function() {
+    ui.openManagerToolbox(this.refs.toolboxButton.getDOMNode())
+  },
+
   onKeyDown: function(ev) {
     if (Heim.tabPressed) {
       if (ev.key == 'ArrowLeft') {
@@ -257,12 +261,14 @@ module.exports = React.createClass({
     }
 
     var selectedMessageCount = this.state.chat.selectedMessages.size
+    // lazy load manager toolbox ui (and store)
+    var ManagerToolbox = this.state.ui.managerMode && require('./manager-toolbox')
 
     return (
       <Panner ref="panner" id="ui" snapPoints={snapPoints} onMove={ui.onViewPan} className={classNames({'disconnected': this.state.chat.connected === false, 'info-pane-hidden': infoPaneHidden, 'sidebar-pane-hidden': sidebarPaneHidden, 'info-pane-focused': this.state.ui.focusedPane == this.state.ui.popupPane, 'manager-mode': this.state.ui.managerMode})} onMouseDownCapture={this.onMouseDown} onClickCapture={this.onClick} onTouchMove={this.onTouchMove} onKeyDown={this.onKeyDown}>
         {this.state.storage && this.state.storage.useOpenDyslexic && <link rel="stylesheet" type="text/css" id="css" href="/static/od.css" />}
         <div className="info-pane" onMouseEnter={ui.freezeInfo} onMouseLeave={ui.thawInfo}>
-          {this.state.ui.managerMode && <FastButton className="toolbox" onClick={null}>toolbox {selectedMessageCount > 0 && <span className="count">{selectedMessageCount} selected</span>}</FastButton>}
+          {this.state.ui.managerMode && <FastButton ref="toolboxButton" className={classNames('toolbox-button', {'selected': !!this.state.ui.managerToolboxAnchorEl})} onClick={this.state.ui.managerToolboxAnchorEl ? ui.closeManagerToolbox : this.openManagerToolbox}>toolbox {selectedMessageCount > -1 && <span className="count">{selectedMessageCount} selected</span>}</FastButton>}
           <h2>discussions</h2>
           <div className="thread-list-container">
             <ThreadList ref="threadList" threadData={ui.store.threadData} threadTree={this.state.ui.frozenThreadList || this.state.chat.messages.threads} tree={this.state.chat.messages} onScroll={this.onThreadsScroll} onThreadSelect={this.onThreadSelect} />
@@ -335,6 +341,9 @@ module.exports = React.createClass({
             <FastButton className="scroll-to" onClick={ui.gotoPopupMessage}>go to</FastButton>
           </div>
           {selectedThread && <ChatPane key={this.state.ui.popupPane} pane={this.state.ui.panes.get(this.state.ui.popupPane)} afterRender={() => this.refs.threadPopup.reposition()} showParent={true} showAllReplies={true} />}
+        </Bubble>}
+        {!thin && this.state.ui.managerMode && <Bubble ref="managerToolboxPopup" className="manager-toolbox-popup" anchorEl={this.state.ui.managerToolboxAnchorEl} visible={!!this.state.ui.managerToolboxAnchorEl} offset={() => ({ left: this.getDOMNode().getBoundingClientRect().left + 5 })}>
+          <ManagerToolbox />
         </Bubble>}
         {this.templateHook('page-bottom')}
       </Panner>
