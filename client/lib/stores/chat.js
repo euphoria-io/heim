@@ -100,6 +100,9 @@ module.exports.store = Reflux.createStore({
         this.state.id = ev.body.data.id
         this.state.isManager = ev.body.data.is_manager
         this.state.isStaff = ev.body.data.is_staff
+        if (ev.body.data.room_is_private) {
+          this.state.authType = 'passcode'
+        }
       } else if (ev.body.type == 'snapshot-event') {
         this.state.serverVersion = ev.body.data.version
         this.state.sessionId = ev.body.data.session_id
