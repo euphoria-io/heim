@@ -262,11 +262,11 @@ module.exports = React.createClass({
       <Panner ref="panner" id="ui" snapPoints={snapPoints} onMove={ui.onViewPan} className={classNames({'disconnected': this.state.chat.connected === false, 'info-pane-hidden': infoPaneHidden, 'sidebar-pane-hidden': sidebarPaneHidden, 'info-pane-focused': this.state.ui.focusedPane == this.state.ui.popupPane, 'manager-mode': this.state.ui.managerMode})} onMouseDownCapture={this.onMouseDown} onClickCapture={this.onClick} onTouchMove={this.onTouchMove} onKeyDown={this.onKeyDown}>
         {this.state.storage && this.state.storage.useOpenDyslexic && <link rel="stylesheet" type="text/css" id="css" href="/static/od.css" />}
         <div className="info-pane" onMouseEnter={ui.freezeInfo} onMouseLeave={ui.thawInfo}>
+          {this.state.ui.managerMode && <FastButton className="toolbox" onClick={null}>toolbox {selectedMessageCount > 0 && <span className="count">{selectedMessageCount} selected</span>}</FastButton>}
           <h2>discussions</h2>
           <div className="thread-list-container">
             <ThreadList ref="threadList" threadData={ui.store.threadData} threadTree={this.state.ui.frozenThreadList || this.state.chat.messages.threads} tree={this.state.chat.messages} onScroll={this.onThreadsScroll} onThreadSelect={this.onThreadSelect} />
           </div>
-          {this.state.ui.managerMode && <FastButton className="toolbox" onClick={null}>toolbox {selectedMessageCount > 0 && <span className="count">{selectedMessageCount} selected</span>}</FastButton>}
           {!(this.state.ui.thin && Heim.isTouch) && <NotificationSettings roomName={this.state.chat.roomName} />}
           <NotificationList tree={this.state.chat.messages} notifications={this.state.ui.frozenNotifications || this.state.notification.notifications} onNotificationSelect={this.onNotificationSelect} animate={!this.state.ui.thin} />
         </div>
