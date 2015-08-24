@@ -504,21 +504,25 @@ func testBroadcast(s *serverUnderTest) {
 					`{"session_id":"%s","id":"%s","name":"%s","server_id":"test1","server_era":"era1"}`,
 					ids[i].SessionID, ids[i].ID, ids[i].Name))
 
+			// Wait for lurker to observe join.
+			lurker.expect("", "join-event",
+				`{"session_id":"%s","id":"%s","name":"","server_id":"test1","server_era":"era1"}`,
+				ids[i].SessionID, ids[i].ID)
+
+			// Name self and verify who list.
 			conn.send("1", "nick", `{"name":"user%d"}`, i)
 			conn.send("2", "who", "")
-
 			conn.expect("1", "nick-reply",
 				`{"session_id":"%s","id":"%s","from":"","to":"%s"}`,
 				ids[i].SessionID, ids[i].ID, ids[i].Name)
 			conn.expect("2", "who-reply", `{"listing":[%s]}`, strings.Join(listingParts, ","))
 
-			lurker.expect("", "join-event",
-				`{"session_id":"%s","id":"%s","name":"","server_id":"test1","server_era":"era1"}`,
-				ids[i].SessionID, ids[i].ID)
+			// Wait for lurker to observe name change.
 			lurker.expect("", "nick-event",
 				`{"session_id":"%s","id":"%s","from":"","to":"%s"}`,
 				ids[i].SessionID, ids[i].ID, ids[i].Name)
 
+			// All previous connections should observe same events.
 			for j, c := range conns[:i] {
 				fmt.Printf("\n>>> id %s expecting events for new conn %s\n\n", ids[j].ID, ids[i].ID)
 				c.expect("", "join-event",
