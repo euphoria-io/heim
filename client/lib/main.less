@@ -1761,11 +1761,15 @@ iframe.js {
       border-radius: 2px;
       background: @neutral-color;
       opacity: .5;
-      transition: opacity .15s ease;
+      transition: all .15s ease;
       user-select: text;
 
       &.active {
         opacity: 1;
+      }
+
+      &.removed {
+        background: mix(#f44, @neutral-color, 25%);
       }
 
       &.message {
@@ -1783,7 +1787,7 @@ iframe.js {
       .id {
         font-size: .75em;
         font-family: monospace;
-        color: gray;
+        color: fade(black, 50%);
       }
     }
   }

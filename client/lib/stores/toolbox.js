@@ -83,21 +83,24 @@ module.exports.store = Reflux.createStore({
           .map(id => {
             var message = chatState.messages.get(id)
             var sender = message.get('sender')
+            var senderId = sender.get('id')
             return Immutable.fromJS([
               {
                 kind: 'message',
                 id: id,
+                removed: !!message.get('deleted'),
               },
               {
                 kind: 'user',
-                id: sender.get('id'),
+                id: senderId,
                 name: sender.get('name'),
+                removed: chatState.bannedIds.has(senderId),
               },
             ])
           })
           .flatten(1)
           .toSet()
-          .sortBy(item => item.get('kind'))
+          .sortBy(item => [!item.get('removed'), item.get('kind')])
       )
       state = this._updateFilter(state)
     } else {
@@ -112,7 +115,7 @@ module.exports.store = Reflux.createStore({
 
     state = state.set('items',
       state.items.map(
-        item => item.set('active', item.get('kind') == commandKind)
+        item => item.set('active', !item.get('removed') && item.get('kind') == commandKind)
       )
     )
 
