@@ -82,6 +82,10 @@ module.exports.store = Reflux.createStore({
           .toSeq()
           .map(id => {
             var message = chatState.messages.get(id)
+            if (!message || !message.get('$count')) {
+              return
+            }
+
             var sender = message.get('sender')
             var senderId = sender.get('id')
             return Immutable.fromJS([
@@ -98,6 +102,7 @@ module.exports.store = Reflux.createStore({
               },
             ])
           })
+          .filter(Boolean)
           .flatten(1)
           .toSet()
           .sortBy(item => [!item.get('removed'), item.get('kind')])
