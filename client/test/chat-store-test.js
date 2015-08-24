@@ -20,6 +20,7 @@ describe('chat store', function() {
     sinon.stub(chat.actions, 'messagesChanged')
     sinon.stub(socket, 'send')
     sinon.stub(storage, 'setRoom')
+    sinon.stub(console, 'warn')
     support.resetStore(chat.store)
     window.Raven = {setUserContext: sinon.stub()}
   })
@@ -30,6 +31,7 @@ describe('chat store', function() {
     chat.actions.messagesChanged.restore()
     socket.send.restore()
     storage.setRoom.restore()
+    console.warn.restore()
     window.Raven = null
   })
 
@@ -671,10 +673,10 @@ describe('chat store', function() {
     })
   }
 
-  describe('received message deletions', function() {
+  function testEditMessageEvent(type) {
     var deleteEvent = {
       'id': '0',
-      'type': 'edit-message-event',
+      'type': type,
       'data': _.merge({}, message1, {deleted: 12345}),
     }
 
@@ -684,6 +686,52 @@ describe('chat store', function() {
         assert(state.messages.get(message1.id).get('deleted') == 12345)
         done()
       })
+    })
+  }
+
+  function testErrorLogging(type, error, done) {
+    var errorEvent = {
+      'type': type,
+      'error': error,
+    }
+    handleSocket({status: 'receive', body: errorEvent}, function() {
+      sinon.assert.calledOnce(console.warn)
+      sinon.assert.calledWithExactly(console.warn, sinon.match.string, errorEvent.error)
+      done()
+    })
+  }
+
+  describe('received edit-message-event events', function() {
+    testEditMessageEvent('edit-message-event')
+  })
+
+  describe('received edit-message-reply events', function() {
+    testEditMessageEvent('edit-message-reply')
+
+    it('should log a warning upon error', function(done) {
+      testErrorLogging('edit-message-reply', 'oh no!', done)
+    })
+  })
+
+  describe('received ban-reply events', function() {
+    var banReplyEvent = {
+      'id': '0',
+      'type': 'ban-reply',
+      'data': {
+        'id': 'agent:tester2',
+        'seconds': 60 * 60,
+      },
+    }
+
+    it('should add the id to the banned ids set', function(done) {
+      handleSocket({status: 'receive', body: banReplyEvent}, function(state) {
+        assert(state.bannedIds.has(banReplyEvent.data.id))
+        done()
+      })
+    })
+
+    it('should log a warning upon error', function(done) {
+      testErrorLogging('ban-reply', 'oops!', done)
     })
   })
 
@@ -1239,14 +1287,6 @@ describe('chat store', function() {
       },
     }
 
-    beforeEach(function() {
-      sinon.stub(console, 'warn')
-    })
-
-    afterEach(function() {
-      console.warn.restore()
-    })
-
     it('should log a warning', function(done) {
       handleSocket({status: 'receive', body: unknownEvent}, function() {
         sinon.assert.calledOnce(console.warn)
@@ -1257,14 +1297,6 @@ describe('chat store', function() {
   })
 
   describe('received unknown socket events', function() {
-    beforeEach(function() {
-      sinon.stub(console, 'warn')
-    })
-
-    afterEach(function() {
-      console.warn.restore()
-    })
-
     it('should log a warning', function() {
       chat.store.socketEvent({status: 'wat'})
       sinon.assert.calledOnce(console.warn)

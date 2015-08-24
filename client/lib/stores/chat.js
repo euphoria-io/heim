@@ -61,6 +61,7 @@ module.exports.store = Reflux.createStore({
       earliestLog: null,
       nickHues: {},
       who: Immutable.Map(),
+      bannedIds: Immutable.Set(),
       selectedMessages: Immutable.Set(),
     }
 
@@ -85,14 +86,15 @@ module.exports.store = Reflux.createStore({
   socketEvent: function(ev) {
     // jshint camelcase: false
     if (ev.status == 'receive') {
-      if (ev.body.type == 'send-event' || ev.body.type == 'send-reply' || ev.body.type == 'edit-message-event') {
-        var message = ev.body.data
-        var processedMessages = this._handleMessagesData([message])
-        this.state.messages.add(processedMessages)
-        if (ev.body.type != 'edit-message-event') {
-          _.each(processedMessages, message =>
-            storeActions.messageReceived(this.state.messages.get(message.id), this.state)
-          )
+      if (ev.body.type == 'send-event' || ev.body.type == 'send-reply') {
+        this._handleMessageUpdate(ev.body.data, true)
+      } else if (ev.body.type == 'edit-message-event') {
+        this._handleMessageUpdate(ev.body.data, false)
+      } else if (ev.body.type == 'edit-message-reply') {
+        if (!ev.body.error) {
+          this._handleMessageUpdate(ev.body.data, false)
+        } else {
+          console.warn('error editing message:', ev.body.error)
         }
       } else if (ev.body.type == 'hello-event') {
         this.state.id = ev.body.data.id
@@ -144,6 +146,12 @@ module.exports.store = Reflux.createStore({
         var id = ev.body.data.server_id
         var era = ev.body.data.server_era
         this.state.who = this.state.who.filterNot(v => v.get('server_id') == id && v.get('server_era') == era)
+      } else if (ev.body.type == 'ban-reply') {
+        if (!ev.body.error) {
+          this.state.bannedIds = this.state.bannedIds.add(ev.body.data.id)
+        } else {
+          console.warn('error banning:', ev.body.error)
+        }
       } else if (ev.body.type == 'ping-event' || ev.body.type == 'ping-reply') {
         // ignore
         return
@@ -164,6 +172,16 @@ module.exports.store = Reflux.createStore({
       console.warn('unexpected socket store status:', ev.status)
     }
     this.trigger(this.state)
+  },
+
+  _handleMessageUpdate: function(message, received) {
+    var processedMessages = this._handleMessagesData([message])
+    this.state.messages.add(processedMessages)
+    if (received) {
+      _.each(processedMessages, message =>
+        storeActions.messageReceived(this.state.messages.get(message.id), this.state)
+      )
+    }
   },
 
   _handleMessagesData: function(messages) {
