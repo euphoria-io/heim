@@ -392,6 +392,9 @@ var store = module.exports.store = Reflux.createStore({
 
   openManagerToolbox: function(anchorEl) {
     this.state.managerToolboxAnchorEl = anchorEl
+    if (this.state.thin) {
+      storeActions.panViewTo('main')
+    }
     this.trigger(this.state)
   },
 

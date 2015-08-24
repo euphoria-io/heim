@@ -561,22 +561,16 @@ iframe.js {
       flex: 1;
       position: relative;
 
-      & > .chat-pane, .main-pane-thread {
+      & > .chat-pane, .main-pane-cover {
         .fill;
       }
     }
 
-    .main-pane-thread {
+    .main-pane-cover {
       display: flex;
-      flex-direction: column;
       background: white;
       transition: all .2s ease-in;
       z-index: 10;
-
-      .top-bar {
-        background: #f2f2ff;
-        box-shadow: 0 -4px 4px -4px #d2d2e7 inset;
-      }
 
       &.slide-leave {
         transform: none;
@@ -584,6 +578,15 @@ iframe.js {
         &.slide-leave-active {
           transform: translateX(-1000px);
         }
+      }
+    }
+
+    .main-pane-thread {
+      flex-direction: column;
+
+      .top-bar {
+        background: #f2f2ff;
+        box-shadow: 0 -4px 4px -4px #d2d2e7 inset;
       }
     }
   }
@@ -1717,15 +1720,29 @@ iframe.js {
 .manager-toolbox-popup {
   z-index: 1001;
   border-bottom: 5px solid @manager-dark-color;
+  padding: 0;
+
+  .manager-toolbox {
+    .items {
+      min-width: 380px;
+      width: 40vw;
+      min-height: 150px;
+    }
+  }
 }
 
 .manager-toolbox {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
   user-select: none;
 
+  .items, .action {
+    padding: 8px;
+  }
+
   .items {
-    min-width: 380px;
-    width: 40vw;
-    min-height: 150px;
+    flex: 1;
 
     &.empty {
       display: flex;
@@ -1775,8 +1792,6 @@ iframe.js {
     display: flex;
     align-items: center;
     background: fade(@manager-color, 25%);
-    padding: 8px;
-    margin: 0 -8px -4px;
 
     &, select {
       font-size: 1em;

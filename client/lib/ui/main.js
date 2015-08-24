@@ -305,12 +305,15 @@ module.exports = React.createClass({
           <div className="main-pane-stack">
             <ChatPane pane={this.state.ui.panes.get('main')} showTimeStamps={this.state.ui.showTimestamps} onScrollbarSize={this.onScrollbarSize} disabled={!!mainPaneThreadId} />
             <ReactCSSTransitionGroup transitionName="slide" transitionLeave={!mainPaneThreadId} transitionEnter={false}>
-              {mainPaneThreadId && <div key={mainPaneThreadId} className="main-pane-thread">
+              {mainPaneThreadId && <div key={mainPaneThreadId} className="main-pane-cover main-pane-thread">
                 <div className="top-bar">
                   <MessageText className="title" content={this.state.chat.messages.get(selectedThread).get('content')} />
                   <FastButton className="close" onClick={ui.deselectThread} />
                 </div>
                 <ChatPane key={mainPaneThreadId} pane={this.state.ui.panes.get(mainPaneThreadId)} showTimeStamps={this.state.ui.showTimestamps} showParent={true} showAllReplies={true} onScrollbarSize={this.onScrollbarSize} />
+              </div>}
+              {thin && this.state.ui.managerToolboxAnchorEl && <div key="manager-toolbox" className="main-pane-cover">
+                <ManagerToolbox />
               </div>}
             </ReactCSSTransitionGroup>
           </div>
