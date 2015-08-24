@@ -7,10 +7,10 @@ import (
 
 	"euphoria.io/heim/proto/security"
 
-	"github.com/awslabs/aws-sdk-go/aws"
-	"github.com/awslabs/aws-sdk-go/aws/awserr"
-	"github.com/awslabs/aws-sdk-go/aws/credentials"
-	"github.com/awslabs/aws-sdk-go/service/kms"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/service/kms"
 )
 
 const AwsKMSType = security.KMSType("aws")
@@ -22,7 +22,7 @@ func init() {
 func New(region, keyID string) (*KMS, error) {
 	config := &aws.Config{
 		Credentials: credentials.NewEnvCredentials(),
-		Region:      region,
+		Region:      &region,
 	}
 	kms := &KMS{
 		kms:   kms.New(config),
@@ -60,9 +60,9 @@ func (k *KMS) GenerateEncryptedKey(keyType security.KeyType, ctxKey, ctxVal stri
 
 	ctx := map[string]*string{ctxKey: &ctxVal}
 	req := &kms.GenerateDataKeyWithoutPlaintextInput{
-		KeyID:             &k.keyID,
+		KeyId:             &k.keyID,
 		KeySpec:           &keySpec,
-		EncryptionContext: &ctx,
+		EncryptionContext: ctx,
 	}
 
 	resp, err := k.kms.GenerateDataKeyWithoutPlaintext(req)
@@ -85,7 +85,7 @@ func (k *KMS) DecryptKey(key *security.ManagedKey) error {
 	ctx := map[string]*string{key.ContextKey: &key.ContextValue}
 	req := &kms.DecryptInput{
 		CiphertextBlob:    key.Ciphertext,
-		EncryptionContext: &ctx,
+		EncryptionContext: ctx,
 	}
 	resp, err := k.kms.Decrypt(req)
 	if err != nil {
@@ -113,7 +113,7 @@ type KMSCredential struct {
 func (c *KMSCredential) KMS() security.KMS {
 	config := &aws.Config{
 		Credentials: credentials.NewCredentials(c),
-		Region:      c.Region,
+		Region:      &c.Region,
 	}
 	return &KMS{
 		kms:   kms.New(config),
