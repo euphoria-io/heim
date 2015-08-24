@@ -393,7 +393,36 @@ func (rb *RoomBinding) banAgent(ctx scope.Context, agentID proto.UserID, until t
 		},
 	}
 
-	if err := rb.DbMap.Insert(ban); err != nil {
+	// Loop within transaction in read committed mode to simulate UPSERT.
+	t, err := rb.DbMap.Begin()
+	if err != nil {
+		return err
+	}
+	rollback := func() {
+		if err := t.Rollback(); err != nil {
+			backend.Logger(ctx).Printf("rollback error: %s", err)
+		}
+	}
+	for {
+		// Try to insert; if this fails due to duplicate key value, try to update.
+		if err := rb.DbMap.Insert(ban); err != nil {
+			if !strings.HasPrefix(err.Error(), "pq: duplicate key value") {
+				rollback()
+				return err
+			}
+		} else {
+			break
+		}
+		n, err := rb.DbMap.Update(ban)
+		if err != nil {
+			rollback()
+			return err
+		}
+		if n > 0 {
+			break
+		}
+	}
+	if err := t.Commit(); err != nil {
 		return err
 	}
 

@@ -1766,6 +1766,10 @@ func testBans(s *serverUnderTest) {
 		mconn.expect("", "part-event",
 			`{"session_id":"*","id":"%s","name":"","server_id":"test1","server_era":"era1"}`, agentID)
 
+		// Repeat ban; should go through despite redundancy.
+		mconn.send("2", "ban", `{"id":"%s"}`, agentID)
+		mconn.expect("2", "ban-reply", `{}`)
+
 		// Agent should be unable to reconnect.
 		s.Reconnect(vconn)
 		vconn.expectPing()
@@ -1774,8 +1778,8 @@ func testBans(s *serverUnderTest) {
 		vconn.Close()
 
 		// Unban agent, who should be able to reconnect.
-		mconn.send("2", "unban", `{"id":"%s"}`, agentID)
-		mconn.expect("2", "unban-reply", `{}`)
+		mconn.send("3", "unban", `{"id":"%s"}`, agentID)
+		mconn.expect("3", "unban-reply", `{}`)
 		mconn.Close()
 
 		s.Reconnect(vconn)
