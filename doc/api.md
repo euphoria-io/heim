@@ -648,9 +648,9 @@ The command is a no-op if an identical entry already exists in the ban list.
 
 | Field | Type | Required? | Description |
 | :-- | :-- | :-- | :--------- |
-| `id` | [UserID](#userid) | *optional* |  if given, select for the given agent or account |
-| `ip` | [string](#string) | *optional* |  if given, select for the given IP address |
-| `seconds` | [int](#int) | *optional* |  if given, the ban is temporary |
+| `id` | [UserID](#userid) | *optional* |  the id of an agent or account |
+| `ip` | [string](#string) | *optional* |  an IP address |
+| `seconds` | [int](#int) | *optional* |  the duration of the ban; if not given, the ban is infinite |
 
 
 
@@ -659,7 +659,12 @@ The command is a no-op if an identical entry already exists in the ban list.
 The `ban-reply` packet indicates that the `ban` command succeeded.
 
 
-This packet has no fields.
+| Field | Type | Required? | Description |
+| :-- | :-- | :-- | :--------- |
+| `id` | [UserID](#userid) | *optional* |  the id of an agent or account |
+| `ip` | [string](#string) | *optional* |  an IP address |
+| `seconds` | [int](#int) | *optional* |  the duration of the ban; if not given, the ban is infinite |
+
 
 
 
@@ -833,8 +838,8 @@ The `unban` command removes an entry from the room's ban list.
 
 | Field | Type | Required? | Description |
 | :-- | :-- | :-- | :--------- |
-| `id` | [UserID](#userid) | *optional* |  if given, select for the given agent or account |
-| `ip` | [string](#string) | *optional* |  if given, select for the given IP address |
+| `id` | [UserID](#userid) | *optional* |  the id of an agent or account |
+| `ip` | [string](#string) | *optional* |  an IP address |
 
 
 
@@ -843,7 +848,11 @@ The `unban` command removes an entry from the room's ban list.
 The `unban-reply` packet indicates that the `unban` command succeeded.
 
 
-This packet has no fields.
+| Field | Type | Required? | Description |
+| :-- | :-- | :-- | :--------- |
+| `id` | [UserID](#userid) | *optional* |  the id of an agent or account |
+| `ip` | [string](#string) | *optional* |  an IP address |
+
 
 
 

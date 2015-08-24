@@ -374,8 +374,8 @@ type AuthReply struct {
 // `Ban` describes an entry in a ban list. When incoming sessions match one of
 // these entries, they are rejected.
 type Ban struct {
-	ID UserID `json:"id,omitempty"` // if given, select for the given agent or account
-	IP string `json:"ip,omitempty"` // if given, select for the given IP address
+	ID UserID `json:"id,omitempty"` // the id of an agent or account
+	IP string `json:"ip,omitempty"` // an IP address
 }
 
 // The `ban` command adds an entry to the room's ban list. Any joined sessions
@@ -385,11 +385,11 @@ type Ban struct {
 // The command is a no-op if an identical entry already exists in the ban list.
 type BanCommand struct {
 	Ban
-	Seconds int `json:"seconds,omitempty"` // if given, the ban is temporary
+	Seconds int `json:"seconds,omitempty"` // the duration of the ban; if not given, the ban is infinite
 }
 
 // The `ban-reply` packet indicates that the `ban` command succeeded.
-type BanReply struct{}
+type BanReply BanCommand
 
 // The `unban` command removes an entry from the room's ban list.
 type UnbanCommand struct {
@@ -397,7 +397,7 @@ type UnbanCommand struct {
 }
 
 // The `unban-reply` packet indicates that the `unban` command succeeded.
-type UnbanReply struct{}
+type UnbanReply UnbanCommand
 
 // A `bounce-event` indicates that access to a room is denied.
 type BounceEvent struct {

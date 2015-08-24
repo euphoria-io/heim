@@ -1758,7 +1758,7 @@ func testBans(s *serverUnderTest) {
 
 		// Ban agent.
 		mconn.send("1", "ban", `{"id":"%s"}`, agentID)
-		mconn.expect("1", "ban-reply", `{}`)
+		mconn.expect("1", "ban-reply", `{"id":"%s"}`, agentID)
 
 		vconn.expect("", "disconnect-event", `{"reason":"banned"}`)
 		vconn.Close()
@@ -1768,7 +1768,7 @@ func testBans(s *serverUnderTest) {
 
 		// Repeat ban; should go through despite redundancy.
 		mconn.send("2", "ban", `{"id":"%s"}`, agentID)
-		mconn.expect("2", "ban-reply", `{}`)
+		mconn.expect("2", "ban-reply", `{"id":"%s"}`, agentID)
 
 		// Agent should be unable to reconnect.
 		s.Reconnect(vconn)
@@ -1779,7 +1779,7 @@ func testBans(s *serverUnderTest) {
 
 		// Unban agent, who should be able to reconnect.
 		mconn.send("3", "unban", `{"id":"%s"}`, agentID)
-		mconn.expect("3", "unban-reply", `{}`)
+		mconn.expect("3", "unban-reply", `{"id":"%s"}`, agentID)
 		mconn.Close()
 
 		s.Reconnect(vconn)
@@ -1834,7 +1834,7 @@ func testBans(s *serverUnderTest) {
 
 		// Ban account.
 		mconn.send("1", "ban", `{"id":"account:%s"}`, victim.ID())
-		mconn.expect("1", "ban-reply", `{}`)
+		mconn.expect("1", "ban-reply", `{"id":"account:%s"}`, victim.ID())
 
 		vconn.expect("", "disconnect-event", `{"reason":"banned"}`)
 		vconn.Close()
@@ -1852,7 +1852,7 @@ func testBans(s *serverUnderTest) {
 
 		// Unban account, who should be able to reconnect.
 		mconn.send("2", "unban", `{"id":"account:%s"}`, victim.ID())
-		mconn.expect("2", "unban-reply", `{}`)
+		mconn.expect("2", "unban-reply", `{"id":"account:%s"}`, victim.ID())
 		mconn.Close()
 
 		s.Reconnect(vconn)

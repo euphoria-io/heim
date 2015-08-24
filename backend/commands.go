@@ -675,7 +675,12 @@ func (s *session) handleBanCommand(msg *proto.BanCommand) *response {
 	if err := s.room.Ban(s.ctx, msg.Ban, until); err != nil {
 		return &response{err: err}
 	}
-	return &response{packet: &proto.BanReply{}}
+	return &response{
+		packet: &proto.BanReply{
+			Ban:     msg.Ban,
+			Seconds: msg.Seconds,
+		},
+	}
 }
 
 func (s *session) handleUnbanCommand(msg *proto.UnbanCommand) *response {
@@ -685,5 +690,9 @@ func (s *session) handleUnbanCommand(msg *proto.UnbanCommand) *response {
 	if err := s.room.Unban(s.ctx, msg.Ban); err != nil {
 		return &response{err: err}
 	}
-	return &response{packet: &proto.BanReply{}}
+	return &response{
+		packet: &proto.UnbanReply{
+			Ban: msg.Ban,
+		},
+	}
 }
