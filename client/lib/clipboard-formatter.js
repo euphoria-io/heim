@@ -22,6 +22,11 @@ module.exports = function handleCopy(ev) {
     return
   }
 
+  var entryEl = startMessageEl.querySelector('.entry')
+  if (entryEl && entryEl.contains(range.startContainer)) {
+    return
+  }
+
   // if the selection start and end aren't within the same message list, do
   // nothing.
   var messagesEl = findParent(startMessageEl, el => el.classList && el.classList.contains('messages'))
