@@ -56,6 +56,7 @@ module.exports.store = Reflux.createStore({
       popupsEnabled: null,
       popupsSupported: 'Notification' in window,
       popupsPausedUntil: null,
+      soundEnabled: false,
       latestNotifications: Immutable.OrderedMap(),
       notifications: Immutable.OrderedMap(),
       newMessageCount: 0,
@@ -138,6 +139,12 @@ module.exports.store = Reflux.createStore({
     this.state.popupsPausedUntil = data.notifyPausedUntil
     if (popupsWereEnabled && !this._popupsAreEnabled()) {
       this.closeAllPopups()
+    }
+
+    this.state.soundEnabled = data.notifySound
+    if (this.state.soundEnabled) {
+      // preload audio file
+      require('../alert-sound')
     }
 
     this._roomStorage = data.room
@@ -438,6 +445,10 @@ module.exports.store = Reflux.createStore({
     }
 
     if (this.state.popupsPermission && this._popupsAreEnabled()) {
+      if (this.state.soundEnabled && kind == 'new-mention') {
+        require('../alert-sound').play()
+      }
+
       var timeoutDuration = options.timeout
       delete options.timeout
 
