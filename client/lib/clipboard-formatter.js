@@ -12,12 +12,16 @@ module.exports = function handleCopy(ev) {
 
   // first, if the selection start and end are within the same message
   // line, do nothing.
-  function findParentMessage(el) {
-    return findParent(el, el => el.classList && el.classList.contains('message-node'))
+  function findParentMessageLine(el) {
+    return findParent(el, el => el.classList && (el.classList.contains('line') || el.classList.contains('message-node')))
   }
-  var startMessageEl = findParentMessage(range.startContainer)
-  var endMessageEl = findParentMessage(range.endContainer)
-  var contentEl = startMessageEl.querySelector('.line > .content')
+  var startMessageEl = findParentMessageLine(range.startContainer)
+  var endMessageEl = findParentMessageLine(range.endContainer)
+  if (!startMessageEl || !endMessageEl) {
+    return
+  }
+
+  var contentEl = startMessageEl.querySelector('.content')
   if (startMessageEl && contentEl.contains(range.startContainer) && contentEl.contains(range.endContainer)) {
     return
   }
@@ -37,12 +41,13 @@ module.exports = function handleCopy(ev) {
   var messageEls = []
   var minDepth
   domWalkForward(startMessageEl, endMessageEl, function(el) {
-    if (!el.classList || !el.classList.contains('message-node')) {
+    if (!el.classList || !el.classList.contains('line')) {
       return
     }
     messageEls.push(el)
-    if (!minDepth || el.dataset.depth < minDepth) {
-      minDepth = el.dataset.depth
+    var depth = el.parentNode.dataset.depth
+    if (!minDepth || depth < minDepth) {
+      minDepth = depth
     }
   })
 
@@ -52,7 +57,8 @@ module.exports = function handleCopy(ev) {
 
   var textParts = []
   var htmlLines = []
-  _.each(messageEls, el => {
+  _.each(messageEls, lineEl => {
+    var el = lineEl.parentNode
     var messageId = el.dataset.messageId
     var message = Heim.chat.store.state.messages.get(messageId)
 
