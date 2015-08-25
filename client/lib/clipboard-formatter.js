@@ -79,7 +79,7 @@ module.exports = function handleCopy(ev) {
     )
   })
 
-  ev.clipboardData.setData('text/plain', formatEmoji(textParts.join('')))
+  ev.clipboardData.setData('text/plain', formatEmoji(textParts.join('')).trim())
   ev.clipboardData.setData('text/html', React.renderToStaticMarkup(<div className="heim-messages">{htmlLines}</div>))
   ev.preventDefault()
 }
