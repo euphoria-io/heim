@@ -61,7 +61,7 @@ module.exports = React.createClass({
       var left = box.right
 
       if (this.props.offset) {
-        var offsetBox = this.props.offset()
+        var offsetBox = this.props.offset(box)
         left -= offsetBox.left || 0
         top -= offsetBox.top || 0
       }

@@ -373,8 +373,7 @@ iframe.js {
     background: fade(@manager-color, 45%);
 
     &.selected {
-      box-shadow: 0 1px 5px fade(black, 25%);
-      background: fade(@manager-color, 55%);
+      background: fade(@manager-color, 75%);
     }
 
     .inner {
@@ -1675,6 +1674,28 @@ iframe.js {
   }
 }
 
+.bubble-from-top {
+  &.bubble-enter {
+    opacity: 0;
+    transform: translateY(-10px);
+
+    &.bubble-enter-active {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  &.bubble-leave {
+    opacity: 1;
+    transform: translateY(0);
+
+    &.bubble-leave-active {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+  }
+}
+
 .thread-popup {
   @top-line-height: 26px;
   left: -9999px;
@@ -1721,6 +1742,8 @@ iframe.js {
 .manager-toolbox-popup {
   z-index: 1001;
   border-bottom: 5px solid @manager-dark-color;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
   padding: 0;
 
   .manager-toolbox {

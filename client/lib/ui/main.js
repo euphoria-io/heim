@@ -345,7 +345,7 @@ module.exports = React.createClass({
           </div>
           {selectedThread && <ChatPane key={this.state.ui.popupPane} pane={this.state.ui.panes.get(this.state.ui.popupPane)} afterRender={() => this.refs.threadPopup.reposition()} showParent={true} showAllReplies={true} />}
         </Bubble>}
-        {!thin && this.state.ui.managerMode && <Bubble ref="managerToolboxPopup" className="manager-toolbox-popup bubble-from-left" anchorEl={this.state.ui.managerToolboxAnchorEl} visible={!!this.state.ui.managerToolboxAnchorEl} offset={() => ({ left: this.getDOMNode().getBoundingClientRect().left + 5 })}>
+        {!thin && this.state.ui.managerMode && <Bubble ref="managerToolboxPopup" className="manager-toolbox-popup bubble-from-top" anchorEl={this.state.ui.managerToolboxAnchorEl} visible={!!this.state.ui.managerToolboxAnchorEl} offset={anchorBox => ({ left: anchorBox.width, top: -anchorBox.height })}>
           <ManagerToolbox />
         </Bubble>}
         {this.templateHook('page-bottom')}
