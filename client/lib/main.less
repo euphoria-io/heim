@@ -1285,7 +1285,6 @@ iframe.js {
 
     .embeds {
       display: block;
-      margin: 0 -4px;
 
       a {
         position: relative;
@@ -1295,6 +1294,10 @@ iframe.js {
         line-height: 0;
         font-size: 0;
         .box-outline;
+
+        &:first-child {
+          margin-left: 0;
+        }
       }
 
       iframe {
@@ -1996,7 +1999,7 @@ iframe.js {
         position: relative;
         left: .5em;
 
-        .message {
+        .message, .embeds {
           margin-left: -.5em;
         }
       }
