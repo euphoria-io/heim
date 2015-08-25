@@ -47,7 +47,7 @@ module.exports = React.createClass({
       ids.push(el.textContent)
     })
 
-    ev.clipboardData.setData('text/plain', ids.join(' '))
+    ev.clipboardData.setData('text/plain', "'" + ids.join("', '") + "'")
     ev.preventDefault()
   },
 
