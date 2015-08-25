@@ -2,6 +2,7 @@ package psql
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -12,11 +13,12 @@ import (
 	"euphoria.io/heim/proto/snowflake"
 	"euphoria.io/scope"
 
-	"github.com/go-gorp/gorp"
+	"gopkg.in/gorp.v1"
 )
 
 var notImpl = fmt.Errorf("not implemented")
 var logger = backend.Logger
+var global *Room
 
 type Room struct {
 	Name                   string
@@ -59,6 +61,38 @@ func (r *Room) generateMessageKey(b *Backend, kms security.KMS) (*RoomMessageKey
 	return NewRoomMessageKeyBinding(r.Bind(b), keyID, mkey, nonce), nil
 }
 
+func (room *Room) broadcast(
+	ctx scope.Context, db gorp.SqlExecutor, packetType proto.PacketType, payload interface{}, exclude ...proto.Session) error {
+
+	encodedPayload, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+
+	packet := &proto.Packet{Type: packetType, Data: json.RawMessage(encodedPayload)}
+	broadcastMsg := BroadcastMessage{
+		Event:   packet,
+		Exclude: make([]string, 0, len(exclude)),
+	}
+	if room != nil {
+		broadcastMsg.Room = room.Name
+	}
+	for _, s := range exclude {
+		if s != nil {
+			broadcastMsg.Exclude = append(broadcastMsg.Exclude, s.ID())
+		}
+	}
+
+	encoded, err := json.Marshal(broadcastMsg)
+	if err != nil {
+		return err
+	}
+
+	escaped := strings.Replace(string(encoded), "'", "''", -1)
+	_, err = db.Exec(fmt.Sprintf("NOTIFY broadcast, '%s'", escaped))
+	return err
+}
+
 type RoomBinding struct {
 	*Backend
 	*Room
@@ -72,12 +106,11 @@ func (rb *RoomBinding) GetMessage(ctx scope.Context, id snowflake.Snowflake) (*p
 		return nil, err
 	}
 
-	err = rb.DbMap.SelectOne(
-		&msg,
-		"SELECT room, id, previous_edit_id, parent, posted, edited, deleted,"+
-			" session_id, sender_id, sender_name, server_id, server_era, content, encryption_key_id"+
-			" FROM message WHERE room = $1 AND id = $2",
-		rb.Name, id.String())
+	cols, err := allColumns(rb.DbMap, Message{}, "")
+	if err != nil {
+		return nil, err
+	}
+	err = rb.DbMap.SelectOne(&msg, fmt.Sprintf("SELECT %s FROM message WHERE room = $1 AND id = $2", cols), rb.Name, id.String())
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, proto.ErrMessageNotFound
@@ -149,6 +182,11 @@ func (rb *RoomBinding) EditMessage(
 		return reply, err
 	}
 
+	cols, err := allColumns(rb.DbMap, Message{}, "")
+	if err != nil {
+		return reply, err
+	}
+
 	t, err := rb.DbMap.Begin()
 	if err != nil {
 		return reply, err
@@ -161,12 +199,7 @@ func (rb *RoomBinding) EditMessage(
 	}
 
 	var msg Message
-	err = t.SelectOne(
-		&msg,
-		"SELECT room, id, previous_edit_id, parent, posted, edited, deleted,"+
-			" session_id, sender_id, sender_name, sender_is_manager, sender_is_staff, server_id, server_era, content, encryption_key_id"+
-			" FROM message WHERE room = $1 AND id = $2",
-		rb.Name, edit.ID.String())
+	err = t.SelectOne(&msg, fmt.Sprintf("SELECT %s FROM message WHERE room = $1 AND id = $2", cols), rb.Name, edit.ID.String())
 	if err != nil {
 		rollback()
 		return reply, err
@@ -230,19 +263,20 @@ func (rb *RoomBinding) EditMessage(
 		return reply, err
 	}
 
-	if err := t.Commit(); err != nil {
-		return reply, err
-	}
-
 	if edit.Announce {
 		event := &proto.EditMessageEvent{
 			EditID:  editID,
 			Message: msg.ToBackend(),
 		}
-		err = rb.Backend.broadcast(ctx, rb.Room, proto.EditMessageEventType, event, session)
+		err = rb.broadcast(ctx, t, proto.EditMessageEventType, event, session)
 		if err != nil {
+			rollback()
 			return reply, err
 		}
+	}
+
+	if err := t.Commit(); err != nil {
+		return reply, err
 	}
 
 	reply.EditID = editID
@@ -271,7 +305,14 @@ func (rb *RoomBinding) RenameUser(ctx scope.Context, session proto.Session, form
 	if err != nil {
 		return nil, fmt.Errorf("presence marshal error: %s", err)
 	}
-	if _, err := rb.DbMap.Update(presence); err != nil {
+
+	t, err := rb.DbMap.Begin()
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err := t.Update(presence); err != nil {
+		rollback(ctx, t)
 		return nil, fmt.Errorf("presence update error: %s", err)
 	}
 
@@ -281,7 +322,16 @@ func (rb *RoomBinding) RenameUser(ctx scope.Context, session proto.Session, form
 		From:      formerName,
 		To:        session.Identity().Name(),
 	}
-	return event, rb.Backend.broadcast(ctx, rb.Room, proto.NickEventType, event, session)
+	if err := rb.broadcast(ctx, t, proto.NickEventType, event, session); err != nil {
+		rollback(ctx, t)
+		return nil, err
+	}
+
+	if err := t.Commit(); err != nil {
+		return nil, err
+	}
+
+	return event, nil
 }
 
 func (rb *RoomBinding) GenerateMessageKey(ctx scope.Context, kms security.KMS) (
@@ -324,13 +374,22 @@ func (rb *RoomBinding) MessageKey(ctx scope.Context) (proto.RoomMessageKey, erro
 		MessageKey
 		RoomMessageKey
 	}
-	err := rb.DbMap.SelectOne(
+
+	mkCols, err := allColumns(rb.DbMap, row.MessageKey, "mk")
+	if err != nil {
+		return nil, err
+	}
+	rCols, err := allColumns(rb.DbMap, row.RoomMessageKey, "r")
+	if err != nil {
+		return nil, err
+	}
+
+	err = rb.DbMap.SelectOne(
 		&row,
-		"SELECT mk.id, mk.encrypted_key, mk.iv, mk.nonce,"+
-			" r.room, r.key_id, r.activated, r.expired, r.comment"+
-			" FROM master_key mk, room_master_key r"+
+		fmt.Sprintf("SELECT %s, %s FROM master_key mk, room_master_key r"+
 			" WHERE r.room = $1 AND mk.id = r.key_id AND r.expired < r.activated"+
 			" ORDER BY r.activated DESC LIMIT 1",
+			mkCols, rCols),
 		rb.Name)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -398,16 +457,11 @@ func (rb *RoomBinding) banAgent(ctx scope.Context, agentID proto.UserID, until t
 	if err != nil {
 		return err
 	}
-	rollback := func() {
-		if err := t.Rollback(); err != nil {
-			backend.Logger(ctx).Printf("rollback error: %s", err)
-		}
-	}
 	for {
 		// Try to insert; if this fails due to duplicate key value, try to update.
 		if err := rb.DbMap.Insert(ban); err != nil {
 			if !strings.HasPrefix(err.Error(), "pq: duplicate key value") {
-				rollback()
+				rollback(ctx, t)
 				return err
 			}
 		} else {
@@ -415,19 +469,25 @@ func (rb *RoomBinding) banAgent(ctx scope.Context, agentID proto.UserID, until t
 		}
 		n, err := rb.DbMap.Update(ban)
 		if err != nil {
-			rollback()
+			rollback(ctx, t)
 			return err
 		}
 		if n > 0 {
 			break
 		}
 	}
+
+	bounceEvent := &proto.BounceEvent{Reason: "banned", AgentID: agentID.String()}
+	if err := rb.broadcast(ctx, t, proto.BounceEventType, bounceEvent); err != nil {
+		rollback(ctx, t)
+		return err
+	}
+
 	if err := t.Commit(); err != nil {
 		return err
 	}
 
-	bounceEvent := &proto.BounceEvent{Reason: "banned", AgentID: agentID.String()}
-	return rb.broadcast(ctx, rb.Room, proto.BounceEventType, bounceEvent)
+	return nil
 }
 
 func (rb *RoomBinding) unbanAgent(ctx scope.Context, agentID proto.UserID) error {
@@ -450,12 +510,27 @@ func (rb *RoomBinding) banIP(ctx scope.Context, ip string, until time.Time) erro
 		},
 	}
 
-	if err := rb.DbMap.Insert(ban); err != nil {
+	t, err := rb.DbMap.Begin()
+	if err != nil {
+		return err
+	}
+
+	if err := t.Insert(ban); err != nil {
+		rollback(ctx, t)
 		return err
 	}
 
 	bounceEvent := &proto.BounceEvent{Reason: "banned", IP: ip}
-	return rb.broadcast(ctx, rb.Room, proto.BounceEventType, bounceEvent)
+	if err := rb.broadcast(ctx, t, proto.BounceEventType, bounceEvent); err != nil {
+		rollback(ctx, t)
+		return err
+	}
+
+	if err := t.Commit(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (rb *RoomBinding) unbanIP(ctx scope.Context, ip string) error {
@@ -469,12 +544,16 @@ func (rb *RoomBinding) Managers(ctx scope.Context) ([]proto.Account, error) {
 		Account
 	}
 
+	cols, err := allColumns(rb.DbMap, Account{}, "a")
+	if err != nil {
+		return nil, err
+	}
+
 	rows, err := rb.Select(
 		Account{},
-		"SELECT a.id, a.nonce, a.mac, a.encrypted_system_key, a.encrypted_user_key,"+
-			" a.encrypted_private_key, a.public_key"+
-			" FROM account a, room_manager_capability m"+
-			" WHERE m.room = $1 AND m.account_id = a.id AND revoked < granted",
+		fmt.Sprintf(
+			"SELECT %s FROM account a, room_manager_capability m WHERE m.room = $1 AND m.account_id = a.id AND revoked < granted",
+			cols),
 		rb.Name)
 	if err != nil {
 		return nil, err
@@ -495,12 +574,16 @@ func (rb *RoomBinding) ManagerCapability(ctx scope.Context, manager proto.Accoun
 	security.Capability, error) {
 
 	var c Capability
-	err := rb.SelectOne(
+	cols, err := allColumns(rb.DbMap, c, "c")
+	if err != nil {
+		return nil, err
+	}
+	err = rb.SelectOne(
 		&c,
-		"SELECT c.id, c.nonce, c.encrypted_private_data, c.public_data"+
-			" FROM capability c, room_manager_capability rm"+
+		fmt.Sprintf("SELECT %s FROM capability c, room_manager_capability rm"+
 			" WHERE rm.room = $1 AND c.id = rm.capability_id AND c.account_id = $2"+
 			" AND rm.revoked < rm.granted",
+			cols),
 		rb.Name, manager.ID().String())
 	if err != nil {
 		if err == sql.ErrNoRows {

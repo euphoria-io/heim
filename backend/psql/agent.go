@@ -14,7 +14,7 @@ import (
 	"euphoria.io/heim/proto/snowflake"
 	"euphoria.io/scope"
 
-	"github.com/go-gorp/gorp"
+	"gopkg.in/gorp.v1"
 )
 
 type Agent struct {
@@ -41,12 +41,27 @@ func (atb *AgentTrackerBinding) BanAgent(ctx scope.Context, agentID string, unti
 		},
 	}
 
-	if err := atb.Backend.DbMap.Insert(ban); err != nil {
+	t, err := atb.DbMap.Begin()
+	if err != nil {
+		return err
+	}
+
+	if err := t.Insert(ban); err != nil {
+		rollback(ctx, t)
 		return err
 	}
 
 	bounceEvent := &proto.BounceEvent{Reason: "banned", AgentID: agentID}
-	return atb.broadcast(ctx, nil, proto.BounceEventType, bounceEvent)
+	if err := global.broadcast(ctx, t, proto.BounceEventType, bounceEvent); err != nil {
+		rollback(ctx, t)
+		return err
+	}
+
+	if err := t.Commit(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (atb *AgentTrackerBinding) UnbanAgent(ctx scope.Context, agentID string) error {

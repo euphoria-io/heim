@@ -9,7 +9,6 @@ import (
 	"net/url"
 	"os"
 	"sort"
-	"strings"
 	"sync"
 	"time"
 
@@ -20,8 +19,8 @@ import (
 	"euphoria.io/heim/proto/snowflake"
 	"euphoria.io/scope"
 
-	"github.com/go-gorp/gorp"
 	"github.com/lib/pq"
+	"gopkg.in/gorp.v1"
 )
 
 var ErrPsqlConnectionLost = errors.New("postgres connection lost")
@@ -423,12 +422,27 @@ func (b *Backend) BanIP(ctx scope.Context, ip string, until time.Time) error {
 		},
 	}
 
-	if err := b.DbMap.Insert(ban); err != nil {
+	t, err := b.DbMap.Begin()
+	if err != nil {
+		return err
+	}
+
+	if err := t.Insert(ban); err != nil {
+		rollback(ctx, t)
 		return err
 	}
 
 	bounceEvent := &proto.BounceEvent{Reason: "banned", IP: ip}
-	return b.broadcast(ctx, nil, proto.BounceEventType, bounceEvent)
+	if err := global.broadcast(ctx, t, proto.BounceEventType, bounceEvent); err != nil {
+		rollback(ctx, t)
+		return err
+	}
+
+	if err := t.Commit(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (b *Backend) UnbanIP(ctx scope.Context, ip string) error {
@@ -444,46 +458,28 @@ func (b *Backend) sendMessageToRoom(
 		return proto.Message{}, err
 	}
 
-	if err := b.DbMap.Insert(stored); err != nil {
+	t, err := b.DbMap.Begin()
+	if err != nil {
+		return proto.Message{}, err
+	}
+
+	if err := t.Insert(stored); err != nil {
+		rollback(ctx, t)
 		return proto.Message{}, err
 	}
 
 	result := stored.ToBackend()
 	event := proto.SendEvent(result)
-	return result, b.broadcast(ctx, room, proto.SendEventType, &event, exclude...)
-}
-
-func (b *Backend) broadcast(
-	ctx scope.Context, room *Room, packetType proto.PacketType, payload interface{},
-	exclude ...proto.Session) error {
-
-	encodedPayload, err := json.Marshal(payload)
-	if err != nil {
-		return err
+	if err := room.broadcast(ctx, t, proto.SendEventType, &event, exclude...); err != nil {
+		rollback(ctx, t)
+		return proto.Message{}, err
 	}
 
-	packet := &proto.Packet{Type: packetType, Data: json.RawMessage(encodedPayload)}
-	broadcastMsg := BroadcastMessage{
-		Event:   packet,
-		Exclude: make([]string, 0, len(exclude)),
-	}
-	if room != nil {
-		broadcastMsg.Room = room.Name
-	}
-	for _, s := range exclude {
-		if s != nil {
-			broadcastMsg.Exclude = append(broadcastMsg.Exclude, s.ID())
-		}
+	if err := t.Commit(); err != nil {
+		return proto.Message{}, err
 	}
 
-	encoded, err := json.Marshal(broadcastMsg)
-	if err != nil {
-		return err
-	}
-
-	escaped := strings.Replace(string(encoded), "'", "''", -1)
-	_, err = b.DbMap.Exec(fmt.Sprintf("NOTIFY broadcast, '%s'", escaped))
-	return err
+	return result, nil
 }
 
 func (b *Backend) join(ctx scope.Context, room *Room, session proto.Session) error {
@@ -492,48 +488,69 @@ func (b *Backend) join(ctx scope.Context, room *Room, session proto.Session) err
 		return fmt.Errorf("client data not found in scope")
 	}
 
+	bannedAgentCols, err := allColumns(b.DbMap, BannedAgent{}, "")
+	if err != nil {
+		return err
+	}
+
+	bannedIPCols, err := allColumns(b.DbMap, BannedIP{}, "")
+	if err != nil {
+		return err
+	}
+
+	t, err := b.DbMap.Begin()
+	if err != nil {
+		return err
+	}
+
+	rb := func() { rollback(ctx, t) }
+
 	// Check for agent ID bans.
-	agentBans, err := b.DbMap.Select(
+	agentBans, err := t.Select(
 		BannedAgent{},
-		"SELECT agent_id, room, created, expires, room_reason, agent_reason, private_reason"+
-			" FROM banned_agent"+
-			" WHERE agent_id = $1 AND (room IS NULL OR room = $2)"+
-			" AND (expires IS NULL OR expires > NOW())",
+		fmt.Sprintf(
+			"SELECT %s FROM banned_agent WHERE agent_id = $1 AND (room IS NULL OR room = $2) AND (expires IS NULL OR expires > NOW())",
+			bannedAgentCols),
 		session.Identity().ID().String(), room.Name)
 	if err != nil {
+		rb()
 		return err
 	}
 	if len(agentBans) > 0 {
 		backend.Logger(ctx).Printf("access denied to %s: %#v", session.Identity().ID(), agentBans)
+		if err := t.Rollback(); err != nil {
+			return err
+		}
 		return proto.ErrAccessDenied
 	}
 
 	// Check for IP bans.
-	ipBans, err := b.DbMap.Select(
+	ipBans, err := t.Select(
 		BannedIP{},
-		"SELECT ip, room, created, expires, reason FROM banned_ip"+
-			" WHERE ip = $1 AND (room IS NULL OR room = $2)"+
-			" AND (expires IS NULL OR expires > NOW())",
+		fmt.Sprintf(
+			"SELECT %s FROM banned_ip WHERE ip = $1 AND (room IS NULL OR room = $2) AND (expires IS NULL OR expires > NOW())",
+			bannedIPCols),
 		client.IP, room.Name)
 	if err != nil {
+		rb()
 		return err
 	}
 	if len(ipBans) > 0 {
 		backend.Logger(ctx).Printf("access denied to %s: %#v", client.IP, ipBans)
+		if err := t.Rollback(); err != nil {
+			return err
+		}
 		return proto.ErrAccessDenied
 	}
 
 	// Write to session log.
+	// TODO: do proper upsert simulation
 	entry := &SessionLog{
 		SessionID: session.ID(),
 		IP:        client.IP,
 		Room:      room.Name,
 		UserAgent: client.UserAgent,
 		Connected: client.Connected,
-	}
-	t, err := b.DbMap.Begin()
-	if err != nil {
-		return err
 	}
 	if _, err := t.Delete(entry); err != nil {
 		if rerr := t.Rollback(); rerr != nil {
@@ -547,21 +564,6 @@ func (b *Backend) join(ctx scope.Context, room *Room, session proto.Session) err
 		}
 		return err
 	}
-	if err := t.Commit(); err != nil {
-		return err
-	}
-
-	b.Lock()
-	defer b.Unlock()
-
-	// Add session to listeners.
-	lm, ok := b.listeners[room.Name]
-	if !ok {
-		b.debug("registering listener for %s", room.Name)
-		lm = ListenerMap{}
-		b.listeners[room.Name] = lm
-	}
-	lm[session.ID()] = Listener{Session: session, Client: client}
 
 	// Broadcast a presence event.
 	// TODO: make this an explicit action via the Room protocol, to support encryption
@@ -578,48 +580,79 @@ func (b *Backend) join(ctx scope.Context, room *Room, session proto.Session) err
 		LastInteracted: presence.Updated,
 	})
 	if err != nil {
+		rb()
 		return fmt.Errorf("presence marshal error: %s", err)
 	}
-	if err := b.DbMap.Insert(presence); err != nil {
+	if err := t.Insert(presence); err != nil {
 		return fmt.Errorf("presence insert error: %s", err)
 	}
-	b.debug("joining session: %#v", session)
-	b.debug(" -> %#v", session.View())
-	return b.broadcast(ctx, room,
-		proto.JoinEventType, proto.PresenceEvent(*session.View()), session)
+
+	b.Lock()
+	// Add session to listeners.
+	lm, ok := b.listeners[room.Name]
+	if !ok {
+		lm = ListenerMap{}
+		b.listeners[room.Name] = lm
+	}
+	lm[session.ID()] = Listener{Session: session, Client: client}
+	b.Unlock()
+
+	if err := room.broadcast(ctx, t, proto.JoinEventType, proto.PresenceEvent(*session.View()), session); err != nil {
+		rb()
+		return err
+	}
+
+	if err := t.Commit(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (b *Backend) part(ctx scope.Context, room *Room, session proto.Session) error {
-	b.Lock()
-	defer b.Unlock()
-
-	if lm, ok := b.listeners[room.Name]; ok {
-		delete(lm, session.ID())
+	t, err := b.DbMap.Begin()
+	if err != nil {
+		return err
 	}
 
-	_, err := b.DbMap.Exec(
-		"DELETE FROM presence"+
-			" WHERE room = $1 AND server_id = $2 AND server_era = $3 AND session_id = $4",
+	_, err = t.Exec(
+		"DELETE FROM presence WHERE room = $1 AND server_id = $2 AND server_era = $3 AND session_id = $4",
 		room.Name, b.desc.ID, b.desc.Era, session.ID())
 	if err != nil {
+		rollback(ctx, t)
 		backend.Logger(ctx).Printf("failed to persist departure: %s", err)
+		return err
 	}
 
 	// Broadcast a presence event.
 	// TODO: make this an explicit action via the Room protocol, to support encryption
-	return b.broadcast(ctx, room,
-		proto.PartEventType, proto.PresenceEvent(*session.View()), session)
+	if err := room.broadcast(ctx, t, proto.PartEventType, proto.PresenceEvent(*session.View()), session); err != nil {
+		rollback(ctx, t)
+		return err
+	}
+
+	if err := t.Commit(); err != nil {
+		return err
+	}
+
+	b.Lock()
+	if lm, ok := b.listeners[room.Name]; ok {
+		delete(lm, session.ID())
+	}
+	b.Unlock()
+
+	return nil
 }
 
 func (b *Backend) listing(ctx scope.Context, room *Room) (proto.Listing, error) {
 	// TODO: return presence in an envelope, to support encryption
 	// TODO: cache for performance
 
-	rows, err := b.DbMap.Select(
-		Presence{},
-		"SELECT room, topic, server_id, server_era, session_id, updated, key_id, fact"+
-			" FROM presence WHERE room = $1",
-		room.Name)
+	cols, err := allColumns(b.DbMap, Presence{}, "")
+	if err != nil {
+		return nil, err
+	}
+	rows, err := b.DbMap.Select(Presence{}, fmt.Sprintf("SELECT %s FROM presence WHERE room = $1", cols), room.Name)
 	if err != nil {
 		return nil, fmt.Errorf("presence listing error: %s", err)
 	}
@@ -662,27 +695,24 @@ func (b *Backend) latest(ctx scope.Context, room *Room, n int, before snowflake.
 	if err != nil {
 		return nil, err
 	}
+	cols, err := allColumns(b.DbMap, Message{}, "")
+	if err != nil {
+		return nil, err
+	}
 	if nDays == 0 {
 		if before.IsZero() {
-			query = ("SELECT room, id, previous_edit_id, parent, posted, edited, deleted," +
-				" session_id, sender_id, sender_name, sender_is_manager, sender_is_staff, server_id, server_era, content, encryption_key_id" +
-				" FROM message WHERE room = $1 AND deleted IS NULL ORDER BY id DESC LIMIT $2")
+			query = fmt.Sprintf("SELECT %s FROM message WHERE room = $1 AND deleted IS NULL ORDER BY id DESC LIMIT $2", cols)
 		} else {
-			query = ("SELECT room, id, previous_edit_id, parent, posted, edited, deleted," +
-				" session_id, sender_id, sender_name, sender_is_manager, sender_is_staff, server_id, server_era, content, encryption_key_id" +
-				" FROM message WHERE room = $1 AND id < $3 AND deleted IS NULL ORDER BY id DESC LIMIT $2")
+			query = fmt.Sprintf("SELECT %s FROM message WHERE room = $1 AND id < $3 AND deleted IS NULL ORDER BY id DESC LIMIT $2", cols)
 			args = append(args, before.String())
 		}
 	} else {
 		threshold := time.Now().Add(time.Duration(-nDays) * 24 * time.Hour)
 		if before.IsZero() {
-			query = ("SELECT room, id, previous_edit_id, parent, posted, edited, deleted," +
-				" session_id, sender_id, sender_name, sender_is_manager, sender_is_staff, server_id, server_era, content, encryption_key_id" +
-				" FROM message WHERE room = $1 AND posted > $3 AND deleted IS NULL ORDER BY id DESC LIMIT $2")
+			query = fmt.Sprintf("SELECT %s FROM message WHERE room = $1 AND posted > $3 AND deleted IS NULL ORDER BY id DESC LIMIT $2", cols)
 		} else {
-			query = ("SELECT room, id, previous_edit_id, parent, posted, edited, deleted," +
-				" session_id, sender_id, sender_name, sender_is_manager, sender_is_staff, server_id, server_era, content, encryption_key_id" +
-				" FROM message WHERE room = $1 AND id < $3 AND deleted IS NULL AND posted > $4 ORDER BY id DESC LIMIT $2")
+			query = fmt.Sprintf(
+				"SELECT %s FROM message WHERE room = $1 AND id < $3 AND deleted IS NULL AND posted > $4 ORDER BY id DESC LIMIT $2", cols)
 			args = append(args, before.String())
 		}
 		args = append(args, threshold)

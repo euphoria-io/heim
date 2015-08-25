@@ -8,13 +8,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-gorp/gorp"
-
 	"euphoria.io/heim/backend"
 	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/security"
 	"euphoria.io/heim/proto/snowflake"
 	"euphoria.io/scope"
+
+	"gopkg.in/gorp.v1"
 )
 
 type Account struct {
@@ -37,6 +37,7 @@ func (a *Account) Bind(b *Backend) *AccountBinding {
 
 type AccountWithStaffCapability struct {
 	AccountID            string         `db:"id"`
+	CapabilityAccountID  sql.NullString `db:"account_id"`
 	AccountNonce         []byte         `db:"nonce"`
 	StaffCapabilityID    sql.NullString `db:"staff_capability_id"`
 	StaffCapabilityNonce []byte         `db:"staff_capability_nonce"`
@@ -247,11 +248,7 @@ func (b *AccountManagerBinding) ChangeClientKey(
 		}
 	}
 
-	var account Account
-	err = t.SelectOne(
-		&account,
-		"SELECT nonce, mac, encrypted_user_key, encrypted_private_key FROM account WHERE id = $1",
-		accountID.String())
+	row, err := t.Get(Account{}, accountID.String())
 	if err != nil {
 		rollback()
 		if err == sql.ErrNoRows {
@@ -259,6 +256,7 @@ func (b *AccountManagerBinding) ChangeClientKey(
 		}
 		return err
 	}
+	account := row.(*Account)
 
 	sec := account.Bind(b.Backend).accountSecurity()
 	if err := sec.ChangeClientKey(oldKey, newKey); err != nil {
@@ -458,15 +456,23 @@ func (b *AccountManagerBinding) Get(ctx scope.Context, id snowflake.Snowflake) (
 func (b *AccountManagerBinding) get(
 	db gorp.SqlExecutor, id snowflake.Snowflake) (*AccountBinding, error) {
 
+	accountCols, err := allColumns(b.DbMap, Account{}, "a")
+	if err != nil {
+		return nil, err
+	}
+
+	capabilityCols, err := allColumns(b.DbMap, Capability{}, "c",
+		"ID", "staff_capability_id",
+		"nonce", "staff_capability_nonce")
+	if err != nil {
+		return nil, err
+	}
+
 	var row AccountWithStaffCapability
-	err := db.SelectOne(
+	err = db.SelectOne(
 		&row,
-		"SELECT a.id, a.nonce, a.mac, a.encrypted_system_key, a.encrypted_user_key,"+
-			" a.encrypted_private_key, a.public_key,"+
-			" c.id AS staff_capability_id, c.nonce AS staff_capability_nonce,"+
-			" c.encrypted_private_data, c.public_data"+
-			" FROM account a LEFT OUTER JOIN capability c ON a.staff_capability_id = c.id"+
-			" WHERE a.id = $1",
+		fmt.Sprintf("SELECT %s, %s FROM account a LEFT OUTER JOIN capability c ON a.staff_capability_id = c.id WHERE a.id = $1",
+			accountCols, capabilityCols),
 		id.String())
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -477,10 +483,11 @@ func (b *AccountManagerBinding) get(
 
 	ab := row.Bind(b.Backend)
 
-	rows, err := db.Select(
-		PersonalIdentity{},
-		"SELECT namespace, id, account_id, verified FROM personal_identity WHERE account_id = $1",
-		id.String())
+	piCols, err := allColumns(b.DbMap, PersonalIdentity{}, "")
+	if err != nil {
+		return nil, err
+	}
+	rows, err := db.Select(PersonalIdentity{}, fmt.Sprintf("SELECT %s FROM personal_identity WHERE account_id = $1", piCols), id.String())
 	switch err {
 	case sql.ErrNoRows:
 	case nil:
@@ -669,10 +676,15 @@ func (b *AccountManagerBinding) ConfirmPasswordReset(
 		account *AccountBinding
 	)
 
+	cols, err := allColumns(b.DbMap, PasswordResetRequest{}, "")
+	if err != nil {
+		return err
+	}
 	err = t.SelectOne(
 		&stored,
-		"SELECT id, account_id, key FROM password_reset_request"+
-			" WHERE id = $1 AND expires > NOW() AND invalidated IS NULL AND consumed IS NULL",
+		fmt.Sprintf(
+			"SELECT %s FROM password_reset_request WHERE id = $1 AND expires > NOW() AND invalidated IS NULL AND consumed IS NULL",
+			cols),
 		id.String())
 	if err != nil && err != sql.ErrNoRows {
 		rollback()

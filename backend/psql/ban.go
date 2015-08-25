@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"time"
 
-	"github.com/go-gorp/gorp"
+	"gopkg.in/gorp.v1"
 )
 
 type BannedAgent struct {

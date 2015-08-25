@@ -2,7 +2,6 @@ package psql
 
 import (
 	"encoding/json"
-	"fmt"
 	"time"
 
 	"euphoria.io/heim/proto"
@@ -20,7 +19,6 @@ type Presence struct {
 }
 
 func (p *Presence) SetFact(fact *proto.Presence) error {
-	fmt.Printf("presence fact: %#v\n", fact)
 	data, err := json.Marshal(fact)
 	if err != nil {
 		return err

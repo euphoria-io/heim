@@ -4,12 +4,12 @@ import (
 	"database/sql"
 	"time"
 
-	"github.com/go-gorp/gorp"
-
 	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/security"
 	"euphoria.io/heim/proto/snowflake"
 	"euphoria.io/scope"
+
+	"gopkg.in/gorp.v1"
 )
 
 type RoomCapability struct {

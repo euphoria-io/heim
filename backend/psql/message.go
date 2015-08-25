@@ -4,10 +4,10 @@ import (
 	"database/sql"
 	"time"
 
-	"github.com/go-gorp/gorp"
-
 	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/snowflake"
+
+	"gopkg.in/gorp.v1"
 )
 
 type Message struct {
