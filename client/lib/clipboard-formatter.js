@@ -17,7 +17,8 @@ module.exports = function handleCopy(ev) {
   }
   var startMessageEl = findParentMessage(range.startContainer)
   var endMessageEl = findParentMessage(range.endContainer)
-  if (startMessageEl && startMessageEl.querySelector('.line').contains(range.endContainer)) {
+  var contentEl = startMessageEl.querySelector('.line > .content')
+  if (startMessageEl && contentEl.contains(range.startContainer) && contentEl.contains(range.endContainer)) {
     return
   }
 
