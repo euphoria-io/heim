@@ -371,6 +371,9 @@ iframe.js {
     padding: 10px;
     text-align: left;
     background: fade(@manager-color, 45%);
+    .touchable-custom({
+      background: @manager-color;
+    });
 
     &.selected {
       background: fade(@manager-color, 75%);
