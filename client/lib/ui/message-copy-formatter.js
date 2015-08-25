@@ -1,9 +1,9 @@
 var _ = require('lodash')
 var React = require('react/addons')
 
-var findParent = require('./find-parent')
-var domWalkForward = require('./dom-walk-forward')
-var emoji = require('./emoji')
+var findParent = require('../find-parent')
+var domWalkForward = require('../dom-walk-forward')
+var emoji = require('../emoji')
 
 
 module.exports = function handleCopy(ev) {
@@ -28,13 +28,6 @@ module.exports = function handleCopy(ev) {
 
   var entryEl = startMessageEl.querySelector('.entry')
   if (entryEl && entryEl.contains(range.startContainer)) {
-    return
-  }
-
-  // if the selection start and end aren't within the same message list, do
-  // nothing.
-  var messagesEl = findParent(startMessageEl, el => el.classList && el.classList.contains('messages'))
-  if (!messagesEl || !messagesEl.contains(range.endContainer)) {
     return
   }
 

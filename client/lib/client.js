@@ -178,8 +178,6 @@ if (!window.frameElement) {
       Heim.activity.windowFocused()
     }
 
-    Heim.addEventListener(uidocument, 'copy', require('./clipboard-formatter'), false)
-
     Heim.addEventListener(uiwindow, 'message', function(ev) {
       if (ev.origin == process.env.EMBED_ORIGIN) {
         Heim.actions.embedMessage(ev.data)

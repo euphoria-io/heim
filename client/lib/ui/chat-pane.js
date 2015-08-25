@@ -14,6 +14,7 @@ var MessageList = require('./message-list')
 var ChatEntry = require('./chat-entry')
 var NickEntry = require('./nick-entry')
 var PasscodeEntry = require('./passcode-entry')
+var messageCopyFormatter = require('./message-copy-formatter')
 
 
 function boxMiddle(el) {
@@ -432,7 +433,7 @@ module.exports = React.createClass({
     }
 
     return (
-      <div className={classNames('chat-pane', {'timestamps-visible': this.props.showTimeStamps})} onClickCapture={this.onClick}>
+      <div className={classNames('chat-pane', {'timestamps-visible': this.props.showTimeStamps})} onClickCapture={this.onClick} onCopy={messageCopyFormatter}>
         <Scroller
           ref="scroller"
           target=".focus-target"
