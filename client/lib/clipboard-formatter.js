@@ -36,7 +36,7 @@ module.exports = function handleCopy(ev) {
 
   var messageEls = []
   var minDepth
-  domWalkForward(startMessageEl, endMessageEl, function (el) {
+  domWalkForward(startMessageEl, endMessageEl, function(el) {
     if (!el.classList || !el.classList.contains('message-node')) {
       return
     }
