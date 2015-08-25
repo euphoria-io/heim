@@ -4,6 +4,7 @@ var Reflux = require('reflux')
 
 var toolbox = require('../stores/toolbox')
 var FastButton = require('./fast-button')
+var domWalkForward = require('../dom-walk-forward')
 
 
 module.exports = React.createClass({
@@ -33,13 +34,30 @@ module.exports = React.createClass({
     toolbox.apply(commandParams)
   },
 
+  onCopy: function(ev) {
+    var selection = uiwindow.getSelection()
+    var range = selection.getRangeAt(0)
+
+    var ids = []
+    domWalkForward(range.startContainer, range.endContainer, function(childEl) {
+      var el = childEl.parentNode
+      if (!el.classList || !el.classList.contains('id')) {
+        return
+      }
+      ids.push(el.textContent)
+    })
+
+    ev.clipboardData.setData('text/plain', ids.join(' '))
+    ev.preventDefault()
+  },
+
   render: function() {
     var toolboxData = this.state.toolbox
     var isEmpty = !toolboxData.items.size
     var selectedCommand = this.state.toolbox.selectedCommand
     return (
       <div className="manager-toolbox">
-        <div className={classNames('items', {'empty': isEmpty})}>
+        <div className={classNames('items', {'empty': isEmpty})} onCopy={this.onCopy}>
           {isEmpty && 'nothing selected'}
           {toolboxData.items.toSeq().map(item =>
             <span key={item.get('kind') + '-' + item.get('id') + '-' + item.get('name', '')} className={classNames('item', item.get('kind'), {'active': item.get('active'), 'removed': item.get('removed')})}>
