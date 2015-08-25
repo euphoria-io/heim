@@ -29,6 +29,13 @@ var ThreadListItem = module.exports = React.createClass({
     var message = this.state.node
 
     var count = this.props.tree.getCount(this.props.nodeId)
+    if (!count) {
+      // FIXME: due to react batching when new logs are loaded, this component
+      // can update after the node has been cleared (with shadow data) but
+      // before being removed.
+      return <div />
+    }
+
     var newCount = count.get('newDescendants')
     var children = thread.get('children')
     var timestamp
