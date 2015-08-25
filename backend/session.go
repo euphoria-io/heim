@@ -193,9 +193,13 @@ func (s *session) Send(ctx scope.Context, cmdType proto.PacketType, payload inte
 		Data: encoded,
 	}
 
-	go func() {
-		s.outgoing <- cmd
-	}()
+	// Add to outgoing channel. If channel is full, defer to goroutine so as not to block
+	// the caller (this may result in deliveries coming out of order).
+	select {
+	case s.outgoing <- cmd:
+	default:
+		go func() { s.outgoing <- cmd }()
+	}
 
 	return nil
 }
