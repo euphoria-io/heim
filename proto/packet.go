@@ -419,10 +419,11 @@ type DisconnectEvent struct {
 // A `hello-event` is sent by the server to the client when a session is started.
 // It includes information about the client's authentication and associated identity.
 type HelloEvent struct {
-	AccountView   *AccountView `json:"account,omitempty"` // details about the user's account, if the session is logged in
-	SessionView   *SessionView `json:"session"`           // details about the session
-	RoomIsPrivate bool         `json:"room_is_private"`   // if true, the session is connected to a private room
-	Version       string       `json:"version"`           // the version of the code being run and served by the server
+	AccountView      *AccountView `json:"account,omitempty"`            // details about the user's account, if the session is logged in
+	SessionView      *SessionView `json:"session"`                      // details about the session
+	AccountHasAccess bool         `json:"account_has_access,omitempty"` // if true, then the account has an explicit access grant to the current room
+	RoomIsPrivate    bool         `json:"room_is_private"`              // if true, the session is connected to a private room
+	Version          string       `json:"version"`                      // the version of the code being run and served by the server
 }
 
 // A `snapshot-event` indicates that a session has successfully joined a room.

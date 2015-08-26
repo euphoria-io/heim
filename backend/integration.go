@@ -173,14 +173,15 @@ func (s *serverUnderTest) RoomAndManager(
 
 type testConn struct {
 	*websocket.Conn
-	room      proto.Room
-	cookies   []*http.Cookie
-	roomName  string
-	sessionID string
-	userID    string
-	accountID string
-	isStaff   bool
-	isManager bool
+	room             proto.Room
+	cookies          []*http.Cookie
+	roomName         string
+	sessionID        string
+	userID           string
+	accountID        string
+	accountHasAccess bool
+	isStaff          bool
+	isManager        bool
 }
 
 func (tc *testConn) id() string { return tc.userID }
@@ -364,6 +365,9 @@ func (tc *testConn) expectHello() {
 	So(err, ShouldBeNil)
 	if key != nil {
 		isParts += `,"room_is_private":true`
+		if tc.accountHasAccess {
+			isParts += `,"account_has_access":true`
+		}
 	} else {
 		isParts += `,"room_is_private":false`
 	}
@@ -836,6 +840,7 @@ func testAuthentication(s *serverUnderTest) {
 		conn.Close()
 
 		// Reconnect with authentication.
+		conn.accountHasAccess = true
 		conn.isManager = true
 		s.Reconnect(conn)
 		conn.expectPing()
@@ -1502,6 +1507,7 @@ func testRoomGrants(s *serverUnderTest) {
 		loganConn.Close()
 
 		// Reconnect manager to private room and grant access to passcode.
+		loganConn.accountHasAccess = true
 		loganConn.isManager = true
 		s.Reconnect(loganConn, "passcodegrants")
 		defer loganConn.Close()
@@ -1560,6 +1566,7 @@ func testRoomGrants(s *serverUnderTest) {
 		loganConn.Close()
 
 		// Reconnect manager to private room.
+		loganConn.accountHasAccess = true
 		loganConn.isManager = true
 		s.Reconnect(loganConn, "grants")
 		loganConn.expectPing()
@@ -1583,6 +1590,7 @@ func testRoomGrants(s *serverUnderTest) {
 		loganConn.expect("1", "grant-access-reply", `{}`)
 
 		// Connect with access account.
+		maxConn.accountHasAccess = true
 		s.Reconnect(maxConn)
 		maxConn.expectPing()
 		maxConn.expectSnapshot(
@@ -1605,6 +1613,7 @@ func testRoomGrants(s *serverUnderTest) {
 		loganConn.expect("2", "revoke-access-reply", `{}`)
 		loganConn.Close()
 
+		maxConn.accountHasAccess = false
 		s.Reconnect(maxConn)
 		maxConn.expectPing()
 		maxConn.expect("", "bounce-event", `{"reason":"authentication required"}`)
@@ -1654,6 +1663,7 @@ func testRoomGrants(s *serverUnderTest) {
 		loganConn.Close()
 
 		// Reconnect to verify.
+		loganConn.accountHasAccess = true
 		loganConn.isManager = true
 		s.Reconnect(loganConn)
 		loganConn.expectPing()
@@ -1670,6 +1680,7 @@ func testRoomGrants(s *serverUnderTest) {
 		loganConn.expect("3", "staff-revoke-access-reply", `{}`)
 		loganConn.Close()
 
+		loganConn.accountHasAccess = false
 		loganConn.isManager = false
 		s.Reconnect(loganConn)
 		loganConn.expectPing()
@@ -1702,6 +1713,7 @@ func testRoomGrants(s *serverUnderTest) {
 		loganConn.Close()
 
 		// Reconnect manager to private room.
+		loganConn.accountHasAccess = true
 		loganConn.isManager = true
 		s.Reconnect(loganConn, "managergrants")
 		defer loganConn.Close()

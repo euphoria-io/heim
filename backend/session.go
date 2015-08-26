@@ -220,7 +220,12 @@ func (s *session) serve() error {
 		return err
 	}
 
-	if err := s.sendHello(key != nil); err != nil {
+	accountHasAccess := false
+	if key != nil {
+		_, accountHasAccess = s.client.Authorization.MessageKeys[key.KeyID()]
+	}
+
+	if err := s.sendHello(key != nil, accountHasAccess); err != nil {
 		return err
 	}
 
@@ -491,12 +496,13 @@ func (s *session) join() error {
 	return nil
 }
 
-func (s *session) sendHello(roomIsPrivate bool) error {
+func (s *session) sendHello(roomIsPrivate, accountHasAccess bool) error {
 	logger := Logger(s.ctx)
 	event := &proto.HelloEvent{
-		SessionView:   s.View(),
-		RoomIsPrivate: roomIsPrivate,
-		Version:       s.room.Version(),
+		SessionView:      s.View(),
+		AccountHasAccess: accountHasAccess,
+		RoomIsPrivate:    roomIsPrivate,
+		Version:          s.room.Version(),
 	}
 	if s.client.Account != nil {
 		event.AccountView = s.client.Account.View(s.roomName)
