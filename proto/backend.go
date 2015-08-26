@@ -12,6 +12,7 @@ import (
 type Backend interface {
 	AccountManager() AccountManager
 	AgentTracker() AgentTracker
+	Jobs() JobService
 
 	// BanIP globally bans an IP. A zero value for until indicates a
 	// permanent ban.

@@ -19,6 +19,7 @@ type TestBackend struct {
 	agents         map[string]*proto.Agent
 	agentBans      map[string]time.Time
 	ipBans         map[string]time.Time
+	js             JobService
 	resetReqs      map[snowflake.Snowflake]*proto.PasswordResetRequest
 	rooms          map[string]proto.Room
 	version        string
@@ -26,6 +27,7 @@ type TestBackend struct {
 
 func (b *TestBackend) AccountManager() proto.AccountManager { return &accountManager{b: b} }
 func (b *TestBackend) AgentTracker() proto.AgentTracker     { return &agentTracker{b} }
+func (b *TestBackend) Jobs() proto.JobService               { return &b.js }
 
 func (b *TestBackend) Close() {}
 

@@ -474,6 +474,7 @@ func IntegrationTest(t *testing.T, factory proto.BackendFactory) {
 	runTest("Accounts low-level API", testAccountsLowLevel)
 	runTest("Managers low-level API", testManagersLowLevel)
 	runTest("Staff low-level API", testStaffLowLevel)
+	runTest("Jobs API", testJobsLowLevel)
 
 	// Websocket tests
 	runTest("Lurker", testLurker)
@@ -2060,5 +2061,285 @@ func testBotsAndHumans(s *serverUnderTest) {
 		c.expectPing()
 		c.expectSnapshot(s.backend.Version(), nil, nil)
 		So(c.userID, ShouldEqual, saved)
+	})
+}
+
+func testJobsLowLevel(s *serverUnderTest) {
+	js := s.backend.Jobs()
+	ctx := scope.New()
+
+	makeJob := func() (proto.PacketType, interface{}) {
+		token, err := snowflake.New()
+		So(err, ShouldBeNil)
+		return proto.EmailJobType, &proto.EmailJob{EmailID: token}
+	}
+
+	Convey("Creating queue errors on duplicates", func() {
+		jq, err := js.CreateQueue(ctx, "duptest")
+		So(err, ShouldBeNil)
+		So(jq, ShouldNotBeNil)
+
+		jq, err = js.CreateQueue(ctx, "duptest")
+		So(err, ShouldEqual, proto.ErrJobQueueAlreadyExists)
+		So(jq, ShouldBeNil)
+
+		jq, err = js.GetQueue(ctx, "duptest")
+		So(err, ShouldBeNil)
+		So(jq, ShouldNotBeNil)
+	})
+
+	Convey("Fetching non-existent queue returns error", func() {
+		jq, err := js.GetQueue(ctx, "doesn't exist")
+		So(err, ShouldEqual, proto.ErrJobQueueNotFound)
+		So(jq, ShouldBeNil)
+	})
+
+	claimJob := func(queueName string) chan *proto.Job {
+		ch := make(chan *proto.Job)
+
+		go func() {
+			jq, err := js.GetQueue(ctx, queueName)
+			if err != nil {
+				fmt.Printf("get queue failed: %s", err)
+				ch <- nil
+				return
+			}
+			job, err := jq.Claim(ctx, "test")
+			if err != nil {
+				fmt.Printf("claim job failed: %s", err)
+				ch <- nil
+				return
+			}
+			ch <- &job
+		}()
+		return ch
+	}
+
+	Convey("Simple job lifecycle", func() {
+		jq, err := js.CreateQueue(ctx, "simple lifecycle")
+		So(err, ShouldBeNil)
+
+		// synchronize with job claiming
+		ctrl := ctx.Breakpoint("euphoria.io/heim/proto.JobQueue.Claim")
+		ch := claimJob("simple lifecycle")
+		<-ctrl
+		ctrl <- nil
+
+		// create and add job to be claimed
+		jt, jp := makeJob()
+		startTime := time.Now()
+		_, err = jq.Add(ctx, jt, jp)
+		So(err, ShouldBeNil)
+
+		// wait for job to be claimed
+		job := <-ch
+
+		// verify job
+		So(job, ShouldNotBeNil)
+		So(job.JobClaim.Queue, ShouldEqual, jq)
+		So(job.Created, ShouldHappenAfter, startTime)
+		So(job.Started, ShouldHappenAfter, startTime)
+		So(job.Started, ShouldHappenAfter, job.Created)
+		So(job.Type, ShouldEqual, jt)
+		payload, err := job.Payload()
+		So(err, ShouldBeNil)
+		So(payload, ShouldResemble, jp)
+
+		// complete job
+		So(job.Complete(ctx), ShouldBeNil)
+	})
+
+	Convey("Delete a job before it can be claimed", func() {
+		jq, err := js.CreateQueue(ctx, "deletion lifecycle")
+		So(err, ShouldBeNil)
+
+		// synchronize with job claiming and block
+		ctrl := ctx.Breakpoint("euphoria.io/heim/proto.JobQueue.Claim")
+		ch := claimJob("deletion lifecycle")
+		<-ctrl
+
+		// add job, then cancel it
+		jt1, jp1 := makeJob()
+		jobID, err := jq.Add(ctx, jt1, jp1)
+		So(err, ShouldBeNil)
+		So(jq.Cancel(ctx, jobID), ShouldBeNil)
+
+		// release job claimer
+		ctrl <- nil
+
+		// add new job to claim
+		jt2, jp2 := makeJob()
+		newJobID, err := jq.Add(ctx, jt2, jp2)
+		So(err, ShouldBeNil)
+
+		// wait for job to be claimed, then verify
+		job := <-ch
+		So(job.ID, ShouldEqual, newJobID)
+		payload, err := job.Payload()
+		So(err, ShouldBeNil)
+		So(payload, ShouldResemble, jp2)
+	})
+
+	Convey("Claim/complete cycle", func() {
+		jq, err := js.CreateQueue(ctx, "claim/complete")
+		So(err, ShouldBeNil)
+
+		jt, jp := makeJob()
+		jobID, err := jq.Add(ctx, jt, jp, proto.JobOptions.MaxAttempts(3))
+
+		n := 0
+		for {
+			n += 1
+			job, err := jq.Claim(ctx, "test")
+			So(err, ShouldBeNil)
+			So(job.ID, ShouldEqual, jobID)
+			So(job.AttemptsRemaining, ShouldEqual, 3-n)
+			if job.AttemptsRemaining == 0 {
+				job.Complete(ctx)
+				break
+			}
+			Printf("job claim: %#v\n", job.JobClaim)
+			job.Fail(ctx, "error")
+		}
+		So(n, ShouldEqual, 3)
+	})
+
+	Convey("Steal", func() {
+		jq, err := js.CreateQueue(ctx, "steal")
+		So(err, ShouldBeNil)
+
+		jt1, jp1 := makeJob()
+		longJobID, err := jq.Add(ctx, jt1, jp1, proto.JobOptions.MaxWorkDuration(time.Hour))
+		So(err, ShouldBeNil)
+
+		jt2, jp2 := makeJob()
+		shortJobID, err := jq.Add(ctx, jt2, jp2,
+			proto.JobOptions.MaxWorkDuration(0),
+			proto.JobOptions.MaxAttempts(2))
+		So(err, ShouldBeNil)
+
+		j1, err := jq.Claim(ctx, "test")
+		So(err, ShouldBeNil)
+		So(j1.ID, ShouldEqual, longJobID)
+
+		j2, err := jq.Claim(ctx, "test")
+		So(err, ShouldBeNil)
+		So(j2.ID, ShouldEqual, shortJobID)
+		So(j2.AttemptsRemaining, ShouldEqual, 1)
+
+		// handler shouldn't be able to steal from itself
+		_, err = jq.Steal(ctx, "test")
+		So(err, ShouldEqual, proto.ErrJobNotFound)
+
+		// other handler should be able to steal
+		j3, err := jq.Steal(ctx, "test2")
+		So(err, ShouldBeNil)
+		So(j3.ID, ShouldEqual, shortJobID)
+		So(j3.AttemptsRemaining, ShouldEqual, 0)
+		So(j2.Started, ShouldHappenBefore, j3.Started)
+
+		So(j3.Complete(ctx), ShouldBeNil)
+		job, err := jq.Steal(ctx, "test2")
+		So(err, ShouldEqual, proto.ErrJobNotFound)
+		So(job, ShouldResemble, proto.Job{})
+		So(j1.Complete(ctx), ShouldBeNil)
+	})
+
+	Convey("Stats", func() {
+		jq, err := js.CreateQueue(ctx, "stats")
+		So(err, ShouldBeNil)
+
+		n := 10
+
+		jobIDs := make([]snowflake.Snowflake, n)
+		for i := range jobIDs {
+			var jobID snowflake.Snowflake
+			jt, jp := makeJob()
+			jobID, err = jq.Add(ctx, jt, jp)
+			if err != nil {
+				break
+			}
+			jobIDs[i] = jobID
+		}
+		So(err, ShouldBeNil)
+
+		stats, err := jq.Stats(ctx)
+		So(err, ShouldBeNil)
+		So(stats, ShouldResemble, proto.JobQueueStats{
+			Waiting: n,
+			Due:     n,
+			Claimed: 0,
+		})
+
+		jt, jp := makeJob()
+		notDueJobID, err := jq.Add(ctx, jt, jp, proto.JobOptions.Due(time.Now().Add(time.Hour)))
+		So(err, ShouldBeNil)
+
+		stats, err = jq.Stats(ctx)
+		So(err, ShouldBeNil)
+		So(stats, ShouldResemble, proto.JobQueueStats{
+			Waiting: n + 1,
+			Due:     n,
+			Claimed: 0,
+		})
+
+		job, err := jq.Claim(ctx, "test")
+		So(err, ShouldBeNil)
+		So(job.ID, ShouldNotEqual, notDueJobID)
+
+		stats, err = jq.Stats(ctx)
+		So(err, ShouldBeNil)
+		So(stats, ShouldResemble, proto.JobQueueStats{
+			Waiting: n,
+			Due:     n,
+			Claimed: 1,
+		})
+
+		for _, jobID := range jobIDs {
+			if err = jq.Cancel(ctx, jobID); err != nil {
+				break
+			}
+		}
+		So(err, ShouldBeNil)
+
+		stats, err = jq.Stats(ctx)
+		So(err, ShouldBeNil)
+		So(stats, ShouldResemble, proto.JobQueueStats{
+			Waiting: 1,
+			Due:     0,
+			Claimed: 0,
+		})
+
+		job, err = jq.Claim(ctx, "test")
+		So(err, ShouldBeNil)
+		So(job.ID, ShouldEqual, notDueJobID)
+
+		stats, err = jq.Stats(ctx)
+		So(err, ShouldBeNil)
+		So(stats, ShouldResemble, proto.JobQueueStats{
+			Waiting: 0,
+			Due:     0,
+			Claimed: 1,
+		})
+
+		So(job.Complete(ctx), ShouldBeNil)
+
+		jt, jp = makeJob()
+		stealableJobID, err := jq.Add(ctx, jt, jp, proto.JobOptions.MaxWorkDuration(0))
+		So(err, ShouldBeNil)
+
+		job, err = jq.Claim(ctx, "test")
+		So(err, ShouldBeNil)
+		So(job.ID, ShouldEqual, stealableJobID)
+
+		stats, err = jq.Stats(ctx)
+		So(err, ShouldBeNil)
+		So(stats, ShouldResemble, proto.JobQueueStats{
+			Waiting: 1,
+			Due:     1,
+			Claimed: 0,
+		})
+
+		So(job.Complete(ctx), ShouldBeNil)
 	})
 }
