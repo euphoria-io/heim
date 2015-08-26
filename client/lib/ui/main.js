@@ -277,29 +277,6 @@ module.exports = React.createClass({
           <NotificationList tree={this.state.chat.messages} notifications={this.state.ui.frozenNotifications || this.state.notification.notifications} onNotificationSelect={this.onNotificationSelect} animate={!this.state.ui.thin} />
         </div>
         <div className="chat-pane-container main-pane" onClickCapture={_.partial(this.onPaneClick, 'main')}>
-          {this.state.chat.authType == 'closed' && (
-            <div className="closed-msg-box">
-              <div className="closed-msg">
-                <h1>Hi Hacker News!</h1>
-                <h2>we're not quite ready for you yet. :)</h2>
-                <p>
-                  <strong>Euphoria</strong> is a new real-time community platform
-                  under active development. You've found our developer preview a
-                  little sooner than anticipated &mdash; while we welcome you into our
-                  spaces, we're not ready for the mass influx yet.
-                </p>
-                <p>
-                  We believe the internet needs more safe, accessible, diverse online
-                  spaces. The platform we are building is completely open source.  If
-                  you are interested in this, contact us at <a
-                  href="mailto:hi@euphoria.io">hi@euphoria.io</a>, <a
-                  href="https://github.com/euphoria-io/heim">star us on GitHub</a>, or
-                  come back in a little bit once we can lower the draw bridge. :)
-                </p>
-                <div className="emoji emoji-euphoria" />
-              </div>
-            </div>
-          )}
           <ChatTopBar who={this.state.chat.who} roomName={this.state.chat.roomName} connected={this.state.chat.connected} joined={this.state.chat.joined} authType={this.state.chat.authType} isManager={this.state.chat.isManager} managerMode={this.state.ui.managerMode} updateReady={this.state.update.get('ready')} working={this.state.chat.loadingLogs} showInfoPaneButton={!thin || !Heim.isTouch} infoPaneOpen={infoPaneOpen} collapseInfoPane={ui.collapseInfoPane} expandInfoPane={ui.expandInfoPane} toggleUserList={ui.toggleUserList} toggleManagerMode={ui.toggleManagerMode} />
           {this.templateHook('main-pane-top')}
           <div className="main-pane-stack">
