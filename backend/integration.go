@@ -364,6 +364,8 @@ func (tc *testConn) expectHello() {
 	So(err, ShouldBeNil)
 	if key != nil {
 		isParts += `,"room_is_private":true`
+	} else {
+		isParts += `,"room_is_private":false`
 	}
 	capture := tc.expect(
 		"", "hello-event", `{%s"session":{"id":"*","name":"","server_id":"*","server_era":"*","session_id":"*"%s}%s,"version":"*"}`,
