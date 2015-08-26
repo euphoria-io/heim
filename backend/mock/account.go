@@ -36,6 +36,7 @@ type memAccount struct {
 	sec                proto.AccountSecurity
 	staffCapability    security.Capability
 	personalIdentities []proto.PersonalIdentity
+	nicks              map[string]string
 }
 
 func (a *memAccount) ID() snowflake.Snowflake { return a.id }
@@ -88,6 +89,23 @@ func (a *memAccount) UnlockStaffKMS(clientKey *security.ManagedKey) (security.KM
 }
 
 func (a *memAccount) PersonalIdentities() []proto.PersonalIdentity { return a.personalIdentities }
+
+func (a *memAccount) DefaultNick() string { return a.nicks[""] }
+
+func (a *memAccount) Nick(roomName string) string {
+	if nick, ok := a.nicks[roomName]; ok {
+		return nick
+	}
+	return a.DefaultNick()
+}
+
+func (a *memAccount) View(roomName string) *proto.AccountView {
+	return &proto.AccountView{
+		ID:          a.id,
+		DefaultNick: a.DefaultNick(),
+		LocalNick:   a.Nick(roomName),
+	}
+}
 
 type personalIdentity struct {
 	accountID snowflake.Snowflake

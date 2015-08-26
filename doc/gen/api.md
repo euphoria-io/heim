@@ -200,6 +200,11 @@ Strings are UTF-8 encoded text. Unless otherwise specified, a string may be of a
 
 An arbitrary JSON object.
 
+### AccountView
+
+{{(object "AccountView").Doc}}
+{{template "fields.md" (object "AccountView")}}
+
 ### AuthOption
 
 `AuthOption` is a string indicating a mode of authentication. It must be one of the
@@ -388,10 +393,8 @@ The following events may be sent from the server to the client at any time.
 
 ## hello-event
 
-A `hello-event` is sent by the server to the client when a session is started.
-It includes information about the client's authentication and associated identity.
-
-{{template "fields.md" (object "PresenceEvent")}}
+{{(packet "hello-event").Doc}}
+{{template "fields.md" (object "HelloEvent")}}
 
 ## join-event
 

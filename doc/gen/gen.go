@@ -256,6 +256,7 @@ func run() error {
 	ts.registerType("int")
 	ts.registerType("object")
 	ts.registerType("string")
+	ts.registerType("AccountView")
 	ts.registerType("AuthOption")
 	ts.registerType("Message")
 	ts.registerType("PacketType")

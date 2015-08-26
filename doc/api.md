@@ -211,6 +211,20 @@ Strings are UTF-8 encoded text. Unless otherwise specified, a string may be of a
 
 An arbitrary JSON object.
 
+### AccountView
+
+AccountView describes an account and its preferred names.
+
+
+| Field | Type | Required? | Description |
+| :-- | :-- | :-- | :--------- |
+| `id` | [Snowflake](#snowflake) | required |  the id of the account |
+| `default_nick` | [string](#string) | required |  the preferred name of the account owner |
+| `local_nick` | [string](#string) | required |  the name the account owner is using in the current room |
+
+
+
+
 ### AuthOption
 
 `AuthOption` is a string indicating a mode of authentication. It must be one of the
@@ -1062,13 +1076,10 @@ It includes information about the client's authentication and associated identit
 
 | Field | Type | Required? | Description |
 | :-- | :-- | :-- | :--------- |
-| `id` | [UserID](#userid) | required |  the id of an agent or account |
-| `name` | [string](#string) | required |  the name-in-use at the time this view was captured |
-| `server_id` | [string](#string) | required |  the id of the server that captured this view |
-| `server_era` | [string](#string) | required |  the era of the server that captured this view |
-| `session_id` | [string](#string) | required |  id of the session, unique across all sessions globally |
-| `is_staff` | [bool](#bool) | *optional* |  if true, this session belongs to a member of staff |
-| `is_manager` | [bool](#bool) | *optional* |  if true, this session belongs to a manager of the room |
+| `account` | [AccountView](#accountview) | *optional* |  details about the user's account, if the session is logged in |
+| `session` | [SessionView](#sessionview) | required |  details about the session |
+| `room_is_private` | [bool](#bool) | *optional* |  if true, the session is connected to a private room |
+| `version` | [string](#string) | required |  the version of the code being run and served by the server |
 
 
 

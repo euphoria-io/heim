@@ -208,6 +208,19 @@ func (ab *AccountBinding) UnlockStaffKMS(clientKey *security.ManagedKey) (securi
 
 func (ab *AccountBinding) PersonalIdentities() []proto.PersonalIdentity { return ab.identities }
 
+// TODO: store and retrieve nick data
+func (ab *AccountBinding) DefaultNick() string         { return "" }
+func (ab *AccountBinding) Nick(roomName string) string { return "" }
+
+func (ab *AccountBinding) View(roomName string) *proto.AccountView {
+	view := &proto.AccountView{
+		ID:          ab.ID(),
+		DefaultNick: ab.DefaultNick(),
+		// TODO: LocalNick
+	}
+	return view
+}
+
 type AccountManagerBinding struct {
 	*Backend
 }

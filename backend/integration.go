@@ -178,6 +178,7 @@ type testConn struct {
 	roomName  string
 	sessionID string
 	userID    string
+	accountID string
 	isStaff   bool
 	isManager bool
 }
@@ -234,6 +235,24 @@ func (tc *testConn) expect(id, cmdType, data string, args ...interface{}) map[st
 	var packet proto.Packet
 	So(json.Unmarshal(packetData, &packet), ShouldBeNil)
 	So(packet.Error, ShouldEqual, "")
+
+	// Inspect events and replies to track some state automatically.
+	switch packet.Type {
+	case proto.LoginReplyType:
+		payload, err := packet.Payload()
+		So(err, ShouldBeNil)
+		reply := payload.(*proto.LoginReply)
+		if reply.Success {
+			tc.accountID = reply.AccountID.String()
+		}
+	case proto.RegisterAccountReplyType:
+		payload, err := packet.Payload()
+		So(err, ShouldBeNil)
+		reply := payload.(*proto.RegisterAccountReply)
+		if reply.Success {
+			tc.accountID = reply.AccountID.String()
+		}
+	}
 
 	// Construct actual map
 	var actual map[string]interface{}
@@ -328,22 +347,29 @@ func (tc *testConn) expectError(id, cmdType, errFormat string, errArgs ...interf
 }
 
 func (tc *testConn) expectHello() {
+	account := ""
+	sessionParts := ""
 	isParts := ""
-	if tc.isStaff {
-		isParts = isParts + `,"is_staff":true`
-	}
-	if tc.isManager {
-		isParts = isParts + `,"is_manager":true`
+	if tc.accountID != "" {
+		account = fmt.Sprintf(`"account":{"id":"%s","default_nick":"","local_nick":""`, tc.accountID)
+		if tc.isStaff {
+			sessionParts += `,"is_staff":true`
+		}
+		if tc.isManager {
+			sessionParts += `,"is_manager":true`
+		}
+		account += "},"
 	}
 	key, err := tc.room.MessageKey(scope.New())
 	So(err, ShouldBeNil)
 	if key != nil {
-		isParts = isParts + `,"room_is_private":true`
+		isParts += `,"room_is_private":true`
 	}
 	capture := tc.expect(
-		"", "hello-event", `{"id":"*","name":"","server_id":"*","server_era":"*","session_id":"*"%s,"version":"*"}`, isParts)
-	tc.sessionID = capture["session_id"].(string)
-	tc.userID = capture["id"].(string)
+		"", "hello-event", `{%s"session":{"id":"*","name":"","server_id":"*","server_era":"*","session_id":"*"%s}%s,"version":"*"}`,
+		account, sessionParts, isParts)
+	tc.sessionID = capture["session.session_id"].(string)
+	tc.userID = capture["session.id"].(string)
 }
 
 func (tc *testConn) expectPing() *proto.PingEvent {

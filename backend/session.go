@@ -493,11 +493,15 @@ func (s *session) join() error {
 
 func (s *session) sendHello(roomIsPrivate bool) error {
 	logger := Logger(s.ctx)
-	cmd, err := proto.MakeEvent(&proto.HelloEvent{
-		SessionView:   *s.View(),
+	event := &proto.HelloEvent{
+		SessionView:   s.View(),
 		RoomIsPrivate: roomIsPrivate,
 		Version:       s.room.Version(),
-	})
+	}
+	if s.client.Account != nil {
+		event.AccountView = s.client.Account.View(s.roomName)
+	}
+	cmd, err := proto.MakeEvent(event)
 	if err != nil {
 		logger.Printf("error: hello event: %s", err)
 		return err
