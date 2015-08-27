@@ -61,6 +61,9 @@ type AccountManager interface {
 	// and applies the new password to the account referred to by the
 	// confirmation code.
 	ConfirmPasswordReset(ctx scope.Context, kms security.KMS, confirmation, password string) error
+
+	// ChangeName changes an account's name.
+	ChangeName(ctx scope.Context, accountID snowflake.Snowflake, name string) error
 }
 
 type PersonalIdentity interface {
@@ -87,6 +90,7 @@ func ValidateAccountPassword(password string) (bool, string) {
 
 type Account interface {
 	ID() snowflake.Snowflake
+	Name() string
 	KeyFromPassword(password string) *security.ManagedKey
 	KeyPair() security.ManagedKeyPair
 	Unlock(clientKey *security.ManagedKey) (*security.ManagedKeyPair, error)
@@ -95,16 +99,13 @@ type Account interface {
 	PersonalIdentities() []PersonalIdentity
 	UserKey() security.ManagedKey
 	SystemKey() security.ManagedKey
-	DefaultNick() string
-	Nick(roomName string) string
 	View(roomName string) *AccountView
 }
 
 // AccountView describes an account and its preferred names.
 type AccountView struct {
-	ID          snowflake.Snowflake `json:"id"`           // the id of the account
-	DefaultNick string              `json:"default_nick"` // the preferred name of the account owner
-	LocalNick   string              `json:"local_nick"`   // the name the account owner is using in the current room
+	ID   snowflake.Snowflake `json:"id"`   // the id of the account
+	Name string              `json:"name"` // the name that the holder of the account goes by
 }
 
 // NewAccountSecurity initializes the nonce and account secrets for a new account

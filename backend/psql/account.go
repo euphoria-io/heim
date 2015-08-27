@@ -19,6 +19,7 @@ import (
 
 type Account struct {
 	ID                  string
+	Name                string
 	Nonce               []byte
 	MAC                 []byte
 	EncryptedSystemKey  []byte         `db:"encrypted_system_key"`
@@ -94,6 +95,8 @@ func (ab *AccountBinding) ID() snowflake.Snowflake {
 	_ = id.FromString(ab.Account.ID)
 	return id
 }
+
+func (ab *AccountBinding) Name() string { return ab.Account.Name }
 
 func (ab *AccountBinding) KeyFromPassword(password string) *security.ManagedKey {
 	return security.KeyFromPasscode([]byte(password), ab.Account.Nonce, proto.ClientKeyType)
@@ -208,15 +211,10 @@ func (ab *AccountBinding) UnlockStaffKMS(clientKey *security.ManagedKey) (securi
 
 func (ab *AccountBinding) PersonalIdentities() []proto.PersonalIdentity { return ab.identities }
 
-// TODO: store and retrieve nick data
-func (ab *AccountBinding) DefaultNick() string         { return "" }
-func (ab *AccountBinding) Nick(roomName string) string { return "" }
-
 func (ab *AccountBinding) View(roomName string) *proto.AccountView {
 	view := &proto.AccountView{
-		ID:          ab.ID(),
-		DefaultNick: ab.DefaultNick(),
-		// TODO: LocalNick
+		ID:   ab.ID(),
+		Name: ab.Name(),
 	}
 	return view
 }
@@ -758,5 +756,23 @@ func (b *AccountManagerBinding) ConfirmPasswordReset(
 		return err
 	}
 
+	return nil
+}
+
+func (b *AccountManagerBinding) ChangeName(ctx scope.Context, accountID snowflake.Snowflake, name string) error {
+	res, err := b.DbMap.Exec("UPDATE account SET name = $2 WHERE id = $1", accountID.String(), name)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return proto.ErrAccountNotFound
+		}
+		return err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n < 1 {
+		return proto.ErrAccountNotFound
+	}
 	return nil
 }

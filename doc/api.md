@@ -12,6 +12,7 @@
     * [send](#send)
     * [who](#who)
   * [Account Management](#account-management)
+    * [change-name](#change-name)
     * [change-password](#change-password)
     * [login](#login)
     * [logout](#logout)
@@ -219,8 +220,7 @@ AccountView describes an account and its preferred names.
 | Field | Type | Required? | Description |
 | :-- | :-- | :-- | :--------- |
 | `id` | [Snowflake](#snowflake) | required |  the id of the account |
-| `default_nick` | [string](#string) | required |  the preferred name of the account owner |
-| `local_nick` | [string](#string) | required |  the name the account owner is using in the current room |
+| `name` | [string](#string) | required |  the name that the holder of the account goes by |
 
 
 
@@ -490,6 +490,29 @@ This packet has no fields.
 These commands enable a client to register, associate, and dissociate with an account.
 An account allows an identity to be shared across browsers and devices, and is a
 prerequisite for room management.
+
+### change-name
+
+The `change-name` command changes the name associated with the signed in account.
+
+
+| Field | Type | Required? | Description |
+| :-- | :-- | :-- | :--------- |
+| `name` | [string](#string) | required |  the name to associate with the account |
+
+
+
+
+
+The `change-name-reply` packet indicates a successful name change.
+
+
+This packet has no fields.
+
+
+
+
+
 
 ### change-password
 

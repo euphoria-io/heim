@@ -33,13 +33,14 @@ func NewAccount(kms security.KMS, password string) (proto.Account, *security.Man
 
 type memAccount struct {
 	id                 snowflake.Snowflake
+	name               string
 	sec                proto.AccountSecurity
 	staffCapability    security.Capability
 	personalIdentities []proto.PersonalIdentity
-	nicks              map[string]string
 }
 
 func (a *memAccount) ID() snowflake.Snowflake { return a.id }
+func (a *memAccount) Name() string            { return a.name }
 
 func (a *memAccount) KeyFromPassword(password string) *security.ManagedKey {
 	return security.KeyFromPasscode([]byte(password), a.sec.Nonce, a.sec.UserKey.KeyType)
@@ -90,20 +91,10 @@ func (a *memAccount) UnlockStaffKMS(clientKey *security.ManagedKey) (security.KM
 
 func (a *memAccount) PersonalIdentities() []proto.PersonalIdentity { return a.personalIdentities }
 
-func (a *memAccount) DefaultNick() string { return a.nicks[""] }
-
-func (a *memAccount) Nick(roomName string) string {
-	if nick, ok := a.nicks[roomName]; ok {
-		return nick
-	}
-	return a.DefaultNick()
-}
-
 func (a *memAccount) View(roomName string) *proto.AccountView {
 	return &proto.AccountView{
-		ID:          a.id,
-		DefaultNick: a.DefaultNick(),
-		LocalNick:   a.Nick(roomName),
+		ID:   a.id,
+		Name: a.name,
 	}
 }
 
@@ -338,5 +329,17 @@ func (m *accountManager) ConfirmPasswordReset(
 		}
 	}
 
+	return nil
+}
+
+func (m *accountManager) ChangeName(ctx scope.Context, accountID snowflake.Snowflake, name string) error {
+	m.b.Lock()
+	defer m.b.Unlock()
+
+	account, ok := m.b.accounts[accountID]
+	if !ok {
+		return proto.ErrAccountNotFound
+	}
+	account.(*memAccount).name = name
 	return nil
 }

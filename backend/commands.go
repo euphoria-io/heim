@@ -103,6 +103,8 @@ func (s *session) handleCoreCommands(payload interface{}) *response {
 		return &response{}
 
 	// account management commands
+	case *proto.ChangeNameCommand:
+		return s.handleChangeNameCommand(msg)
 	case *proto.ChangePasswordCommand:
 		return s.handleChangePasswordCommand(msg)
 	case *proto.LoginCommand:
@@ -435,6 +437,16 @@ func (s *session) handleLogoutCommand() *response {
 		return &response{err: err}
 	}
 	return &response{packet: &proto.LogoutReply{}}
+}
+
+func (s *session) handleChangeNameCommand(msg *proto.ChangeNameCommand) *response {
+	if s.client.Account == nil {
+		return &response{err: proto.ErrNotLoggedIn}
+	}
+	if err := s.backend.AccountManager().ChangeName(s.ctx, s.client.Account.ID(), msg.Name); err != nil {
+		return &response{err: err}
+	}
+	return &response{packet: &proto.ChangeNameReply{}}
 }
 
 func (s *session) handleChangePasswordCommand(msg *proto.ChangePasswordCommand) *response {

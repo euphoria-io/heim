@@ -179,6 +179,7 @@ type testConn struct {
 	sessionID        string
 	userID           string
 	accountID        string
+	accountName      string
 	accountHasAccess bool
 	isStaff          bool
 	isManager        bool
@@ -352,7 +353,7 @@ func (tc *testConn) expectHello() {
 	sessionParts := ""
 	isParts := ""
 	if tc.accountID != "" {
-		account = fmt.Sprintf(`"account":{"id":"%s","default_nick":"","local_nick":""`, tc.accountID)
+		account = fmt.Sprintf(`"account":{"id":"%s","name":"%s"`, tc.accountID, tc.accountName)
 		if tc.isStaff {
 			sessionParts += `,"is_staff":true`
 		}
@@ -459,6 +460,7 @@ func IntegrationTest(t *testing.T, factory proto.BackendFactory) {
 	runTest("Account registration", testAccountRegistration)
 	runTest("Account change password", testAccountChangePassword)
 	runTest("Account reset password", testAccountResetPassword)
+	runTest("Account change name", testAccountChangeName)
 	runTest("Room creation", testRoomCreation)
 	runTest("Room grants", testRoomGrants)
 	runTest("Room not found", testRoomNotFound)
@@ -1245,6 +1247,39 @@ func testAccountResetPassword(s *serverUnderTest) {
 		})
 		So(err, ShouldBeNil)
 		So(resp.StatusCode, ShouldEqual, http.StatusBadRequest)
+	})
+}
+
+func testAccountChangeName(s *serverUnderTest) {
+	ctx := scope.New()
+	kms := s.app.kms
+	nonce := fmt.Sprintf("%s", time.Now())
+	logan, _, err := s.Account(ctx, kms, "email", "logan"+nonce, "loganpass")
+	So(err, ShouldBeNil)
+
+	Convey("Change name", func() {
+		conn := s.Connect("changename")
+		conn.expectPing()
+		conn.expectSnapshot(s.backend.Version(), nil, nil)
+		conn.send("1", "change-name", `{"name":"logan"}`)
+		conn.expectError("1", "change-name-reply", "not logged in")
+		conn.send("2", "login", `{"namespace":"email","id":"logan%s","password":"loganpass"}`, nonce)
+		conn.expect("2", "login-reply", `{"success":true,"account_id":"%s"}`, logan.ID())
+		conn.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
+		conn.Close()
+
+		s.Reconnect(conn)
+		conn.expectPing()
+		conn.expectSnapshot(s.backend.Version(), nil, nil)
+		conn.send("1", "change-name", `{"name":"logan"}`)
+		conn.expect("1", "change-name-reply", `{}`)
+		conn.Close()
+
+		conn.accountName = "logan"
+		s.Reconnect(conn)
+		conn.expectPing()
+		conn.expectSnapshot(s.backend.Version(), nil, nil)
+		conn.Close()
 	})
 }
 
