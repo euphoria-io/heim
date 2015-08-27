@@ -373,10 +373,10 @@ func (tc *testConn) expectHello() {
 		isParts += `,"room_is_private":false`
 	}
 	capture := tc.expect(
-		"", "hello-event", `{%s"session":{"id":"*","name":"","server_id":"*","server_era":"*","session_id":"*"%s}%s,"version":"*"}`,
+		"", "hello-event", `{%s"id":"*","session":{"id":"*","name":"","server_id":"*","server_era":"*","session_id":"*"%s}%s,"version":"*"}`,
 		account, sessionParts, isParts)
 	tc.sessionID = capture["session.session_id"].(string)
-	tc.userID = capture["session.id"].(string)
+	tc.userID = capture["id"].(string)
 }
 
 func (tc *testConn) expectPing() *proto.PingEvent {

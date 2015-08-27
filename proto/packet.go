@@ -433,6 +433,7 @@ type DisconnectEvent struct {
 // A `hello-event` is sent by the server to the client when a session is started.
 // It includes information about the client's authentication and associated identity.
 type HelloEvent struct {
+	ID               UserID       `json:"id"`                           // the id of the agent or account logged into this session
 	AccountView      *AccountView `json:"account,omitempty"`            // details about the user's account, if the session is logged in
 	SessionView      *SessionView `json:"session"`                      // details about the session
 	AccountHasAccess bool         `json:"account_has_access,omitempty"` // if true, then the account has an explicit access grant to the current room

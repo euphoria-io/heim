@@ -507,6 +507,7 @@ func (s *session) sendHello(roomIsPrivate, accountHasAccess bool) error {
 	if s.client.Account != nil {
 		event.AccountView = s.client.Account.View(s.roomName)
 	}
+	event.ID = event.SessionView.ID
 	cmd, err := proto.MakeEvent(event)
 	if err != nil {
 		logger.Printf("error: hello event: %s", err)
