@@ -45,8 +45,8 @@ describe('chat store', function() {
   var helloEvent = {
     'type': 'hello-event',
     'data': {
+      'id': 'agent:tester1',
       'session': {
-        'id': 'agent:tester1',
         'is_manager': true,
         'is_staff': false,
       }
@@ -503,7 +503,7 @@ describe('chat store', function() {
     it('should store user id, manager status, and staff status', function(done) {
       handleSocket({status: 'receive', body: helloEvent}, function(state) {
         // jshint camelcase: false
-        assert.equal(state.id, helloEvent.data.session.id)
+        assert.equal(state.id, helloEvent.data.id)
         assert.equal(state.isManager, helloEvent.data.session.is_manager)
         assert.equal(state.isStaff, helloEvent.data.session.is_staff)
         done()
