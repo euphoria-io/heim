@@ -101,6 +101,11 @@ module.exports.store = Reflux.createStore({
         this.state.isManager = ev.body.data.session.is_manager
         this.state.isStaff = ev.body.data.session.is_staff
         this.state.authType = ev.body.data.room_is_private ? 'passcode' : 'public'
+        if (ev.body.data.account_has_access) {
+          // note: if there was a stored passcode, we could have an outgoing
+          // auth event and authState == 'trying-stored'
+          this.state.authState = null
+        }
       } else if (ev.body.type == 'snapshot-event') {
         this.state.serverVersion = ev.body.data.version
         this.state.sessionId = ev.body.data.session_id
@@ -301,7 +306,9 @@ module.exports.store = Reflux.createStore({
         data: this.state.authData,
       })
     } else {
-      if (this.state.authState == 'trying-stored') {
+      if (error == 'already joined') {
+        return
+      } else if (this.state.authState == 'trying-stored') {
         this.state.authState = 'needs-passcode'
       } else {
         this.state.authState = 'failed'

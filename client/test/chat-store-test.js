@@ -1215,6 +1215,13 @@ describe('chat store', function() {
       'error': 'command not implemented',
     }
 
+    var redundantAuthReplyEvent = {
+      'id': '1',
+      'type': 'auth-reply',
+      'data': null,
+      'error': 'already joined',
+    }
+
     beforeEach(function() {
       chat.store.state.roomName = 'ezzie'
       chat.store.state.authType = 'passcode'
@@ -1257,6 +1264,15 @@ describe('chat store', function() {
     })
 
     testAuthFail(incorrectAuthReplyEvent)
+
+    describe('if auth redundant', function() {
+      it('should not change auth state', function() {
+        chat.store.state.authState = null
+        handleSocket({status: 'receive', body: redundantAuthReplyEvent}, function(state) {
+          assert.equal(state.authState, null)
+        })
+      })
+    })
   })
 
   describe('received network partition events', function() {
