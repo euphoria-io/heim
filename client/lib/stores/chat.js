@@ -100,9 +100,7 @@ module.exports.store = Reflux.createStore({
         this.state.id = ev.body.data.session.id
         this.state.isManager = ev.body.data.session.is_manager
         this.state.isStaff = ev.body.data.session.is_staff
-        if (ev.body.data.room_is_private) {
-          this.state.authType = 'passcode'
-        }
+        this.state.authType = ev.body.data.room_is_private ? 'passcode' : 'public'
       } else if (ev.body.type == 'snapshot-event') {
         this.state.serverVersion = ev.body.data.version
         this.state.sessionId = ev.body.data.session_id
@@ -322,10 +320,6 @@ module.exports.store = Reflux.createStore({
     if (!this.state.joined && this.state.canJoin) {
       if (this.state.tentativeNick || this.state.nick) {
         this._sendNick(this.state.tentativeNick || this.state.nick)
-      }
-
-      if (!this.state.authType) {
-        this.state.authType = 'public'
       }
 
       this.state.authState = null

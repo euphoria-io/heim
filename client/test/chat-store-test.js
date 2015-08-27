@@ -509,6 +509,24 @@ describe('chat store', function() {
         done()
       })
     })
+
+    it('should set auth type state to public if room not private', function(done) {
+      // jshint camelcase: false
+      var publicHelloEvent = _.merge({}, helloEvent, {data: {room_is_private: false}})
+      handleSocket({status: 'receive', body: publicHelloEvent}, function(state) {
+        assert.equal(state.authType, 'public')
+        done()
+      })
+    })
+
+    it('should set auth type state to passcode if room private', function(done) {
+      // jshint camelcase: false
+      var privateHelloEvent = _.merge({}, helloEvent, {data: {room_is_private: true}})
+      handleSocket({status: 'receive', body: privateHelloEvent}, function(state) {
+        assert.equal(state.authType, 'passcode')
+        done()
+      })
+    })
   })
 
   describe('received messages', function() {
@@ -944,13 +962,6 @@ describe('chat store', function() {
       it('should set joined state to the join time', function(done) {
         handleSocket({status: 'receive', body: snapshotReply}, function(state) {
           assert.equal(state.joined, Date.now())
-          done()
-        })
-      })
-
-      it('should set auth type state to public if no bounce event received', function(done) {
-        handleSocket({status: 'receive', body: snapshotReply}, function(state) {
-          assert.equal(state.authType, 'public')
           done()
         })
       })
