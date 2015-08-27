@@ -827,6 +827,10 @@ func testAuthentication(s *serverUnderTest) {
 
 		conn.send("1", "auth", `{"type":"passcode","passcode":"hunter2"}`)
 		conn.expect("1", "auth-reply", `{"success":true}`)
+		conn.expectSnapshot(s.backend.Version(), nil, nil)
+
+		conn.send("2", "auth", `{"type":"passcode","passcode":"hunter2"}`)
+		conn.expectError("2", "auth-reply", "already joined")
 	})
 
 	Convey("Access granted to account", func() {
@@ -847,6 +851,8 @@ func testAuthentication(s *serverUnderTest) {
 		s.Reconnect(conn)
 		conn.expectPing()
 		conn.expectSnapshot(s.backend.Version(), nil, nil)
+		conn.send("1", "auth", `{"type":"passcode","passcode":"hunter2"}`)
+		conn.expectError("1", "auth-reply", "already joined")
 	})
 
 	Convey("Ignore after excessive failures", func() {

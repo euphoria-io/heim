@@ -45,6 +45,8 @@ func (s *session) joinedState(cmd *proto.Packet) *response {
 	}
 
 	switch msg := payload.(type) {
+	case *proto.AuthCommand:
+		return &response{err: fmt.Errorf("already joined")}
 	case *proto.SendCommand:
 		return s.handleSendCommand(msg)
 	case *proto.LogCommand:
