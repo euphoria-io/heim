@@ -183,6 +183,12 @@ module.exports = React.createClass({
   },
 
   scrollUpdatePosition: function() {
+    if (!this.refs.scroller) {
+      // we've been unmounted as a result of setUISize but the listener has not
+      // been removed yet.
+      return
+    }
+
     this.refs.scroller.update()
     this._markSeen()
 
