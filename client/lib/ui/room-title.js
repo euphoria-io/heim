@@ -27,7 +27,7 @@ module.exports = React.createClass({
       className = 'reconnecting'
       details = 'hang tight! we\'ll try again every few seconds until we get in.'
     } else {
-      switch (this.props.joined && this.props.authType) {
+      switch (this.props.authType) {
         case 'passcode':
           className = caption = 'private'
           details = 'this room requires a passcode for entry'
