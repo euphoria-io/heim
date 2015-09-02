@@ -91,6 +91,7 @@ func (cmd *serveCmd) run(ctx scope.Context, args []string) error {
 		return fmt.Errorf("server error: %s", err)
 	}
 
+	server.SetInsecureCookies(backend.Config.SetInsecureCookies)
 	server.AllowRoomCreation(backend.Config.AllowRoomCreation)
 	server.NewAccountMinAgentAge(backend.Config.NewAccountMinAgentAge)
 

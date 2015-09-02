@@ -43,6 +43,7 @@ type Server struct {
 	allowRoomCreation     bool
 	newAccountMinAgentAge time.Duration
 	roomEntryMinAgentAge  time.Duration
+	setInsecureCookies    bool
 
 	m sync.Mutex
 
@@ -74,6 +75,7 @@ func NewServer(heim *proto.Heim, id, era string) (*Server, error) {
 func (s *Server) AllowRoomCreation(allow bool)            { s.allowRoomCreation = allow }
 func (s *Server) NewAccountMinAgentAge(age time.Duration) { s.newAccountMinAgentAge = age }
 func (s *Server) RoomEntryMinAgentAge(age time.Duration)  { s.roomEntryMinAgentAge = age }
+func (s *Server) SetInsecureCookies(allow bool)           { s.setInsecureCookies = allow }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.r.ServeHTTP(w, r)

@@ -52,7 +52,9 @@ func (ac *agentCredentials) Cookie(sc *securecookie.SecureCookie) (*http.Cookie,
 		Path:     "/",
 		Expires:  time.Now().Add(agentCookieDuration),
 		HttpOnly: true,
-		Secure:   true,
+	}
+	if !Config.SetInsecureCookies {
+		cookie.Secure = true
 	}
 	return cookie, nil
 }

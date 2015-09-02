@@ -5,3 +5,4 @@ database:
 kms:
   aes256:
     key-file: /keys/masterkey
+set_insecure_cookies: true
