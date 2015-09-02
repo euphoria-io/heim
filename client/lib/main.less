@@ -949,6 +949,10 @@ iframe.js {
         box-shadow: 0 0 1px hsla(50, 51%, 40%, 0.6) inset;
       }
 
+      & > .line-emote .message {
+        padding-left: 0;
+      }
+
       & > .timestamp {
         color: hsl(56, 60%, 78%) !important;
       }
@@ -1326,14 +1330,15 @@ iframe.js {
       .nick {
         border-top-right-radius: 0;
         border-bottom-right-radius: 0;
+        margin-right: 0;
       }
 
       .message {
-        display: flex;
+        display: inline-flex;
+        vertical-align: bottom;
       }
 
       .message-emote {
-        margin-left: -6px;
         padding-left: 3px;
         border-top-left-radius: 0;
         border-bottom-left-radius: 0;
