@@ -25,6 +25,7 @@ index['dealwithit'] = 'dealwithit'
 index['spider'] = 'spider'
 index['indigo_heart'] = 'indigo_heart'
 index['orange_heart'] = 'orange_heart'
+index['bot'] = 'bot'
 
 module.exports.names = _.invert(index)
 
