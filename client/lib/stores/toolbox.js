@@ -3,7 +3,6 @@ var Reflux = require('reflux')
 var Immutable = require('immutable')
 
 var chat = require('./chat')
-var socket = require('./socket')
 
 
 var storeActions = Reflux.createActions([
@@ -22,30 +21,22 @@ var commands = {
   delete: {
     kind: 'message',
     execute: function(items) {
-      items.forEach(item => {
-        socket.send({
-          type: 'edit-message',
-          data: {
-            id: item.get('id'),
-            delete: true,
-            announce: true,
-          },
+      items.forEach(item =>
+        chat.editMessage(item.get('id'), {
+          delete: true,
+          announce: true,
         })
-      })
+      )
     }
   },
   ban: {
     kind: 'user',
     execute: function(items, commandParams) {
-      items.forEach(item => {
-        socket.send({
-          type: 'ban',
-          data: {
-            id: item.get('id'),
-            seconds: commandParams.seconds,
-          },
+      items.forEach(item =>
+        chat.banUser(item.get('id'), {
+          seconds: commandParams.seconds,
         })
-      })
+      )
     }
   },
 }

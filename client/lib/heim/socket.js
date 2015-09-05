@@ -1,17 +1,7 @@
 var _ = require('lodash')
 var url = require('url')
-var Reflux = require('reflux')
+var EventEmitter = require('eventemitter3')
 
-
-var storeActions = Reflux.createActions([
-  'send',
-  'devSend',
-  'pingIfIdle',
-  'connect',
-])
-_.extend(module.exports, storeActions)
-
-storeActions.connect.sync = true
 
 function logPacket(kind, data, highlight) {
   var group = highlight ? 'group' : 'groupCollapsed'
@@ -26,84 +16,76 @@ function logPacket(kind, data, highlight) {
   console.groupEnd()
 }
 
-module.exports.store = Reflux.createStore({
-  listenables: storeActions,
 
+function Socket() {
+  this.endpoint = null
+  this.roomName = null
+  this.events = new EventEmitter()
+  this.ws = null
+  this.seq = 0
+  this.pingTimeout = null
+  this.pingReplyTimeout = null
+  this.nextPing = 0
+  this.lastMessage = null
+  this._logPackets = false
+  this._logPacketIds = {}
+}
+
+_.extend(Socket.prototype, {
   pingLimit: 2000,
 
-  init: function() {
-    this.roomName = null
-    this.customOrigin = null
-    this.customPrefix = null
-    this.ws = null
-    this.seq = 0
-    this.pingTimeout = null
-    this.pingReplyTimeout = null
-    this.nextPing = 0
-    this.lastMessage = null
-    this._logPackets = false
-    this._logPacketIds = {}
-  },
+  _wsurl: function(endpoint, roomName) {
+    var parsedEndpoint = url.parse(endpoint)
 
-  _wsurl: function(origin, prefix, roomName) {
-    var parsedOrigin = url.parse(origin)
+    var prefix = parsedEndpoint.pathname == '/' ? '' : parsedEndpoint.pathname
 
     var scheme = 'ws'
-    if (parsedOrigin.protocol == 'https:') {
+    if (parsedEndpoint.protocol == 'https:') {
       scheme = 'wss'
     }
 
-    return scheme + '://' + parsedOrigin.host + prefix + '/room/' + roomName + '/ws?h=1'
+    return scheme + '://' + parsedEndpoint.host + prefix + '/room/' + roomName + '/ws?h=1'
   },
 
-  connect: function(roomName, customConnect) {
-    if (customConnect) {
-      var parsedConnect = url.parse(customConnect)
-      this.customOrigin = parsedConnect.protocol + '//' + parsedConnect.host
-      this.customPrefix = parsedConnect.pathname == '/' ? '' : parsedConnect.pathname
+  connect: function(endpoint, roomName, opts) {
+    this._logPackets = opts && opts.log
+    this.endpoint = endpoint
+    this.roomName = roomName
+    this.reconnect()
+  },
+
+  reconnect: function() {
+    if (this.ws) {
+      // forcefully drop websocket and reconnect
+      this._onClose()
+      this.ws.close()
     }
-    this.roomName = this.roomName || roomName
-    this._connect()
-  },
-
-  _connect: function() {
-    var wsurl = this._wsurl(this.customOrigin || process.env.HEIM_ORIGIN, this.customPrefix || process.env.HEIM_PREFIX, this.roomName)
+    var wsurl = this._wsurl(this.endpoint, this.roomName)
     this.ws = new WebSocket(wsurl, 'heim1')
-    this.ws.onopen = this._open
-    this.ws.onclose = this._closeReconnectSlow
-    this.ws.onmessage = this._message
+    this.ws.onopen = this._onOpen.bind(this)
+    this.ws.onclose = this._onCloseReconnectSlow.bind(this)
+    this.ws.onmessage = this._onMessage.bind(this)
   },
 
-  _reconnect: function() {
-    // forcefully drop websocket and reconnect
-    this._close()
-    this.ws.close()
-    this._connect()
+  _onOpen: function() {
+    this.events.emit('open')
   },
 
-  _open: function() {
-    this.trigger({
-      status: 'open',
-    })
-  },
-
-  _close: function() {
+  _onClose: function() {
     clearTimeout(this.pingTimeout)
     clearTimeout(this.pingReplyTimeout)
     this.pingReplyTimeout = null
     this.ws.onopen = this.ws.onclose = this.ws.onmessage = null
-    this.trigger({
-      status: 'close',
-    })
+    this.events.emit('close')
   },
 
-  _closeReconnectSlow: function() {
-    this._close()
+  _onCloseReconnectSlow: function() {
+    this._onClose()
     var delay = 2000 + 3000 * Math.random()
-    setTimeout(this._connect, delay)
+    setTimeout(this.reconnect.bind(this), delay)
   },
 
-  _message: function(ev) {
+  _onMessage: function(ev) {
     var data = JSON.parse(ev.data)
 
     var packetLogged = _.has(this._logPacketIds, data.id)
@@ -115,10 +97,7 @@ module.exports.store = Reflux.createStore({
 
     this._handlePings(data)
 
-    this.trigger({
-      status: 'receive',
-      body: data,
-    })
+    this.events.emit('receive', data)
   },
 
   _handlePings: function(msg) {
@@ -127,7 +106,7 @@ module.exports.store = Reflux.createStore({
         var interval = msg.data.next - msg.data.time
         this.nextPing = msg.data.next
         clearTimeout(this.pingTimeout)
-        this.pingTimeout = setTimeout(this._ping, interval * 1000)
+        this.pingTimeout = setTimeout(this._ping.bind(this), interval * 1000)
       }
 
       this.send({
@@ -162,10 +141,6 @@ module.exports.store = Reflux.createStore({
     this.ws.send(JSON.stringify(data))
   },
 
-  devSend: function(data) {
-    this.send(data, true)
-  },
-
   _ping: function() {
     if (this.pingReplyTimeout) {
       return
@@ -175,7 +150,7 @@ module.exports.store = Reflux.createStore({
       type: 'ping',
     })
 
-    this.pingReplyTimeout = setTimeout(this._reconnect, this.pingLimit)
+    this.pingReplyTimeout = setTimeout(this.reconnect.bind(this), this.pingLimit)
   },
 
   pingIfIdle: function() {
@@ -184,3 +159,11 @@ module.exports.store = Reflux.createStore({
     }
   },
 })
+
+_.each(['on', 'off', 'once'], function(method) {
+  Socket.prototype[method] = function() {
+    this.events[method].apply(this.events, arguments)
+  }
+})
+
+module.exports = Socket

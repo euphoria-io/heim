@@ -4,15 +4,11 @@ var sinon = require('sinon')
 
 
 describe('socket store', function() {
-  var socket = require('../lib/stores/socket')
+  var Socket = require('../lib/heim/socket')
   var clock
   var realWebSocket = window.WebSocket
   var fakeWebSocket, fakeWebSocketContructor
-
-  support.fakeEnv({
-    HEIM_ORIGIN: 'https://heimhost',
-    HEIM_PREFIX: '/test',
-  })
+  var socket
 
   beforeEach(function() {
     clock = support.setupClock()
@@ -22,7 +18,7 @@ describe('socket store', function() {
       this.close = sinon.spy()
     })
     window.WebSocket = fakeWebSocketContructor
-    support.resetStore(socket.store)
+    socket = new Socket()
   })
 
   afterEach(function() {
@@ -32,59 +28,45 @@ describe('socket store', function() {
 
   describe('_wsurl', function() {
     it('should return wss://host/room/name/ws?h=1 if protocol is https', function() {
-      assert.equal(socket.store._wsurl('https://host', '/prefix', 'ezzie'), 'wss://host/prefix/room/ezzie/ws?h=1')
+      assert.equal(socket._wsurl('https://host/prefix', 'ezzie'), 'wss://host/prefix/room/ezzie/ws?h=1')
     })
 
     it('should return ws://host/room/name/ws?h=1 if protocol is NOT https', function() {
-      assert.equal(socket.store._wsurl('http://host', '/prefix', 'ezzie'), 'ws://host/prefix/room/ezzie/ws?h=1')
+      assert.equal(socket._wsurl('http://host/prefix', 'ezzie'), 'ws://host/prefix/room/ezzie/ws?h=1')
     })
   })
 
-  describe('connect action', function() {
-    it('should by default connect to ws://host/room/name/ws?h=1 with heim1 protocol', function() {
-      socket.store.connect('ezzie')
+  describe('connect method', function() {
+    it('should by connect to wss://heimhost/test/ws?h=1 with heim1 protocol', function() {
+      socket.connect('https://heimhost/test', 'ezzie')
       var expectedPath = 'wss://heimhost/test/room/ezzie/ws?h=1'
       sinon.assert.calledWithExactly(fakeWebSocketContructor, expectedPath, 'heim1')
     })
 
-    it('should connect to a custom url if specified', function() {
-      socket.store.connect('ezzie', 'https://euphoria.io/dev/chromakode')
-      var expectedPath = 'wss://euphoria.io/dev/chromakode/room/ezzie/ws?h=1'
-      sinon.assert.calledWithExactly(fakeWebSocketContructor, expectedPath, 'heim1')
-    })
-
     it('should set up event handlers', function() {
-      socket.store.connect('ezzie')
-      assert.equal(fakeWebSocket.onopen, socket.store._open)
-      assert.equal(fakeWebSocket.onclose, socket.store._closeReconnectSlow)
-      assert.equal(fakeWebSocket.onmessage, socket.store._message)
+      socket.connect('https://heimhost/test', 'ezzie')
+      assert(fakeWebSocket.onopen)
+      assert(fakeWebSocket.onclose)
+      assert(fakeWebSocket.onmessage)
     })
   })
 
   describe('when socket opened', function() {
     it('should emit an open event', function(done) {
-      support.listenOnce(socket.store, function(ev) {
-        assert.deepEqual(ev, {status: 'open'})
-        done()
-      })
-
-      socket.store._open()
+      socket.once('open', done)
+      socket._onOpen()
     })
   })
 
   function checkSocketCleanup(action) {
     it('should emit an close event', function(done) {
-      support.listenOnce(socket.store, function(ev) {
-        assert.deepEqual(ev, {status: 'close'})
-        done()
-      })
-
+      socket.once('close', done)
       action()
     })
 
     it('should clean up timeouts', function() {
-      var pingTimeout = socket.store.pingTimeout = 1
-      var pingReplyTimeout = socket.store.pingReplyTimeout = 2
+      var pingTimeout = socket.pingTimeout = 1
+      var pingReplyTimeout = socket.pingReplyTimeout = 2
       sinon.stub(window, 'clearTimeout')
       action()
       sinon.assert.calledTwice(window.clearTimeout)
@@ -92,50 +74,47 @@ describe('socket store', function() {
       sinon.assert.calledWithExactly(window.clearTimeout, pingReplyTimeout)
       window.clearTimeout.restore()
     })
-
-    it('should clear socket event handlers', function() {
-      action()
-      assert.equal(fakeWebSocket.onopen, null)
-      assert.equal(fakeWebSocket.onclose, null)
-      assert.equal(fakeWebSocket.onmessage, null)
-    })
   }
 
   describe('when socket closed', function() {
     beforeEach(function() {
-      socket.store.connect('ezzie')
-      sinon.stub(socket.store, '_connect')
+      socket.connect('https://heimhost/test', 'ezzie')
+      sinon.stub(socket, 'reconnect')
     })
 
     afterEach(function() {
-      socket.store._connect.restore()
+      socket.reconnect.restore()
     })
 
-    checkSocketCleanup(() => socket.store.ws.onclose())
+    checkSocketCleanup(() => socket.ws.onclose())
+
+    it('should clear socket event handlers', function() {
+      socket.ws.onclose()
+      assert.equal(fakeWebSocket.onopen, null)
+      assert.equal(fakeWebSocket.onclose, null)
+      assert.equal(fakeWebSocket.onmessage, null)
+    })
 
     it('should attempt to reconnect within 5s', function() {
-      socket.store.ws.onclose()
+      socket.ws.onclose()
       clock.tick(5000)
-      sinon.assert.calledOnce(socket.store._connect)
+      sinon.assert.calledOnce(socket.reconnect)
     })
   })
 
   describe('a forceful reconnect', function() {
     beforeEach(function() {
-      socket.store.connect('ezzie')
-      sinon.stub(socket.store, '_connect')
+      socket.connect('https://heimhost/test', 'ezzie')
     })
 
-    afterEach(function() {
-      socket.store._connect.restore()
-    })
-
-    checkSocketCleanup(socket.store._reconnect)
+    checkSocketCleanup(() => socket.reconnect())
 
     it('should close the socket and connect again', function() {
-      socket.store._reconnect()
-      sinon.assert.calledOnce(socket.store.ws.close)
-      sinon.assert.calledOnce(socket.store._connect)
+      var oldWs = socket.ws
+      fakeWebSocketContructor.reset()
+      socket.reconnect()
+      sinon.assert.calledOnce(oldWs.close)
+      sinon.assert.calledOnce(fakeWebSocketContructor)
     })
   })
 
@@ -143,23 +122,20 @@ describe('socket store', function() {
     it('should emit a receive event', function(done) {
       var testBody = {it: 'works'}
 
-      support.listenOnce(socket.store, function(ev) {
-        assert.deepEqual(ev, {
-          status: 'receive',
-          body: testBody
-        })
+      socket.once('receive', function(body) {
+        assert.deepEqual(body, testBody)
         done()
       })
 
-      socket.store._message({data: JSON.stringify(testBody)})
+      socket._onMessage({data: JSON.stringify(testBody)})
     })
   })
 
   describe('when server ping received', function() {
     beforeEach(function() {
       sinon.spy(window, 'setTimeout')
-      socket.store.connect('ezzie')
-      socket.store._message({data: JSON.stringify({
+      socket.connect('https://heimhost/test', 'ezzie')
+      socket._onMessage({data: JSON.stringify({
         type: 'ping-event',
         data: {
           time: 0,
@@ -183,13 +159,13 @@ describe('socket store', function() {
     })
 
     it('should schedule timeout', function() {
-      sinon.assert.calledWith(setTimeout, socket.store._ping, 20 * 1000)
+      sinon.assert.calledWith(setTimeout, sinon.match.func, 20 * 1000)
     })
 
     describe('when a second ping received late', function() {
       beforeEach(function() {
         setTimeout.reset()
-        socket.store._message({data: JSON.stringify({
+        socket._onMessage({data: JSON.stringify({
           type: 'ping-event',
           data: {
             time: 0,
@@ -206,14 +182,14 @@ describe('socket store', function() {
     describe('if another server ping isn\'t received before the next timeout', function() {
       beforeEach(function() {
         fakeWebSocket.send.reset()
-        sinon.stub(socket.store, '_reconnect')
+        sinon.stub(socket, 'reconnect')
         clock.tick(20000)
       })
 
       afterEach(function() {
-        socket.store._reconnect.restore()
-        clearTimeout(socket.store.pingTimeout)
-        clearTimeout(socket.store.pingReplyTimeout)
+        socket.reconnect.restore()
+        clearTimeout(socket.pingTimeout)
+        clearTimeout(socket.pingReplyTimeout)
       })
 
       it('should send a client ping', function() {
@@ -228,18 +204,18 @@ describe('socket store', function() {
         describe('if there is no response', function() {
           it('should force a reconnect', function() {
             clock.tick(2000)
-            sinon.assert.calledOnce(socket.store._reconnect)
+            sinon.assert.calledOnce(socket.reconnect)
           })
         })
 
         describe('if any server message received', function() {
           it('should not reconnect', function() {
             clock.tick(1000)
-            socket.store._message({data: JSON.stringify({
+            socket._onMessage({data: JSON.stringify({
               type: 'another-message',
             })})
             clock.tick(1000)
-            sinon.assert.notCalled(socket.store._reconnect)
+            sinon.assert.notCalled(socket.reconnect)
           })
         })
       })
@@ -248,11 +224,11 @@ describe('socket store', function() {
 
   describe('pingIfIdle action', function() {
     beforeEach(function() {
-      socket.store.connect('ezzie')
+      socket.connect('https://heimhost/test', 'ezzie')
     })
 
     it('should send a ping if no messages have ever been received', function() {
-      socket.store.pingIfIdle()
+      socket.pingIfIdle()
       sinon.assert.calledWith(fakeWebSocket.send, JSON.stringify({
         type: 'ping',
         id: '0',
@@ -261,11 +237,11 @@ describe('socket store', function() {
     })
 
     it('should send a ping if no messages have been received in the last 2000ms', function() {
-      socket.store._message({data: JSON.stringify({
+      socket._onMessage({data: JSON.stringify({
         type: 'hello, ezzie.',
       })})
       clock.tick(2000)
-      socket.store.pingIfIdle()
+      socket.pingIfIdle()
       sinon.assert.calledWith(fakeWebSocket.send, JSON.stringify({
         type: 'ping',
         id: '0',
@@ -274,16 +250,16 @@ describe('socket store', function() {
     })
 
     it('should not send a ping if a message has been received in the last 2000ms', function() {
-      socket.store._message({data: JSON.stringify({
+      socket._onMessage({data: JSON.stringify({
         type: 'hello, ezzie.',
       })})
       clock.tick(1000)
-      socket.store.pingIfIdle()
+      socket.pingIfIdle()
       sinon.assert.notCalled(fakeWebSocket.send)
     })
 
     it('should not send a second ping if one was sent in the last 2000ms', function() {
-      socket.store.pingIfIdle()
+      socket.pingIfIdle()
       sinon.assert.calledWith(fakeWebSocket.send, JSON.stringify({
         type: 'ping',
         id: '0',
@@ -291,18 +267,18 @@ describe('socket store', function() {
       }))
       fakeWebSocket.send.reset()
       clock.tick(100)
-      socket.store.pingIfIdle()
+      socket.pingIfIdle()
       sinon.assert.notCalled(fakeWebSocket.send)
     })
   })
 
   describe('send action', function() {
     beforeEach(function() {
-      socket.store.connect('ezzie')
+      socket.connect('https://heimhost/test', 'ezzie')
     })
 
     it('should send JSON to the websocket', function() {
-      socket.store.send({
+      socket.send({
         type: 'send',
         data: {
           content: 'hello, ezzie.',
@@ -326,9 +302,9 @@ describe('socket store', function() {
         return JSON.stringify({data: {seqShouldBe: num}, id: String(num)})
       }
 
-      socket.store.send(testData(0))
-      socket.store.send(testData(1))
-      socket.store.send(testData(2))
+      socket.send(testData(0))
+      socket.send(testData(1))
+      socket.send(testData(2))
 
       sinon.assert.calledWith(fakeWebSocket.send, testSent(0))
       sinon.assert.calledWith(fakeWebSocket.send, testSent(1))
@@ -336,12 +312,12 @@ describe('socket store', function() {
     })
 
     it('should send a data property even if unset', function() {
-      socket.store.send({})
+      socket.send({})
       sinon.assert.calledWith(fakeWebSocket.send, JSON.stringify({id: '0', data: {}}))
     })
 
     it('should send an id property if specified', function() {
-      socket.store.send({id: 'heyyy'})
+      socket.send({id: 'heyyy'})
       sinon.assert.calledWith(fakeWebSocket.send, JSON.stringify({id: 'heyyy', data: {}}))
     })
   })
@@ -351,9 +327,9 @@ describe('socket store', function() {
     var testPacket2 = {type: 'test', data: {hello: 'world'}}
 
     beforeEach(function() {
-      socket.store.connect('ezzie')
+      socket.connect('https://heimhost/test', 'ezzie')
       sinon.stub(console, 'log')
-      socket.store._logPackets = true
+      socket._logPackets = true
     })
 
     afterEach(function() {
@@ -361,24 +337,24 @@ describe('socket store', function() {
     })
 
     it('should output packets sent', function() {
-      socket.store.send(testPacket1)
+      socket.send(testPacket1)
       sinon.assert.calledWithExactly(console.log, testPacket1)
     })
 
     it('should output packets received', function() {
-      socket.store._message({data: JSON.stringify(testPacket2)})
+      socket._onMessage({data: JSON.stringify(testPacket2)})
       sinon.assert.calledWithExactly(console.log, testPacket2)
     })
 
     it('should output packets sent and response received when sent with log flag', function() {
-      socket.store._logPackets = false
+      socket._logPackets = false
 
-      socket.store.devSend(testPacket1)
+      socket.send(testPacket1, true)
       sinon.assert.calledWithExactly(console.log, testPacket1)
 
       console.log.reset()
 
-      socket.store._message({data: JSON.stringify(testPacket1)})
+      socket._onMessage({data: JSON.stringify(testPacket1)})
       sinon.assert.calledWithExactly(console.log, testPacket1)
     })
   })

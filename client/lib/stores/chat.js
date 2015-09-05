@@ -7,9 +7,9 @@ var actions = require('../actions')
 var ChatTree = require('../chat-tree')
 var storage = require('./storage')
 var activity = require('./activity')
-var socket = require('./socket')
 var plugins = require('./plugins')
 var hueHash = require('../hue-hash')
+var Socket = require('../heim/socket')
 
 
 var mentionRe = module.exports.mentionRe = /\B@([^\s]+?(?=$|[,.!?;&'\s]|&#39;|&quot;|&amp;))/g
@@ -22,6 +22,8 @@ var storeActions = module.exports.actions = Reflux.createActions([
   'markMessagesSeen',
   'setSelected',
   'deselectAll',
+  'editMessage',
+  'banUser',
 ])
 storeActions.setRoomSettings.sync = true
 storeActions.messagesChanged.sync = true
@@ -31,7 +33,6 @@ module.exports.store = Reflux.createStore({
   listenables: [
     actions,
     storeActions,
-    {socketEvent: socket.store},
     {storageChange: storage.store},
     {activityChange: activity.store},
     {onActive: activity.becameActive},
@@ -65,6 +66,8 @@ module.exports.store = Reflux.createStore({
       selectedMessages: Immutable.Set(),
     }
 
+    this.socket = new Socket()
+
     this._loadingLogs = false
     this._seenMessages = Immutable.Map()
     this._joinWhenReady = false
@@ -83,99 +86,101 @@ module.exports.store = Reflux.createStore({
     return this.state
   },
 
+  socketOpen: function() {
+    this.state.connected = true
+    if (this.state.authType == 'passcode' && this.state.authData) {
+      this._sendPasscode(this.state.authData)
+      this.state.authState = 'trying-stored'
+    }
+    this.trigger(this.state)
+  },
+
+  socketClose: function() {
+    this.state.connected = false
+    this.state.joined = false
+    this.state.canJoin = false
+    this.trigger(this.state)
+  },
+
   socketEvent: function(ev) {
     // jshint camelcase: false
-    if (ev.status == 'receive') {
-      if (ev.body.type == 'send-event' || ev.body.type == 'send-reply') {
-        this._handleMessageUpdate(ev.body.data, true)
-      } else if (ev.body.type == 'edit-message-event') {
-        this._handleMessageUpdate(ev.body.data, false)
-      } else if (ev.body.type == 'edit-message-reply') {
-        if (!ev.body.error) {
-          this._handleMessageUpdate(ev.body.data, false)
-        } else {
-          console.warn('error editing message:', ev.body.error)
-        }
-      } else if (ev.body.type == 'hello-event') {
-        this.state.id = ev.body.data.id
-        this.state.isManager = ev.body.data.session.is_manager
-        this.state.isStaff = ev.body.data.session.is_staff
-        this.state.authType = ev.body.data.room_is_private ? 'passcode' : 'public'
-        if (ev.body.data.account_has_access) {
-          // note: if there was a stored passcode, we could have an outgoing
-          // auth event and authState == 'trying-stored'
-          this.state.authState = null
-        }
-      } else if (ev.body.type == 'snapshot-event') {
-        this.state.serverVersion = ev.body.data.version
-        this.state.sessionId = ev.body.data.session_id
-        this._joinReady()
-        this._handleWhoReply(ev.body.data)
-        this._handleLogReply(ev.body.data)
-      } else if (ev.body.type == 'bounce-event') {
-        this.state.canJoin = false
-
-        var reason = ev.body.data.reason
-        if (reason == 'authentication required') {
-          this.state.authType = 'passcode'
-          if (this.state.authState != 'trying-stored') {
-            this.state.authState = 'needs-passcode'
-          }
-        } else if (reason == 'room not open') {
-          this.state.authType = this.state.authState = 'closed'
-        }
-      } else if (ev.body.type == 'auth-reply') {
-        this._handleAuthReply(ev.body.error, ev.body.data)
-      } else if (ev.body.type == 'log-reply' && ev.body.data) {
-        this._handleLogReply(ev.body.data)
-      } else if (ev.body.type == 'who-reply') {
-        this._handleWhoReply(ev.body.data)
-      } else if (ev.body.type == 'nick-reply' || ev.body.type == 'nick-event') {
-        if (ev.body.type == 'nick-reply') {
-          this._handleNickReply(ev.body.error, ev.body.data)
-        }
-        if (!ev.body.error) {
-          this.state.who = this.state.who
-            .mergeIn([ev.body.data.session_id], {
-              session_id: ev.body.data.session_id,
-              name: ev.body.data.to,
-              hue: hueHash.hue(ev.body.data.to),
-            })
-        }
-      } else if (ev.body.type == 'join-event') {
-        ev.body.data.hue = hueHash.hue(ev.body.data.name)
-        this.state.who = this.state.who
-          .set(ev.body.data.session_id, Immutable.fromJS(ev.body.data))
-      } else if (ev.body.type == 'part-event') {
-        this.state.who = this.state.who.delete(ev.body.data.session_id)
-      } else if (ev.body.type == 'network-event' && ev.body.data.type == 'partition') {
-        var id = ev.body.data.server_id
-        var era = ev.body.data.server_era
-        this.state.who = this.state.who.filterNot(v => v.get('server_id') == id && v.get('server_era') == era)
-      } else if (ev.body.type == 'ban-reply') {
-        if (!ev.body.error) {
-          this.state.bannedIds = this.state.bannedIds.add(ev.body.data.id)
-        } else {
-          console.warn('error banning:', ev.body.error)
-        }
-      } else if (ev.body.type == 'ping-event' || ev.body.type == 'ping-reply') {
-        // ignore
-        return
+    if (ev.type == 'send-event' || ev.type == 'send-reply') {
+      this._handleMessageUpdate(ev.data, true)
+    } else if (ev.type == 'edit-message-event') {
+      this._handleMessageUpdate(ev.data, false)
+    } else if (ev.type == 'edit-message-reply') {
+      if (!ev.error) {
+        this._handleMessageUpdate(ev.data, false)
       } else {
-        console.warn('received unknown event of type:', ev.body.type)
+        console.warn('error editing message:', ev.error)
       }
-    } else if (ev.status == 'open') {
-      this.state.connected = true
-      if (this.state.authType == 'passcode' && this.state.authData) {
-        this._sendPasscode(this.state.authData)
-        this.state.authState = 'trying-stored'
+    } else if (ev.type == 'hello-event') {
+      this.state.id = ev.data.id
+      this.state.isManager = ev.data.session.is_manager
+      this.state.isStaff = ev.data.session.is_staff
+      this.state.authType = ev.data.room_is_private ? 'passcode' : 'public'
+      if (ev.data.account_has_access) {
+        // note: if there was a stored passcode, we could have an outgoing
+        // auth event and authState == 'trying-stored'
+        this.state.authState = null
       }
-    } else if (ev.status == 'close') {
-      this.state.connected = false
-      this.state.joined = false
+    } else if (ev.type == 'snapshot-event') {
+      this.state.serverVersion = ev.data.version
+      this.state.sessionId = ev.data.session_id
+      this._joinReady()
+      this._handleWhoReply(ev.data)
+      this._handleLogReply(ev.data)
+    } else if (ev.type == 'bounce-event') {
       this.state.canJoin = false
+
+      var reason = ev.data.reason
+      if (reason == 'authentication required') {
+        this.state.authType = 'passcode'
+        if (this.state.authState != 'trying-stored') {
+          this.state.authState = 'needs-passcode'
+        }
+      } else if (reason == 'room not open') {
+        this.state.authType = this.state.authState = 'closed'
+      }
+    } else if (ev.type == 'auth-reply') {
+      this._handleAuthReply(ev.error, ev.data)
+    } else if (ev.type == 'log-reply' && ev.data) {
+      this._handleLogReply(ev.data)
+    } else if (ev.type == 'who-reply') {
+      this._handleWhoReply(ev.data)
+    } else if (ev.type == 'nick-reply' || ev.type == 'nick-event') {
+      if (ev.type == 'nick-reply') {
+        this._handleNickReply(ev.error, ev.data)
+      }
+      if (!ev.error) {
+        this.state.who = this.state.who
+          .mergeIn([ev.data.session_id], {
+            session_id: ev.data.session_id,
+            name: ev.data.to,
+            hue: hueHash.hue(ev.data.to),
+          })
+      }
+    } else if (ev.type == 'join-event') {
+      ev.data.hue = hueHash.hue(ev.data.name)
+      this.state.who = this.state.who
+        .set(ev.data.session_id, Immutable.fromJS(ev.data))
+    } else if (ev.type == 'part-event') {
+      this.state.who = this.state.who.delete(ev.data.session_id)
+    } else if (ev.type == 'network-event' && ev.data.type == 'partition') {
+      var id = ev.data.server_id
+      var era = ev.data.server_era
+      this.state.who = this.state.who.filterNot(v => v.get('server_id') == id && v.get('server_era') == era)
+    } else if (ev.type == 'ban-reply') {
+      if (!ev.error) {
+        this.state.bannedIds = this.state.bannedIds.add(ev.data.id)
+      } else {
+        console.warn('error banning:', ev.error)
+      }
+    } else if (ev.type == 'ping-event' || ev.type == 'ping-reply') {
+      // ignore
+      return
     } else {
-      console.warn('unexpected socket store status:', ev.status)
+      console.warn('received unknown event of type:', ev.type)
     }
     this.trigger(this.state)
   },
@@ -364,12 +369,17 @@ module.exports.store = Reflux.createStore({
 
   onActive: function() {
     if (this.state.connected) {
-      socket.pingIfIdle()
+      this.socket.pingIfIdle()
     }
   },
 
-  connect: function(roomName, connect) {
-    socket.connect(roomName, connect)
+  connect: function(roomName, opts) {
+    opts = opts || {}
+    var endpoint = opts.endpoint || process.env.HEIM_ORIGIN + process.env.HEIM_PREFIX
+    this.socket.connect(endpoint, roomName, opts)
+    this.socket.on('open', this.socketOpen)
+    this.socket.on('close', this.socketClose)
+    this.socket.on('receive', this.socketEvent)
     this.state.roomName = roomName
     storage.load()
     this.trigger(this.state)
@@ -391,7 +401,7 @@ module.exports.store = Reflux.createStore({
   },
 
   _sendNick: function(nick) {
-    socket.send({
+    this.socket.send({
       type: 'nick',
       data: {
         name: nick
@@ -400,7 +410,7 @@ module.exports.store = Reflux.createStore({
   },
 
   _sendPasscode: function(passcode) {
-    this._authSendId = socket.send({
+    this._authSendId = this.socket.send({
       type: 'auth',
       data: {
         type: 'passcode',
@@ -431,7 +441,7 @@ module.exports.store = Reflux.createStore({
     this.state.loadingLogs = true
     this.trigger(this.state)
 
-    socket.send({
+    this.socket.send({
       type: 'log',
       data: {n: 50, before: this.state.earliestLog},
     })
@@ -470,12 +480,26 @@ module.exports.store = Reflux.createStore({
   },
 
   sendMessage: function(content, parent) {
-    socket.send({
+    this.socket.send({
       type: 'send',
       data: {
         content: content,
         parent: parent || null,
       },
+    })
+  },
+
+  editMessage: function(id, data) {
+    this.socket.send({
+      type: 'edit-message',
+      data: _.merge(data, {id: id}),
+    })
+  },
+
+  banUser: function(id, data) {
+    this.socket.send({
+      type: 'ban',
+      data: _.merge(data, {id: id}),
     })
   },
 })

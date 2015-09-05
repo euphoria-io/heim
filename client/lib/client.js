@@ -101,7 +101,6 @@ if (!window.frameElement) {
 
   _.extend(Heim, {
     actions: require('./actions'),
-    socket: require('./stores/socket'),
     chat: require('./stores/chat'),
     ui: require('./stores/ui'),
     notification: require('./stores/notification'),
@@ -115,6 +114,8 @@ if (!window.frameElement) {
   Heim.hook = Heim.plugins.hook
 
   var hashFlags = queryString.parse(location.hash.substr(1))
+  var connectEndpoint = hashFlags.connect
+  var socketLog = _.has(hashFlags, 'socket')
 
   if (_.has(hashFlags, 'perf')) {
     var React = require('react/addons')
@@ -122,10 +123,6 @@ if (!window.frameElement) {
       uiwindow.ReactPerf = React.addons.Perf
       uiwindow.ReactPerf.start()
     }
-  }
-
-  if (_.has(hashFlags, 'socket')) {
-    Heim.socket.store._logPackets = true
   }
 
   var roomName = location.pathname.match(/(\w+)\/$/)[1]
@@ -337,7 +334,7 @@ if (!window.frameElement) {
           Heim.update.setReady(false)
         }
       })
-      context.Heim.actions.connect(roomName, hashFlags.connect)
+      context.Heim.actions.connect(roomName, {endpoint: connectEndpoint, log: socketLog})
     }
     writeEnv(context.document, hash)
   }
@@ -345,7 +342,7 @@ if (!window.frameElement) {
   Heim.plugins.load(roomName)
 
   if (!window.onReady) {
-    Heim.actions.connect(roomName, hashFlags.connect)
+    Heim.actions.connect(roomName, {endpoint: connectEndpoint, log: socketLog})
     Heim.actions.joinRoom()
   }
 
