@@ -144,6 +144,10 @@ func (tc *TestCluster) update(desc *PeerDesc) PeerEvent {
 		tc.myID = desc.ID
 	}
 
+	if tc.peers == nil {
+		tc.peers = map[string]PeerDesc{}
+	}
+
 	if tc.c == nil {
 		tc.peers[desc.ID] = *desc
 		return nil
