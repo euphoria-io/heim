@@ -12,7 +12,7 @@ module.exports.containsSubseq = function(nick, part) {
     if (nexdex < 0) {
       return false
     }
-    offset++
+    offset = nexdex + 1
     remain = remain.substr(1)
   }
   return true
