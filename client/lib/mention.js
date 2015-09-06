@@ -1,4 +1,4 @@
-var hueHash = require('hue-hash')
+var hueHash = require('./hue-hash')
 
 /**
  * Determines if nick contains the characters in the partial nick, in order.
