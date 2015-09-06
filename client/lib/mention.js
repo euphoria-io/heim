@@ -52,9 +52,10 @@ module.exports.scoreMatch = function(nick, part) {
 module.exports.rankCompletions = function(nicks, part) {
   var partStrip = hueHash.stripSpaces(part)
   return nicks
-    .map(hueHash.stripSpaces)
-    .filter(Boolean)
-    .map(name => [name, module.exports.scoreMatch(name, partStrip)])
+    .map(function(name) {
+      var stripped = hueHash.stripSpaces(name)
+      return [stripped, module.exports.scoreMatch(stripped, partStrip)]
+    })
     .filter(entry => entry[1] > 0)
     .sort(function(a, b) {
       return b[1] - a[1]
