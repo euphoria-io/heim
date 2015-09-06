@@ -18,7 +18,11 @@ module.exports.containsSubseq = function(nick, part) {
   return true
 }
 
-/** From a nick and a partial produce a score. */
+/**
+ * From a nick and a partial produce a score. A score of
+ * zero indicates "no match whatsoever", all other scores
+ * are positive.
+ */
 module.exports.scoreMatch = function(nick, part) {
   // FIXME Use proper Unicode-aware case-folding, if not already
   var part_cf = part.toLowerCase()
@@ -38,21 +42,22 @@ module.exports.scoreMatch = function(nick, part) {
   else if (module.exports.containsSubseq(nick_cf, part_cf))
     return 2
   else
-    return 1
+    return 0
 }
 
 /**
  * Given a seq of usernames and a partial nick, yield sorted
- * (and space-stripped) usernames by match relevancy (best first).
+ * seq of stripped usernames by match relevancy (best first).
  */
 module.exports.rankCompletions = function(nicks, part) {
   var partStrip = hueHash.stripSpaces(part)
   return nicks
     .map(hueHash.stripSpaces)
     .filter(Boolean)
+    .map(name => [name, module.exports.scoreMatch(name, partStrip)])
+    .filter(entry => entry[1] > 0)
     .sort(function(a, b) {
-      var sa = module.exports.scoreMatch(a, partStrip)
-      var sb = module.exports.scoreMatch(b, partStrip)
-      return sb - sa
+      return b[1] - a[1]
     })
+    .map(entry => entry[0])
 }
