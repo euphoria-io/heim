@@ -29,6 +29,8 @@ module.exports.scoreMatch = function(name, part) {
   var name_cf = name.toLowerCase()
   // Check prefixes, then infixes, then subsequences -- and for
   // each, try case-sensitive and then insensitive.
+  // Want something faster but uglier?
+  // https://github.com/timmc/lib-1666/commit/6bd6f8a7635074f098e3d498cdd248450559b013
   if (name.startsWith(part))
     return 31
   else if (name_cf.startsWith(part_cf))
