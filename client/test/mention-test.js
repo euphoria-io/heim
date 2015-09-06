@@ -37,10 +37,12 @@ describe('mention', function() {
 
   describe('scoreMatch', function() {
     it('scores entirely bad matches as zero', function() {
-      assert.equal(mention.scoreMatch('', ''), 0)
-      assert.equal(mention.scoreMatch('something', ''), 0)
       assert.equal(mention.scoreMatch('', 'something'), 0)
       assert.equal(mention.scoreMatch('1', '2'), 0)
+    })
+    it('empty prefix always matches', function() {
+      assert.equal(mention.scoreMatch('', ''), 31)
+      assert.equal(mention.scoreMatch('something', ''), 31)
     })
     it('has expected score levels for a single name', function() {
       // Exact match scores same as prefix for now.
@@ -58,16 +60,18 @@ describe('mention', function() {
 
   describe('rankCompletions', function() {
     function assertRanking(names, part, outNames) {
-      var actual = mention.rankCompletions(Immutable.fromJS(names), part);
-      assert.equal(actual, outNames.toArray());
+      var actual = mention
+        .rankCompletions(Immutable.Seq(names), part)
+        .toArray()
+      assert.deepEqual(actual, outNames)
     }
-    var users = ["chromakode" "logan" "mac" "Max" "TimMc"]
+    var users = ["chromakode", "logan", "mac", "Max", "TimMc"]
 
     it('puts prefix over infix, tie-breaks with case, and is stable', function() {
-      assertRanking(users, "M", ["Max" "mac" "TimMc" "chromakode"])
+      assertRanking(users, "M", ["Max", "mac", "TimMc", "chromakode"])
     })
     it('ranks subseqs less than infix ci, and is stable', function() {
-      assertRanking(users, 'mc', ["TimMc" "mac"])
+      assertRanking(users, 'mc', ["TimMc", "mac"])
     })
   })
 })

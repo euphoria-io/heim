@@ -25,26 +25,29 @@ module.exports.containsSubseq = function(name, part) {
  */
 module.exports.scoreMatch = function(name, part) {
   // FIXME Use proper Unicode-aware case-folding, if not already
-  var part_cf = part.toLowerCase()
-  var name_cf = name.toLowerCase()
+  var partCf = part.toLowerCase()
+  var nameCf = name.toLowerCase()
   // Check prefixes, then infixes, then subsequences -- and for
   // each, try case-sensitive and then insensitive.
   // Want something faster but uglier?
   // https://github.com/timmc/lib-1666/commit/6bd6f8a7635074f098e3d498cdd248450559b013
-  if (name.startsWith(part))
+  var indexOfCs = name.indexOf(part);
+  var indexOfCi = nameCf.indexOf(partCf);
+  if (indexOfCs === 0) {
     return 31
-  else if (name_cf.startsWith(part_cf))
+  } else if (indexOfCi === 0) {
     return 30
-  else if (name.contains(part))
+  } else if (indexOfCs >= 0) {
     return 21
-  else if (name_cf.contains(part_cf))
+  } else if (indexOfCi >= 0) {
     return 20
-  else if (module.exports.containsSubseq(name, part))
+  } else if (module.exports.containsSubseq(name, part)) {
     return 11
-  else if (module.exports.containsSubseq(name_cf, part_cf))
+  } else if (module.exports.containsSubseq(nameCf, partCf)) {
     return 10
-  else
+  } else {
     return 0
+  }
 }
 
 /**
