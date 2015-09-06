@@ -33,9 +33,9 @@ module.exports.scoreMatch = function(nick, part) {
     return 5
   else if (nick_cf.contains(part_cf))
     return 4
-  else if (containsSubseq(nick, part))
+  else if (module.exports.containsSubseq(nick, part))
     return 3
-  else if (containsSubseq(nick_cf, part_cf))
+  else if (module.exports.containsSubseq(nick_cf, part_cf))
     return 2
   else
     return 1
@@ -51,8 +51,8 @@ module.exports.rankCompletions = function(nicks, part) {
     .map(hueHash.stripSpaces)
     .filter(Boolean)
     .sort(function(a, b) {
-      var sa = scoreMatch(a, partStrip)
-      var sb = scoreMatch(b, partStrip)
+      var sa = module.exports.scoreMatch(a, partStrip)
+      var sb = module.exports.scoreMatch(b, partStrip)
       return sb - sa
     })
 }
