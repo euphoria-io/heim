@@ -4,7 +4,8 @@ var Reflux = require('reflux')
 
 var actions = require('../actions')
 var chat = require('../stores/chat')
-var hueHash = require('../hue-hash')
+var mention = require('../mention')
+
 var KeyboardActionHandler = require('./keyboard-action-handler')
 var EntryDragHandle = require('./entry-drag-handle')
 
@@ -109,21 +110,16 @@ module.exports = React.createClass({
       return
     }
 
-    // FIXME: replace this with a fast Trie implementation
-    var word = hueHash.stripSpaces(text.substring(wordStart, wordEnd)).toLowerCase()
-    var match = this.state.chat.who
+    var word = text.substring(wordStart, wordEnd)
+    var nameSeq = this.state.chat.who
       .toSeq()
-      .map(user => hueHash.stripSpaces(user.get('name', '')))
-      .filter(Boolean)
-      .map(name => [name.toLowerCase().lastIndexOf(word), name])
-      .filter(entry => entry[0] > -1)
-      .sort()
-      .first()
+      .map(user => user.get('name', ''))
+    var match = mention.rankCompletions(nameSeq, word).first()
 
     if (!match) {
       return
     }
-    var completed = (text[wordStart - 1] != '@' ? '@' : '') + match[1]
+    var completed = (text[wordStart - 1] != '@' ? '@' : '') + match
     input.value = input.value.substring(0, wordStart) + completed + input.value.substring(wordEnd)
     this.saveEntryState()
   },
