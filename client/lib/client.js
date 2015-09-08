@@ -120,7 +120,12 @@ if (!window.frameElement) {
   Heim.hook = Heim.plugins.hook
 
   var hashFlags = queryString.parse(location.hash.substr(1))
-  var connectEndpoint = hashFlags.connect
+
+  var connectEndpoint
+  if (process.env.NODE_ENV != 'production') {
+    connectEndpoint = hashFlags.connect
+  }
+
   var socketLog = _.has(hashFlags, 'socket')
 
   if (_.has(hashFlags, 'perf')) {
