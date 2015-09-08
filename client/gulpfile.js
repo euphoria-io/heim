@@ -32,6 +32,7 @@ var heimOptions = {
   HEIM_ORIGIN: process.env.HEIM_ORIGIN,
   HEIM_PREFIX: process.env.HEIM_PREFIX || '',
   EMBED_ORIGIN: process.env.EMBED_ORIGIN,
+  NODE_ENV: process.env.NODE_ENV,
 }
 
 // via https://github.com/tblobaum/git-rev
