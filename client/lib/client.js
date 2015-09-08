@@ -97,6 +97,12 @@ if (!window.frameElement) {
     isChrome: /chrome/i.test(navigator.userAgent),
     isAndroid: /android/i.test(navigator.userAgent),
     isiOS: /ipad|iphone|ipod/i.test(navigator.userAgent),
+
+    socket: {
+      devSend: function(packet) {
+        Heim.chat.store.socket.send(packet, true)
+      },
+    },
   }
 
   _.extend(Heim, {
