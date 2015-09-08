@@ -96,6 +96,15 @@ func (m *Message) ToBackend() proto.Message {
 	return msg
 }
 
+func (m *Message) ToTransmission() proto.Message {
+	msg := m.ToBackend()
+	if len(msg.Content) > proto.MaxMessageTransmissionLength {
+		msg.Content = msg.Content[:proto.MaxMessageTransmissionLength]
+		msg.Truncated = true
+	}
+	return msg
+}
+
 type MessageEditLog struct {
 	EditID          string `db:"edit_id"`
 	Room            string

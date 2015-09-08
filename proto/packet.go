@@ -36,6 +36,9 @@ var (
 	EditMessageEventType = EditMessageType.Event()
 	EditMessageReplyType = EditMessageType.Reply()
 
+	GetMessageType      = PacketType("get-message")
+	GetMessageReplyType = GetMessageType.Reply()
+
 	GrantAccessType      = PacketType("grant-access")
 	GrantAccessReplyType = GrantAccessType.Reply()
 
@@ -119,6 +122,9 @@ var (
 		EditMessageType:      reflect.TypeOf(EditMessageCommand{}),
 		EditMessageEventType: reflect.TypeOf(EditMessageEvent{}),
 		EditMessageReplyType: reflect.TypeOf(EditMessageReply{}),
+
+		GetMessageType:      reflect.TypeOf(GetMessageCommand{}),
+		GetMessageReplyType: reflect.TypeOf(GetMessageReply{}),
 
 		GrantAccessType:      reflect.TypeOf(GrantAccessCommand{}),
 		GrantAccessReplyType: reflect.TypeOf(GrantAccessReply{}),
@@ -429,6 +435,14 @@ type BounceEvent struct {
 type DisconnectEvent struct {
 	Reason string `json:"reason"` // the reason for disconnection
 }
+
+// The `get-message` command retrieves the full content of a single message in the room.
+type GetMessageCommand struct {
+	ID snowflake.Snowflake `json:"id"` // the id of the message to retrieve
+}
+
+// `get-message-reply` returns the message retrieved by `get-message`.
+type GetMessageReply Message
 
 // A `hello-event` is sent by the server to the client when a session is started.
 // It includes information about the client's authentication and associated identity.

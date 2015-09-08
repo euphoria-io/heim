@@ -468,7 +468,7 @@ func (b *Backend) sendMessageToRoom(
 		return proto.Message{}, err
 	}
 
-	result := stored.ToBackend()
+	result := stored.ToTransmission()
 	event := proto.SendEvent(result)
 	if err := room.broadcast(ctx, t, proto.SendEventType, &event, exclude...); err != nil {
 		rollback(ctx, t)
@@ -726,7 +726,7 @@ func (b *Backend) latest(ctx scope.Context, room *Room, n int, before snowflake.
 	results := make([]proto.Message, len(msgs))
 	for i, row := range msgs {
 		msg := row.(*Message)
-		results[len(msgs)-i-1] = msg.ToBackend()
+		results[len(msgs)-i-1] = msg.ToTransmission()
 	}
 
 	return results, nil

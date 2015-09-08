@@ -7,6 +7,7 @@
     * [auth](#auth)
     * [ping](#ping)
   * [Chat Room Commands](#chat-room-commands)
+    * [get-message](#get-message)
     * [log](#log)
     * [nick](#nick)
     * [send](#send)
@@ -270,6 +271,10 @@ Session management commands are involved in the initial handshake and maintenanc
 ## Chat Room Commands
 
 These commands are available to the client once a session successfully joins a room.
+
+### get-message
+
+{{template "command.md" "get-message"}}
 
 ### log
 

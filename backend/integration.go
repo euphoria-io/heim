@@ -87,6 +87,7 @@ func (s *serverUnderTest) openWebsocket(roomName string, cookies []*http.Cookie)
 func (s *serverUnderTest) Connect(roomName string) *testConn {
 	room, conn, resp := s.openWebsocket(roomName, nil)
 	tc := &testConn{Conn: conn, cookies: resp.Cookies(), roomName: roomName, room: room}
+	tc.debug(true)
 	tc.expectHello()
 	return tc
 }
@@ -183,9 +184,11 @@ type testConn struct {
 	accountHasAccess bool
 	isStaff          bool
 	isManager        bool
+	debugOn          bool
 }
 
-func (tc *testConn) id() string { return tc.userID }
+func (tc *testConn) debug(on bool) { tc.debugOn = on }
+func (tc *testConn) id() string    { return tc.userID }
 
 func (tc *testConn) send(id, cmdType, data string, args ...interface{}) {
 	if len(args) > 0 {
@@ -197,7 +200,9 @@ func (tc *testConn) send(id, cmdType, data string, args ...interface{}) {
 	} else {
 		msg = fmt.Sprintf(`{"id":"%s","type":"%s","data":%s}`, id, cmdType, data)
 	}
-	fmt.Printf("sent %s\n", msg)
+	if tc.debugOn {
+		fmt.Printf("sent %s\n", msg)
+	}
 	So(tc.Conn.WriteMessage(websocket.TextMessage, []byte(msg)), ShouldBeNil)
 }
 
@@ -206,7 +211,9 @@ func (tc *testConn) readPacket() (proto.PacketType, interface{}) {
 	So(err, ShouldBeNil)
 	So(msgType, ShouldEqual, websocket.TextMessage)
 
-	fmt.Printf("%s received %s\n", tc.LocalAddr(), string(data))
+	if tc.debugOn {
+		fmt.Printf("%s received %s\n", tc.LocalAddr(), string(data))
+	}
 	var packet proto.Packet
 	So(json.Unmarshal(data, &packet), ShouldBeNil)
 
@@ -233,7 +240,9 @@ func (tc *testConn) expect(id, cmdType, data string, args ...interface{}) map[st
 	So(err, ShouldBeNil)
 	So(msgType, ShouldEqual, websocket.TextMessage)
 
-	fmt.Printf("%s received %s\n", tc.LocalAddr(), string(packetData))
+	if tc.debugOn {
+		fmt.Printf("%s received %s\n", tc.LocalAddr(), string(packetData))
+	}
 	var packet proto.Packet
 	So(json.Unmarshal(packetData, &packet), ShouldBeNil)
 	So(packet.Error, ShouldEqual, "")
@@ -340,7 +349,9 @@ func (tc *testConn) expectError(id, cmdType, errFormat string, errArgs ...interf
 		errMsg = fmt.Sprintf(errFormat, errArgs...)
 	}
 
-	fmt.Printf("reading packet, expecting %s error\n", cmdType)
+	if tc.debugOn {
+		fmt.Printf("reading packet, expecting %s error\n", cmdType)
+	}
 	packetType, payload := tc.readPacket()
 	So(packetType, ShouldEqual, cmdType)
 	err, ok := payload.(error)
@@ -380,7 +391,9 @@ func (tc *testConn) expectHello() {
 }
 
 func (tc *testConn) expectPing() *proto.PingEvent {
-	fmt.Printf("reading packet, expecting ping-event\n")
+	if tc.debugOn {
+		fmt.Printf("reading packet, expecting ping-event\n")
+	}
 	packetType, payload := tc.readPacket()
 	So(packetType, ShouldEqual, "ping-event")
 	return payload.(*proto.PingEvent)
@@ -466,6 +479,7 @@ func IntegrationTest(t *testing.T, factory proto.BackendFactory) {
 	runTest("Room not found", testRoomNotFound)
 	runTest("KeepAlive", testKeepAlive)
 	runTest("Bans", testBans)
+	runTest("MessageTruncation", testMessageTruncation)
 }
 
 func testLurker(s *serverUnderTest) {
@@ -557,8 +571,7 @@ func testBroadcast(s *serverUnderTest) {
 				ids[i].SessionID, ids[i].ID, ids[i].Name)
 
 			// All previous connections should observe same events.
-			for j, c := range conns[:i] {
-				fmt.Printf("\n>>> id %s expecting events for new conn %s\n\n", ids[j].ID, ids[i].ID)
+			for _, c := range conns[:i] {
 				c.expect("", "join-event",
 					`{"session_id":"%s","id":"%s","name":"","server_id":"test1","server_era":"era1"}`,
 					ids[i].SessionID, ids[i].ID)
@@ -1939,5 +1952,59 @@ func testBans(s *serverUnderTest) {
 		s.Reconnect(vconn)
 		vconn.expectPing()
 		vconn.expectSnapshot(s.backend.Version(), nil, nil)
+	})
+}
+
+func testMessageTruncation(s *serverUnderTest) {
+	Convey("Long messages are truncated, can be retrieved", func() {
+		c1 := s.Connect("bigmessages")
+		defer c1.Close()
+
+		c1.debug(false)
+		c1.expectPing()
+		c1.expectSnapshot(s.backend.Version(), nil, nil)
+		c1.send("1", "nick", `{"name":"c1"}`)
+		c1.expect("1", "nick-reply", `{"session_id":"*","id":"*","from":"","to":"c1"}`)
+		c1.send("2", "send", `{"content":"%s"}`, strings.Repeat(".", proto.MaxMessageLength+1))
+		c1.expectError("2", "send-reply", proto.ErrMessageTooLong.Error())
+
+		c2 := s.Connect("bigmessages")
+		defer c2.Close()
+
+		named := func(name string) string {
+			return fmt.Sprintf(
+				`{"session_id":"*","id":"*","name":"%s","server_id":"*","server_era":"*"}`, name)
+		}
+
+		c2.expectPing()
+		c2.expectSnapshot(
+			s.backend.Version(),
+			[]string{named("c1")},
+			nil)
+		c1.expect("", "join-event", named(""))
+		c2.send("1", "nick", `{"name":"c2"}`)
+		c2.expect("1", "nick-reply", `{"session_id":"*","id":"*","from":"","to":"c2"}`)
+		c1.expect("", "nick-event", `{"session_id":"*","id":"*","from":"","to":"c2"}`)
+
+		bigMessage := strings.Repeat(".", proto.MaxMessageTransmissionLength+1)
+		c2.debug(false)
+
+		c1.send("3", "send", `{"content":"%s"}`, bigMessage)
+		c1.expect("3", "send-reply",
+			`{"id":"*","time":"*","sender":%s,"content":"*","truncated":true}`, named("c1"))
+		capture := c2.expect("", "send-event",
+			`{"id":"*","time":"*","sender":%s,"content":"*","truncated":true}`, named("c1"))
+		So(len(bigMessage), ShouldEqual, proto.MaxMessageTransmissionLength+1)
+		So(capture["content"], ShouldEqual, bigMessage[:proto.MaxMessageTransmissionLength])
+
+		c2.send("2", "get-message", `{"id":"%s"}`, capture["id"])
+		capture = c2.expect("2", "get-message-reply",
+			`{"id":"*","time":"*","sender":%s,"content":"*"}`, named("c1"))
+		So(capture["content"], ShouldEqual, bigMessage)
+
+		c1.send("4", "log", `{"n":1}`)
+		c1.expect("4", "log-reply",
+			`{"log":[{"id":"%s","time":"*","sender":%s,"content":"%s","truncated":true}]}`,
+			capture["id"], named("c1"), bigMessage[:proto.MaxMessageTransmissionLength])
 	})
 }

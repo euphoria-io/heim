@@ -49,6 +49,14 @@ func (s *session) joinedState(cmd *proto.Packet) *response {
 		return &response{err: fmt.Errorf("already joined")}
 	case *proto.SendCommand:
 		return s.handleSendCommand(msg)
+	case *proto.GetMessageCommand:
+		ret, err := s.room.GetMessage(s.ctx, msg.ID)
+		if err != nil {
+			return &response{err: err}
+		}
+		return &response{
+			packet: proto.GetMessageReply(*ret),
+		}
 	case *proto.LogCommand:
 		msgs, err := s.room.Latest(s.ctx, msg.N, msg.Before)
 		if err != nil {
@@ -157,6 +165,10 @@ func (s *session) handleCoreCommands(payload interface{}) *response {
 func (s *session) handleSendCommand(cmd *proto.SendCommand) *response {
 	if s.Identity().Name() == "" {
 		return &response{err: fmt.Errorf("you must choose a name before you may begin chatting")}
+	}
+
+	if len(cmd.Content) > proto.MaxMessageLength {
+		return &response{err: proto.ErrMessageTooLong}
 	}
 
 	msgID, err := snowflake.New()

@@ -7,6 +7,7 @@
     * [auth](#auth)
     * [ping](#ping)
   * [Chat Room Commands](#chat-room-commands)
+    * [get-message](#get-message)
     * [log](#log)
     * [nick](#nick)
     * [send](#send)
@@ -251,6 +252,7 @@ a post, or any broadcasted event in a room that should appear in the log.
 | `encryption_key_id` | [string](#string) | *optional* |  the id of the key that encrypts the message in storage |
 | `edited` | [Time](#time) | *optional* |  the unix timestamp of when the message was last edited |
 | `deleted` | [Time](#time) | *optional* |  the unix timestamp of when the message was deleted |
+| `truncated` | [bool](#bool) | *optional* |  if true, then the full content of this message is not included (see `get-message` to obtain the message with full content) |
 
 
 
@@ -367,6 +369,41 @@ back a `ping-reply` with the same timestamp as soon as possible.
 
 These commands are available to the client once a session successfully joins a room.
 
+### get-message
+
+The `get-message` command retrieves the full content of a single message in the room.
+
+
+| Field | Type | Required? | Description |
+| :-- | :-- | :-- | :--------- |
+| `id` | [Snowflake](#snowflake) | required |  the id of the message to retrieve |
+
+
+
+
+
+`get-message-reply` returns the message retrieved by `get-message`.
+
+
+| Field | Type | Required? | Description |
+| :-- | :-- | :-- | :--------- |
+| `id` | [Snowflake](#snowflake) | required |  the id of the message (unique within a room) |
+| `parent` | [Snowflake](#snowflake) | *optional* |  the id of the message's parent, or null if top-level |
+| `previous_edit_id` | [Snowflake](#snowflake) | *optional* |  the edit id of the most recent edit of this message, or null if it's never been edited |
+| `time` | [Time](#time) | required |  the unix timestamp of when the message was posted |
+| `sender` | [SessionView](#sessionview) | required |  the view of the sender's session |
+| `content` | [string](#string) | required |  the content of the message (client-defined) |
+| `encryption_key_id` | [string](#string) | *optional* |  the id of the key that encrypts the message in storage |
+| `edited` | [Time](#time) | *optional* |  the unix timestamp of when the message was last edited |
+| `deleted` | [Time](#time) | *optional* |  the unix timestamp of when the message was deleted |
+| `truncated` | [bool](#bool) | *optional* |  if true, then the full content of this message is not included (see `get-message` to obtain the message with full content) |
+
+
+
+
+
+
+
 ### log
 
 The `log` command requests messages from the room's message log. This can be used
@@ -466,6 +503,7 @@ which was populated by the server.
 | `encryption_key_id` | [string](#string) | *optional* |  the id of the key that encrypts the message in storage |
 | `edited` | [Time](#time) | *optional* |  the unix timestamp of when the message was last edited |
 | `deleted` | [Time](#time) | *optional* |  the unix timestamp of when the message was deleted |
+| `truncated` | [bool](#bool) | *optional* |  if true, then the full content of this message is not included (see `get-message` to obtain the message with full content) |
 
 
 
@@ -753,6 +791,7 @@ TODO: support reparenting
 | `encryption_key_id` | [string](#string) | *optional* |  the id of the key that encrypts the message in storage |
 | `edited` | [Time](#time) | *optional* |  the unix timestamp of when the message was last edited |
 | `deleted` | [Time](#time) | *optional* |  the unix timestamp of when the message was deleted |
+| `truncated` | [bool](#bool) | *optional* |  if true, then the full content of this message is not included (see `get-message` to obtain the message with full content) |
 
 
 
@@ -1183,6 +1222,7 @@ The event packet includes a snapshot of the message post-edit.
 | `encryption_key_id` | [string](#string) | *optional* |  the id of the key that encrypts the message in storage |
 | `edited` | [Time](#time) | *optional* |  the unix timestamp of when the message was last edited |
 | `deleted` | [Time](#time) | *optional* |  the unix timestamp of when the message was deleted |
+| `truncated` | [bool](#bool) | *optional* |  if true, then the full content of this message is not included (see `get-message` to obtain the message with full content) |
 
 
 
@@ -1236,6 +1276,7 @@ A `send-event` indicates a message received by the room from another session.
 | `encryption_key_id` | [string](#string) | *optional* |  the id of the key that encrypts the message in storage |
 | `edited` | [Time](#time) | *optional* |  the unix timestamp of when the message was last edited |
 | `deleted` | [Time](#time) | *optional* |  the unix timestamp of when the message was deleted |
+| `truncated` | [bool](#bool) | *optional* |  if true, then the full content of this message is not included (see `get-message` to obtain the message with full content) |
 
 
 

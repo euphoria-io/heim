@@ -185,7 +185,7 @@ func (r *memRoom) Send(ctx scope.Context, session proto.Session, message proto.M
 	r.m.Lock()
 	defer r.m.Unlock()
 
-	msg := proto.Message{
+	msg := &proto.Message{
 		ID:              message.ID,
 		UnixTime:        proto.Time(message.ID.Time()),
 		Parent:          message.Parent,
@@ -193,8 +193,9 @@ func (r *memRoom) Send(ctx scope.Context, session proto.Session, message proto.M
 		Content:         message.Content,
 		EncryptionKeyID: message.EncryptionKeyID,
 	}
-	r.log.post(&msg)
-	return msg, r.broadcast(ctx, proto.SendType, msg, session)
+	r.log.post(msg)
+	msg = maybeTruncate(msg)
+	return *msg, r.broadcast(ctx, proto.SendType, msg, session)
 }
 
 func (r *memRoom) EditMessage(

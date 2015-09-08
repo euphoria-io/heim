@@ -54,7 +54,7 @@ func (log *memLog) Latest(ctx scope.Context, n int, before snowflake.Snowflake) 
 	slice := make([]*proto.Message, 0, n)
 	for _, msg := range log.msgs[start:] {
 		if time.Time(msg.Deleted).IsZero() {
-			slice = append(slice, msg)
+			slice = append(slice, maybeTruncate(msg))
 			if len(slice) >= n {
 				break
 			}
@@ -90,8 +90,18 @@ func (log *memLog) edit(e proto.EditMessageCommand) (*proto.Message, error) {
 				msg.Deleted = proto.Time{}
 			}
 			msg.Edited = now
-			return msg, nil
+			return maybeTruncate(msg), nil
 		}
 	}
 	return nil, proto.ErrMessageNotFound
+}
+
+func maybeTruncate(msg *proto.Message) *proto.Message {
+	if len(msg.Content) > proto.MaxMessageTransmissionLength {
+		truncated := *msg
+		truncated.Content = truncated.Content[:proto.MaxMessageTransmissionLength]
+		truncated.Truncated = true
+		msg = &truncated
+	}
+	return msg
 }
