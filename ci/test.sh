@@ -30,8 +30,8 @@ test_client() {
 
 setup_deps
 
-test_backend
 test_client
+test_backend
 
 if [ "$1" == "build" ]; then
   $(dirname $0)/build.sh
