@@ -133,7 +133,7 @@ func (b *Backend) debug(format string, args ...interface{}) { b.logger.Printf(fo
 func (b *Backend) start() error {
 	b.DbMap = &gorp.DbMap{Db: b.DB, Dialect: gorp.PostgresDialect{}}
 	// TODO: make debug configurable
-	b.DbMap.TraceOn("[gorp]", log.New(os.Stdout, "", log.LstdFlags))
+	//b.DbMap.TraceOn("[gorp]", log.New(os.Stdout, "", log.LstdFlags))
 
 	for _, item := range schema {
 		b.DbMap.AddTableWithName(item.Table, item.Name).SetKeys(false, item.PrimaryKey...)
