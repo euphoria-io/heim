@@ -40,6 +40,18 @@ Heim is now running on port 8080. \o/
    using your local client, open:
    <http://localhost:8080/room/test/#connect=https://euphoria.io>
 
+### Running tests
+
+#### Backend
+
+`docker-compose run backend go test -v euphoria.io/heim/...`
+
+Note: some tests require a database. See the [CI automation script](ci/test.sh) for more context.
+
+#### Frontend
+
+`docker-compose run frontend npm test`
+
 ## Discussion
 
 Questions? Feedback? Ideas? Come join us in
