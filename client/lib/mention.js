@@ -5,15 +5,13 @@ var hueHash = require('./hue-hash')
  */
 module.exports.containsSubseq = function(name, part) {
   var offset = 0
-  var remain = part
-  var nexdex
-  while (remain !== "") {
-    nexdex = name.indexOf(remain.substr(0, 1), offset)
-    if (nexdex < 0) {
+  for(var partOffset = 0; partOffset < part.length; partOffset++) {
+    var nextChar = part.substr(partOffset, 1)
+    offset = name.indexOf(nextChar, offset)
+    if (offset === -1) {
       return false
     }
-    offset = nexdex + 1
-    remain = remain.substr(1)
+    offset++
   }
   return true
 }
@@ -25,14 +23,14 @@ module.exports.containsSubseq = function(name, part) {
  */
 module.exports.scoreMatch = function(name, part) {
   // FIXME Use proper Unicode-aware case-folding, if not already
-  var partCf = part.toLowerCase()
-  var nameCf = name.toLowerCase()
+  var partLowercase = part.toLowerCase()
+  var nameLowercase = name.toLowerCase()
   // Check prefixes, then infixes, then subsequences -- and for
   // each, try case-sensitive and then insensitive.
   // Want something faster but uglier?
   // https://github.com/timmc/lib-1666/commit/6bd6f8a7635074f098e3d498cdd248450559b013
   var indexOfCs = name.indexOf(part);
-  var indexOfCi = nameCf.indexOf(partCf);
+  var indexOfCi = nameLowercase.indexOf(partLowercase);
   if (indexOfCs === 0) {
     return 31
   } else if (indexOfCi === 0) {
@@ -43,7 +41,7 @@ module.exports.scoreMatch = function(name, part) {
     return 20
   } else if (module.exports.containsSubseq(name, part)) {
     return 11
-  } else if (module.exports.containsSubseq(nameCf, partCf)) {
+  } else if (module.exports.containsSubseq(nameLowercase, partLowercase)) {
     return 10
   } else {
     return 0
@@ -64,8 +62,6 @@ module.exports.rankCompletions = function(names, part) {
       return [stripped, module.exports.scoreMatch(stripped, partStrip)]
     })
     .filter(entry => entry[1] > 0)
-    .sort(function(a, b) {
-      return b[1] - a[1]
-    })
+    .sortBy(entry => -entry[1])
     .map(entry => entry[0])
 }

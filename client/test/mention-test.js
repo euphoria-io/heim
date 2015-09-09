@@ -11,27 +11,27 @@ describe('mention', function() {
     }
 
     it('handles empty and exact matches', function() {
-      assertContains("", "", true)
-      assertContains("name", "", true)
-      assertContains("", "cruft", false)
-      assertContains("name", "name", true)
+      assertContains('', '', true)
+      assertContains('name', '', true)
+      assertContains('', 'cruft', false)
+      assertContains('name', 'name', true)
     })
     it('rejects extra on end of partial', function() {
-      assertContains("name", "namex", false)
+      assertContains('name', 'namex', false)
     })
     it('finds standard cases', function() {
-      assertContains("name", "nm", true)
-      assertContains("name", "e", true)
+      assertContains('name', 'nm', true)
+      assertContains('name', 'e', true)
     })
     // This is a possible index bug.
     it('rejects extra chars going off the end', function() {
-      assertContains("name", "es", false)
+      assertContains('name', 'es', false)
     })
     it('respects order', function() {
-      assertContains("name", "eman", false)
+      assertContains('name', 'eman', false)
     })
     it('respects count (always advance)', function() {
-      assertContains("name", "nnm", false)
+      assertContains('name', 'nnm', false)
     })
   })
 
@@ -65,13 +65,15 @@ describe('mention', function() {
         .toArray()
       assert.deepEqual(actual, outNames)
     }
-    var users = ["chromakode", "logan", "mac", "Max", "TimMc"]
+    var users = ['chromakode', 'logan', 'mac', 'Max', 'TimMc']
 
+    // These tests may fail if sort ever becomes unstable, which is
+    // out of our control.
     it('puts prefix over infix, tie-breaks with case, and is stable', function() {
-      assertRanking(users, "M", ["Max", "mac", "TimMc", "chromakode"])
+      assertRanking(users, 'M', ['Max', 'mac', 'TimMc', 'chromakode'])
     })
     it('ranks subseqs less than infix ci, and is stable', function() {
-      assertRanking(users, 'mc', ["TimMc", "mac"])
+      assertRanking(users, 'mc', ['TimMc', 'mac'])
     })
   })
 })
