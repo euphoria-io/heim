@@ -67,12 +67,13 @@ describe('mention', function() {
     }
     var users = ['chromakode', 'logan', 'mac', 'Max 2', 'TimMc']
 
-    // These tests may fail if sort ever becomes unstable, which is
-    // out of our control.
-    it('puts prefix over infix, tie-breaks with case, and is stable', function() {
+    // These tests do not include sort stability. (It's either not
+    // stable or we're not getting usernames from the store in
+    // alphabetical order. In either case, don't test for it yet.)
+    it('puts prefix over infix and tie-breaks with case', function() {
       assertRanking(users, 'M', ['Max2', 'mac', 'TimMc', 'chromakode'])
     })
-    it('ranks subseqs less than infix ci, and is stable', function() {
+    it('ranks subseqs less than infix ci', function() {
       assertRanking(users, 'mc', ['TimMc', 'mac'])
     })
     it('strips spaces from names', function() {
