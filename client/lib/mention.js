@@ -60,6 +60,7 @@ module.exports.scoreMatch = function(name, part) {
 module.exports.rankCompletions = function(names, part) {
   var partStrip = hueHash.stripSpaces(part)
   return names
+    .filter(Boolean)
     .map(function(name) {
       var stripped = hueHash.stripSpaces(name)
       return [stripped, module.exports.scoreMatch(stripped, partStrip)]
