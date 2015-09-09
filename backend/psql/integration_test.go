@@ -33,8 +33,21 @@ func TestBackend(t *testing.T) {
 			t.Fatalf("failed to drop table %s: %s", item.Name, err)
 		}
 	}
-	if _, err := db.Exec("DROP TABLE IF EXISTS gorp_migrations"); err != nil {
-		t.Fatal(err)
+	for _, table := range []string{"gorp_migrations", "stats_sessions_analyzed", "stats_sessions_global", "stats_sessions_per_room"} {
+		if _, err := db.Exec("DROP TABLE IF EXISTS " + table); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, function := range []string{
+		"stats_sessions_analyze()",
+		"stats_sessions_global_find(min_posted timestamp with time zone, max_posted timestamp with time zone)",
+		"stats_sessions_global_extend(min_posted timestamp with time zone, max_posted timestamp with time zone)",
+		"stats_sessions_per_room_find(min_posted timestamp with time zone, max_posted timestamp with time zone)",
+		"stats_sessions_per_room_extend(min_posted timestamp with time zone, max_posted timestamp with time zone)",
+	} {
+		if _, err := db.Exec("DROP FUNCTION IF EXISTS " + function); err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	// Recreate all tables.
