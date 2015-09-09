@@ -296,7 +296,6 @@ module.exports = React.createClass({
           </div>
         </div>
         {(thin || this.state.ui.sidebarPaneExpanded) && <div className="sidebar-pane">
-          <h2>people</h2>
           <UserList users={this.state.chat.who} />
           {this.templateHook('main-sidebar')}
         </div>}
