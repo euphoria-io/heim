@@ -65,15 +65,18 @@ describe('mention', function() {
         .toArray()
       assert.deepEqual(actual, outNames)
     }
-    var users = ['chromakode', 'logan', 'mac', 'Max', 'TimMc']
+    var users = ['chromakode', 'logan', 'mac', 'Max 2', 'TimMc']
 
     // These tests may fail if sort ever becomes unstable, which is
     // out of our control.
     it('puts prefix over infix, tie-breaks with case, and is stable', function() {
-      assertRanking(users, 'M', ['Max', 'mac', 'TimMc', 'chromakode'])
+      assertRanking(users, 'M', ['Max2', 'mac', 'TimMc', 'chromakode'])
     })
     it('ranks subseqs less than infix ci, and is stable', function() {
       assertRanking(users, 'mc', ['TimMc', 'mac'])
+    })
+    it('strips spaces from names', function() {
+      assertRanking(users, 'x2', ['Max2'])
     })
   })
 })
