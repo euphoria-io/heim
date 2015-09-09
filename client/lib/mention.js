@@ -4,9 +4,12 @@ var hueHash = require('./hue-hash')
  * Determines if name contains the characters in the partial name, in order.
  */
 module.exports.containsSubseq = function(name, part) {
+  // Walk the characters in partial name, skipping forward in full
+  // name to match until we can't find any more matches or we finish
+  // walking.
   var offset = 0
   for(var partOffset = 0; partOffset < part.length; partOffset++) {
-    var nextChar = part.substr(partOffset, 1)
+    var nextChar = part[partOffset]
     offset = name.indexOf(nextChar, offset)
     if (offset === -1) {
       return false
