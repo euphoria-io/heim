@@ -31,25 +31,25 @@ describe('socket store', function() {
   })
 
   describe('_wsurl', function() {
-    it('should return wss://host/room/name/ws if protocol is https', function() {
-      assert.equal(socket.store._wsurl('https://host', '/prefix', 'ezzie'), 'wss://host/prefix/room/ezzie/ws')
+    it('should return wss://host/room/name/ws?h=1 if protocol is https', function() {
+      assert.equal(socket.store._wsurl('https://host', '/prefix', 'ezzie'), 'wss://host/prefix/room/ezzie/ws?h=1')
     })
 
-    it('should return ws://host/room/name/ws if protocol is NOT https', function() {
-      assert.equal(socket.store._wsurl('http://host', '/prefix', 'ezzie'), 'ws://host/prefix/room/ezzie/ws')
+    it('should return ws://host/room/name/ws?h=1 if protocol is NOT https', function() {
+      assert.equal(socket.store._wsurl('http://host', '/prefix', 'ezzie'), 'ws://host/prefix/room/ezzie/ws?h=1')
     })
   })
 
   describe('connect action', function() {
-    it('should by default connect to ws://host/room/name/ws with heim1 protocol', function() {
+    it('should by default connect to ws://host/room/name/ws?h=1 with heim1 protocol', function() {
       socket.store.connect('ezzie')
-      var expectedPath = 'wss://heimhost/test/room/ezzie/ws'
+      var expectedPath = 'wss://heimhost/test/room/ezzie/ws?h=1'
       sinon.assert.calledWithExactly(fakeWebSocketContructor, expectedPath, 'heim1')
     })
 
     it('should connect to a custom url if specified', function() {
       socket.store.connect('ezzie', 'https://euphoria.io/dev/chromakode')
-      var expectedPath = 'wss://euphoria.io/dev/chromakode/room/ezzie/ws'
+      var expectedPath = 'wss://euphoria.io/dev/chromakode/room/ezzie/ws?h=1'
       sinon.assert.calledWithExactly(fakeWebSocketContructor, expectedPath, 'heim1')
     })
 

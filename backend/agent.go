@@ -59,7 +59,7 @@ func (ac *agentCredentials) Cookie(sc *securecookie.SecureCookie) (*http.Cookie,
 	return cookie, nil
 }
 
-func assignAgent(ctx scope.Context, s *Server) (*proto.Agent, *http.Cookie, *security.ManagedKey, error) {
+func assignAgent(ctx scope.Context, s *Server, bot bool) (*proto.Agent, *http.Cookie, *security.ManagedKey, error) {
 	agentKey := &security.ManagedKey{
 		KeyType:   proto.AgentKeyType,
 		Plaintext: make([]byte, proto.AgentKeyType.KeySize()),
@@ -82,6 +82,7 @@ func assignAgent(ctx scope.Context, s *Server) (*proto.Agent, *http.Cookie, *sec
 		return nil, nil, nil, fmt.Errorf("agent generation error: %s", err)
 	}
 
+	agent.Bot = bot
 	if err := s.b.AgentTracker().Register(ctx, agent); err != nil {
 		return nil, nil, nil, fmt.Errorf("agent generation error: %s", err)
 	}
@@ -103,24 +104,29 @@ func getAgent(
 	ctx scope.Context, s *Server, r *http.Request) (
 	*proto.Agent, *http.Cookie, *security.ManagedKey, error) {
 
+	if err := r.ParseForm(); err != nil {
+		return nil, nil, nil, err
+	}
+	bot := r.Form.Get("h") != "1"
+
 	cookie, err := r.Cookie(agentCookieName)
 	if err != nil {
-		return assignAgent(ctx, s)
+		return assignAgent(ctx, s, bot)
 	}
 
 	encoded := []byte{}
 	if err := s.sc.Decode(agentCookieName, cookie.Value, &encoded); err != nil {
-		return assignAgent(ctx, s)
+		return assignAgent(ctx, s, bot)
 	}
 
 	ac := agentCredentials{}
 	if err := json.Unmarshal(encoded, &ac); err != nil {
-		return assignAgent(ctx, s)
+		return assignAgent(ctx, s, bot)
 	}
 
 	agent, err := s.b.AgentTracker().Get(ctx, ac.ID)
 	if err != nil {
-		return assignAgent(ctx, s)
+		return assignAgent(ctx, s, bot)
 	}
 
 	cookie, err = ac.Cookie(s.sc)

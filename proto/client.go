@@ -45,10 +45,14 @@ func (c *Client) FromContext(ctx scope.Context) bool {
 }
 
 func (c *Client) UserID() string {
-	if c.Account != nil {
+	switch {
+	case c.Account != nil:
 		return fmt.Sprintf("account:%s", c.Account.ID().String())
+	case c.Agent.Bot:
+		return fmt.Sprintf("bot:%s", c.Agent.IDString())
+	default:
+		return fmt.Sprintf("agent:%s", c.Agent.IDString())
 	}
-	return fmt.Sprintf("agent:%s", c.Agent.IDString())
 }
 
 func (c *Client) AuthenticateWithAgent(

@@ -84,6 +84,7 @@ type Agent struct {
 	AccountID          string
 	Created            time.Time
 	Blessed            bool
+	Bot                bool
 }
 
 func (a *Agent) IDString() string { return base64.URLEncoding.EncodeToString(a.ID) }

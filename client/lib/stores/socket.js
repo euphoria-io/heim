@@ -53,7 +53,7 @@ module.exports.store = Reflux.createStore({
       scheme = 'wss'
     }
 
-    return scheme + '://' + parsedOrigin.host + prefix + '/room/' + roomName + '/ws'
+    return scheme + '://' + parsedOrigin.host + prefix + '/room/' + roomName + '/ws?h=1'
   },
 
   connect: function(roomName, customConnect) {

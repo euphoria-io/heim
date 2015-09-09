@@ -62,7 +62,7 @@ func (s *serverUnderTest) Close() {
 	s.backend.Close()
 }
 
-func (s *serverUnderTest) openWebsocket(roomName string, cookies []*http.Cookie) (proto.Room, *websocket.Conn, *http.Response) {
+func (s *serverUnderTest) openWebsocket(roomName string, cookies []*http.Cookie, params url.Values) (proto.Room, *websocket.Conn, *http.Response) {
 	room, err := s.backend.GetRoom(scope.New(), roomName)
 	if err == proto.ErrRoomNotFound {
 		room, err = s.backend.CreateRoom(scope.New(), s.app.kms, false, roomName)
@@ -73,6 +73,9 @@ func (s *serverUnderTest) openWebsocket(roomName string, cookies []*http.Cookie)
 		headers.Add("Cookie", cookie.String())
 	}
 	url := strings.Replace(s.server.URL, "http:", "ws:", 1) + "/room/" + roomName + "/ws"
+	if params != nil {
+		url = fmt.Sprintf("%s?%s", url, params.Encode())
+	}
 	conn, resp, err := websocket.DefaultDialer.Dial(url, headers)
 	if err != nil {
 		if resp != nil {
@@ -85,7 +88,17 @@ func (s *serverUnderTest) openWebsocket(roomName string, cookies []*http.Cookie)
 }
 
 func (s *serverUnderTest) Connect(roomName string) *testConn {
-	room, conn, resp := s.openWebsocket(roomName, nil)
+	room, conn, resp := s.openWebsocket(roomName, nil, nil)
+	tc := &testConn{Conn: conn, cookies: resp.Cookies(), roomName: roomName, room: room}
+	tc.debug(true)
+	tc.expectHello()
+	return tc
+}
+
+func (s *serverUnderTest) ConnectAsHuman(roomName string) *testConn {
+	vs := url.Values{}
+	vs.Add("h", "1")
+	room, conn, resp := s.openWebsocket(roomName, nil, vs)
 	tc := &testConn{Conn: conn, cookies: resp.Cookies(), roomName: roomName, room: room}
 	tc.debug(true)
 	tc.expectHello()
@@ -96,7 +109,7 @@ func (s *serverUnderTest) Reconnect(tc *testConn, roomNames ...string) *testConn
 	if roomNames != nil {
 		tc.roomName = roomNames[0]
 	}
-	room, conn, resp := s.openWebsocket(tc.roomName, tc.cookies)
+	room, conn, resp := s.openWebsocket(tc.roomName, tc.cookies, nil)
 	tc.room = room
 	tc.Conn = conn
 	tc.cookies = resp.Cookies()
@@ -479,7 +492,8 @@ func IntegrationTest(t *testing.T, factory proto.BackendFactory) {
 	runTest("Room not found", testRoomNotFound)
 	runTest("KeepAlive", testKeepAlive)
 	runTest("Bans", testBans)
-	runTest("MessageTruncation", testMessageTruncation)
+	runTest("Message truncation", testMessageTruncation)
+	runTest("Bots and humans", testBotsAndHumans)
 }
 
 func testLurker(s *serverUnderTest) {
@@ -1327,7 +1341,7 @@ func testAccountLogin(s *serverUnderTest) {
 					`{"session_id":"%s","id":"%s","name":"","server_id":"test1","server_era":"era1"}`,
 					observer.sessionID, observer.userID)},
 			nil)
-		So(conn.userID, ShouldStartWith, "agent:")
+		So(conn.userID, ShouldStartWith, "bot:")
 
 		observer.expect("", "join-event",
 			`{"session_id":"%s","id":"%s","name":"","server_id":"test1","server_era":"era1"}`,
@@ -1402,7 +1416,7 @@ func testAccountRegistration(s *serverUnderTest) {
 					`{"session_id":"%s","id":"%s","name":"","server_id":"test1","server_era":"era1"}`,
 					observer.sessionID, observer.userID)},
 			nil)
-		So(conn.userID, ShouldStartWith, "agent:")
+		So(conn.userID, ShouldStartWith, "bot:")
 
 		observer.expect("", "join-event",
 			`{"session_id":"%s","id":"%s","name":"","server_id":"test1","server_era":"era1"}`,
@@ -2006,5 +2020,39 @@ func testMessageTruncation(s *serverUnderTest) {
 		c1.expect("4", "log-reply",
 			`{"log":[{"id":"%s","time":"*","sender":%s,"content":"%s","truncated":true}]}`,
 			capture["id"], named("c1"), bigMessage[:proto.MaxMessageTransmissionLength])
+	})
+}
+
+func testBotsAndHumans(s *serverUnderTest) {
+	Convey("Human parameter makes user ID start with agent", func() {
+		c := s.ConnectAsHuman("bots")
+		defer c.Close()
+
+		c.expectPing()
+		c.expectSnapshot(s.backend.Version(), nil, nil)
+		So(c.userID, ShouldStartWith, "agent:")
+		saved := c.userID
+
+		// Should still be human after reconnection.
+		c = s.Reconnect(c, "bots")
+		c.expectPing()
+		c.expectSnapshot(s.backend.Version(), nil, nil)
+		So(c.userID, ShouldEqual, saved)
+	})
+
+	Convey("Absence of human parameter makes user ID start with bot", func() {
+		c := s.Connect("bots")
+		defer c.Close()
+
+		c.expectPing()
+		c.expectSnapshot(s.backend.Version(), nil, nil)
+		So(c.userID, ShouldStartWith, "bot:")
+		saved := c.userID
+
+		// Should still be bot after reconnection.
+		c = s.Reconnect(c, "bots")
+		c.expectPing()
+		c.expectSnapshot(s.backend.Version(), nil, nil)
+		So(c.userID, ShouldEqual, saved)
 	})
 }
