@@ -93,9 +93,9 @@ module.exports = function(roomName) {
     var MessageText = require('./ui/message-text')
 
     var clientTimeOffset = 0
-    Heim.socket.store.listen(function(ev) {
-      if (ev.status == 'receive' && ev.body.type == 'ping-event') {
-        clientTimeOffset = Date.now() / 1000 - ev.body.data.time
+    Heim.chat.store.socket.on('receive', function(ev) {
+      if (ev.type == 'ping-event') {
+        clientTimeOffset = Date.now() / 1000 - ev.data.time
       }
     })
 
