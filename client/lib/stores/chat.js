@@ -104,8 +104,14 @@ module.exports.store = Reflux.createStore({
 
   socketEvent: function(ev) {
     // jshint camelcase: false
-    if (ev.type == 'send-event' || ev.type == 'send-reply') {
+    if (ev.type == 'send-event') {
       this._handleMessageUpdate(ev.data, true)
+    } else if (ev.type == 'send-reply') {
+      if (!ev.error) {
+        this._handleMessageUpdate(ev.data, true)
+      } else {
+        console.warn('error sending message:', ev.error)
+      }
     } else if (ev.type == 'edit-message-event') {
       this._handleMessageUpdate(ev.data, false)
     } else if (ev.type == 'edit-message-reply') {

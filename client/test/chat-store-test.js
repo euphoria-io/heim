@@ -215,6 +215,18 @@ describe('chat store', function() {
     },
   }
 
+  function testErrorLogging(type, error, done) {
+    var errorEvent = {
+      'type': type,
+      'error': error,
+    }
+    handleSocket(errorEvent, function() {
+      sinon.assert.calledOnce(console.warn)
+      sinon.assert.calledWithExactly(console.warn, sinon.match.string, errorEvent.error)
+      done()
+    })
+  }
+
   it('should initialize with null connected and false joined state', function() {
     assert.equal(chat.store.getInitialState().connected, null)
     assert.equal(chat.store.getInitialState().joined, false)
@@ -701,6 +713,12 @@ describe('chat store', function() {
     })
   }
 
+  describe('sending messages', function() {
+    it('should log a warning upon error', function(done) {
+      testErrorLogging('send-reply', 'bzzt!', done)
+    })
+  })
+
   function testEditMessageEvent(type) {
     var deleteEvent = {
       'id': '0',
@@ -714,18 +732,6 @@ describe('chat store', function() {
         assert(state.messages.get(message1.id).get('deleted') == 12345)
         done()
       })
-    })
-  }
-
-  function testErrorLogging(type, error, done) {
-    var errorEvent = {
-      'type': type,
-      'error': error,
-    }
-    handleSocket(errorEvent, function() {
-      sinon.assert.calledOnce(console.warn)
-      sinon.assert.calledWithExactly(console.warn, sinon.match.string, errorEvent.error)
-      done()
     })
   }
 
