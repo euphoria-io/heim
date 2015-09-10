@@ -222,11 +222,6 @@ if (!window.frameElement) {
       // dig into React a little so it normalizes the event (namely ev.key).
       var ev = new SyntheticKeyboardEvent(null, null, originalEv)
 
-      // prevent alt-left/alt-right back/forward navigation
-      if (ev.altKey && (ev.key == 'ArrowLeft' || ev.key == 'ArrowRight')) {
-        ev.preventDefault()
-      }
-
       // prevent backspace from navigating the page
       if (ev.key == 'Backspace' && ev.target == uidocument.body) {
         ev.preventDefault()
