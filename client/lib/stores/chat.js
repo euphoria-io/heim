@@ -376,10 +376,10 @@ module.exports.store = Reflux.createStore({
   connect: function(roomName, opts) {
     opts = opts || {}
     var endpoint = opts.endpoint || process.env.HEIM_ORIGIN + process.env.HEIM_PREFIX
-    this.socket.connect(endpoint, roomName, opts)
     this.socket.on('open', this.socketOpen)
     this.socket.on('close', this.socketClose)
     this.socket.on('receive', this.socketEvent)
+    this.socket.connect(endpoint, roomName, opts)
     this.state.roomName = roomName
     storage.load()
     this.trigger(this.state)
