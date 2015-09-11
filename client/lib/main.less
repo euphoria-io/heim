@@ -8,8 +8,11 @@ body {
 
   &.ready > #container {
     display: block;
-    opacity: 1;
+  }
+
+  &.ready.visible > #container {
     transition: opacity .1s ease-out;
+    opacity: 1;
   }
 
   &, input, textarea, button {

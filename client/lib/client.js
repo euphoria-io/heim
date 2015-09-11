@@ -290,7 +290,10 @@ if (!window.frameElement) {
           <Main />,
           uidocument.getElementById('container')
         )
-        uidocument.body.classList.add('ready')
+        require('react/lib/ReactUpdates').asap(() => {
+          uidocument.body.classList.add('ready')
+          setImmediate(() => uidocument.body.classList.add('visible'))
+        })
       })
     })
     window.top.Heim = Heim
@@ -300,7 +303,7 @@ if (!window.frameElement) {
   }
 
   Heim.detachUI = function() {
-    uidocument.body.classList.remove('ready')
+    uidocument.body.classList.remove('ready', 'visible')
     evs.removeAllEventListeners()
     Heim.mainComponent.unmountComponent()
   }
