@@ -147,6 +147,10 @@ module.exports = React.createClass({
 
     var node = this.getDOMNode()
 
+    if (node.scrollHeight === 0) {
+      return
+    }
+
     if (this.props.onNearTop && node.scrollTop < node.scrollHeight / 8) {
       // since RAF doesn't execute while the page is hidden, scrolling in
       // infinite scroll won't occur in Chrome if users are on another tab.
