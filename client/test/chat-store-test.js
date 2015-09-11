@@ -24,7 +24,12 @@ describe('chat store', function() {
     sinon.stub(storage, 'setRoom')
     sinon.stub(console, 'warn')
     support.resetStore(chat.store)
-    sinon.stub(chat.store.socket, 'send')
+    chat.store.socket = {
+      on: sinon.spy(),
+      endBuffering: sinon.spy(),
+      send: sinon.spy(),
+      pingIfIdle: sinon.spy(),
+    }
     window.Raven = {setUserContext: sinon.stub()}
   })
 
@@ -32,7 +37,6 @@ describe('chat store', function() {
     clock.restore()
     chat.actions.messageReceived.restore()
     chat.actions.messagesChanged.restore()
-    chat.store.socket.send.restore()
     storage.setRoom.restore()
     console.warn.restore()
     window.Raven = null
@@ -242,19 +246,23 @@ describe('chat store', function() {
 
   describe('connect action', function() {
     beforeEach(function() {
-      sinon.stub(chat.store.socket, 'connect')
       sinon.stub(storage, 'load')
     })
 
     afterEach(function() {
-      chat.store.socket.connect.restore()
       storage.load.restore()
     })
 
-    it('should connect socket with room name', function() {
+    it('should register event handlers', function() {
       chat.store.connect('ezzie', undefined)
-      sinon.assert.calledOnce(chat.store.socket.connect)
-      sinon.assert.calledWithExactly(chat.store.socket.connect, process.env.HEIM_ORIGIN + process.env.HEIM_PREFIX, 'ezzie', {})
+      sinon.assert.calledWithExactly(chat.store.socket.on, 'open', chat.store.socketOpen)
+      sinon.assert.calledWithExactly(chat.store.socket.on, 'close', chat.store.socketClose)
+      sinon.assert.calledWithExactly(chat.store.socket.on, 'receive', chat.store.socketEvent)
+    })
+
+    it('should end socket buffering', function() {
+      chat.store.connect('ezzie', undefined)
+      sinon.assert.calledOnce(chat.store.socket.endBuffering)
     })
 
     it('should save room name', function(done) {
@@ -494,14 +502,6 @@ describe('chat store', function() {
   })
 
   describe('when ui becomes active', function() {
-    beforeEach(function() {
-      sinon.stub(chat.store.socket, 'pingIfIdle')
-    })
-
-    afterEach(function() {
-      chat.store.socket.pingIfIdle.restore()
-    })
-
     describe('when connected', function() {
       it('should ping the server', function() {
         chat.store.state.connected = true

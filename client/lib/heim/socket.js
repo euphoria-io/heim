@@ -27,6 +27,7 @@ function Socket() {
   this.pingReplyTimeout = null
   this.nextPing = 0
   this.lastMessage = null
+  this._buffer = null
   this._logPackets = false
   this._logPacketIds = {}
 }
@@ -45,6 +46,28 @@ _.extend(Socket.prototype, {
     }
 
     return scheme + '://' + parsedEndpoint.host + prefix + '/room/' + roomName + '/ws?h=1'
+  },
+
+  startBuffering: function() {
+    if (!this._buffer) {
+      this._buffer = []
+    }
+  },
+
+  endBuffering: function() {
+    _.each(this._buffer, ev =>
+      // TODO: es6 destructuring
+      this.events.emit(ev[0], ev[1])
+    )
+    this._buffer = null
+  },
+
+  _emit: function(name, data) {
+    if (this._buffer) {
+      this._buffer.push([name, data])
+    } else {
+      this.events.emit(name, data)
+    }
   },
 
   connect: function(endpoint, roomName, opts) {
@@ -68,7 +91,7 @@ _.extend(Socket.prototype, {
   },
 
   _onOpen: function() {
-    this.events.emit('open')
+    this._emit('open')
   },
 
   _onClose: function() {
@@ -76,7 +99,7 @@ _.extend(Socket.prototype, {
     clearTimeout(this.pingReplyTimeout)
     this.pingReplyTimeout = null
     this.ws.onopen = this.ws.onclose = this.ws.onmessage = null
-    this.events.emit('close')
+    this._emit('close')
   },
 
   _onCloseReconnectSlow: function() {
@@ -97,7 +120,7 @@ _.extend(Socket.prototype, {
 
     this._handlePings(data)
 
-    this.events.emit('receive', data)
+    this._emit('receive', data)
   },
 
   _handlePings: function(msg) {

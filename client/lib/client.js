@@ -26,14 +26,32 @@ if (!window.frameElement) {
   window.uiwindow = window.top
   window.uidocument = window.top.document
 
+  var queryString = require('querystring')
+  var _ = require('lodash')
   var EventListeners = require('./event-listeners')
-  var evs = new EventListeners()
 
+  var evs = new EventListeners()
   if (!window.onReady) {
     // if this is the first frame, register crash handlers early
     setupCrashHandler(evs)
   }
 
+  // read url hash flags pertaining to socket connection
+  var roomName = location.pathname.match(/(\w+)\/$/)[1]
+  var hashFlags = queryString.parse(location.hash.substr(1))
+  var connectEndpoint = process.env.HEIM_ORIGIN + process.env.HEIM_PREFIX
+  if (process.env.NODE_ENV != 'production' && hashFlags.connect) {
+    connectEndpoint = hashFlags.connect
+  }
+  var socketLog = _.has(hashFlags, 'socket')
+
+  // connect websocket as early as possible so we can start streaming data
+  var Socket = require('./heim/socket')
+  var socket = new Socket()
+  socket.startBuffering()
+  socket.connect(connectEndpoint, roomName, {log: socketLog})
+
+  // set up general environment
   var moment = require('moment')
   moment.relativeTimeThreshold('s', 0)
   moment.relativeTimeThreshold('m', 60)
@@ -74,8 +92,6 @@ if (!window.frameElement) {
     }
   })
 
-  var queryString = require('querystring')
-  var _ = require('lodash')
   require('setimmediate')
 
   var isTextInput = require('./is-text-input')
@@ -117,16 +133,9 @@ if (!window.frameElement) {
     plugins: require('./stores/plugins'),
   })
 
+  Heim.chat.store.socket = socket
+
   Heim.hook = Heim.plugins.hook
-
-  var hashFlags = queryString.parse(location.hash.substr(1))
-
-  var connectEndpoint
-  if (process.env.NODE_ENV != 'production') {
-    connectEndpoint = hashFlags.connect
-  }
-
-  var socketLog = _.has(hashFlags, 'socket')
 
   if (_.has(hashFlags, 'perf')) {
     var React = require('react/addons')
@@ -135,8 +144,6 @@ if (!window.frameElement) {
       uiwindow.ReactPerf.start()
     }
   }
-
-  var roomName = location.pathname.match(/(\w+)\/$/)[1]
 
   Heim.loadCSS = function(id) {
     var cssEl = uidocument.getElementById(id)
@@ -343,7 +350,7 @@ if (!window.frameElement) {
           Heim.update.setReady(false)
         }
       })
-      context.Heim.actions.connect(roomName, {endpoint: connectEndpoint, log: socketLog})
+      context.Heim.actions.connect(roomName)
     }
     writeEnv(context.document, hash)
   }
@@ -351,7 +358,7 @@ if (!window.frameElement) {
   Heim.plugins.load(roomName)
 
   if (!window.onReady) {
-    Heim.actions.connect(roomName, {endpoint: connectEndpoint, log: socketLog})
+    Heim.actions.connect(roomName)
     Heim.actions.joinRoom()
   }
 

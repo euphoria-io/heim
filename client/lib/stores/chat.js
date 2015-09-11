@@ -9,7 +9,6 @@ var storage = require('./storage')
 var activity = require('./activity')
 var plugins = require('./plugins')
 var hueHash = require('../hue-hash')
-var Socket = require('../heim/socket')
 
 
 var mentionRe = module.exports.mentionRe = /\B@([^\s]+?(?=$|[,.!?;&'\s]|&#39;|&quot;|&amp;))/g
@@ -66,7 +65,7 @@ module.exports.store = Reflux.createStore({
       selectedMessages: Immutable.Set(),
     }
 
-    this.socket = new Socket()
+    this.socket = null
 
     this._loadingLogs = false
     this._seenMessages = Immutable.Map()
@@ -379,13 +378,11 @@ module.exports.store = Reflux.createStore({
     }
   },
 
-  connect: function(roomName, opts) {
-    opts = opts || {}
-    var endpoint = opts.endpoint || process.env.HEIM_ORIGIN + process.env.HEIM_PREFIX
+  connect: function(roomName) {
     this.socket.on('open', this.socketOpen)
     this.socket.on('close', this.socketClose)
     this.socket.on('receive', this.socketEvent)
-    this.socket.connect(endpoint, roomName, opts)
+    this.socket.endBuffering()
     this.state.roomName = roomName
     storage.load()
     this.trigger(this.state)

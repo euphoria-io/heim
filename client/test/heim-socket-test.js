@@ -36,6 +36,42 @@ describe('socket store', function() {
     })
   })
 
+  describe('buffering', function() {
+    beforeEach(function() {
+      sinon.stub(socket.events, 'emit')
+    })
+
+    afterEach(function() {
+      socket.events.emit.restore()
+    })
+
+    it('should init with buffering off', function() {
+      assert.equal(socket._buffer, null)
+    })
+
+    it('when started should suppress events and store them until end', function() {
+      var receiveObj = {test: true}
+      socket.startBuffering()
+      socket._emit('open')
+      socket._emit('receive', receiveObj)
+      sinon.assert.notCalled(socket.events.emit)
+      assert.deepEqual(socket._buffer, [
+        ['open', undefined],
+        ['receive', receiveObj],
+      ])
+      socket.endBuffering()
+      sinon.assert.calledTwice(socket.events.emit)
+      sinon.assert.calledWithExactly(socket.events.emit, 'open', undefined)
+      sinon.assert.calledWithExactly(socket.events.emit, 'receive', receiveObj)
+      assert.equal(socket._buffer, null)
+
+      socket.events.emit.reset()
+      socket._emit('receive', receiveObj)
+      sinon.assert.calledOnce(socket.events.emit)
+      sinon.assert.calledWithExactly(socket.events.emit, 'receive', receiveObj)
+    })
+  })
+
   describe('connect method', function() {
     it('should by connect to wss://heimhost/test/ws?h=1 with heim1 protocol', function() {
       socket.connect('https://heimhost/test', 'ezzie')
