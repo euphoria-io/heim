@@ -1,45 +1,44 @@
-var fs = require('fs')
-var React = require('react')
-
-
-var crashedSVG = 'data:image/svg+xml;base64,' + fs.readFileSync(__dirname + '/../../res/crashed.svg', 'base64')
-var crashedCSS = fs.readFileSync(__dirname + '/../../build/heim/crashed.css')
-
-var CrashDialog = React.createClass({
-  displayName: 'CrashDialog',
-
-  render: function() {
-    var ravenStatus
-    if (this.props.ravenEventId) {
-      ravenStatus = <p className="saved">saved an error report. <span style={{whiteSpace: 'nowrap'}}>please send us this code:</span> <strong><code>{this.props.ravenEventId}</code></strong></p>
-    } else if (this.props.ravenEventId === false) {
-      ravenStatus = <p className="failed">failed to send an error report.</p>
-    } else {
-      ravenStatus = <p>sending an error report &hellip;</p>
-    }
-
-    return (
-      <div className="mask">
-        <div className="container">
-          <div className="crash-message">
-            <img className="logo" src={crashedSVG} alt="euphoria crashed" />
-            <h1>sorry, euphoria had an <span style={{whiteSpace: 'nowrap'}}>error :(</span></h1>
-            <p>we'd like to help. if this is happening frequently, please let us know in <a href={process.env.HEIM_PREFIX + '/room/heim'}>&amp;heim</a> or <a href="mailto:hi@euphoria.io">send us an email</a>.</p>
-            <div className="raven-status-container">{ravenStatus}</div>
-            <button onClick={this.props.onReload} className="reload">reload (recommended)</button>
-            <button onClick={this.props.onIgnore}>ignore</button>
-          </div>
-        </div>
-        <style dangerouslySetInnerHTML={{__html: crashedCSS}} />
-      </div>
-    )
-  },
-})
-
 module.exports = function(ev) {
   if (uidocument.getElementById('crash-dialog')) {
     return
   }
+
+  // defer loading until we are actually rendering a crash dialog (speeds up initial client.js connection)
+  var fs = require('fs')
+  var React = require('react')
+  var crashedSVG = 'data:image/svg+xml;base64,' + fs.readFileSync(__dirname + '/../../res/crashed.svg', 'base64')
+  var crashedCSS = fs.readFileSync(__dirname + '/../../build/heim/crashed.css')
+
+  var CrashDialog = React.createClass({
+    displayName: 'CrashDialog',
+
+    render: function() {
+      var ravenStatus
+      if (this.props.ravenEventId) {
+        ravenStatus = <p className="saved">saved an error report. <span style={{whiteSpace: 'nowrap'}}>please send us this code:</span> <strong><code>{this.props.ravenEventId}</code></strong></p>
+      } else if (this.props.ravenEventId === false) {
+        ravenStatus = <p className="failed">failed to send an error report.</p>
+      } else {
+        ravenStatus = <p>sending an error report &hellip;</p>
+      }
+
+      return (
+        <div className="mask">
+          <div className="container">
+            <div className="crash-message">
+              <img className="logo" src={crashedSVG} alt="euphoria crashed" />
+              <h1>sorry, euphoria had an <span style={{whiteSpace: 'nowrap'}}>error :(</span></h1>
+              <p>we'd like to help. if this is happening frequently, please let us know in <a href={process.env.HEIM_PREFIX + '/room/heim'}>&amp;heim</a> or <a href="mailto:hi@euphoria.io">send us an email</a>.</p>
+              <div className="raven-status-container">{ravenStatus}</div>
+              <button onClick={this.props.onReload} className="reload">reload (recommended)</button>
+              <button onClick={this.props.onIgnore}>ignore</button>
+            </div>
+          </div>
+          <style dangerouslySetInnerHTML={{__html: crashedCSS}} />
+        </div>
+      )
+    },
+  })
 
   var container = uidocument.createElement('div')
   container.id = 'crash-dialog'
