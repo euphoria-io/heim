@@ -20,7 +20,7 @@ function setupCrashHandler(evs) {
 }
 
 if (!window.frameElement) {
-  writeEnv(document.getElementById('env').contentWindow.document)
+  writeEnv(document.getElementById('env').contentWindow.document, process.env.HEIM_GIT_COMMIT)
 } else {
   // >:)
   window.uiwindow = window.top

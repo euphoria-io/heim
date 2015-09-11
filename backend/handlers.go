@@ -47,7 +47,7 @@ func (s *Server) handleStatic(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	s.serveGzippedFile(w, r, path.Clean(r.URL.Path))
+	s.serveGzippedFile(w, r, path.Clean(r.URL.Path), true)
 }
 
 func (s *Server) handleRoomStatic(w http.ResponseWriter, r *http.Request) {
@@ -61,15 +61,15 @@ func (s *Server) handleRoomStatic(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	s.serveGzippedFile(w, r, "index.html")
+	s.serveGzippedFile(w, r, "index.html", false)
 }
 
 func (s *Server) handleHomeStatic(w http.ResponseWriter, r *http.Request) {
-	s.serveGzippedFile(w, r, "home.html")
+	s.serveGzippedFile(w, r, "home.html", false)
 }
 
 func (s *Server) handleRobotsTxt(w http.ResponseWriter, r *http.Request) {
-	s.serveGzippedFile(w, r, "robots.txt")
+	s.serveGzippedFile(w, r, "robots.txt", false)
 }
 
 func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {

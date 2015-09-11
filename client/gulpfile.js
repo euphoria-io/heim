@@ -68,7 +68,13 @@ function embedBundler(args) {
     }))
 }
 
-gulp.task('heim-js', ['heim-less'], function() {
+gulp.task('heim-git-commit', function() {
+  shell('git rev-parse HEAD', function(gitRev) {
+    heimOptions.HEIM_GIT_COMMIT = gitRev
+  })
+})
+
+gulp.task('heim-js', ['heim-git-commit', 'heim-less'], function() {
   return heimBundler({debug: true})
     // share some libraries with the global namespace
     // doing this here because these exposes trip up watchify atm
@@ -104,24 +110,21 @@ gulp.task('embed-js', function() {
     .pipe(gulp.dest(embedDest))
 })
 
-gulp.task('raven-js', ['heim-js'], function() {
-  shell('git rev-parse HEAD', function(gitRev) {
-    shell('md5sum build/main.js | cut -d " " -f 1', function(releaseHash) {
-      return browserify('./lib/raven.js')
-        .transform(envify({
-          SENTRY_ENDPOINT: process.env.SENTRY_ENDPOINT,
-          HEIM_RELEASE: releaseHash,
-          HEIM_GIT_COMMIT: gitRev,
-        }))
-        .bundle()
-        .pipe(source('raven.js'))
-        .pipe(buffer())
-        .pipe(process.env.NODE_ENV == 'production' ? uglify() : gutil.noop())
-        .on('error', handleError('raven browserify error'))
-        .pipe(gulp.dest(heimDest))
-        .pipe(gzip())
-        .pipe(gulp.dest(heimDest))
-    })
+gulp.task('raven-js', ['heim-git-commit', 'heim-js'], function() {
+  shell('md5sum build/main.js | cut -d " " -f 1', function(releaseHash) {
+    return browserify('./lib/raven.js')
+      .transform(envify(_.extend({
+        SENTRY_ENDPOINT: process.env.SENTRY_ENDPOINT,
+        HEIM_RELEASE: releaseHash,
+      }, heimOptions)))
+      .bundle()
+      .pipe(source('raven.js'))
+      .pipe(buffer())
+      .pipe(process.env.NODE_ENV == 'production' ? uglify() : gutil.noop())
+      .on('error', handleError('raven browserify error'))
+      .pipe(gulp.dest(heimDest))
+      .pipe(gzip())
+      .pipe(gulp.dest(heimDest))
   })
 })
 
@@ -168,7 +171,7 @@ gulp.task('embed-static', function() {
     .pipe(gulp.dest(embedDest))
 })
 
-gulp.task('heim-html', function() {
+gulp.task('heim-html', ['heim-git-commit'], function() {
   return gulp.src(['./lib/index.html', './lib/home.html'])
     .pipe(gtemplate(heimOptions))
     .pipe(gulp.dest(heimDest))

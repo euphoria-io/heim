@@ -83,16 +83,20 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 type gzipResponseWriter struct {
 	http.ResponseWriter
+	cache bool
 }
 
 func (w *gzipResponseWriter) WriteHeader(code int) {
 	header := w.Header()
 	header.Set("Content-Encoding", "gzip")
 	header.Add("Vary", "Accept-Encoding")
+	if w.cache {
+		header.Add("Cache-Control", "max-age=604800")
+	}
 	w.ResponseWriter.WriteHeader(code)
 }
 
-func (s *Server) serveGzippedFile(w http.ResponseWriter, r *http.Request, filename string) {
+func (s *Server) serveGzippedFile(w http.ResponseWriter, r *http.Request, filename string, cache bool) {
 	dir := http.Dir(s.staticPath)
 	var err error
 	var f http.File
@@ -126,7 +130,10 @@ func (s *Server) serveGzippedFile(w http.ResponseWriter, r *http.Request, filena
 	name := d.Name()
 	if gzipped {
 		name = strings.TrimSuffix(name, ".gz")
-		w = &gzipResponseWriter{ResponseWriter: w}
+		w = &gzipResponseWriter{
+			ResponseWriter: w,
+			cache:          cache,
+		}
 	}
 
 	http.ServeContent(w, r, name, d.ModTime(), f)
