@@ -5,14 +5,14 @@ module.exports = Reflux.createActions([
   'loadMoreLogs',
   'setNick',
   'tryRoomPasscode',
+  'setup',
   'connect',
   'joinRoom',
   'embedMessage',
 ])
 
-// sync so that we connect and set joinWhenReady in the load tick
-module.exports.connect.sync = true
-module.exports.joinRoom.sync = true
+// sync so that we initialize room name / storage in the load tick
+module.exports.setup.sync = true
 
 // sync so that chatEntry can pass its state off to tentativeNick immediately after calling setNick
 module.exports.setNick.sync = true

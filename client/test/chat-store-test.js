@@ -244,7 +244,7 @@ describe('chat store', function() {
     assert(Immutable.is(initialState.roomSettings, Immutable.Map()))
   })
 
-  describe('connect action', function() {
+  describe('setup action', function() {
     beforeEach(function() {
       sinon.stub(storage, 'load')
     })
@@ -253,37 +253,44 @@ describe('chat store', function() {
       storage.load.restore()
     })
 
-    it('should register event handlers', function() {
-      chat.store.connect('ezzie', undefined)
-      sinon.assert.calledWithExactly(chat.store.socket.on, 'open', chat.store.socketOpen)
-      sinon.assert.calledWithExactly(chat.store.socket.on, 'close', chat.store.socketClose)
-      sinon.assert.calledWithExactly(chat.store.socket.on, 'receive', chat.store.socketEvent)
-    })
-
-    it('should end socket buffering', function() {
-      chat.store.connect('ezzie', undefined)
-      sinon.assert.calledOnce(chat.store.socket.endBuffering)
-    })
-
     it('should save room name', function(done) {
       support.listenOnce(chat.store, function(state) {
         assert.equal(state.roomName, 'ezzie')
         done()
       })
 
-      chat.store.connect('ezzie')
+      chat.store.setup('ezzie')
     })
 
     it('should load storage', function() {
-      chat.store.connect('ezzie')
+      chat.store.setup('ezzie')
       sinon.assert.calledOnce(storage.load)
+    })
+  })
+
+  describe('connect action', function() {
+    beforeEach(function() {
+      chat.store.setup('ezzie')
+    })
+
+    it('should register event handlers', function() {
+      chat.store.connect()
+      sinon.assert.calledWithExactly(chat.store.socket.on, 'open', chat.store.socketOpen)
+      sinon.assert.calledWithExactly(chat.store.socket.on, 'close', chat.store.socketClose)
+      sinon.assert.calledWithExactly(chat.store.socket.on, 'receive', chat.store.socketEvent)
+    })
+
+    it('should end socket buffering', function() {
+      chat.store.connect()
+      sinon.assert.calledOnce(chat.store.socket.endBuffering)
     })
 
     describe('then setNick action', function() {
       var testNick = 'test-nick'
 
       beforeEach(function() {
-        chat.store.connect('ezzie')
+        chat.store.setup('ezzie')
+        chat.store.connect()
         chat.store.setNick(testNick)
       })
 

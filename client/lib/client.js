@@ -291,18 +291,14 @@ if (!window.frameElement) {
       delete Heim._titleMsg
     }
 
-    setImmediate(function() {
-      React.addons.batchedUpdates(() => {
-        Heim.mainComponent = React.render(
-          <Main />,
-          uidocument.getElementById('container')
-        )
-        require('react/lib/ReactUpdates').asap(() => {
-          uidocument.body.classList.add('ready')
-          setImmediate(() => uidocument.body.classList.add('visible'))
-        })
-      })
-    })
+    Heim.mainComponent = React.render(
+      <Main />,
+      uidocument.getElementById('container')
+    )
+    uidocument.body.classList.add('ready')
+    _.identity(uidocument.body.clientHeight)
+    uidocument.body.classList.add('visible')
+
     window.top.Heim = Heim
     window.top.require = require
 
@@ -350,23 +346,21 @@ if (!window.frameElement) {
           Heim.update.setReady(false)
         }
       })
-      context.Heim.actions.connect(roomName)
+      context.Heim.actions.connect()
     }
     writeEnv(context.document, hash)
   }
 
   Heim.plugins.load(roomName)
-
-  if (!window.onReady) {
-    Heim.actions.connect(roomName)
-    Heim.actions.joinRoom()
-  }
+  Heim.actions.setup(roomName)
 
   setImmediate(function() {
     if (window.onReady) {
       window.onReady()
     } else {
       Heim.attachUI()
+      Heim.actions.joinRoom()
+      Heim.actions.connect()
     }
   })
 }

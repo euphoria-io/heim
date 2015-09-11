@@ -378,14 +378,17 @@ module.exports.store = Reflux.createStore({
     }
   },
 
-  connect: function(roomName) {
+  setup: function(roomName) {
+    this.state.roomName = roomName
+    storage.load()
+    this.trigger(this.state)
+  },
+
+  connect: function() {
     this.socket.on('open', this.socketOpen)
     this.socket.on('close', this.socketClose)
     this.socket.on('receive', this.socketEvent)
     this.socket.endBuffering()
-    this.state.roomName = roomName
-    storage.load()
-    this.trigger(this.state)
   },
 
   joinRoom: function() {
