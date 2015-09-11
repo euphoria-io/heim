@@ -273,6 +273,10 @@ module.exports = React.createClass({
 
   getPosition: function() {
     var node = this.getDOMNode()
+    if (!node.scrollHeight) {
+      return false
+    }
+
     var frac = node.scrollTop / (node.scrollHeight - node.clientHeight)
     return frac ? Math.round(frac * 100) / 100 : 1
   },

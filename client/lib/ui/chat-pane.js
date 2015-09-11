@@ -137,6 +137,11 @@ module.exports = React.createClass({
     }
 
     var scrollPos = scroller.getPosition()
+    if (scrollPos === false) {
+      // styles not loaded yet
+      return
+    }
+
     var guessIdx = Math.min(messages.length - 1, Math.floor(scrollPos * messages.length))
 
     var scrollerBox = this.refs.scroller.getDOMNode().getBoundingClientRect()
