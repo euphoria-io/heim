@@ -120,7 +120,7 @@ module.exports.store = Reflux.createStore({
         console.warn('error editing message:', ev.error)
       }
     } else if (ev.type == 'hello-event') {
-      this.state.id = ev.data.id
+      this.state.id = ev.data.session.id
       this.state.isManager = ev.data.session.is_manager
       this.state.isStaff = ev.data.session.is_staff
       this.state.authType = ev.data.room_is_private ? 'passcode' : 'public'
