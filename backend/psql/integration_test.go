@@ -40,10 +40,15 @@ func TestBackend(t *testing.T) {
 	}
 	for _, function := range []string{
 		"stats_sessions_analyze()",
-		"stats_sessions_global_find(min_posted timestamp with time zone, max_posted timestamp with time zone)",
-		"stats_sessions_global_extend(min_posted timestamp with time zone, max_posted timestamp with time zone)",
-		"stats_sessions_per_room_find(min_posted timestamp with time zone, max_posted timestamp with time zone)",
-		"stats_sessions_per_room_extend(min_posted timestamp with time zone, max_posted timestamp with time zone)",
+		"stats_sessions_global_find(timestamp with time zone, timestamp with time zone)",
+		"stats_sessions_global_extend(timestamp with time zone, timestamp with time zone)",
+		"stats_sessions_per_room_find(timestamp with time zone, timestamp with time zone)",
+		"stats_sessions_per_room_extend(timestamp with time zone, timestamp with time zone)",
+		"job_claim(text, text)",
+		"job_steal(text, text)",
+		"job_complete(bigint, integer, bytea)",
+		"job_fail(bigint, integer, text, bytea)",
+		"job_cancel(bigint)",
 	} {
 		if _, err := db.Exec("DROP FUNCTION IF EXISTS " + function); err != nil {
 			t.Fatal(err)

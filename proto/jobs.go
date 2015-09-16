@@ -120,7 +120,6 @@ type Job struct {
 	Type              PacketType
 	Data              json.RawMessage
 	Created           time.Time
-	Started           time.Time
 	Due               time.Time
 	MaxWorkDuration   time.Duration
 	AttemptsMade      int32

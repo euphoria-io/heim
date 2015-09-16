@@ -59,6 +59,11 @@ var schema = []struct {
 	{"password_reset_request", PasswordResetRequest{}, []string{"ID"}},
 	{"personal_identity", PersonalIdentity{}, []string{"Namespace", "ID"}},
 	{"account", Account{}, []string{"ID"}},
+
+	// Jobs.
+	{"job_log", JobLog{}, []string{"JobID", "Attempt"}},
+	{"job_item", JobItem{}, []string{"ID"}},
+	{"job_queue", JobQueue{}, []string{"Name"}},
 }
 
 type Backend struct {
@@ -76,6 +81,7 @@ type Backend struct {
 	partWaiters map[string]chan struct{}
 	ctx         scope.Context
 	logger      *log.Logger
+	jql         *jobQueueListener
 }
 
 func NewBackend(heim *proto.Heim, dsn string) (*Backend, error) {
@@ -755,6 +761,17 @@ func (b *Backend) Peers() []cluster.PeerDesc { return b.cluster.Peers() }
 
 func (b *Backend) AccountManager() proto.AccountManager { return &AccountManagerBinding{b} }
 func (b *Backend) AgentTracker() proto.AgentTracker     { return &AgentTrackerBinding{b} }
+func (b *Backend) Jobs() proto.JobService               { return &JobService{b} }
+
+func (b *Backend) jobQueueListener() *jobQueueListener {
+	b.Lock()
+	defer b.Unlock()
+
+	if b.jql == nil {
+		b.jql = newJobQueueListener(b)
+	}
+	return b.jql
+}
 
 type BroadcastMessage struct {
 	Room    string

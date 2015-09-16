@@ -45,6 +45,7 @@ func (js *JobService) GetQueue(ctx scope.Context, name string) (proto.JobQueue, 
 
 type entry struct {
 	proto.Job
+	claimed time.Time
 }
 
 type jobHeap []entry
@@ -178,7 +179,7 @@ func (jq *JobQueue) Stats(ctx scope.Context) (proto.JobQueueStats, error) {
 		}
 	}
 	for _, entry := range jq.working {
-		if now.Before(entry.Started.Add(entry.MaxWorkDuration)) {
+		if now.Before(entry.claimed.Add(entry.MaxWorkDuration)) {
 			stats.Claimed++
 		} else {
 			stats.Waiting++
@@ -192,21 +193,21 @@ func (jq *JobQueue) Stats(ctx scope.Context) (proto.JobQueueStats, error) {
 
 func (jq *JobQueue) Claim(ctx scope.Context, handlerID string) (proto.Job, error) {
 	child := ctx.Fork()
-	ch := make(chan *proto.Job, 1)
+	ch := make(chan *proto.Job)
 
 	// polling goroutine, scheduled by condition
 	go func() {
 		jq.m.Lock()
 		defer jq.m.Unlock()
 
-		// send an initial nil value to inform caller that we're waiting
+		// send an initial nil value to inform caller that we're ready
 		ch <- nil
 
 		// loop until we claim a job or get cancelled
 		for child.Err() == nil {
 			if len(jq.available) > 0 {
 				e := heap.Pop(&jq.available).(entry)
-				e.Started = time.Now()
+				e.claimed = time.Now()
 				e.AttemptsRemaining -= 1
 				e.JobClaim = &proto.JobClaim{
 					JobID:         e.ID,
@@ -256,7 +257,7 @@ func (jq *JobQueue) Steal(ctx scope.Context, handlerID string) (proto.Job, error
 		if entry.JobClaim.HandlerID == handlerID {
 			continue
 		}
-		overrun := now.Sub(entry.Started) - entry.MaxWorkDuration
+		overrun := now.Sub(entry.claimed) - entry.MaxWorkDuration
 		if overrun < 0 {
 			continue
 		}
@@ -274,7 +275,7 @@ func (jq *JobQueue) Steal(ctx scope.Context, handlerID string) (proto.Job, error
 	for i, entry := range jq.available {
 		if entry.ID == jobID {
 			heap.Remove(&jq.available, i)
-			entry.Started = now
+			entry.claimed = now
 			entry.AttemptsMade += 1
 			entry.AttemptsRemaining -= 1
 			entry.JobClaim = &proto.JobClaim{
