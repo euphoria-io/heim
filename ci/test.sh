@@ -5,11 +5,11 @@ set -ex
 export HEIM_GOPATH=$(pwd)/../../..
 
 setup_deps() {
-  ${DEPS_PATH}/deps.sh link ./
+  git submodule update --init
   # required for running gulp out of this directory.
-  ln -s ${DEPS_PATH}/node_modules ./node_modules
-  export PATH=${PATH}:$(pwd)/node_modules/.bin:$(pwd)/deps/godeps/bin:${HEIM_GOPATH}/bin
-  export GOPATH=${HEIM_GOPATH}:$(pwd)/deps/godeps
+  ln -s $(pwd)/_deps/node_modules ./node_modules
+  export PATH=${PATH}:$(pwd)/node_modules/.bin:$(pwd)/_deps/godeps/bin:${HEIM_GOPATH}/bin
+  export GOPATH=${HEIM_GOPATH}:$(pwd)/_deps/godeps
 }
 
 test_backend() {

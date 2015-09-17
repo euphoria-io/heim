@@ -19,7 +19,7 @@ complex pull requests while we get our core building blocks in place.
 1. Install `git`, [`docker`](https://docs.docker.com/installation/), and
    [`docker-compose`](https://docs.docker.com/compose/install/).
 
-2. Fetch dependencies: run `./fetch-deps.sh` in this repo directory.
+2. Ensure dependencies are fetched: run `git submodule update --init` in this repo directory.
 
 ### Running a server
 

@@ -1,7 +1,6 @@
-image: eu.phoria/drone-runner:32
+image: eu.phoria/drone-runner:33
 
 env:
-  - DEPS_PATH=/var/cache/heim-deps
   - DB_HOST=$POSTGRES_PORT_5432_TCP_ADDR
 
 script:
