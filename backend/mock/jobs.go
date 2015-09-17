@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"euphoria.io/heim/proto"
+	"euphoria.io/heim/proto/jobs"
 	"euphoria.io/heim/proto/snowflake"
 	"euphoria.io/scope"
 )
@@ -18,7 +18,7 @@ type JobService struct {
 	qs map[string]*JobQueue
 }
 
-func (js *JobService) CreateQueue(ctx scope.Context, name string) (proto.JobQueue, error) {
+func (js *JobService) CreateQueue(ctx scope.Context, name string) (jobs.JobQueue, error) {
 	js.m.Lock()
 	defer js.m.Unlock()
 
@@ -26,7 +26,7 @@ func (js *JobService) CreateQueue(ctx scope.Context, name string) (proto.JobQueu
 		js.qs = map[string]*JobQueue{}
 	}
 	if _, ok := js.qs[name]; ok {
-		return nil, proto.ErrJobQueueAlreadyExists
+		return nil, jobs.ErrJobQueueAlreadyExists
 	}
 
 	jq := &JobQueue{}
@@ -35,16 +35,16 @@ func (js *JobService) CreateQueue(ctx scope.Context, name string) (proto.JobQueu
 	return jq, nil
 }
 
-func (js *JobService) GetQueue(ctx scope.Context, name string) (proto.JobQueue, error) {
+func (js *JobService) GetQueue(ctx scope.Context, name string) (jobs.JobQueue, error) {
 	jq, ok := js.qs[name]
 	if !ok {
-		return nil, proto.ErrJobQueueNotFound
+		return nil, jobs.ErrJobQueueNotFound
 	}
 	return jq, nil
 }
 
 type entry struct {
-	proto.Job
+	jobs.Job
 	claimed time.Time
 }
 
@@ -69,7 +69,7 @@ type JobQueue struct {
 }
 
 func (jq *JobQueue) Add(
-	ctx scope.Context, jobType proto.JobType, payload interface{}, options ...proto.JobOption) (
+	ctx scope.Context, jobType jobs.JobType, payload interface{}, options ...jobs.JobOption) (
 	snowflake.Snowflake, error) {
 
 	jobID, err := snowflake.New()
@@ -79,13 +79,13 @@ func (jq *JobQueue) Add(
 
 	now := time.Now()
 	e := entry{
-		Job: proto.Job{
+		Job: jobs.Job{
 			ID:                jobID,
 			Type:              jobType,
 			Created:           now,
 			Due:               now,
 			AttemptsRemaining: math.MaxInt32,
-			MaxWorkDuration:   proto.DefaultMaxWorkDuration,
+			MaxWorkDuration:   jobs.DefaultMaxWorkDuration,
 		},
 	}
 	data, err := json.Marshal(payload)
@@ -132,7 +132,7 @@ func (jq *JobQueue) Cancel(ctx scope.Context, jobID snowflake.Snowflake) error {
 	jq.m.Lock()
 	defer jq.m.Unlock()
 
-	return jq.remove(jobID, proto.ErrJobCancelled)
+	return jq.remove(jobID, jobs.ErrJobCancelled)
 }
 
 func (jq *JobQueue) release(jobID snowflake.Snowflake, penalty int32) {
@@ -163,15 +163,15 @@ func (jq *JobQueue) remove(jobID snowflake.Snowflake, err error) error {
 		}
 	}
 
-	return proto.ErrJobNotFound
+	return jobs.ErrJobNotFound
 }
 
-func (jq *JobQueue) Stats(ctx scope.Context) (proto.JobQueueStats, error) {
+func (jq *JobQueue) Stats(ctx scope.Context) (jobs.JobQueueStats, error) {
 	jq.m.Lock()
 	defer jq.m.Unlock()
 
 	now := time.Now()
-	stats := proto.JobQueueStats{}
+	stats := jobs.JobQueueStats{}
 	for _, entry := range jq.available {
 		stats.Waiting++
 		if !now.Before(entry.Due) {
@@ -191,9 +191,9 @@ func (jq *JobQueue) Stats(ctx scope.Context) (proto.JobQueueStats, error) {
 	return stats, nil
 }
 
-func (jq *JobQueue) Claim(ctx scope.Context, handlerID string) (proto.Job, error) {
+func (jq *JobQueue) Claim(ctx scope.Context, handlerID string) (jobs.Job, error) {
 	child := ctx.Fork()
-	ch := make(chan *proto.Job)
+	ch := make(chan *jobs.Job)
 
 	// polling goroutine, scheduled by condition
 	go func() {
@@ -211,7 +211,7 @@ func (jq *JobQueue) Claim(ctx scope.Context, handlerID string) (proto.Job, error
 				e := heap.Pop(&jq.available).(entry)
 				e.claimed = time.Now()
 				e.AttemptsRemaining -= 1
-				e.JobClaim = &proto.JobClaim{
+				e.JobClaim = &jobs.JobClaim{
 					JobID:         e.ID,
 					HandlerID:     handlerID,
 					AttemptNumber: e.AttemptsMade + 1,
@@ -228,7 +228,7 @@ func (jq *JobQueue) Claim(ctx scope.Context, handlerID string) (proto.Job, error
 	// to facilitate testing, wait for initial nil value from polling goroutine
 	// before coordinating with breakpoint
 	<-ch
-	if err := ctx.Check("euphoria.io/heim/proto.JobQueue.Claim"); err != nil {
+	if err := ctx.Check("euphoria.io/heim/proto/jobs.JobQueue.Claim"); err != nil {
 		child.Terminate(err)
 	}
 	jq.m.Lock()
@@ -244,13 +244,13 @@ func (jq *JobQueue) Claim(ctx scope.Context, handlerID string) (proto.Job, error
 			jq.release(j.ID, 0)
 		}
 		jq.m.Unlock()
-		return proto.Job{}, child.Err()
+		return jobs.Job{}, child.Err()
 	case job := <-ch:
 		return *job, nil
 	}
 }
 
-func (jq *JobQueue) Steal(ctx scope.Context, handlerID string) (proto.Job, error) {
+func (jq *JobQueue) Steal(ctx scope.Context, handlerID string) (jobs.Job, error) {
 	jq.m.Lock()
 	defer jq.m.Unlock()
 
@@ -271,7 +271,7 @@ func (jq *JobQueue) Steal(ctx scope.Context, handlerID string) (proto.Job, error
 		}
 	}
 	if idx < 0 {
-		return proto.Job{}, proto.ErrJobNotFound
+		return jobs.Job{}, jobs.ErrJobNotFound
 	}
 
 	jobID := jq.working[idx].ID
@@ -282,7 +282,7 @@ func (jq *JobQueue) Steal(ctx scope.Context, handlerID string) (proto.Job, error
 			entry.claimed = now
 			entry.AttemptsMade += 1
 			entry.AttemptsRemaining -= 1
-			entry.JobClaim = &proto.JobClaim{
+			entry.JobClaim = &jobs.JobClaim{
 				JobID:         entry.ID,
 				HandlerID:     handlerID,
 				AttemptNumber: entry.AttemptsMade + 1,
@@ -293,5 +293,5 @@ func (jq *JobQueue) Steal(ctx scope.Context, handlerID string) (proto.Job, error
 		}
 	}
 
-	return proto.Job{}, fmt.Errorf("job disappeared")
+	return jobs.Job{}, fmt.Errorf("job disappeared")
 }

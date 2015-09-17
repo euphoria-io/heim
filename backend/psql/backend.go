@@ -15,6 +15,7 @@ import (
 	"euphoria.io/heim/backend"
 	"euphoria.io/heim/cluster"
 	"euphoria.io/heim/proto"
+	"euphoria.io/heim/proto/jobs"
 	"euphoria.io/heim/proto/security"
 	"euphoria.io/heim/proto/snowflake"
 	"euphoria.io/scope"
@@ -761,7 +762,7 @@ func (b *Backend) Peers() []cluster.PeerDesc { return b.cluster.Peers() }
 
 func (b *Backend) AccountManager() proto.AccountManager { return &AccountManagerBinding{b} }
 func (b *Backend) AgentTracker() proto.AgentTracker     { return &AgentTrackerBinding{b} }
-func (b *Backend) Jobs() proto.JobService               { return &JobService{b} }
+func (b *Backend) Jobs() jobs.JobService                { return &JobService{b} }
 
 func (b *Backend) jobQueueListener() *jobQueueListener {
 	b.Lock()

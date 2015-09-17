@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"euphoria.io/heim/cluster"
+	"euphoria.io/heim/proto/jobs"
 	"euphoria.io/heim/proto/security"
 	"euphoria.io/scope"
 )
@@ -12,7 +13,7 @@ import (
 type Backend interface {
 	AccountManager() AccountManager
 	AgentTracker() AgentTracker
-	Jobs() JobService
+	Jobs() jobs.JobService
 
 	// BanIP globally bans an IP. A zero value for until indicates a
 	// permanent ban.

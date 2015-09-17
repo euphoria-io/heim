@@ -6,6 +6,7 @@ import (
 
 	"euphoria.io/heim/cluster"
 	"euphoria.io/heim/proto"
+	"euphoria.io/heim/proto/jobs"
 	"euphoria.io/heim/proto/security"
 	"euphoria.io/heim/proto/snowflake"
 	"euphoria.io/scope"
@@ -27,7 +28,7 @@ type TestBackend struct {
 
 func (b *TestBackend) AccountManager() proto.AccountManager { return &accountManager{b: b} }
 func (b *TestBackend) AgentTracker() proto.AgentTracker     { return &agentTracker{b} }
-func (b *TestBackend) Jobs() proto.JobService               { return &b.js }
+func (b *TestBackend) Jobs() jobs.JobService                { return &b.js }
 
 func (b *TestBackend) Close() {}
 

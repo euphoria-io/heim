@@ -17,6 +17,7 @@ import (
 	"euphoria.io/heim/cluster"
 	"euphoria.io/heim/emails"
 	"euphoria.io/heim/proto"
+	"euphoria.io/heim/proto/jobs"
 	"euphoria.io/heim/proto/security"
 	"euphoria.io/heim/proto/snowflake"
 	"euphoria.io/scope"
@@ -2068,10 +2069,10 @@ func testJobsLowLevel(s *serverUnderTest) {
 	js := s.backend.Jobs()
 	ctx := scope.New()
 
-	makeJob := func() (proto.JobType, interface{}) {
+	makeJob := func() (jobs.JobType, interface{}) {
 		token, err := snowflake.New()
 		So(err, ShouldBeNil)
-		return proto.EmailJobType, &proto.EmailJob{EmailID: token}
+		return jobs.EmailJobType, &jobs.EmailJob{EmailID: token}
 	}
 
 	Convey("Creating queue errors on duplicates", func() {
@@ -2080,7 +2081,7 @@ func testJobsLowLevel(s *serverUnderTest) {
 		So(jq, ShouldNotBeNil)
 
 		jq, err = js.CreateQueue(ctx, "duptest")
-		So(err, ShouldEqual, proto.ErrJobQueueAlreadyExists)
+		So(err, ShouldEqual, jobs.ErrJobQueueAlreadyExists)
 		So(jq, ShouldBeNil)
 
 		jq, err = js.GetQueue(ctx, "duptest")
@@ -2090,12 +2091,12 @@ func testJobsLowLevel(s *serverUnderTest) {
 
 	Convey("Fetching non-existent queue returns error", func() {
 		jq, err := js.GetQueue(ctx, "doesn't exist")
-		So(err, ShouldEqual, proto.ErrJobQueueNotFound)
+		So(err, ShouldEqual, jobs.ErrJobQueueNotFound)
 		So(jq, ShouldBeNil)
 	})
 
-	claimJob := func(queueName string) chan *proto.Job {
-		ch := make(chan *proto.Job)
+	claimJob := func(queueName string) chan *jobs.Job {
+		ch := make(chan *jobs.Job)
 
 		go func() {
 			jq, err := js.GetQueue(ctx, queueName)
@@ -2120,7 +2121,7 @@ func testJobsLowLevel(s *serverUnderTest) {
 		So(err, ShouldBeNil)
 
 		// synchronize with job claiming
-		ctrl := ctx.Breakpoint("euphoria.io/heim/proto.JobQueue.Claim")
+		ctrl := ctx.Breakpoint("euphoria.io/heim/proto/jobs.JobQueue.Claim")
 		ch := claimJob("simple lifecycle")
 		<-ctrl
 		ctrl <- nil
@@ -2152,7 +2153,7 @@ func testJobsLowLevel(s *serverUnderTest) {
 		So(err, ShouldBeNil)
 
 		// synchronize with job claiming and block
-		ctrl := ctx.Breakpoint("euphoria.io/heim/proto.JobQueue.Claim")
+		ctrl := ctx.Breakpoint("euphoria.io/heim/proto/jobs.JobQueue.Claim")
 		ch := claimJob("cancel lifecycle")
 		<-ctrl
 
@@ -2184,7 +2185,7 @@ func testJobsLowLevel(s *serverUnderTest) {
 		So(err, ShouldBeNil)
 
 		jt, jp := makeJob()
-		jobID, err := jq.Add(ctx, jt, jp, proto.JobOptions.MaxAttempts(3))
+		jobID, err := jq.Add(ctx, jt, jp, jobs.JobOptions.MaxAttempts(3))
 
 		n := 0
 		for {
@@ -2207,13 +2208,13 @@ func testJobsLowLevel(s *serverUnderTest) {
 		So(err, ShouldBeNil)
 
 		jt1, jp1 := makeJob()
-		longJobID, err := jq.Add(ctx, jt1, jp1, proto.JobOptions.MaxWorkDuration(time.Hour))
+		longJobID, err := jq.Add(ctx, jt1, jp1, jobs.JobOptions.MaxWorkDuration(time.Hour))
 		So(err, ShouldBeNil)
 
 		jt2, jp2 := makeJob()
 		shortJobID, err := jq.Add(ctx, jt2, jp2,
-			proto.JobOptions.MaxWorkDuration(0),
-			proto.JobOptions.MaxAttempts(2))
+			jobs.JobOptions.MaxWorkDuration(0),
+			jobs.JobOptions.MaxAttempts(2))
 		So(err, ShouldBeNil)
 
 		j1, err := jq.Claim(ctx, "test")
@@ -2227,7 +2228,7 @@ func testJobsLowLevel(s *serverUnderTest) {
 
 		// handler shouldn't be able to steal from itself
 		_, err = jq.Steal(ctx, "test")
-		So(err, ShouldEqual, proto.ErrJobNotFound)
+		So(err, ShouldEqual, jobs.ErrJobNotFound)
 
 		// other handler should be able to steal
 		j3, err := jq.Steal(ctx, "test2")
@@ -2238,8 +2239,8 @@ func testJobsLowLevel(s *serverUnderTest) {
 
 		So(j3.Complete(ctx), ShouldBeNil)
 		job, err := jq.Steal(ctx, "test2")
-		So(err, ShouldEqual, proto.ErrJobNotFound)
-		So(job, ShouldResemble, proto.Job{})
+		So(err, ShouldEqual, jobs.ErrJobNotFound)
+		So(job, ShouldResemble, jobs.Job{})
 		So(j1.Complete(ctx), ShouldBeNil)
 	})
 
@@ -2263,19 +2264,19 @@ func testJobsLowLevel(s *serverUnderTest) {
 
 		stats, err := jq.Stats(ctx)
 		So(err, ShouldBeNil)
-		So(stats, ShouldResemble, proto.JobQueueStats{
+		So(stats, ShouldResemble, jobs.JobQueueStats{
 			Waiting: n,
 			Due:     n,
 			Claimed: 0,
 		})
 
 		jt, jp := makeJob()
-		notDueJobID, err := jq.Add(ctx, jt, jp, proto.JobOptions.Due(time.Now().Add(time.Hour)))
+		notDueJobID, err := jq.Add(ctx, jt, jp, jobs.JobOptions.Due(time.Now().Add(time.Hour)))
 		So(err, ShouldBeNil)
 
 		stats, err = jq.Stats(ctx)
 		So(err, ShouldBeNil)
-		So(stats, ShouldResemble, proto.JobQueueStats{
+		So(stats, ShouldResemble, jobs.JobQueueStats{
 			Waiting: n + 1,
 			Due:     n,
 			Claimed: 0,
@@ -2287,7 +2288,7 @@ func testJobsLowLevel(s *serverUnderTest) {
 
 		stats, err = jq.Stats(ctx)
 		So(err, ShouldBeNil)
-		So(stats, ShouldResemble, proto.JobQueueStats{
+		So(stats, ShouldResemble, jobs.JobQueueStats{
 			Waiting: n,
 			Due:     n,
 			Claimed: 1,
@@ -2302,7 +2303,7 @@ func testJobsLowLevel(s *serverUnderTest) {
 
 		stats, err = jq.Stats(ctx)
 		So(err, ShouldBeNil)
-		So(stats, ShouldResemble, proto.JobQueueStats{
+		So(stats, ShouldResemble, jobs.JobQueueStats{
 			Waiting: 1,
 			Due:     0,
 			Claimed: 0,
@@ -2314,7 +2315,7 @@ func testJobsLowLevel(s *serverUnderTest) {
 
 		stats, err = jq.Stats(ctx)
 		So(err, ShouldBeNil)
-		So(stats, ShouldResemble, proto.JobQueueStats{
+		So(stats, ShouldResemble, jobs.JobQueueStats{
 			Waiting: 0,
 			Due:     0,
 			Claimed: 1,
@@ -2323,7 +2324,7 @@ func testJobsLowLevel(s *serverUnderTest) {
 		So(job.Complete(ctx), ShouldBeNil)
 
 		jt, jp = makeJob()
-		stealableJobID, err := jq.Add(ctx, jt, jp, proto.JobOptions.MaxWorkDuration(0))
+		stealableJobID, err := jq.Add(ctx, jt, jp, jobs.JobOptions.MaxWorkDuration(0))
 		So(err, ShouldBeNil)
 
 		job, err = jq.Claim(ctx, "test")
@@ -2332,7 +2333,7 @@ func testJobsLowLevel(s *serverUnderTest) {
 
 		stats, err = jq.Stats(ctx)
 		So(err, ShouldBeNil)
-		So(stats, ShouldResemble, proto.JobQueueStats{
+		So(stats, ShouldResemble, jobs.JobQueueStats{
 			Waiting: 1,
 			Due:     1,
 			Claimed: 0,

@@ -15,12 +15,6 @@ var (
 	ErrInvalidNick              = fmt.Errorf("invalid nick")
 	ErrInvalidParent            = fmt.Errorf("invalid parent ID")
 	ErrInvalidVerificationToken = fmt.Errorf("invalid verification token")
-	ErrJobCancelled             = fmt.Errorf("job cancelled")
-	ErrJobCanceled              = ErrJobCancelled
-	ErrJobNotFound              = fmt.Errorf("job not found")
-	ErrJobNotClaimed            = fmt.Errorf("job not claimed")
-	ErrJobQueueAlreadyExists    = fmt.Errorf("job queue already exists")
-	ErrJobQueueNotFound         = fmt.Errorf("job queue not found")
 	ErrLoggedIn                 = fmt.Errorf("logged in")
 	ErrManagerNotFound          = fmt.Errorf("manager not found")
 	ErrMessageNotFound          = fmt.Errorf("message not found")

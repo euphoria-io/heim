@@ -11,7 +11,7 @@ import (
 
 	"github.com/lib/pq"
 
-	"euphoria.io/heim/proto"
+	"euphoria.io/heim/proto/jobs"
 	"euphoria.io/heim/proto/snowflake"
 	"euphoria.io/scope"
 	"gopkg.in/gorp.v1"
@@ -66,30 +66,30 @@ type JobService struct {
 	*Backend
 }
 
-func (js *JobService) CreateQueue(ctx scope.Context, name string) (proto.JobQueue, error) {
+func (js *JobService) CreateQueue(ctx scope.Context, name string) (jobs.JobQueue, error) {
 	jq := &JobQueue{Name: name}
 	if err := js.DbMap.Insert(jq); err != nil {
 		if strings.HasPrefix(err.Error(), "pq: duplicate key value") {
-			return nil, proto.ErrJobQueueAlreadyExists
+			return nil, jobs.ErrJobQueueAlreadyExists
 		}
 		return nil, err
 	}
 	return jq.Bind(js.Backend), nil
 }
 
-func (js *JobService) GetQueue(ctx scope.Context, name string) (proto.JobQueue, error) {
+func (js *JobService) GetQueue(ctx scope.Context, name string) (jobs.JobQueue, error) {
 	row, err := js.DbMap.Get(JobQueue{}, name)
 	if err != nil {
 		return nil, err
 	}
 	if row == nil {
-		return nil, proto.ErrJobQueueNotFound
+		return nil, jobs.ErrJobQueueNotFound
 	}
 	return row.(*JobQueue).Bind(js.Backend), nil
 }
 
 func (jq *JobQueueBinding) Add(
-	ctx scope.Context, jobType proto.JobType, payload interface{}, options ...proto.JobOption) (
+	ctx scope.Context, jobType jobs.JobType, payload interface{}, options ...jobs.JobOption) (
 	snowflake.Snowflake, error) {
 
 	jobID, err := snowflake.New()
@@ -98,13 +98,13 @@ func (jq *JobQueueBinding) Add(
 	}
 
 	now := time.Now()
-	job := &proto.Job{
+	job := &jobs.Job{
 		ID:                jobID,
 		Type:              jobType,
 		Created:           now,
 		Due:               now,
 		AttemptsRemaining: math.MaxInt32,
-		MaxWorkDuration:   proto.DefaultMaxWorkDuration,
+		MaxWorkDuration:   jobs.DefaultMaxWorkDuration,
 	}
 	data, err := json.Marshal(payload)
 	if err != nil {
@@ -154,15 +154,15 @@ func (jq *JobQueueBinding) Add(
 	return jobID, nil
 }
 
-func (jq *JobQueueBinding) Claim(ctx scope.Context, handlerID string) (proto.Job, error) {
+func (jq *JobQueueBinding) Claim(ctx scope.Context, handlerID string) (jobs.Job, error) {
 	cols, err := allColumns(jq.Backend.DbMap, JobItem{}, "")
 	if err != nil {
-		return proto.Job{}, err
+		return jobs.Job{}, err
 	}
 
 	jql := jq.Backend.jobQueueListener()
 	child := ctx.Fork()
-	ch := make(chan *proto.Job, 0)
+	ch := make(chan *jobs.Job, 0)
 
 	// polling goroutine, scheduled by backend-managed condition
 	var pollErr error
@@ -188,16 +188,16 @@ func (jq *JobQueueBinding) Claim(ctx scope.Context, handlerID string) (proto.Job
 				ch <- nil
 				return
 			}
-			job := &proto.Job{
+			job := &jobs.Job{
 				ID:                snowflake.Snowflake(row.ID),
-				Type:              proto.JobType(row.JobType),
+				Type:              jobs.JobType(row.JobType),
 				Data:              json.RawMessage(row.Data),
 				Created:           row.Created,
 				Due:               row.Due,
 				MaxWorkDuration:   time.Duration(row.MaxWorkDurationSeconds) * time.Second,
 				AttemptsMade:      row.AttemptsMade,
 				AttemptsRemaining: row.AttemptsRemaining - 1,
-				JobClaim: &proto.JobClaim{
+				JobClaim: &jobs.JobClaim{
 					JobID:         snowflake.Snowflake(row.ID),
 					HandlerID:     handlerID,
 					AttemptNumber: row.AttemptsMade + 1,
@@ -212,7 +212,7 @@ func (jq *JobQueueBinding) Claim(ctx scope.Context, handlerID string) (proto.Job
 	// to facilitate testing, wait for initial nil value from polling goroutine
 	// before coordinating with breakpoint
 	<-ch
-	if err := ctx.Check("euphoria.io/heim/proto.JobQueue.Claim"); err != nil {
+	if err := ctx.Check("euphoria.io/heim/proto/jobs.JobQueue.Claim"); err != nil {
 		child.Terminate(err)
 		ch <- nil
 	}
@@ -227,38 +227,38 @@ func (jq *JobQueueBinding) Claim(ctx scope.Context, handlerID string) (proto.Job
 			// TODO: release without penalty instead of returning?
 			return *j, nil
 		}
-		return proto.Job{}, child.Err()
+		return jobs.Job{}, child.Err()
 	case job := <-ch:
 		if job == nil {
-			return proto.Job{}, pollErr
+			return jobs.Job{}, pollErr
 		}
 		return *job, nil
 	}
 }
 
-func (jq *JobQueueBinding) Steal(ctx scope.Context, handlerID string) (proto.Job, error) {
+func (jq *JobQueueBinding) Steal(ctx scope.Context, handlerID string) (jobs.Job, error) {
 	var row JobItem
 	cols, err := allColumns(jq.Backend.DbMap, JobItem{}, "")
 	if err != nil {
-		return proto.Job{}, err
+		return jobs.Job{}, err
 	}
 	err = jq.Backend.DbMap.SelectOne(&row, fmt.Sprintf("SELECT %s FROM job_steal($1, $2)", cols), jq.Name, handlerID)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return proto.Job{}, proto.ErrJobNotFound
+			return jobs.Job{}, jobs.ErrJobNotFound
 		}
-		return proto.Job{}, err
+		return jobs.Job{}, err
 	}
-	job := proto.Job{
+	job := jobs.Job{
 		ID:                snowflake.Snowflake(row.ID),
-		Type:              proto.JobType(row.JobType),
+		Type:              jobs.JobType(row.JobType),
 		Data:              json.RawMessage(row.Data),
 		Created:           row.Created,
 		Due:               row.Due,
 		MaxWorkDuration:   time.Duration(row.MaxWorkDurationSeconds) * time.Second,
 		AttemptsMade:      row.AttemptsMade,
 		AttemptsRemaining: row.AttemptsRemaining - 1,
-		JobClaim: &proto.JobClaim{
+		JobClaim: &jobs.JobClaim{
 			JobID:         snowflake.Snowflake(row.ID),
 			HandlerID:     handlerID,
 			AttemptNumber: row.AttemptsMade + 1,
@@ -286,8 +286,8 @@ func (jq *JobQueueBinding) Fail(
 	return err
 }
 
-func (jq *JobQueueBinding) Stats(ctx scope.Context) (proto.JobQueueStats, error) {
-	var stats proto.JobQueueStats
+func (jq *JobQueueBinding) Stats(ctx scope.Context) (jobs.JobQueueStats, error) {
+	var stats jobs.JobQueueStats
 
 	err := jq.Backend.DbMap.SelectOne(
 		&stats,
