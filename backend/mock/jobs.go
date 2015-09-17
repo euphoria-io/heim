@@ -197,11 +197,13 @@ func (jq *JobQueue) Claim(ctx scope.Context, handlerID string) (proto.Job, error
 
 	// polling goroutine, scheduled by condition
 	go func() {
-		jq.m.Lock()
-		defer jq.m.Unlock()
-
 		// send an initial nil value to inform caller that we're ready
 		ch <- nil
+
+		// wait for caller to respond
+		// caller will lock mutex for us and wait for us to unlock it
+		<-ch
+		defer jq.m.Unlock()
 
 		// loop until we claim a job or get cancelled
 		for child.Err() == nil {
@@ -229,6 +231,8 @@ func (jq *JobQueue) Claim(ctx scope.Context, handlerID string) (proto.Job, error
 	if err := ctx.Check("euphoria.io/heim/proto.JobQueue.Claim"); err != nil {
 		child.Terminate(err)
 	}
+	jq.m.Lock()
+	ch <- nil
 
 	select {
 	case <-child.Done():
