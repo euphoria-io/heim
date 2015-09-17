@@ -1,12 +1,16 @@
 image: eu.phoria/drone-runner:32
+
 env:
   - DEPS_PATH=/var/cache/heim-deps
   - DB_HOST=$POSTGRES_PORT_5432_TCP_ADDR
+
 script:
   - mv /var/cache/drone/src/github.com/euphoria-io /var/cache/drone/src/euphoria.io
   - ci/test.sh build
+
 services:
   - postgres
+
 notify:
   webhook:
     urls:
