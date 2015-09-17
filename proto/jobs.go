@@ -13,10 +13,12 @@ import (
 
 const DefaultMaxWorkDuration = time.Minute
 
-var (
-	EmailJobType = PacketType("email")
+type JobType string
 
-	jobPayloadMap = map[PacketType]reflect.Type{
+var (
+	EmailJobType = JobType("email")
+
+	jobPayloadMap = map[JobType]reflect.Type{
 		EmailJobType: reflect.TypeOf(EmailJob{}),
 	}
 )
@@ -32,7 +34,7 @@ type JobService interface {
 
 type JobQueue interface {
 	// Add enqueues a new job, as defined by the given type/payload.
-	Add(ctx scope.Context, jobType PacketType, payload interface{}, options ...JobOption) (
+	Add(ctx scope.Context, jobType JobType, payload interface{}, options ...JobOption) (
 		snowflake.Snowflake, error)
 
 	// Claim acquires a currently unclaimed job. The call will block
@@ -117,7 +119,7 @@ type JobQueueStats struct {
 
 type Job struct {
 	ID                snowflake.Snowflake
-	Type              PacketType
+	Type              JobType
 	Data              json.RawMessage
 	Created           time.Time
 	Due               time.Time

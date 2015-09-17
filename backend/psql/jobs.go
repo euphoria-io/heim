@@ -89,7 +89,7 @@ func (js *JobService) GetQueue(ctx scope.Context, name string) (proto.JobQueue, 
 }
 
 func (jq *JobQueueBinding) Add(
-	ctx scope.Context, jobType proto.PacketType, payload interface{}, options ...proto.JobOption) (
+	ctx scope.Context, jobType proto.JobType, payload interface{}, options ...proto.JobOption) (
 	snowflake.Snowflake, error) {
 
 	jobID, err := snowflake.New()
@@ -190,7 +190,7 @@ func (jq *JobQueueBinding) Claim(ctx scope.Context, handlerID string) (proto.Job
 			}
 			job := &proto.Job{
 				ID:                snowflake.Snowflake(row.ID),
-				Type:              proto.PacketType(row.JobType),
+				Type:              proto.JobType(row.JobType),
 				Data:              json.RawMessage(row.Data),
 				Created:           row.Created,
 				Due:               row.Due,
@@ -251,7 +251,7 @@ func (jq *JobQueueBinding) Steal(ctx scope.Context, handlerID string) (proto.Job
 	}
 	job := proto.Job{
 		ID:                snowflake.Snowflake(row.ID),
-		Type:              proto.PacketType(row.JobType),
+		Type:              proto.JobType(row.JobType),
 		Data:              json.RawMessage(row.Data),
 		Created:           row.Created,
 		Due:               row.Due,

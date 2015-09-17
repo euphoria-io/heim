@@ -2068,7 +2068,7 @@ func testJobsLowLevel(s *serverUnderTest) {
 	js := s.backend.Jobs()
 	ctx := scope.New()
 
-	makeJob := func() (proto.PacketType, interface{}) {
+	makeJob := func() (proto.JobType, interface{}) {
 		token, err := snowflake.New()
 		So(err, ShouldBeNil)
 		return proto.EmailJobType, &proto.EmailJob{EmailID: token}

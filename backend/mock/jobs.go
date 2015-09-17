@@ -69,7 +69,7 @@ type JobQueue struct {
 }
 
 func (jq *JobQueue) Add(
-	ctx scope.Context, jobType proto.PacketType, payload interface{}, options ...proto.JobOption) (
+	ctx scope.Context, jobType proto.JobType, payload interface{}, options ...proto.JobOption) (
 	snowflake.Snowflake, error) {
 
 	jobID, err := snowflake.New()
