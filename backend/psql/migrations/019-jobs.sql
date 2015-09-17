@@ -3,6 +3,7 @@
 CREATE TABLE job_queue (
     name text NOT NULL PRIMARY KEY
 );
+COMMENT ON TABLE job_queue IS 'Names of queues that have been created.';
 
 CREATE TABLE job_item (
     id bigint NOT NULL PRIMARY KEY,
@@ -17,9 +18,9 @@ CREATE TABLE job_item (
     attempts_made integer DEFAULT 0,
     attempts_remaining integer NOT NULL
 );
-
 CREATE INDEX job_item_queue_claimed_completed_attempts_remaining_due_id ON job_item(queue, claimed, completed, attempts_remaining, due, id);
 CREATE INDEX job_item_queue_completed ON job_item(queue, completed);
+COMMENT ON TABLE job_item IS 'Jobs that have been enqueued (including cancelled or completed), and their current state.';
 
 CREATE TABLE job_log (
     job_id bigint NOT NULL REFERENCES job_item(id),
@@ -33,9 +34,10 @@ CREATE TABLE job_log (
     log bytea,
     PRIMARY KEY (job_id, attempt)
 );
+COMMENT ON TABLE job_log IS 'Claims of jobs, and their outcome if known.';
 
 -- +migrate StatementBegin
-CREATE OR REPLACE FUNCTION job_claim(_queue text, _handler_id text) RETURNS SETOF job_item AS
+CREATE FUNCTION job_claim(_queue text, _handler_id text) RETURNS SETOF job_item AS
 $$
 DECLARE
     item job_item%rowtype;
@@ -82,6 +84,7 @@ END;
 $$
 LANGUAGE plpgsql;
 -- +migrate StatementEnd
+COMMENT ON FUNCTION job_claim(text, text) IS 'Claim an unclaimed, uncompleted, uncancelled job and returns its job_item row, or NULL if no jobs are immediately available to claim.';
 
 -- +migrate StatementBegin
 CREATE OR REPLACE FUNCTION job_steal(_queue text, _handler_id text) RETURNS SETOF job_item AS
@@ -138,6 +141,7 @@ END;
 $$
 LANGUAGE plpgsql;
 -- +migrate StatementEnd
+COMMENT ON FUNCTION job_steal(text, text) IS 'Steals an expired outstanding claim from another _handler_id on an uncompleted job. Returns the job_item row of the job, or NULL if there are no claims to steal.';
 
 -- +migrate StatementBegin
 CREATE OR REPLACE FUNCTION job_complete(_job_id bigint, _attempt integer, _log bytea) RETURNS VOID AS
@@ -151,6 +155,7 @@ END;
 $$
 LANGUAGE plpgsql;
 -- +migrate StatementEnd
+COMMENT ON FUNCTION job_complete(bigint, integer, bytea) IS 'Releases a claim on a job and marks it as completed.';
 
 -- +migrate StatementBegin
 CREATE OR REPLACE FUNCTION job_fail(_job_id bigint, _attempt integer, _error text, _log bytea) RETURNS VOID AS
@@ -164,6 +169,7 @@ END;
 $$
 LANGUAGE plpgsql;
 -- +migrate StatementEnd
+COMMENT ON FUNCTION job_fail(bigint, integer, text, bytea) IS 'Releases a claim on a job but leaves it uncompleted.';
 
 -- +migrate StatementBegin
 CREATE OR REPLACE FUNCTION job_cancel(_job_id bigint) RETURNS VOID AS
@@ -176,6 +182,7 @@ END;
 $$
 LANGUAGE plpgsql;
 -- +migrate StatementEnd
+COMMENT ON FUNCTION job_cancel(bigint) IS 'Marks a job is cancelled. Existing claims continue to process and may yet complete the job, but it is no longer available to claim or steal.';
 
 
 -- +migrate Down
