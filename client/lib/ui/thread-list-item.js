@@ -76,7 +76,7 @@ const ThreadListItem = React.createClass({
         {this.props.depth < 3 && children.size > 0 && <div className="children">
           {children.toSeq().map((threadId) =>
             <ThreadListItem key={threadId} threadData={this.props.threadData} threadTree={this.props.threadTree} threadNodeId={threadId} tree={this.props.tree} nodeId={threadId} depth={this.props.depth + 1} onClick={this.props.onClick} />
-          ).toArray()}
+          )}
         </div>}
       </div>
     )

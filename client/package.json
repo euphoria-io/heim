@@ -8,7 +8,7 @@
     "babel-polyfill": "~6.0.16",
     "core-js": "~1.2.5",
     "lodash": "~3.10.0",
-    "react": "~0.12.1",
+    "react": "~0.13.3",
     "reflux": "~0.2.1",
     "classnames": "~1.2.1",
     "moment": "~2.8.4",

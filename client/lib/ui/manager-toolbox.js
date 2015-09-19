@@ -64,7 +64,7 @@ export default React.createClass({
               {item.has('name') && <div className="name">{item.get('name')}</div>}
               <div className="id">{item.get('id')}</div>
             </span>
-          ).toArray()}
+          )}
         </div>
         <div className="action">
           <select className="command-picker" value={selectedCommand} onChange={this.selectCommand}>

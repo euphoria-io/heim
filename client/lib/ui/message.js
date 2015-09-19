@@ -377,7 +377,7 @@ const Message = React.createClass({
             <div className="content">
               {children.toIndexedSeq().map((nodeId, idx) =>
                 <Message key={nodeId} pane={this.props.pane} tree={this.props.tree} nodeId={nodeId} depth={this.props.depth + 1} visibleCount={repliesExpanded ? Message.visibleCount : Math.floor((this.props.visibleCount - 1) / 2)} showTimeAgo={!expandRestOfReplies && idx === children.size - 1} showTimeStamps={this.props.showTimeStamps} roomSettings={this.props.roomSettings} />
-              ).toArray()}
+              )}
               {focusAction}
             </div>
           </div>

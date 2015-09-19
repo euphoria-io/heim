@@ -313,7 +313,7 @@ export default React.createClass({
                 <ChatPane pane={pane} showParent showAllReplies />
               </div>
             )
-          }).toArray()}
+          })}
         </div>}
         {!thin && <Bubble ref="threadPopup" className="thread-popup bubble-from-left" anchorEl={this.state.ui.threadPopupAnchorEl} visible={!!this.state.ui.threadPopupAnchorEl} onDismiss={this.dismissThreadPopup} offset={() => ({ left: this.getDOMNode().getBoundingClientRect().left + 5, top: 26 })}>
           <div className="top-line">
