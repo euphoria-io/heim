@@ -111,11 +111,6 @@ export default React.createClass({
     this.scrollUpdatePosition()
   },
 
-  componentWillUnmount() {
-    // FIXME: hack to work around Reflux #156.
-    this.replaceState = () => {}
-  },
-
   onActive() {
     this._markSeen()
   },

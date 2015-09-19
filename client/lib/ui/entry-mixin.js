@@ -28,9 +28,4 @@ export default {
     }
     return false
   },
-
-  componentWillUnmount() {
-    // FIXME: hack to work around Reflux #156.
-    this.replaceState = () => {}
-  },
 }

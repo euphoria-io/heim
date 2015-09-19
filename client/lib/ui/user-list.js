@@ -32,11 +32,11 @@ export default React.createClass({
       <div className="user-list" {...this.props}>
         {list.has('human') && <div className="list">
           <h1>people</h1>
-          {list.get('human').map(formatUser).toArray()}
+          {list.get('human').map(formatUser).toIndexedSeq()}
         </div>}
         {list.has('bot') && <div className="list">
           <h1>bots</h1>
-          {list.get('bot').map(formatUser).toArray()}
+          {list.get('bot').map(formatUser).toIndexedSeq()}
         </div>}
       </div>
     )

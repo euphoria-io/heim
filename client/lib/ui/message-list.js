@@ -39,7 +39,7 @@ export default React.createClass({
       <div className="message-list">
         {children.toIndexedSeq().map((nodeId, idx) =>
           <Message key={nodeId} pane={this.props.pane} tree={this.props.tree} nodeId={nodeId} showTimeAgo={idx === children.size - 1} showTimeStamps={this.props.showTimeStamps} roomSettings={this.props.roomSettings} />
-        ).toArray()}
+        )}
       </div>
     )
   },
