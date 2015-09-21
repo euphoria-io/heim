@@ -154,102 +154,73 @@ func (jq *JobQueueBinding) Add(
 	return jobID, nil
 }
 
-func (jq *JobQueueBinding) Claim(ctx scope.Context, handlerID string) (jobs.Job, error) {
-	cols, err := allColumns(jq.Backend.DbMap, JobItem{}, "")
-	if err != nil {
-		return jobs.Job{}, err
-	}
+func (jq *JobQueueBinding) WaitForJob(ctx scope.Context) error {
+	ch := make(chan error)
 
-	jql := jq.Backend.jobQueueListener()
-	child := ctx.Fork()
-	ch := make(chan *jobs.Job, 0)
-
-	// polling goroutine, scheduled by backend-managed condition
-	var pollErr error
 	go func() {
-
-		// send an initial nil value to inform caller that we're waiting
+		jq.Backend.jobQueueListener().wait(jq.Name)
 		ch <- nil
-
-		// wait for caller to allow us to proceed
-		<-ch
-
-		// loop until we claim a job or get cancelled
-		for child.Err() == nil {
-			var row JobItem
-			err := jq.Backend.DbMap.SelectOne(&row, fmt.Sprintf("SELECT %s FROM job_claim($1, $2)", cols), jq.Name, handlerID)
-			if err != nil {
-				if err == sql.ErrNoRows {
-					// no job was ready; wait for notification of new job and try again
-					jql.wait(jq.Name)
-					continue
-				}
-				pollErr = err
-				ch <- nil
-				return
-			}
-			job := &jobs.Job{
-				ID:                snowflake.Snowflake(row.ID),
-				Type:              jobs.JobType(row.JobType),
-				Data:              json.RawMessage(row.Data),
-				Created:           row.Created,
-				Due:               row.Due,
-				MaxWorkDuration:   time.Duration(row.MaxWorkDurationSeconds) * time.Second,
-				AttemptsMade:      row.AttemptsMade,
-				AttemptsRemaining: row.AttemptsRemaining - 1,
-				JobClaim: &jobs.JobClaim{
-					JobID:         snowflake.Snowflake(row.ID),
-					HandlerID:     handlerID,
-					AttemptNumber: row.AttemptsMade + 1,
-					Queue:         jq,
-				},
-			}
-			ch <- job
-			return
-		}
 	}()
 
-	// to facilitate testing, wait for initial nil value from polling goroutine
-	// before coordinating with breakpoint
-	<-ch
-	if err := ctx.Check("euphoria.io/heim/proto/jobs.JobQueue.Claim"); err != nil {
-		child.Terminate(err)
-		ch <- nil
-	}
-	ch <- nil
-
 	select {
-	case <-child.Done():
-		jql.wakeAll(jq.Name)
-		// job may still have been received between receiving cancellation signal
-		// and locking
-		if j, ok := <-ch; ok && j != nil {
-			// TODO: release without penalty instead of returning?
-			return *j, nil
-		}
-		return jobs.Job{}, child.Err()
-	case job := <-ch:
-		if job == nil {
-			return jobs.Job{}, pollErr
-		}
-		return *job, nil
+	case <-ctx.Done():
+		jq.Backend.jobQueueListener().wakeAll(jq.Name)
+		<-ch
+		return ctx.Err()
+	case err := <-ch:
+		return err
 	}
 }
 
-func (jq *JobQueueBinding) Steal(ctx scope.Context, handlerID string) (jobs.Job, error) {
+func (jq *JobQueueBinding) TryClaim(ctx scope.Context, handlerID string) (*jobs.Job, error) {
 	var row JobItem
 	cols, err := allColumns(jq.Backend.DbMap, JobItem{}, "")
 	if err != nil {
-		return jobs.Job{}, err
+		return nil, err
+	}
+	err = jq.Backend.DbMap.SelectOne(
+		&row,
+		fmt.Sprintf("SELECT %s FROM job_claim($1, $2)", cols),
+		jq.Name, handlerID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, jobs.ErrJobNotFound
+		}
+		return nil, err
+	}
+	job := &jobs.Job{
+		ID:                snowflake.Snowflake(row.ID),
+		Type:              jobs.JobType(row.JobType),
+		Data:              json.RawMessage(row.Data),
+		Created:           row.Created,
+		Due:               row.Due,
+		MaxWorkDuration:   time.Duration(row.MaxWorkDurationSeconds) * time.Second,
+		AttemptsMade:      row.AttemptsMade,
+		AttemptsRemaining: row.AttemptsRemaining - 1,
+		JobClaim: &jobs.JobClaim{
+			JobID:         snowflake.Snowflake(row.ID),
+			HandlerID:     handlerID,
+			AttemptNumber: row.AttemptsMade + 1,
+			Queue:         jq,
+		},
+	}
+	return job, nil
+}
+
+func (jq *JobQueueBinding) TrySteal(ctx scope.Context, handlerID string) (*jobs.Job, error) {
+	var row JobItem
+	cols, err := allColumns(jq.Backend.DbMap, JobItem{}, "")
+	if err != nil {
+		return nil, err
 	}
 	err = jq.Backend.DbMap.SelectOne(&row, fmt.Sprintf("SELECT %s FROM job_steal($1, $2)", cols), jq.Name, handlerID)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return jobs.Job{}, jobs.ErrJobNotFound
+			return nil, jobs.ErrJobNotFound
 		}
-		return jobs.Job{}, err
+		return nil, err
 	}
-	job := jobs.Job{
+	job := &jobs.Job{
 		ID:                snowflake.Snowflake(row.ID),
 		Type:              jobs.JobType(row.JobType),
 		Data:              json.RawMessage(row.Data),

@@ -2075,6 +2075,27 @@ func testJobsLowLevel(s *serverUnderTest) {
 		return jobs.EmailJobType, &jobs.EmailJob{EmailID: token}
 	}
 
+	claimJob := func(queueName string) chan *jobs.Job {
+		ch := make(chan *jobs.Job)
+
+		go func() {
+			jq, err := js.GetQueue(ctx, queueName)
+			if err != nil {
+				fmt.Printf("get queue failed: %s", err)
+				ch <- nil
+				return
+			}
+			job, err := jobs.Claim(ctx, jq, "test", 10*time.Millisecond)
+			if err != nil {
+				fmt.Printf("claim job failed: %s", err)
+				ch <- nil
+				return
+			}
+			ch <- job
+		}()
+		return ch
+	}
+
 	Convey("Creating queue errors on duplicates", func() {
 		jq, err := js.CreateQueue(ctx, "duptest")
 		So(err, ShouldBeNil)
@@ -2095,36 +2116,12 @@ func testJobsLowLevel(s *serverUnderTest) {
 		So(jq, ShouldBeNil)
 	})
 
-	claimJob := func(queueName string) chan *jobs.Job {
-		ch := make(chan *jobs.Job)
-
-		go func() {
-			jq, err := js.GetQueue(ctx, queueName)
-			if err != nil {
-				fmt.Printf("get queue failed: %s", err)
-				ch <- nil
-				return
-			}
-			job, err := jq.Claim(ctx, "test")
-			if err != nil {
-				fmt.Printf("claim job failed: %s", err)
-				ch <- nil
-				return
-			}
-			ch <- &job
-		}()
-		return ch
-	}
-
 	Convey("Simple job lifecycle", func() {
 		jq, err := js.CreateQueue(ctx, "simple lifecycle")
 		So(err, ShouldBeNil)
 
-		// synchronize with job claiming
-		ctrl := ctx.Breakpoint("euphoria.io/heim/proto/jobs.JobQueue.Claim")
+		// start job claimer
 		ch := claimJob("simple lifecycle")
-		<-ctrl
-		ctrl <- nil
 
 		// create and add job to be claimed
 		jt, jp := makeJob()
@@ -2152,19 +2149,14 @@ func testJobsLowLevel(s *serverUnderTest) {
 		jq, err := js.CreateQueue(ctx, "cancel lifecycle")
 		So(err, ShouldBeNil)
 
-		// synchronize with job claiming and block
-		ctrl := ctx.Breakpoint("euphoria.io/heim/proto/jobs.JobQueue.Claim")
-		ch := claimJob("cancel lifecycle")
-		<-ctrl
-
 		// add job, then cancel it
 		jt1, jp1 := makeJob()
 		jobID, err := jq.Add(ctx, jt1, jp1)
 		So(err, ShouldBeNil)
 		So(jq.Cancel(ctx, jobID), ShouldBeNil)
 
-		// release job claimer
-		ctrl <- nil
+		// start job claimer
+		ch := claimJob("cancel lifecycle")
 
 		// add new job to claim
 		jt2, jp2 := makeJob()
@@ -2190,7 +2182,7 @@ func testJobsLowLevel(s *serverUnderTest) {
 		n := 0
 		for {
 			n += 1
-			job, err := jq.Claim(ctx, "test")
+			job, err := jobs.Claim(ctx, jq, "test", 10*time.Millisecond)
 			So(err, ShouldBeNil)
 			So(job.ID, ShouldEqual, jobID)
 			So(job.AttemptsRemaining, ShouldEqual, 3-n)
@@ -2217,31 +2209,34 @@ func testJobsLowLevel(s *serverUnderTest) {
 			jobs.JobOptions.MaxAttempts(2))
 		So(err, ShouldBeNil)
 
-		j1, err := jq.Claim(ctx, "test")
+		j1, err := jobs.Claim(ctx, jq, "test", 10*time.Millisecond)
 		So(err, ShouldBeNil)
 		So(j1.ID, ShouldEqual, longJobID)
 
-		j2, err := jq.Claim(ctx, "test")
+		j2, err := jobs.Claim(ctx, jq, "test", 10*time.Millisecond)
 		So(err, ShouldBeNil)
 		So(j2.ID, ShouldEqual, shortJobID)
 		So(j2.AttemptsRemaining, ShouldEqual, 1)
 
 		// handler shouldn't be able to steal from itself
-		_, err = jq.Steal(ctx, "test")
+		_, err = jq.TrySteal(ctx, "test")
 		So(err, ShouldEqual, jobs.ErrJobNotFound)
 
 		// other handler should be able to steal
-		j3, err := jq.Steal(ctx, "test2")
+		j3, err := jq.TrySteal(ctx, "test2")
 		So(err, ShouldBeNil)
 		So(j3.ID, ShouldEqual, shortJobID)
 		So(j3.AttemptsRemaining, ShouldEqual, 0)
 		//So(j2.Started, ShouldHappenBefore, j3.Started)
 
 		So(j3.Complete(ctx), ShouldBeNil)
-		job, err := jq.Steal(ctx, "test2")
+		job, err := jq.TrySteal(ctx, "test2")
 		So(err, ShouldEqual, jobs.ErrJobNotFound)
-		So(job, ShouldResemble, jobs.Job{})
+		So(job, ShouldBeNil)
 		So(j1.Complete(ctx), ShouldBeNil)
+	})
+
+	Convey("Wake waiters on job failure", func() {
 	})
 
 	Convey("Stats", func() {
@@ -2282,7 +2277,7 @@ func testJobsLowLevel(s *serverUnderTest) {
 			Claimed: 0,
 		})
 
-		job, err := jq.Claim(ctx, "test")
+		job, err := jobs.Claim(ctx, jq, "test", 10*time.Millisecond)
 		So(err, ShouldBeNil)
 		So(job.ID, ShouldNotEqual, notDueJobID)
 
@@ -2309,7 +2304,7 @@ func testJobsLowLevel(s *serverUnderTest) {
 			Claimed: 0,
 		})
 
-		job, err = jq.Claim(ctx, "test")
+		job, err = jobs.Claim(ctx, jq, "test", 10*time.Millisecond)
 		So(err, ShouldBeNil)
 		So(job.ID, ShouldEqual, notDueJobID)
 
@@ -2327,7 +2322,7 @@ func testJobsLowLevel(s *serverUnderTest) {
 		stealableJobID, err := jq.Add(ctx, jt, jp, jobs.JobOptions.MaxWorkDuration(0))
 		So(err, ShouldBeNil)
 
-		job, err = jq.Claim(ctx, "test")
+		job, err = jobs.Claim(ctx, jq, "test", 10*time.Millisecond)
 		So(err, ShouldBeNil)
 		So(job.ID, ShouldEqual, stealableJobID)
 

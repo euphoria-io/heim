@@ -34,14 +34,21 @@ type JobService interface {
 
 type JobQueue interface {
 	// Add enqueues a new job, as defined by the given type/payload.
+	// If any callers waiting in WaitForJob (not just in the local
+	// process), at least one should be woken.
 	Add(ctx scope.Context, jobType JobType, payload interface{}, options ...JobOption) (
 		snowflake.Snowflake, error)
 
-	// Claim acquires a currently unclaimed job. The call will block
-	// until a job is available or the given context is cancelled.
-	Claim(ctx scope.Context, handlerID string) (Job, error)
+	// WaitForJob blocks until notification of a new claimable job
+	// in the queue. This does not guarantee that a job will be
+	// immediately claimable.
+	WaitForJob(ctx scope.Context) error
 
-	// Steal attempts to preempt another handler's claim. Only jobs
+	// TryClaim tries to acquire a currently unclaimed job. If none is
+	// available, returns ErrJobNotFound.
+	TryClaim(ctx scope.Context, handlerID string) (*Job, error)
+
+	// TrySteal attempts to preempt another handler's claim. Only jobs
 	// that have been claimed longer than their MaxWorkDuration setting
 	// can be stolen. Only jobs claimed by a different handlerID can
 	// be stolen.
@@ -51,7 +58,7 @@ type JobQueue interface {
 	// Stolen jobs are at risk of being completed twice. It's important
 	// for handlers to set a completion timeout and self-cancel well
 	// within the job's MaxWorkDuration.
-	Steal(ctx scope.Context, handlerID string) (Job, error)
+	TrySteal(ctx scope.Context, handlerID string) (*Job, error)
 
 	// Cancel removes a job from the queue. If it is currently claimed, then it
 	// may still be completed by the handler that claimed it, but no future call

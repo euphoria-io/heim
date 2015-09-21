@@ -191,66 +191,50 @@ func (jq *JobQueue) Stats(ctx scope.Context) (jobs.JobQueueStats, error) {
 	return stats, nil
 }
 
-func (jq *JobQueue) Claim(ctx scope.Context, handlerID string) (jobs.Job, error) {
-	child := ctx.Fork()
-	ch := make(chan *jobs.Job)
+func (jq *JobQueue) WaitForJob(ctx scope.Context) error {
+	ch := make(chan error)
 
-	// polling goroutine, scheduled by condition
 	go func() {
-		// send an initial nil value to inform caller that we're ready
+		jq.m.Lock()
+		jq.c.Wait()
+		jq.m.Unlock()
 		ch <- nil
-
-		// wait for caller to respond
-		// caller will lock mutex for us and wait for us to unlock it
-		<-ch
-		defer jq.m.Unlock()
-
-		// loop until we claim a job or get cancelled
-		for child.Err() == nil {
-			if len(jq.available) > 0 {
-				e := heap.Pop(&jq.available).(entry)
-				e.claimed = time.Now()
-				e.AttemptsRemaining -= 1
-				e.JobClaim = &jobs.JobClaim{
-					JobID:         e.ID,
-					HandlerID:     handlerID,
-					AttemptNumber: e.AttemptsMade + 1,
-					Queue:         jq,
-				}
-				heap.Push(&jq.working, e)
-				ch <- &e.Job
-				return
-			}
-			jq.c.Wait()
-		}
 	}()
 
-	// to facilitate testing, wait for initial nil value from polling goroutine
-	// before coordinating with breakpoint
-	<-ch
-	if err := ctx.Check("euphoria.io/heim/proto/jobs.JobQueue.Claim"); err != nil {
-		child.Terminate(err)
-	}
-	jq.m.Lock()
-	ch <- nil
-
 	select {
-	case <-child.Done():
+	case <-ctx.Done():
 		jq.m.Lock()
 		jq.c.Broadcast()
-		// job may still have been received between receiving cancellation signal
-		// and locking, so return it to the queue without penalty
-		if j, ok := <-ch; ok {
-			jq.release(j.ID, 0)
-		}
 		jq.m.Unlock()
-		return jobs.Job{}, child.Err()
-	case job := <-ch:
-		return *job, nil
+		<-ch
+		return ctx.Err()
+	case err := <-ch:
+		return err
 	}
 }
 
-func (jq *JobQueue) Steal(ctx scope.Context, handlerID string) (jobs.Job, error) {
+func (jq *JobQueue) TryClaim(ctx scope.Context, handlerID string) (*jobs.Job, error) {
+	jq.m.Lock()
+	defer jq.m.Unlock()
+
+	if len(jq.available) == 0 {
+		return nil, jobs.ErrJobNotFound
+	}
+
+	e := heap.Pop(&jq.available).(entry)
+	e.claimed = time.Now()
+	e.AttemptsRemaining -= 1
+	e.JobClaim = &jobs.JobClaim{
+		JobID:         e.ID,
+		HandlerID:     handlerID,
+		AttemptNumber: e.AttemptsMade + 1,
+		Queue:         jq,
+	}
+	heap.Push(&jq.working, e)
+	return &e.Job, nil
+}
+
+func (jq *JobQueue) TrySteal(ctx scope.Context, handlerID string) (*jobs.Job, error) {
 	jq.m.Lock()
 	defer jq.m.Unlock()
 
@@ -271,7 +255,7 @@ func (jq *JobQueue) Steal(ctx scope.Context, handlerID string) (jobs.Job, error)
 		}
 	}
 	if idx < 0 {
-		return jobs.Job{}, jobs.ErrJobNotFound
+		return nil, jobs.ErrJobNotFound
 	}
 
 	jobID := jq.working[idx].ID
@@ -289,9 +273,9 @@ func (jq *JobQueue) Steal(ctx scope.Context, handlerID string) (jobs.Job, error)
 				Queue:         jq,
 			}
 			heap.Push(&jq.working, entry)
-			return entry.Job, nil
+			return &entry.Job, nil
 		}
 	}
 
-	return jobs.Job{}, fmt.Errorf("job disappeared")
+	return nil, fmt.Errorf("job disappeared")
 }
