@@ -157,10 +157,20 @@ func (jq *JobQueueBinding) Add(
 func (jq *JobQueueBinding) WaitForJob(ctx scope.Context) error {
 	ch := make(chan error)
 
+	// background goroutine to wait on condition
 	go func() {
+		// synchronize with caller
+		<-ch
+		jq.m.Unlock()
 		jq.Backend.jobQueueListener().wait(jq.Name)
 		ch <- nil
 	}()
+
+	// synchronize with background goroutine
+	jq.m.Lock()
+	ch <- nil
+	jq.m.Lock()
+	jq.m.Unlock()
 
 	select {
 	case <-ctx.Done():
