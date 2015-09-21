@@ -88,13 +88,12 @@ func (js *JobService) GetQueue(ctx scope.Context, name string) (jobs.JobQueue, e
 	return row.(*JobQueue).Bind(js.Backend), nil
 }
 
-func (jq *JobQueueBinding) Add(
-	ctx scope.Context, jobType jobs.JobType, payload interface{}, options ...jobs.JobOption) (
-	snowflake.Snowflake, error) {
+func (jq *JobQueueBinding) newJob(
+	jobType jobs.JobType, payload interface{}, options ...jobs.JobOption) (*jobs.Job, error) {
 
 	jobID, err := snowflake.New()
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
 	now := time.Now()
@@ -108,27 +107,66 @@ func (jq *JobQueueBinding) Add(
 	}
 	data, err := json.Marshal(payload)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 	if err := job.Data.UnmarshalJSON(data); err != nil {
-		return 0, err
+		return nil, err
 	}
 
 	for _, option := range options {
 		if err := option.Apply(job); err != nil {
-			return 0, err
+			return nil, err
 		}
 	}
 
+	return job, nil
+}
+
+func (jq *JobQueueBinding) insertJob(db gorp.SqlExecutor, job *jobs.Job) error {
 	item := &JobItem{
-		ID:                     int64(jobID),
+		ID:                     int64(job.ID),
 		Queue:                  jq.Name,
-		JobType:                string(jobType),
+		JobType:                string(job.Type),
 		Data:                   []byte(job.Data),
 		Created:                job.Created,
 		Due:                    job.Due,
+		AttemptsMade:           job.AttemptsMade,
 		AttemptsRemaining:      job.AttemptsRemaining,
 		MaxWorkDurationSeconds: int32(job.MaxWorkDuration / time.Second),
+	}
+	if job.JobClaim != nil {
+		item.Claimed = gorp.NullTime{
+			Valid: true,
+			Time:  job.Created,
+		}
+	}
+
+	if err := db.Insert(item); err != nil {
+		return err
+	}
+
+	if job.JobClaim != nil {
+		logEntry := &JobLog{
+			JobID:     int64(job.ID),
+			Attempt:   0,
+			HandlerID: job.JobClaim.HandlerID,
+			Started:   job.Created,
+		}
+		if err := db.Insert(logEntry); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (jq *JobQueueBinding) Add(
+	ctx scope.Context, jobType jobs.JobType, payload interface{}, options ...jobs.JobOption) (
+	snowflake.Snowflake, error) {
+
+	job, err := jq.newJob(jobType, payload, options...)
+	if err != nil {
+		return 0, err
 	}
 
 	t, err := jq.DbMap.Begin()
@@ -136,7 +174,7 @@ func (jq *JobQueueBinding) Add(
 		return 0, err
 	}
 
-	if err := t.Insert(item); err != nil {
+	if err := jq.insertJob(t, job); err != nil {
 		rollback(ctx, t)
 		return 0, err
 	}
@@ -151,7 +189,44 @@ func (jq *JobQueueBinding) Add(
 		return 0, err
 	}
 
-	return jobID, nil
+	return job.ID, nil
+}
+
+func (jq *JobQueueBinding) AddAndClaim(
+	ctx scope.Context, jobType jobs.JobType, payload interface{}, handlerID string, options ...jobs.JobOption) (
+	*jobs.Job, error) {
+
+	job, err := jq.newJob(jobType, payload, options...)
+	if err != nil {
+		return nil, err
+	}
+
+	t, err := jq.DbMap.Begin()
+	if err != nil {
+		return nil, err
+	}
+
+	job.AttemptsMade = 1
+	job.AttemptsRemaining -= 1
+	job.JobClaim = &jobs.JobClaim{
+		JobID:         job.ID,
+		HandlerID:     handlerID,
+		AttemptNumber: 0,
+		Queue:         jq,
+	}
+	if err := jq.insertJob(t, job); err != nil {
+		rollback(ctx, t)
+		return nil, err
+	}
+
+	if err := t.Commit(); err != nil {
+		return nil, err
+	}
+
+	// The stored job item should have AttemptsMade=1, but the returned job
+	// should have AttemptsMade=0.
+	job.AttemptsMade = 0
+	return job, nil
 }
 
 func (jq *JobQueueBinding) WaitForJob(ctx scope.Context) error {
@@ -210,7 +285,7 @@ func (jq *JobQueueBinding) TryClaim(ctx scope.Context, handlerID string) (*jobs.
 		JobClaim: &jobs.JobClaim{
 			JobID:         snowflake.Snowflake(row.ID),
 			HandlerID:     handlerID,
-			AttemptNumber: row.AttemptsMade + 1,
+			AttemptNumber: row.AttemptsMade,
 			Queue:         jq,
 		},
 	}

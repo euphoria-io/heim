@@ -68,49 +68,84 @@ type JobQueue struct {
 	working   jobHeap
 }
 
+func (jq *JobQueue) newJob(jobType jobs.JobType, payload interface{}, options ...jobs.JobOption) (*jobs.Job, error) {
+	jobID, err := snowflake.New()
+	if err != nil {
+		return nil, err
+	}
+
+	now := time.Now()
+	job := &jobs.Job{
+		ID:                jobID,
+		Type:              jobType,
+		Created:           now,
+		Due:               now,
+		AttemptsRemaining: math.MaxInt32,
+		MaxWorkDuration:   jobs.DefaultMaxWorkDuration,
+	}
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return nil, err
+	}
+	if err := job.Data.UnmarshalJSON(data); err != nil {
+		return nil, err
+	}
+
+	for _, option := range options {
+		if err := option.Apply(job); err != nil {
+			return nil, err
+		}
+	}
+
+	return job, nil
+}
+
 func (jq *JobQueue) Add(
 	ctx scope.Context, jobType jobs.JobType, payload interface{}, options ...jobs.JobOption) (
 	snowflake.Snowflake, error) {
 
-	jobID, err := snowflake.New()
+	job, err := jq.newJob(jobType, payload, options...)
 	if err != nil {
 		return 0, err
 	}
-
-	now := time.Now()
-	e := entry{
-		Job: jobs.Job{
-			ID:                jobID,
-			Type:              jobType,
-			Created:           now,
-			Due:               now,
-			AttemptsRemaining: math.MaxInt32,
-			MaxWorkDuration:   jobs.DefaultMaxWorkDuration,
-		},
-	}
-	data, err := json.Marshal(payload)
-	if err != nil {
-		return 0, err
-	}
-	if err := e.Data.UnmarshalJSON(data); err != nil {
-		return 0, err
-	}
-
-	for _, option := range options {
-		if err := option.Apply(&e.Job); err != nil {
-			return 0, err
-		}
-	}
-
-	heap.Push(&jq.available, e)
 
 	jq.m.Lock()
+	heap.Push(&jq.available, entry{Job: *job})
 	if jq.c != nil {
 		jq.c.Signal()
 	}
 	jq.m.Unlock()
 
-	return jobID, nil
+	return job.ID, nil
+}
+
+func (jq *JobQueue) AddAndClaim(
+	ctx scope.Context, jobType jobs.JobType, payload interface{}, handlerID string, options ...jobs.JobOption) (
+	*jobs.Job, error) {
+
+	job, err := jq.newJob(jobType, payload, options...)
+	if err != nil {
+		return nil, err
+	}
+
+	job.AttemptsMade = 1
+	job.AttemptsRemaining -= 1
+	job.JobClaim = &jobs.JobClaim{
+		JobID:         job.ID,
+		HandlerID:     handlerID,
+		AttemptNumber: 0,
+		Queue:         jq,
+	}
+	e := entry{
+		Job:     *job,
+		claimed: job.Created,
+	}
+
+	jq.m.Lock()
+	heap.Push(&jq.working, e)
+	jq.m.Unlock()
+
+	return job, nil
 }
 
 func (jq *JobQueue) Complete(ctx scope.Context, jobID snowflake.Snowflake, handlerID string, attempt int32, log []byte) error {
@@ -125,6 +160,7 @@ func (jq *JobQueue) Fail(ctx scope.Context, jobID snowflake.Snowflake, handlerID
 	defer jq.m.Unlock()
 
 	jq.release(jobID, 0)
+	jq.c.Signal()
 	return nil
 }
 
@@ -222,7 +258,6 @@ func (jq *JobQueue) TryClaim(ctx scope.Context, handlerID string) (*jobs.Job, er
 	}
 
 	e := heap.Pop(&jq.available).(entry)
-	e.claimed = time.Now()
 	e.AttemptsRemaining -= 1
 	e.JobClaim = &jobs.JobClaim{
 		JobID:         e.ID,
@@ -230,6 +265,10 @@ func (jq *JobQueue) TryClaim(ctx scope.Context, handlerID string) (*jobs.Job, er
 		AttemptNumber: e.AttemptsMade + 1,
 		Queue:         jq,
 	}
+	ret := &jobs.Job{}
+	*ret = e.Job
+	e.claimed = time.Now()
+	e.AttemptsMade += 1
 	heap.Push(&jq.working, e)
 	return &e.Job, nil
 }

@@ -2145,6 +2145,41 @@ func testJobsLowLevel(s *serverUnderTest) {
 		So(job.Complete(ctx), ShouldBeNil)
 	})
 
+	Convey("Add and claim a job", func() {
+		jq, err := js.CreateQueue(ctx, "add and claim")
+		So(err, ShouldBeNil)
+
+		// Start job claimer
+		ch := claimJob("add and claim")
+
+		// Add and claim a job.
+		jt1, jp1 := makeJob()
+		job, err := jq.AddAndClaim(ctx, jt1, jp1, "test", jobs.JobOptions.MaxAttempts(3))
+		So(err, ShouldBeNil)
+		So(job.JobClaim, ShouldNotBeNil)
+		So(job.JobClaim.AttemptNumber, ShouldEqual, 0)
+
+		// Add a second job.
+		jt2, jp2 := makeJob()
+		newJobID, err := jq.Add(ctx, jt2, jp2)
+		So(err, ShouldBeNil)
+
+		// Wait for second job to be claimed.
+		newJob := <-ch
+		So(newJob.ID, ShouldEqual, newJobID)
+		So(newJob.Complete(ctx), ShouldBeNil)
+
+		// Fail job and let other handler claim it.
+		ch = claimJob("add and claim")
+		So(job.Fail(ctx, "error"), ShouldBeNil)
+		job2 := <-ch
+		So(job2, ShouldNotBeNil)
+		So(job2.ID, ShouldEqual, job.ID)
+		So(job2.AttemptsMade, ShouldEqual, 1)
+		So(job2.AttemptsRemaining, ShouldEqual, 1)
+		So(job2.JobClaim.AttemptNumber, ShouldEqual, 1)
+	})
+
 	Convey("Cancel a job before it can be claimed", func() {
 		jq, err := js.CreateQueue(ctx, "cancel lifecycle")
 		So(err, ShouldBeNil)

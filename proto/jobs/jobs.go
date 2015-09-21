@@ -39,6 +39,11 @@ type JobQueue interface {
 	Add(ctx scope.Context, jobType JobType, payload interface{}, options ...JobOption) (
 		snowflake.Snowflake, error)
 
+	// AddAndClaim enqueues a new job, atomically marking it as claimed by the
+	// caller. Returns the added and claimed job.
+	AddAndClaim(
+		ctx scope.Context, jobType JobType, payload interface{}, handlerID string, options ...JobOption) (*Job, error)
+
 	// WaitForJob blocks until notification of a new claimable job
 	// in the queue. This does not guarantee that a job will be
 	// immediately claimable.
