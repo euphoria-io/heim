@@ -5,7 +5,7 @@ import (
 	"html/template"
 	"net/url"
 
-	"euphoria.io/heim/emails"
+	"euphoria.io/heim/proto/emails"
 	"euphoria.io/heim/templates"
 )
 

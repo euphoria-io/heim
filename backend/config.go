@@ -16,8 +16,8 @@ import (
 	"euphoria.io/heim/aws/kms"
 	"euphoria.io/heim/cluster"
 	"euphoria.io/heim/cluster/etcd"
-	"euphoria.io/heim/emails"
 	"euphoria.io/heim/proto"
+	"euphoria.io/heim/proto/emails"
 	"euphoria.io/heim/proto/security"
 	"euphoria.io/scope"
 )

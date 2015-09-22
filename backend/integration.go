@@ -15,8 +15,8 @@ import (
 	"time"
 
 	"euphoria.io/heim/cluster"
-	"euphoria.io/heim/emails"
 	"euphoria.io/heim/proto"
+	"euphoria.io/heim/proto/emails"
 	"euphoria.io/heim/proto/jobs"
 	"euphoria.io/heim/proto/security"
 	"euphoria.io/heim/proto/snowflake"

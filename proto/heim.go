@@ -8,7 +8,7 @@ import (
 	"encoding/hex"
 
 	"euphoria.io/heim/cluster"
-	"euphoria.io/heim/emails"
+	"euphoria.io/heim/proto/emails"
 	"euphoria.io/heim/proto/security"
 	"euphoria.io/scope"
 )
