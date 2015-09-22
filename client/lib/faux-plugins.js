@@ -238,7 +238,7 @@ module.exports = function(roomName) {
         })
         .filter(Boolean)
 
-      var playRe = /!play [^?]*\?v=([-\w]+)(&t=([0-9hms]+))?/
+      var playRe = /!play [^?]*\?v=([-\w]+)(?:&t=([0-9hms]+))?/
       var video = candidates
         .map(msg => {
           var match = msg.get('content').match(playRe)
@@ -246,7 +246,7 @@ module.exports = function(roomName) {
             time: msg.get('time'),
             messageId: msg.get('id'),
             youtubeId: match[1],
-            youtubeTime: match[3] ? parseYoutubeTime(match[3]) : 0,
+            youtubeTime: match[2] ? parseYoutubeTime(match[2]) : 0,
             title: msg.get('content'),
           }
         })
