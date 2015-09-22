@@ -211,14 +211,14 @@ module.exports = function(roomName) {
 
     var parseYoutubeTime = function(time) {
       var timeReg = /([0-9]+h)?([0-9]+m)?([0-9]+s?)?/
-      var match   = time.match(timeReg)
-      if(match){
-        var hours   = parseInt(match[1] || 0)
-        var minutes = parseInt(match[2] || 0)
-        var seconds = parseInt(match[3] || 0)
-        return hours * 3600 + minutes * 60 + seconds
+      var match = time.match(timeReg)
+      if (!match) {
+        return 0
       }
-      return 0
+      var hours = parseInt(match[1] || 0)
+      var minutes = parseInt(match[2] || 0)
+      var seconds = parseInt(match[3] || 0)
+      return hours * 3600 + minutes * 60 + seconds
     }
 
     Heim.hook('thread-panes', function() {
@@ -238,7 +238,7 @@ module.exports = function(roomName) {
         })
         .filter(Boolean)
 
-      var playRe = /!play [^?]*\?v=([-\w]+)(&t=([0-9hms]+))?( .*)?/
+      var playRe = /!play [^?]*\?v=([-\w]+)(&t=([0-9hms]+))?/
       var video = candidates
         .map(msg => {
           var match = msg.get('content').match(playRe)
