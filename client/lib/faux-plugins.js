@@ -118,6 +118,7 @@ module.exports = function(roomName) {
             time: 0,
             messageId: null,
             youtubeId: null,
+            youtubeTime: 0,
             title: '',
           },
           notice: {
@@ -146,7 +147,7 @@ module.exports = function(roomName) {
       displayName: 'SyncedEmbed',
 
       shouldComponentUpdate: function(nextProps) {
-        return nextProps.youtubeId != this.props.youtubeId
+        return nextProps.youtubeId != this.props.youtubeId || nextProps.youtubeTime != this.props.youtubeTime
       },
 
       render: function() {
@@ -156,7 +157,7 @@ module.exports = function(roomName) {
             className={this.props.className}
             kind="youtube"
             autoplay="1"
-            start={Math.max(0, Math.floor(Date.now() / 1000 - this.props.startedAt - clientTimeOffset))}
+            start={Math.max(this.props.youtubeTime , Math.floor(Date.now() / 1000 - this.props.startedAt - clientTimeOffset + this.props.youtubeTime ))}
             youtube_id={this.props.youtubeId}
           />
         )
@@ -178,6 +179,7 @@ module.exports = function(roomName) {
             className="youtube-tv"
             youtubeId={this.state.tv.getIn(['video', 'youtubeId'])}
             startedAt={this.state.tv.getIn(['video', 'time'])}
+            youtubeTime={this.state.tv.getIn(['video', 'youtubeTime'])}
           />
         )
       }
@@ -207,6 +209,15 @@ module.exports = function(roomName) {
       }
     })
 
+    var parseYoutubeTime = function(time){
+       var timeReg = /([0-9]+h)?([0-9]+m)?([0-9]+s?)?/,
+           match   = time.match(timeReg),
+           hours   = parseInt(match[1] || 0),
+           minutes = parseInt(match[2] || 0),
+           seconds = parseInt(match[3] || 0)
+       return hours*3600+minutes*60+seconds
+    }
+
     Heim.hook('thread-panes', function() {
       return <YouTubePane key="youtube-tv" />
     })
@@ -224,7 +235,7 @@ module.exports = function(roomName) {
         })
         .filter(Boolean)
 
-      var playRe = /!play [^?]*\?v=([-\w]+)/
+      var playRe = /!play [^?]*\?v=([-\w]+)(&t=([0-9hms]+))?( .*)?/
       var video = candidates
         .map(msg => {
           var match = msg.get('content').match(playRe)
@@ -232,13 +243,13 @@ module.exports = function(roomName) {
             time: msg.get('time'),
             messageId: msg.get('id'),
             youtubeId: match[1],
+            youtubeTime: parseYoutubeTime(match[3] || "0"),
             title: msg.get('content'),
           }
         })
         .filter(Boolean)
         .sortBy(video => video.time)
         .last()
-
       if (video && video.time > TVStore.state.getIn(['video', 'time'])) {
         TVActions.changeVideo(video)
       }
