@@ -157,7 +157,7 @@ module.exports = function(roomName) {
             className={this.props.className}
             kind="youtube"
             autoplay="1"
-            start={Math.max(this.props.youtubeTime , Math.floor(Date.now() / 1000 - this.props.startedAt - clientTimeOffset + this.props.youtubeTime ))}
+            start={Math.max(0, Math.floor(Date.now() / 1000 - this.props.startedAt - clientTimeOffset)) + this.props.youtubeTime}
             youtube_id={this.props.youtubeId}
           />
         )
@@ -209,13 +209,16 @@ module.exports = function(roomName) {
       }
     })
 
-    var parseYoutubeTime = function(time){
-       var timeReg = /([0-9]+h)?([0-9]+m)?([0-9]+s?)?/,
-           match   = time.match(timeReg),
-           hours   = parseInt(match[1] || 0),
-           minutes = parseInt(match[2] || 0),
-           seconds = parseInt(match[3] || 0)
-       return hours*3600+minutes*60+seconds
+    var parseYoutubeTime = function(time) {
+      var timeReg = /([0-9]+h)?([0-9]+m)?([0-9]+s?)?/
+      var match   = time.match(timeReg)
+      if(match){
+        var hours   = parseInt(match[1] || 0)
+        var minutes = parseInt(match[2] || 0)
+        var seconds = parseInt(match[3] || 0)
+        return hours * 3600 + minutes * 60 + seconds
+      }
+      return 0
     }
 
     Heim.hook('thread-panes', function() {
@@ -243,13 +246,14 @@ module.exports = function(roomName) {
             time: msg.get('time'),
             messageId: msg.get('id'),
             youtubeId: match[1],
-            youtubeTime: parseYoutubeTime(match[3] || "0"),
+            youtubeTime: match[3] ? parseYoutubeTime(match[3]) : 0,
             title: msg.get('content'),
           }
         })
         .filter(Boolean)
         .sortBy(video => video.time)
         .last()
+
       if (video && video.time > TVStore.state.getIn(['video', 'time'])) {
         TVActions.changeVideo(video)
       }
