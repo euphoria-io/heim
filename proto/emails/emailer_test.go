@@ -12,7 +12,6 @@ import (
 	"testing"
 
 	"euphoria.io/heim/templates"
-	"euphoria.io/scope"
 
 	. "github.com/smartystreets/goconvey/convey"
 )
@@ -79,54 +78,25 @@ func parseEmail(data []byte) *templates.Email {
 }
 
 func TestTemplateEmailer(t *testing.T) {
-	Convey("TemplateEmailer", t, func() {
+	Convey("NewEmail", t, func() {
 		tmpl, err := template.New("test").Parse(`
 			{{define "test.html"}}html part{{end}}
 			{{define "test.txt"}}text part{{end}}
-			{{define "test.hdr"}}Subject: test{{end}}`)
+			{{define "test.hdr"}}Subject: test
+From: noreply@heim.invalid{{end}}`)
 		So(err, ShouldBeNil)
 
-		e := &TemplateEmailer{
-			Deliverer: &TestDeliverer{},
-			Templater: &templates.Templater{Templates: map[string]*template.Template{"test": tmpl}},
-		}
+		templater := &templates.Templater{Templates: map[string]*template.Template{"test": tmpl}}
 
 		Convey("Send test email", func() {
-			c := e.Deliverer.(MockDeliverer).Inbox("test@heim.invalid")
-			msgID, err := e.Send(scope.New(), "test@heim.invalid", "test", nil)
+			ref, err := NewEmail(templater, "<msgid@test>", "test@heim.invalid", "test", nil)
 			So(err, ShouldBeNil)
+			So(ref.ID, ShouldEqual, "<msgid@test>")
+			So(ref.SendTo, ShouldEqual, "test@heim.invalid")
+			So(ref.SendFrom, ShouldEqual, "noreply@heim.invalid")
 
-			email := parseEmail(<-c)
-			So(email.Header.Get("Message-ID"), ShouldEqual, msgID)
-			So(email.Header.Get("Subject"), ShouldEqual, "test")
-			So(string(email.Text), ShouldEqual, "text part")
-			So(string(email.HTML), ShouldEqual, "html part")
-		})
-	})
-}
-
-func TestTestEmailer(t *testing.T) {
-	Convey("TemplateEmailer", t, func() {
-		tmpl, err := template.New("test").Parse(`
-			{{define "test.html"}}html part{{end}}
-			{{define "test.txt"}}text part{{end}}
-			{{define "test.hdr"}}Subject: test{{end}}`)
-		So(err, ShouldBeNil)
-
-		e := &TestEmailer{
-			Templater: &templates.Templater{Templates: map[string]*template.Template{"test": tmpl}},
-		}
-
-		Convey("Send test email", func() {
-			c := e.Inbox("test@heim.invalid")
-			msgID, err := e.Send(scope.New(), "test@heim.invalid", "test", nil)
-			So(err, ShouldBeNil)
-
-			msg := <-c
-			So(msg.MessageID, ShouldEqual, msgID)
-			So(msg.TemplateName, ShouldEqual, "test")
-
-			email := parseEmail(msg.Delivery)
+			email := parseEmail(ref.Message)
+			So(email.Header.Get("Message-ID"), ShouldEqual, ref.ID)
 			So(email.Header.Get("Subject"), ShouldEqual, "test")
 			So(string(email.Text), ShouldEqual, "text part")
 			So(string(email.HTML), ShouldEqual, "html part")

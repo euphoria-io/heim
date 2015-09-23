@@ -4,9 +4,13 @@ import (
 	"fmt"
 	"html/template"
 	"net/url"
+	"time"
 
 	"euphoria.io/heim/proto/emails"
+	"euphoria.io/heim/proto/jobs"
+	"euphoria.io/heim/proto/snowflake"
 	"euphoria.io/heim/templates"
+	"euphoria.io/scope"
 )
 
 const (
@@ -16,6 +20,16 @@ const (
 	RoomInvitationWelcomeEmail = "room-invitation-welcome"
 	WelcomeEmail               = "welcome"
 )
+
+type EmailTracker interface {
+	Send(
+		ctx scope.Context, js jobs.JobService, templater *templates.Templater, deliverer emails.Deliverer,
+		account Account, templateName string, data interface{}) (*emails.EmailRef, error)
+
+	Get(accountID snowflake.Snowflake, id string) (*emails.EmailRef, error)
+
+	List(accountID snowflake.Snowflake, n int, before time.Time) ([]*emails.EmailRef, error)
+}
 
 type CommonEmailParams struct {
 	emails.CommonData

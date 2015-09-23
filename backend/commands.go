@@ -479,7 +479,7 @@ func (s *session) handleChangePasswordCommand(msg *proto.ChangePasswordCommand) 
 
 	// TODO: bounce all other sessions
 
-	if err := s.heim.OnAccountPasswordChanged(s.ctx, s.client.Account); err != nil {
+	if err := s.heim.OnAccountPasswordChanged(s.ctx, s.backend, s.client.Account); err != nil {
 		return &response{err: err}
 	}
 
@@ -496,7 +496,7 @@ func (s *session) handleResetPasswordCommand(msg *proto.ResetPasswordCommand) *r
 		return &response{err: err}
 	}
 
-	if err := s.heim.OnAccountPasswordResetRequest(s.ctx, acc, req); err != nil {
+	if err := s.heim.OnAccountPasswordResetRequest(s.ctx, s.backend, acc, req); err != nil {
 		return &response{err: err}
 	}
 
@@ -536,7 +536,7 @@ func (s *session) handleRegisterAccountCommand(cmd *proto.RegisterAccountCommand
 	}
 
 	// Kick off on-registration tasks.
-	if err := s.heim.OnAccountRegistration(s.ctx, account, clientKey); err != nil {
+	if err := s.heim.OnAccountRegistration(s.ctx, s.backend, account, clientKey); err != nil {
 		// Log this error only.
 		Logger(s.ctx).Printf("error on account registration: %s", err)
 	}

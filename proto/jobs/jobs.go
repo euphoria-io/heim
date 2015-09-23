@@ -11,12 +11,20 @@ import (
 	"euphoria.io/scope"
 )
 
-const DefaultMaxWorkDuration = time.Minute
+const (
+	DefaultMaxWorkDuration = time.Minute
+
+	EmailQueue = "emails"
+)
 
 type JobType string
 
 var (
-	EmailJobType = JobType("email")
+	EmailJobType    = JobType("email")
+	EmailJobOptions = []JobOption{
+		JobOptions.MaxAttempts(3),
+		JobOptions.MaxWorkDuration(30 * time.Second),
+	}
 
 	jobPayloadMap = map[JobType]reflect.Type{
 		EmailJobType: reflect.TypeOf(EmailJob{}),
@@ -24,7 +32,7 @@ var (
 )
 
 type EmailJob struct {
-	EmailID snowflake.Snowflake
+	EmailID string
 }
 
 type JobService interface {

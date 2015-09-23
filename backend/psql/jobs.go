@@ -196,12 +196,29 @@ func (jq *JobQueueBinding) AddAndClaim(
 	ctx scope.Context, jobType jobs.JobType, payload interface{}, handlerID string, options ...jobs.JobOption) (
 	*jobs.Job, error) {
 
-	job, err := jq.newJob(jobType, payload, options...)
+	t, err := jq.DbMap.Begin()
 	if err != nil {
 		return nil, err
 	}
 
-	t, err := jq.DbMap.Begin()
+	job, err := jq.addAndClaim(ctx, t, jobType, payload, handlerID, options...)
+	if err != nil {
+		rollback(ctx, t)
+		return nil, err
+	}
+
+	if err := t.Commit(); err != nil {
+		return nil, err
+	}
+
+	return job, nil
+}
+
+func (jq *JobQueueBinding) addAndClaim(
+	ctx scope.Context, db gorp.SqlExecutor, jobType jobs.JobType, payload interface{}, handlerID string, options ...jobs.JobOption) (
+	*jobs.Job, error) {
+
+	job, err := jq.newJob(jobType, payload, options...)
 	if err != nil {
 		return nil, err
 	}
@@ -214,12 +231,7 @@ func (jq *JobQueueBinding) AddAndClaim(
 		AttemptNumber: 0,
 		Queue:         jq,
 	}
-	if err := jq.insertJob(t, job); err != nil {
-		rollback(ctx, t)
-		return nil, err
-	}
-
-	if err := t.Commit(); err != nil {
+	if err := jq.insertJob(db, job); err != nil {
 		return nil, err
 	}
 

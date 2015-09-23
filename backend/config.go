@@ -18,7 +18,9 @@ import (
 	"euphoria.io/heim/cluster/etcd"
 	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/emails"
+	"euphoria.io/heim/proto/jobs"
 	"euphoria.io/heim/proto/security"
+	"euphoria.io/heim/templates"
 	"euphoria.io/scope"
 )
 
@@ -162,18 +164,19 @@ func (cfg *ServerConfig) Heim(ctx scope.Context) (*proto.Heim, error) {
 		return nil, err
 	}
 
-	emailer, err := cfg.Email.Get(cfg)
+	emailTemplater, emailDeliverer, err := cfg.Email.Get(cfg)
 	if err != nil {
 		return nil, err
 	}
 
 	heim := &proto.Heim{
-		Context:    ctx,
-		Cluster:    c,
-		PeerDesc:   cfg.Cluster.DescribeSelf(),
-		KMS:        kms,
-		Emailer:    emailer,
-		StaticPath: cfg.StaticPath,
+		Context:        ctx,
+		Cluster:        c,
+		PeerDesc:       cfg.Cluster.DescribeSelf(),
+		KMS:            kms,
+		EmailTemplater: emailTemplater,
+		EmailDeliverer: emailDeliverer,
+		StaticPath:     cfg.StaticPath,
 	}
 
 	backend, err := cfg.GetBackend(heim)
@@ -187,6 +190,16 @@ func (cfg *ServerConfig) Heim(ctx scope.Context) (*proto.Heim, error) {
 	}
 
 	heim.Backend = backend
+
+	// Make sure required queues exist.
+	if _, err := backend.Jobs().GetQueue(ctx, jobs.EmailQueue); err != nil {
+		if err == jobs.ErrJobQueueNotFound {
+			if _, err := backend.Jobs().CreateQueue(ctx, jobs.EmailQueue); err != nil {
+				return nil, err
+			}
+		}
+	}
+
 	return heim, nil
 }
 
@@ -318,13 +331,13 @@ type EmailConfig struct {
 	Templates  string `yaml:"templates"`
 }
 
-func (ec *EmailConfig) Get(cfg *ServerConfig) (emails.Emailer, error) {
+func (ec *EmailConfig) Get(cfg *ServerConfig) (*templates.Templater, emails.Deliverer, error) {
 	proto.DefaultCommonEmailParams = cfg.CommonEmailParams
 	localDomain := cfg.CommonEmailParams.EmailDomain
 	cfg.CommonEmailParams.CommonData.LocalDomain = localDomain
 
 	if ec.Server == "" {
-		return &emails.TestEmailer{}, nil
+		return nil, nil, nil
 	}
 
 	var sslHost string
@@ -332,7 +345,7 @@ func (ec *EmailConfig) Get(cfg *ServerConfig) (emails.Emailer, error) {
 		var err error
 		sslHost, _, err = net.SplitHostPort(ec.Server)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 
@@ -343,25 +356,26 @@ func (ec *EmailConfig) Get(cfg *ServerConfig) (emails.Emailer, error) {
 		auth = smtp.CRAMMD5Auth(ec.Username, ec.Password)
 	case "PLAIN":
 		if !ec.UseTLS {
-			return nil, fmt.Errorf("PLAIN authentication requires TLS")
+			return nil, nil, fmt.Errorf("PLAIN authentication requires TLS")
 		}
 		auth = smtp.PlainAuth(ec.Identity, ec.Username, ec.Password, sslHost)
 	}
 
 	// Load templates and configure email sender.
+	templater := &templates.Templater{}
 	// TODO: replace -static with a better sense of a static root
-	emailer, err := emails.NewSMTPEmailer(filepath.Join(cfg.StaticPath, "..", "email"), localDomain, ec.Server, sslHost, auth)
-	if err != nil {
-		return nil, err
+	if errs := templater.Load(filepath.Join(cfg.StaticPath, "..", "email")); errs != nil {
+		return nil, nil, errs[0]
 	}
 
 	// Verify templates.
-	if errs := proto.ValidateEmailTemplates(emailer.Templater); errs != nil {
+	if errs := proto.ValidateEmailTemplates(templater); errs != nil {
 		for _, err := range errs {
 			fmt.Printf("error: %s\n", err)
 		}
-		return nil, fmt.Errorf("template validation failed: %s...", errs[0].Error())
+		return nil, nil, fmt.Errorf("template validation failed: %s...", errs[0].Error())
 	}
 
-	return emailer, nil
+	deliverer := emails.NewSMTPDeliverer(localDomain, ec.Server, sslHost, auth)
+	return templater, deliverer, nil
 }

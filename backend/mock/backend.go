@@ -19,6 +19,7 @@ type TestBackend struct {
 	accountIDs     map[string]*personalIdentity
 	agents         map[string]*proto.Agent
 	agentBans      map[string]time.Time
+	et             EmailTracker
 	ipBans         map[string]time.Time
 	js             JobService
 	resetReqs      map[snowflake.Snowflake]*proto.PasswordResetRequest
@@ -28,6 +29,7 @@ type TestBackend struct {
 
 func (b *TestBackend) AccountManager() proto.AccountManager { return &accountManager{b: b} }
 func (b *TestBackend) AgentTracker() proto.AgentTracker     { return &agentTracker{b} }
+func (b *TestBackend) EmailTracker() proto.EmailTracker     { return &b.et }
 func (b *TestBackend) Jobs() jobs.JobService                { return &b.js }
 
 func (b *TestBackend) Close() {}

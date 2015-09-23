@@ -432,11 +432,12 @@ func IntegrationTest(t *testing.T, factory proto.BackendFactory) {
 	security.TestMode = true
 
 	runTest := func(name string, test testSuite) {
+		// Set up and start backend.
 		heim := &proto.Heim{
-			Cluster: &cluster.TestCluster{},
-			Context: scope.New(),
-			Emailer: &emails.TestEmailer{},
-			KMS:     security.LocalKMS(),
+			Cluster:        &cluster.TestCluster{},
+			Context:        scope.New(),
+			KMS:            security.LocalKMS(),
+			EmailDeliverer: &emails.TestDeliverer{},
 		}
 		heim.KMS.(security.MockKMS).SetMasterKey(make([]byte, security.AES256.KeySize()))
 
@@ -447,6 +448,16 @@ func IntegrationTest(t *testing.T, factory proto.BackendFactory) {
 		heim.Backend = backend
 		defer heim.Backend.Close()
 
+		// Make sure queues exist.
+		ctx := scope.New()
+		js := backend.Jobs()
+		if _, err := js.CreateQueue(ctx, jobs.EmailQueue); err != nil {
+			if err != jobs.ErrJobQueueAlreadyExists {
+				t.Fatal(err)
+			}
+		}
+
+		// Set up and start server.
 		app, err := NewServer(heim, "test1", "era1")
 		if err != nil {
 			t.Fatal(err)
@@ -464,6 +475,8 @@ func IntegrationTest(t *testing.T, factory proto.BackendFactory) {
 
 		s := newServerUnderTest(backend, app, server, heim.KMS.(security.MockKMS))
 		Convey(name, t, func() { test(s) })
+		ctx.Terminate(fmt.Errorf("test completed"))
+		ctx.WaitGroup().Wait()
 	}
 
 	runTestWithFactory := func(name string, test factoryTestSuite) {
@@ -476,6 +489,7 @@ func IntegrationTest(t *testing.T, factory proto.BackendFactory) {
 	runTest("Managers low-level API", testManagersLowLevel)
 	runTest("Staff low-level API", testStaffLowLevel)
 	runTest("Jobs API", testJobsLowLevel)
+	runTest("Emails API", testEmailsLowLevel)
 
 	// Websocket tests
 	runTest("Lurker", testLurker)
@@ -1191,7 +1205,7 @@ func testAccountChangePassword(s *serverUnderTest) {
 	So(err, ShouldBeNil)
 
 	Convey("Change password", func() {
-		inbox := s.app.heim.Emailer.(emails.MockEmailer).Inbox("logan" + nonce)
+		inbox := s.app.heim.MockDeliverer().Inbox("logan" + nonce)
 
 		conn := s.Connect("changepass1a")
 		conn.expectPing()
@@ -1224,7 +1238,7 @@ func testAccountChangePassword(s *serverUnderTest) {
 
 		// Password change email should have been sent.
 		msg := <-inbox
-		So(msg.TemplateName, ShouldEqual, proto.PasswordChangedEmail)
+		So(msg.EmailType, ShouldEqual, proto.PasswordChangedEmail)
 		_, ok := msg.Data.(*proto.PasswordChangedEmailParams)
 		So(ok, ShouldBeTrue)
 	})
@@ -1238,7 +1252,7 @@ func testAccountResetPassword(s *serverUnderTest) {
 	So(err, ShouldBeNil)
 
 	Convey("Reset password", func() {
-		inbox := s.app.heim.Emailer.(emails.MockEmailer).Inbox("logan" + nonce)
+		inbox := s.app.heim.MockDeliverer().Inbox("logan" + nonce)
 
 		// Issue password reset requests.
 		conn := s.Connect("resetpass1")
@@ -1249,7 +1263,7 @@ func testAccountResetPassword(s *serverUnderTest) {
 
 		// Receive confirmation code in email.
 		msg := <-inbox
-		So(msg.TemplateName, ShouldEqual, proto.PasswordResetEmail)
+		So(msg.EmailType, ShouldEqual, proto.PasswordResetEmail)
 		p, ok := msg.Data.(*proto.PasswordResetEmailParams)
 		So(ok, ShouldBeTrue)
 		firstConfirmation := p.Confirmation
@@ -1259,7 +1273,7 @@ func testAccountResetPassword(s *serverUnderTest) {
 		conn.expect("2", "reset-password-reply", `{}`)
 		conn.Close()
 		msg = <-inbox
-		So(msg.TemplateName, ShouldEqual, proto.PasswordResetEmail)
+		So(msg.EmailType, ShouldEqual, proto.PasswordResetEmail)
 		p, ok = msg.Data.(*proto.PasswordResetEmailParams)
 		So(ok, ShouldBeTrue)
 
@@ -1403,7 +1417,7 @@ func testAccountLogin(s *serverUnderTest) {
 
 func testAccountRegistration(s *serverUnderTest) {
 	Convey("Agent upgrades to account", func() {
-		inbox := s.app.heim.Emailer.(emails.MockEmailer).Inbox("registration@euphoria.io")
+		inbox := s.app.heim.MockDeliverer().Inbox("registration@euphoria.io")
 
 		// Add observer for timing control.
 		observer := s.Connect("registration")
@@ -1468,7 +1482,7 @@ func testAccountRegistration(s *serverUnderTest) {
 
 		// Registration email should have been sent.
 		msg := <-inbox
-		So(msg.TemplateName, ShouldEqual, proto.WelcomeEmail)
+		So(msg.EmailType, ShouldEqual, proto.WelcomeEmail)
 		params, ok := msg.Data.(*proto.WelcomeEmailParams)
 		So(ok, ShouldBeTrue)
 
@@ -2072,7 +2086,7 @@ func testJobsLowLevel(s *serverUnderTest) {
 	makeJob := func() (jobs.JobType, interface{}) {
 		token, err := snowflake.New()
 		So(err, ShouldBeNil)
-		return jobs.EmailJobType, &jobs.EmailJob{EmailID: token}
+		return jobs.EmailJobType, &jobs.EmailJob{EmailID: token.String()}
 	}
 
 	claimJob := func(queueName string) chan *jobs.Job {
@@ -2369,6 +2383,106 @@ func testJobsLowLevel(s *serverUnderTest) {
 			Claimed: 0,
 		})
 
+		So(job.Complete(ctx), ShouldBeNil)
+	})
+}
+
+type testDeliverer struct {
+	emails.TestDeliverer
+	ok bool
+}
+
+func (te *testDeliverer) Deliver(ctx scope.Context, ref *emails.EmailRef) error {
+	if !te.ok {
+		return fmt.Errorf("test")
+	}
+	return te.TestDeliverer.Deliver(ctx, ref)
+}
+
+func testEmailsLowLevel(s *serverUnderTest) {
+	ctx := scope.New()
+	js := s.backend.Jobs()
+	jq, err := js.CreateQueue(ctx, jobs.EmailQueue)
+	if err == jobs.ErrJobQueueAlreadyExists {
+		jq, err = js.GetQueue(ctx, jobs.EmailQueue)
+	}
+	So(err, ShouldBeNil)
+
+	kms := s.app.kms
+	nonce := time.Now()
+	addr := fmt.Sprintf("logan+%s@test.invalid", nonce)
+	account, _, err := s.Account(ctx, kms, "email", addr, "hunter2")
+	So(err, ShouldBeNil)
+	otherAccount, _, err := s.Account(ctx, kms, "email", "other"+addr, "hunter2")
+	So(err, ShouldBeNil)
+
+	deliverer := &testDeliverer{}
+	ch := deliverer.Inbox(addr)
+	et := s.backend.EmailTracker()
+	So(err, ShouldBeNil)
+
+	normalizeTime := func(t *time.Time) {
+		if !t.IsZero() {
+			// round time to microsecond precision
+			nano := t.Nanosecond() + 500
+			*t = time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), nano-nano%1000, t.Location())
+		}
+	}
+
+	normalizeRef := func(ref *emails.EmailRef) *emails.EmailRef {
+		if len(ref.Message) == 0 {
+			ref.Message = nil
+		}
+		normalizeTime(&ref.Created)
+		normalizeTime(&ref.Delivered)
+		normalizeTime(&ref.Failed)
+		return ref
+	}
+
+	sendEmail := func(templateName string) *emails.EmailRef {
+		ref, err := et.Send(ctx, js, nil, deliverer, account, templateName, nil)
+		So(err, ShouldBeNil)
+		return normalizeRef(ref)
+	}
+
+	Convey("Simple email lifecycle", func() {
+		deliverer.ok = true
+		ref := sendEmail("test")
+
+		msg := <-ch
+		delivered := normalizeRef(&msg.EmailRef)
+
+		// comparing times that pass through serialization is tricky
+		normalizeRef(ref)
+		So(delivered, ShouldResemble, normalizeRef(ref))
+		So(ref.Delivered, ShouldHappenOnOrAfter, ref.Created)
+		So(ref.Failed.IsZero(), ShouldBeTrue)
+
+		fetched, err := et.Get(account.ID(), ref.ID)
+		So(err, ShouldBeNil)
+
+		// For psql, the Location of the timestamps seems to change, but is really the same.
+		// Make sure the times are close and then force them to match in ShouldResemble.
+		So(fetched.Created, ShouldHappenWithin, time.Microsecond, ref.Created)
+		So(fetched.Delivered, ShouldHappenWithin, time.Microsecond, ref.Delivered)
+		fetched.Created = ref.Created
+		fetched.Delivered = ref.Delivered
+		So(normalizeRef(fetched), ShouldResemble, normalizeRef(ref))
+
+		_, err = et.Get(otherAccount.ID(), ref.ID)
+		So(err, ShouldEqual, proto.ErrEmailNotFound)
+	})
+
+	Convey("Deferred email delivery", func() {
+		deliverer.ok = false
+		ref := sendEmail("test")
+		So(ref, ShouldNotBeNil)
+		So(ref.Delivered.IsZero(), ShouldBeTrue)
+
+		job, err := jobs.Claim(ctx, jq, jobs.EmailQueue, 10*time.Millisecond)
+		So(err, ShouldBeNil)
+		So(job.ID, ShouldEqual, ref.JobID)
+		So(job.AttemptsMade, ShouldEqual, 1)
 		So(job.Complete(ctx), ShouldBeNil)
 	})
 }

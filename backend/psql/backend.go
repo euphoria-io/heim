@@ -51,7 +51,10 @@ var schema = []struct {
 	// Sessions.
 	{"session_log", SessionLog{}, []string{"SessionID"}},
 
-	// Accounts, keys and capabilities.
+	// Emails.
+	{"email", Email{}, []string{"ID"}},
+
+	// Keys and capabilities.
 	{"master_key", MessageKey{}, []string{"ID"}},
 	{"capability", Capability{}, []string{"ID"}},
 
@@ -762,6 +765,7 @@ func (b *Backend) Peers() []cluster.PeerDesc { return b.cluster.Peers() }
 
 func (b *Backend) AccountManager() proto.AccountManager { return &AccountManagerBinding{b} }
 func (b *Backend) AgentTracker() proto.AgentTracker     { return &AgentTrackerBinding{b} }
+func (b *Backend) EmailTracker() proto.EmailTracker     { return &EmailTracker{b} }
 func (b *Backend) Jobs() jobs.JobService                { return &JobService{b} }
 
 func (b *Backend) jobQueueListener() *jobQueueListener {

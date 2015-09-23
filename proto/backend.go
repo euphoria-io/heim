@@ -13,6 +13,7 @@ import (
 type Backend interface {
 	AccountManager() AccountManager
 	AgentTracker() AgentTracker
+	EmailTracker() EmailTracker
 	Jobs() jobs.JobService
 
 	// BanIP globally bans an IP. A zero value for until indicates a

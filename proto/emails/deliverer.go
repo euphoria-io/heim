@@ -1,64 +1,61 @@
 package emails
 
 import (
-	"bytes"
 	"fmt"
-	"io"
 	"sync"
+	"time"
 
 	"euphoria.io/scope"
 )
 
 type Deliverer interface {
-	Deliver(ctx scope.Context, from, to string, email io.WriterTo) error
-	MessageID() (string, error)
+	Deliver(ctx scope.Context, ref *EmailRef) error
+	LocalName() string
+}
+
+type TestMessage struct {
+	EmailRef
+	Data interface{}
 }
 
 type MockDeliverer interface {
 	Deliverer
 
-	Inbox(addr string) <-chan []byte
+	Inbox(addr string) <-chan *TestMessage
 }
 
 type TestDeliverer struct {
 	sync.Mutex
 	counter  int
-	channels map[string]chan []byte
+	channels map[string]chan *TestMessage
 }
 
-func (td *TestDeliverer) MessageID() (string, error) {
+func (td *TestDeliverer) LocalName() string { return "test" }
+
+func (td *TestDeliverer) Deliver(ctx scope.Context, ref *EmailRef) error {
 	td.Lock()
 	defer td.Unlock()
 
-	td.counter++
-	return fmt.Sprintf("<%08x@test>", td.counter), nil
-}
-
-func (td *TestDeliverer) Deliver(ctx scope.Context, from, to string, email io.WriterTo) error {
-	td.Lock()
-	defer td.Unlock()
-
-	buf := &bytes.Buffer{}
-	if _, err := email.WriteTo(buf); err != nil {
-		return err
-	}
-
-	if ch, ok := td.channels[to]; ok {
-		ch <- buf.Bytes()
+	ref.Delivered = time.Now()
+	if ch, ok := td.channels[ref.SendTo]; ok {
+		ch <- &TestMessage{
+			EmailRef: *ref,
+			Data:     ref.data,
+		}
 	} else {
-		fmt.Printf("delivered:\n%s\n", buf.String())
+		fmt.Printf("delivered:\n%s\n", string(ref.Message))
 	}
 
 	return nil
 }
 
-func (td *TestDeliverer) Inbox(addr string) <-chan []byte {
+func (td *TestDeliverer) Inbox(addr string) <-chan *TestMessage {
 	td.Lock()
 	defer td.Unlock()
 
 	if td.channels == nil {
-		td.channels = map[string]chan []byte{}
+		td.channels = map[string]chan *TestMessage{}
 	}
-	td.channels[addr] = make(chan []byte, 10)
+	td.channels[addr] = make(chan *TestMessage, 10)
 	return td.channels[addr]
 }

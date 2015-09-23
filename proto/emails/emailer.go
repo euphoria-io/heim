@@ -2,109 +2,64 @@ package emails
 
 import (
 	"bytes"
-	"fmt"
-	"sync"
+	"time"
 
+	"euphoria.io/heim/proto/snowflake"
 	"euphoria.io/heim/templates"
 	"euphoria.io/scope"
 )
 
+type EmailRef struct {
+	ID        string
+	AccountID snowflake.Snowflake
+	JobID     snowflake.Snowflake
+	EmailType string
+	SendTo    string
+	SendFrom  string
+	Message   []byte
+	Created   time.Time
+	Delivered time.Time
+	Failed    time.Time
+
+	data interface{}
+}
+
 type Emailer interface {
-	Send(ctx scope.Context, to, templateName string, data interface{}) (messageID string, err error)
+	Send(ctx scope.Context, to, templateName string, data interface{}) (*EmailRef, error)
 }
 
-type MockEmailer interface {
-	Emailer
-
-	Inbox(addr string) <-chan TestMessage
-}
-
-type TestMessage struct {
-	TemplateName string
-	MessageID    string
-	Data         interface{}
-	Delivery     []byte
-}
-
-type TestEmailer struct {
-	sync.Mutex
-	Templater *templates.Templater
-
-	counter      int
-	sendChannels map[string]chan TestMessage
-}
-
-func (e *TestEmailer) Send(ctx scope.Context, to, templateName string, data interface{}) (string, error) {
-	e.Lock()
-	defer e.Unlock()
-
-	e.counter++
-	msgID := fmt.Sprintf("%08x", e.counter)
-
-	delivery := &bytes.Buffer{}
-	if e.Templater != nil {
-		email, err := templates.EvaluateEmail(e.Templater, templateName, data)
-		if err != nil {
-			return "", err
-		}
-		if _, err := email.WriteTo(delivery); err != nil {
-			return "", err
-		}
+func NewEmail(templater *templates.Templater, msgID, to, templateName string, data interface{}) (*EmailRef, error) {
+	now := time.Now()
+	ref := &EmailRef{
+		ID:        msgID,
+		EmailType: templateName,
+		SendTo:    to,
+		Created:   now,
+		data:      data,
 	}
-
-	if ch, ok := e.sendChannels[to]; ok {
-		ch <- TestMessage{
-			TemplateName: templateName,
-			MessageID:    msgID,
-			Data:         data,
-			Delivery:     delivery.Bytes(),
-		}
-	} else {
-		fmt.Printf("sending %s to %s: %#v\n", templateName, to, data)
-	}
-
-	return msgID, nil
-}
-
-func (e *TestEmailer) Inbox(addr string) <-chan TestMessage {
-	e.Lock()
-	defer e.Unlock()
-
-	if e.sendChannels == nil {
-		e.sendChannels = map[string]chan TestMessage{}
-	}
-	if ch, ok := e.sendChannels[addr]; ok {
-		return ch
-	}
-	e.sendChannels[addr] = make(chan TestMessage, 10)
-	return e.sendChannels[addr]
-}
-
-type TemplateEmailer struct {
-	Templater *templates.Templater
-	Deliverer Deliverer
-}
-
-func (e *TemplateEmailer) Send(ctx scope.Context, to, templateName string, data interface{}) (string, error) {
-	msgID, err := e.Deliverer.MessageID()
-	if err != nil {
-		return "", err
+	if templater == nil {
+		return ref, nil
 	}
 
 	if cd, ok := data.(commonData); ok {
 		cd.setAccountEmailAddress(to)
 	}
-	email, err := templates.EvaluateEmail(e.Templater, templateName, data)
+
+	email, err := templates.EvaluateEmail(templater, templateName, data)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	email.Header.Set("Message-ID", msgID)
-	from := email.Header.Get("From")
-	if err := e.Deliverer.Deliver(ctx, from, to, email); err != nil {
-		return "", err
+	ref.SendFrom = email.Header.Get("From")
+
+	delivery := &bytes.Buffer{}
+	if _, err := email.WriteTo(delivery); err != nil {
+		return nil, err
 	}
-	return msgID, nil
+
+	ref.Message = delivery.Bytes()
+	return ref, nil
 }
 
 type commonData interface {

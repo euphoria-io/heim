@@ -10,6 +10,7 @@ import (
 	"euphoria.io/heim/cluster"
 	"euphoria.io/heim/proto/emails"
 	"euphoria.io/heim/proto/security"
+	"euphoria.io/heim/templates"
 	"euphoria.io/scope"
 )
 
@@ -18,68 +19,54 @@ type Heim struct {
 	Cluster    cluster.Cluster
 	PeerDesc   *cluster.PeerDesc
 	Context    scope.Context
-	Emailer    emails.Emailer
 	KMS        security.KMS
 	StaticPath string
+
+	EmailTemplater *templates.Templater
+	EmailDeliverer emails.Deliverer
 }
 
-func (heim *Heim) OnAccountPasswordChanged(ctx scope.Context, account Account) error {
-	// Pick an email identity.
-	email := ""
-	for _, ident := range account.PersonalIdentities() {
-		if ident.Namespace() == "email" {
-			if email == "" {
-				email = ident.ID()
-				break
-			}
-		}
-	}
+func (heim *Heim) MockDeliverer() emails.MockDeliverer {
+	return heim.EmailDeliverer.(emails.MockDeliverer)
+}
 
-	if email != "" {
-		// TODO: account names
-		params := &PasswordChangedEmailParams{
-			CommonEmailParams: DefaultCommonEmailParams,
-			AccountName:       email,
-		}
-		if _, err := heim.Emailer.Send(ctx, email, PasswordChangedEmail, params); err != nil {
-			return err
-		}
+func (heim *Heim) SendEmail(
+	ctx scope.Context, b Backend, account Account, templateName string, data interface{}) (*emails.EmailRef, error) {
+
+	return b.EmailTracker().Send(ctx, b.Jobs(), heim.EmailTemplater, heim.EmailDeliverer, account, templateName, data)
+}
+
+func (heim *Heim) OnAccountPasswordChanged(ctx scope.Context, b Backend, account Account) error {
+	// TODO: account names
+	params := &PasswordChangedEmailParams{
+		CommonEmailParams: DefaultCommonEmailParams,
+		AccountName:       account.Name(),
+	}
+	if _, err := heim.SendEmail(ctx, b, account, PasswordChangedEmail, params); err != nil {
+		return err
 	}
 
 	return nil
 }
 
 func (heim *Heim) OnAccountPasswordResetRequest(
-	ctx scope.Context, account Account, req *PasswordResetRequest) error {
+	ctx scope.Context, b Backend, account Account, req *PasswordResetRequest) error {
 
-	// Pick an email identity.
-	email := ""
-	for _, ident := range account.PersonalIdentities() {
-		if ident.Namespace() == "email" {
-			if email == "" {
-				email = ident.ID()
-				break
-			}
-		}
+	// TODO: account names
+	params := &PasswordResetEmailParams{
+		CommonEmailParams: DefaultCommonEmailParams,
+		AccountName:       account.Name(),
+		Confirmation:      req.String(),
 	}
-
-	if email != "" {
-		// TODO: account names
-		params := &PasswordResetEmailParams{
-			CommonEmailParams: DefaultCommonEmailParams,
-			AccountName:       email,
-			Confirmation:      req.String(),
-		}
-		if _, err := heim.Emailer.Send(ctx, email, PasswordResetEmail, params); err != nil {
-			return err
-		}
+	if _, err := heim.SendEmail(ctx, b, account, PasswordResetEmail, params); err != nil {
+		return err
 	}
 
 	return nil
 }
 
 func (heim *Heim) OnAccountRegistration(
-	ctx scope.Context, account Account, clientKey *security.ManagedKey) error {
+	ctx scope.Context, b Backend, account Account, clientKey *security.ManagedKey) error {
 
 	// Pick an email identity.
 	email := ""
@@ -111,7 +98,7 @@ func (heim *Heim) OnAccountRegistration(
 			CommonEmailParams: DefaultCommonEmailParams,
 			VerificationToken: hex.EncodeToString(token),
 		}
-		if _, err := heim.Emailer.Send(ctx, email, WelcomeEmail, params); err != nil {
+		if _, err := heim.SendEmail(ctx, b, account, WelcomeEmail, params); err != nil {
 			return err
 		}
 	}

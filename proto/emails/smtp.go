@@ -3,35 +3,22 @@ package emails
 import (
 	"crypto/tls"
 	"fmt"
-	"io"
 	"net/smtp"
+	"time"
 
-	"euphoria.io/heim/proto/snowflake"
-	"euphoria.io/heim/templates"
 	"euphoria.io/scope"
 )
 
-func NewSMTPEmailer(templatesPath, localAddr, serverAddr, sslHost string, auth smtp.Auth) (*TemplateEmailer, error) {
+func NewSMTPDeliverer(localAddr, serverAddr, sslHost string, auth smtp.Auth) *SMTPDeliverer {
 	d := &SMTPDeliverer{
 		addr:      serverAddr,
 		localName: localAddr,
 		auth:      auth,
 	}
-
-	emailer := &TemplateEmailer{
-		Templater: &templates.Templater{},
-		Deliverer: d,
-	}
-
 	if sslHost != "" {
 		d.tlsConfig = &tls.Config{ServerName: sslHost}
 	}
-
-	if errs := emailer.Templater.Load(templatesPath); errs != nil {
-		return nil, errs[0]
-	}
-
-	return emailer, nil
+	return d
 }
 
 type SMTPDeliverer struct {
@@ -41,17 +28,10 @@ type SMTPDeliverer struct {
 	tlsConfig *tls.Config
 }
 
-func (s *SMTPDeliverer) String() string { return fmt.Sprintf("smtp[%s]", s.addr) }
+func (s *SMTPDeliverer) String() string    { return fmt.Sprintf("smtp[%s]", s.addr) }
+func (s *SMTPDeliverer) LocalName() string { return s.localName }
 
-func (s *SMTPDeliverer) MessageID() (string, error) {
-	sf, err := snowflake.New()
-	if err != nil {
-		return "", fmt.Errorf("%s: snowflake error: %s", s, err)
-	}
-	return fmt.Sprintf("<%s@%s>", sf, s.localName), nil
-}
-
-func (s *SMTPDeliverer) Deliver(ctx scope.Context, from, to string, email io.WriterTo) error {
+func (s *SMTPDeliverer) Deliver(ctx scope.Context, ref *EmailRef) error {
 	// Connect and authenticate to SMTP server.
 	c, err := smtp.Dial(s.addr)
 	if err != nil {
@@ -76,14 +56,14 @@ func (s *SMTPDeliverer) Deliver(ctx scope.Context, from, to string, email io.Wri
 	}
 
 	// Send email.
-	if from == "" {
-		from = "noreply@" + s.localName
+	if ref.SendFrom == "" {
+		ref.SendFrom = "noreply@" + s.localName
 	}
-	if err := c.Mail(from); err != nil {
+	if err := c.Mail(ref.SendFrom); err != nil {
 		return fmt.Errorf("%s: mail error: %s", s, err)
 	}
 
-	if err := c.Rcpt(to); err != nil {
+	if err := c.Rcpt(ref.SendTo); err != nil {
 		return fmt.Errorf("%s: rcpt error: %s", s, err)
 	}
 
@@ -92,12 +72,13 @@ func (s *SMTPDeliverer) Deliver(ctx scope.Context, from, to string, email io.Wri
 		return fmt.Errorf("%s: data error: %s", s, err)
 	}
 
-	if _, err := email.WriteTo(wc); err != nil {
+	if _, err := wc.Write(ref.Message); err != nil {
 		return fmt.Errorf("%s: write error: %s", s, err)
 	}
 	if err := wc.Close(); err != nil {
 		return fmt.Errorf("%s: close error: %s", s, err)
 	}
 
+	ref.Delivered = time.Now()
 	return nil
 }
