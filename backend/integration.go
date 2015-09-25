@@ -880,6 +880,12 @@ func testAuthentication(s *serverUnderTest) {
 		conn.expectSnapshot(s.backend.Version(), nil, nil)
 		conn.send("1", "auth", `{"type":"passcode","passcode":"hunter2"}`)
 		conn.expectError("1", "auth-reply", "already joined")
+
+		// Send a message and verify it's encrypted.
+		conn.send("2", "nick", `{"name":"speaker"}`)
+		conn.expect("2", "nick-reply", `{"session_id":"*","id":"*","from":"","to":"speaker"}`)
+		conn.send("3", "send", `{"content":"hi"}`)
+		conn.expect("3", "send-reply", `{"id":"*","time":"*","sender":"*","content":"hi","encryption_key_id":"*"}`)
 	})
 
 	Convey("Ignore after excessive failures", func() {

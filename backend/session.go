@@ -266,6 +266,7 @@ func (s *session) serve() error {
 	default:
 		if _, ok := s.client.Authorization.MessageKeys[key.KeyID()]; ok {
 			s.client.Authorization.CurrentMessageKeyID = key.KeyID()
+			s.keyID = key.KeyID()
 			if err := s.join(); err != nil {
 				// TODO: send an error packet
 				return err
