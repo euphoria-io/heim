@@ -36,25 +36,26 @@ describe('mention', function() {
   })
 
   describe('scoreMatch', function() {
-    it('scores entirely bad matches as zero', function() {
-      assert.equal(mention.scoreMatch('', 'something'), 0)
-      assert.equal(mention.scoreMatch('1', '2'), 0)
+    
+    it('scores entirely bad matches as null', function() {
+      assert.deepEqual(mention.scoreMatch('', 'something'), null)
+      assert.deepEqual(mention.scoreMatch('1', '2'), null)
     })
     it('empty prefix always matches', function() {
-      assert.equal(mention.scoreMatch('', ''), 31)
-      assert.equal(mention.scoreMatch('something', ''), 31)
+      assert.deepEqual(mention.scoreMatch('', ''), [-31, 0])
+      assert.deepEqual(mention.scoreMatch('something', ''), [-31, 0])
     })
     it('has expected score levels for a single name', function() {
       // Exact match scores same as prefix for now.
-      assert.equal(mention.scoreMatch('TimMc', 'TimMc'), 31)
-      assert.equal(mention.scoreMatch('TimMc', 'timmc'), 30)
-      assert.equal(mention.scoreMatch('TimMc', 'Tim'), 31)
-      assert.equal(mention.scoreMatch('TimMc', 'tim'), 30)
-      assert.equal(mention.scoreMatch('TimMc', 'imM'), 21)
-      assert.equal(mention.scoreMatch('TimMc', 'imm'), 20)
-      assert.equal(mention.scoreMatch('TimMc', 'TM'), 11)
-      assert.equal(mention.scoreMatch('TimMc', 'tm'), 10)
-      assert.equal(mention.scoreMatch('TimMc', 'no'), 0)
+      assert.deepEqual(mention.scoreMatch('TimMc', 'TimMc'), [-31, 0])
+      assert.deepEqual(mention.scoreMatch('TimMc', 'timmc'), [-30, 0])
+      assert.deepEqual(mention.scoreMatch('TimMc', 'Tim'), [-31, 0])
+      assert.deepEqual(mention.scoreMatch('TimMc', 'tim'), [-30, 0])
+      assert.deepEqual(mention.scoreMatch('TimMc', 'imM'), [-21, 1])
+      assert.deepEqual(mention.scoreMatch('TimMc', 'imm'), [-20, 1])
+      assert.deepEqual(mention.scoreMatch('TimMc', 'TM'), [-11, 0])
+      assert.deepEqual(mention.scoreMatch('TimMc', 'tm'), [-10, 0])
+      assert.deepEqual(mention.scoreMatch('TimMc', 'no'), null)
     })
   })
 
@@ -67,14 +68,25 @@ describe('mention', function() {
     }
     var users = ['chromakode', 'logan', 'mac', 'Max 2', 'TimMc']
 
-    // These tests do not include sort stability. (It's either not
-    // stable or we're not getting usernames from the store in
-    // alphabetical order. In either case, don't test for it yet.)
+    it('removes entries that don\'t match at all', function() {
+      assertRanking(users, 'g', ['logan'])
+    })
     it('puts prefix over infix and tie-breaks with case', function() {
+      // Note that this demonstrates that a case-insensitive prefix
+      // match is superior to a case-sensitive infix match; otherwise
+      // we could treat prefix as a high-scoring infix.
       assertRanking(users, 'M', ['Max2', 'mac', 'TimMc', 'chromakode'])
     })
     it('ranks subseqs less than infix ci', function() {
       assertRanking(users, 'mc', ['TimMc', 'mac'])
+    })
+    it('sorts asciibetically as tie-breaker, caps first', function() {
+      assertRanking(['ax', 'Ax', 'Zx', 'zx'], 'x', ['Ax', 'ax', 'Zx', 'zx'])
+    })
+    it('ranks earlier infix over later', function() {
+      // use a vs b to check for interference from fallback sorting
+      assertRanking(['aXX', 'bbXX'], 'XX', ['aXX', 'bbXX'])
+      assertRanking(['aaXX', 'bXX'], 'XX', ['bXX', 'aaXX'])
     })
     it('strips spaces from names', function() {
       assertRanking(users, 'x2', ['Max2'])
