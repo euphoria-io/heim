@@ -46,7 +46,7 @@ function loadImage(id, url, onloadCallback) {
     }
     widthSent = true
 
-    var displayHeight = window.innerHeight
+    var displayHeight = document.body.offsetHeight
     var displayWidth
     var ratio = img.naturalWidth / img.naturalHeight
     if (ratio < 9/16) {
