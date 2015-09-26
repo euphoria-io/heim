@@ -35,7 +35,7 @@ frontend:
   build: client
   volumes:
     - .:/srv/heim/
-    - ./deps/node_modules:/srv/heim/client/node_modules
+    - ./_deps/node_modules:/srv/heim/client/node_modules
     - ./client/build:/srv/heim/client/build
   ports:
     - "8080:8080"
@@ -62,7 +62,7 @@ backend:
     - psql
   volumes:
     - .:/go/src/euphoria.io/heim
-    - ./deps/godeps:/godeps
+    - ./_deps/godeps:/godeps
     - ./client/build:/srv/heim/client/src/build
     - ./backend/console/keys:/keys
   ports:
@@ -80,7 +80,7 @@ embed:
   build: backend
   volumes:
     - .:/go/src/euphoria.io/heim
-    - ./deps/godeps:/godeps
+    - ./_deps/godeps:/godeps
     - ./client/build:/srv/heim/client/src/build
   ports:
     - "8081:80"
@@ -93,7 +93,7 @@ presence:
     - psql
   volumes:
     - .:/go/src/euphoria.io/heim
-    - ./deps/godeps:/godeps
+    - ./_deps/godeps:/godeps
   ports:
     - "8082:80"
   environment:
@@ -109,7 +109,7 @@ retention:
     - psql
   volumes:
     - .:/go/src/euphoria.io/heim
-    - ./deps/godeps:/godeps
+    - ./_deps/godeps:/godeps
   ports:
     - "8082:80"
   environment:
@@ -125,7 +125,7 @@ activity:
     - psql
   volumes:
     - .:/go/src/euphoria.io/heim
-    - ./deps/godeps:/godeps
+    - ./_deps/godeps:/godeps
   ports:
     - "8082:80"
   environment:
