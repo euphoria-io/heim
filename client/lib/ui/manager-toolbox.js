@@ -20,7 +20,8 @@ module.exports = React.createClass({
 
   apply: function() {
     var commandParams
-    if (this.state.toolbox.selectedCommand == 'ban') {
+    var selectedCommand = this.state.toolbox.selectedCommand
+    if (selectedCommand == 'ban' || selectedCommand == 'ipban') {
       commandParams = {
         seconds: {
           h: 60 * 60,
@@ -70,9 +71,10 @@ module.exports = React.createClass({
           <select className="command-picker" value={selectedCommand} onChange={this.selectCommand}>
             <option value="delete">delete</option>
             <option value="ban">ban</option>
+            {toolboxData.isStaff && <option value="ipban">IP ban</option>}
           </select>
           <div className="preview">{toolboxData.activeItemSummary}</div>
-          {!isEmpty && selectedCommand == 'ban' && <select ref="banDuration" defaultValue={60 * 60}>
+          {!isEmpty && (selectedCommand == 'ban' || selectedCommand == 'ipban') && <select ref="banDuration" defaultValue={60 * 60}>
             <option value="h">for 1 hour</option>
             <option value="d">for 1 day</option>
             <option value="w">for 1 week</option>

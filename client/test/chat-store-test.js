@@ -755,24 +755,30 @@ describe('chat store', function() {
   })
 
   describe('received ban-reply events', function() {
-    var banReplyEvent = {
-      'id': '0',
-      'type': 'ban-reply',
-      'data': {
-        'id': 'agent:tester2',
-        'seconds': 60 * 60,
-      },
-    }
+    it('should log a warning upon error', function(done) {
+      testErrorLogging('ban-reply', 'oops!', done)
+    })
 
     it('should add the id to the banned ids set', function(done) {
+      var banReplyEvent = {
+        'id': '0',
+        'type': 'ban-reply',
+        'data': {
+          'id': 'agent:tester2',
+          'seconds': 60 * 60,
+        },
+      }
+
       handleSocket(banReplyEvent, function(state) {
         assert(state.bannedIds.has(banReplyEvent.data.id))
         done()
       })
     })
+  })
 
+  describe('received staff-ban-reply events', function() {
     it('should log a warning upon error', function(done) {
-      testErrorLogging('ban-reply', 'oops!', done)
+      testErrorLogging('staff-ban-reply', 'oopsie!', done)
     })
   })
 

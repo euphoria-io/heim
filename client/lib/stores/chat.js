@@ -23,6 +23,7 @@ var storeActions = module.exports.actions = Reflux.createActions([
   'deselectAll',
   'editMessage',
   'banUser',
+  'staffBan',
 ])
 storeActions.setRoomSettings.sync = true
 storeActions.messagesChanged.sync = true
@@ -175,8 +176,8 @@ module.exports.store = Reflux.createStore({
       var id = ev.data.server_id
       var era = ev.data.server_era
       this.state.who = this.state.who.filterNot(v => v.get('server_id') == id && v.get('server_era') == era)
-    } else if (ev.type == 'ban-reply') {
-      if (!ev.error) {
+    } else if (ev.type == 'ban-reply' || ev.type == 'staff-ban-reply') {
+      if (!ev.error && ev.type == 'ban-reply') {
         this.state.bannedIds = this.state.bannedIds.add(ev.data.id)
       } else {
         console.warn('error banning:', ev.error)
@@ -506,6 +507,14 @@ module.exports.store = Reflux.createStore({
     this.socket.send({
       type: 'ban',
       data: _.merge(data, {id: id}),
+    })
+  },
+
+  staffBan: function(messageId, data) {
+    // jshint camelcase: false
+    this.socket.send({
+      type: 'staff-ban',
+      data: _.merge(data, {message_id: messageId}),
     })
   },
 })

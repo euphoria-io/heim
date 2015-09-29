@@ -12,6 +12,7 @@ var storeActions = Reflux.createActions([
 _.extend(module.exports, storeActions)
 
 var StateRecord = Immutable.Record({
+  isStaff: false,
   items: Immutable.Set(),
   selectedCommand: 'delete',
   activeItemSummary: 'nothing',
@@ -39,6 +40,16 @@ var commands = {
       )
     }
   },
+  ipban: {
+    kind: 'message',
+    execute: function(items, commandParams) {
+      items.forEach(item =>
+        chat.staffBan(item.get('id'), {
+          seconds: commandParams.seconds,
+        })
+      )
+    }
+  },
 }
 
 module.exports.store = Reflux.createStore({
@@ -59,7 +70,10 @@ module.exports.store = Reflux.createStore({
   },
 
   chatUpdate: function(chatState) {
-    this.triggerUpdate(this._updateSelection(this.state, chatState))
+    this.triggerUpdate(this.state.withMutations(state => {
+      this._updateSelection(state, chatState)
+      state.set('isStaff', chatState.isStaff)
+    }))
   },
 
   messagesUpdate: function(ids, chatState) {
