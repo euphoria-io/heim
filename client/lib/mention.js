@@ -1,22 +1,68 @@
 var hueHash = require('./hue-hash')
 
 /**
- * Determines if name contains the characters in the partial name, in order.
+ * Custom lexicographic comparator on pairs of equal-length
+ * arrays. Does not do a deep comparison on sub-arrays.
  */
-module.exports.containsSubseq = function(name, part) {
+function compareArrays(a, b) {
+  var len = a.length;
+  for (var i = 0; i < len; i++) {
+    var elA = a[i]
+    var elB = b[i]
+    if (elA < elB) {
+      return -1
+    } else if (elA > elB) {
+      return 1
+    }
+    // continue if equal...
+  }
+  return 0;
+}
+
+/**
+ * Determine if name contains the characters in the partial name, in
+ * order. If found, yield the index where the subsequence starts, else
+ * yield -1.
+ */
+module.exports.findSubseq = function(name, part) {
   // Walk the characters in partial name, skipping forward in full
   // name to match until we can't find any more matches or we finish
   // walking.
-  var offset = 0
+  var searchFrom = 0
+  var matchStart = -1
   for (var partOffset = 0; partOffset < part.length; partOffset++) {
     var nextChar = part[partOffset]
-    offset = name.indexOf(nextChar, offset)
-    if (offset === -1) {
-      return false
+    var foundAt = name.indexOf(nextChar, searchFrom)
+    if (foundAt === -1) {
+      return -1
     }
-    offset++
+    if (partOffset === 0) {
+      matchStart = foundAt
+    }
+    searchFrom = foundAt + 1
   }
-  return true
+  return matchStart
+}
+
+/**
+ * Match partial against name without looking at case variants.  Yield
+ * array of [contiguousScore, prefixScore, start], or null for no
+ * match.
+ */
+module.exports.matchPinningCase = function(name, part) {
+  var subseq = module.exports.findSubseq(name, part)
+  if (subseq === -1) {
+    return null
+  }
+  var infix = name.indexOf(part)
+
+  var contiguous = infix !== -1
+  var prefix = infix === 0
+  var start = contiguous ? infix : subseq
+
+  return [contiguous ? -1 : 0,
+          prefix ? -1 : 0,
+          start]
 }
 
 /**
@@ -27,29 +73,26 @@ module.exports.containsSubseq = function(name, part) {
  */
 module.exports.scoreMatch = function(name, part) {
   // FIXME Use proper Unicode-aware case-folding, if not already
-  var partLowercase = part.toLowerCase()
-  var nameLowercase = name.toLowerCase()
-  // Check prefixes, then infixes, then subsequences -- and for
-  // each, try case-sensitive and then insensitive.
-  // Want something faster but uglier?
-  // https://github.com/timmc/lib-1666/commit/6bd6f8a7635074f098e3d498cdd248450559b013
-  var indexOfCs = name.indexOf(part);
-  var indexOfCi = nameLowercase.indexOf(partLowercase);
-  if (indexOfCs === 0) {
-    return [-31, 0]
-  } else if (indexOfCi === 0) {
-    return [-30, 0]
-  } else if (indexOfCs >= 0) {
-    return [-21, indexOfCs]
-  } else if (indexOfCi >= 0) {
-    return [-20, indexOfCi]
-  } else if (module.exports.containsSubseq(name, part)) {
-    return [-11, 0]
-  } else if (module.exports.containsSubseq(nameLowercase, partLowercase)) {
-    return [-10, 0]
-  } else {
-    return null
+  var partLower = part.toLowerCase()
+  var nameLower = name.toLowerCase()
+
+  var casefoldScore = module.exports.matchPinningCase(nameLower, partLower)
+  if (!casefoldScore) {
+    return null;
   }
+  var casekeepScore = module.exports.matchPinningCase(name, part)
+
+  // Inject case-preservation just before last score element, then
+  // choose best of the two options (if we have two options.)
+
+  casefoldScore.splice(2, 0, 0)
+  if (casekeepScore) {
+    casekeepScore.splice(2, 0, -1)
+    if (compareArrays(casekeepScore, casefoldScore) <= 0) {
+      return casekeepScore
+    }
+  }
+  return casefoldScore
 }
 
 /**
@@ -67,25 +110,6 @@ function annotateScore(name, partStrip) {
     score.push(name.toLowerCase(), name)
   }
   return {completion: stripped, score: score}
-}
-
-/**
- * Custom lexicographic comparator on pairs of equal-length
- * arrays. Does not do a deep comparison on sub-arrays.
- */
-function compareArrays(a, b) {
-  var len = a.length;
-  for (var i = 0; i < len; i++) {
-    var elA = a[i]
-    var elB = b[i]
-    if (elA < elB) {
-      return -1
-    } else if (elA > elB) {
-      return 1
-    }
-    // continue if equal...
-  }
-  return 0;
 }
 
 /**
