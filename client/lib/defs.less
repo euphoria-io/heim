@@ -96,6 +96,17 @@
   }
 }
 
+.raised-filled-button(@color) {
+  text-decoration: none;
+  color: white;
+  font-weight: bold;
+  white-space: nowrap;
+  background: @color;
+  padding: 4px 14px;
+  border-radius: 3px;
+  box-shadow: 0 2px 2px fade(black, 12.5%);
+}
+
 @neutral-color: #e8e8e8;
 @public-color: lighten(blue, 43%);
 @welcome-color: #e5f2e5;
@@ -106,4 +117,5 @@
 @faded-topic-color: #7070be;
 @disconnected-color: #ff7c7c;
 @focus-green: fade(green, 50%);
+@brand-color: #80c080;
 @pane-bg-color: #f4f4f4;

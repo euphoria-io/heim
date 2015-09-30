@@ -45,6 +45,12 @@ function shell(cmd, cb) {
   })
 }
 
+// FIXME: replace with a more robust js loader
+function reload(moduleName) {
+  delete require.cache[require.resolve(moduleName)]
+  return require(moduleName)
+}
+
 function handleError(title) {
   return function(err) {
     gutil.log(gutil.colors.red(title + ':'), err.message)
@@ -129,7 +135,7 @@ gulp.task('raven-js', ['heim-git-commit', 'heim-js'], function() {
 })
 
 gulp.task('heim-less', function() {
-  return gulp.src(['./lib/main.less', './lib/crashed.less', './lib/od.less', './lib/home.less'])
+  return gulp.src(['./lib/main.less', './lib/crashed.less', './lib/od.less', './site/*.less'])
     .pipe(less({compress: true}))
     .on('error', handleError('LESS error'))
     .pipe(autoprefixer({cascade: false}))
@@ -172,7 +178,7 @@ gulp.task('embed-static', function() {
 })
 
 gulp.task('heim-html', ['heim-git-commit'], function() {
-  return gulp.src(['./lib/index.html', './lib/home.html'])
+  return gulp.src(['./lib/room.html'])
     .pipe(gtemplate(heimOptions))
     .pipe(gulp.dest(heimDest))
 })
@@ -182,12 +188,18 @@ gulp.task('embed-html', function() {
     .pipe(gulp.dest(embedDest))
 })
 
-gulp.task('email-templates', function() {
-  function reload(moduleName) {
-    delete require.cache[require.resolve(moduleName)]
-    return require(moduleName)
-  }
+gulp.task('site-templates', function() {
+  var page = reload('./site/page.js')
+  var pages = ['home', 'about/values', 'about/conduct']
 
+  return merge(_.map(pages, function(name) {
+    var html = page.render(reload('./site/' + name))
+    return gfile(name + '.html', html, {src: true})
+  }))
+    .pipe(gulp.dest(heimDest))
+})
+
+gulp.task('email-templates', function() {
   var email = reload('./emails/email.js')
   var emails = ['welcome', 'room-invitation', 'room-invitation-welcome', 'password-changed', 'password-reset']
 
@@ -246,15 +258,17 @@ watchifyTask('heim-watchify', heimBundler, 'main.js', heimDest)
 watchifyTask('embed-watchify', embedBundler, 'embed.js', embedDest)
 
 gulp.task('build-emails', ['email-templates', 'email-hdrs', 'email-static'])
-gulp.task('build-statics', ['raven-js', 'heim-less', 'emoji-less', 'heim-static', 'embed-static', 'heim-html', 'embed-html'])
+gulp.task('build-statics', ['raven-js', 'heim-less', 'emoji-less', 'heim-static', 'embed-static', 'heim-html', 'embed-html', 'site-templates'])
 gulp.task('build-browserify', ['heim-js', 'embed-js'])
 
 gulp.task('watch', function() {
   watching = true
   gulp.watch('./lib/**/*.less', ['heim-less'])
   gulp.watch('./res/**/*', ['heim-less', 'emoji-less'])
+  gulp.watch('./site/**/*.less', ['heim-less'])
   gulp.watch('./lib/**/*.html', ['heim-html', 'embed-html'])
   gulp.watch('./static/**/*', ['heim-static', 'embed-static'])
+  gulp.watch('./site/**/*', ['site-templates'])
   gulp.watch('./emails/*', ['email-templates'])
   gulp.watch('./emails/static/*', ['email-static'])
 })
