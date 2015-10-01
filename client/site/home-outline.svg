@@ -85,15 +85,15 @@
      transform="translate(0,-540.36218)">
     <g
        id="g4016"
-       transform="translate(-1290,4.4335939e-6)">
+       transform="matrix(1.2078874,0,0,1.2078874,-1611.3938,-165.55366)">
       <g
          id="g4184"
          clip-path="url(#clipPath5579)"
          transform="matrix(1.6844737,0,0,1.6844737,-1300.7715,-295.78684)">
         <rect
-           style="color:#000000;fill:#ffffff;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:20;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
-           id="rect5585"
            transform="matrix(0.59365724,0,0,0.59365724,1538.0302,496.38591)"
+           style="color:#000000;display:inline;overflow:visible;visibility:visible;fill:#ffffff;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:20;marker:none;enable-background:accumulate"
+           id="rect5585"
            y="0"
            x="0"
            height="512"
@@ -101,22 +101,18 @@
         <g
            style="opacity:0.55;fill:#151515;fill-opacity:1;filter:url(#filter4180)"
            id="g5910-9"
-           transform="matrix(0.48568345,0,0,0.48568345,939.13336,261.57464)">
-          <path
-             style="color:#000000;fill:#151515;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:65;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
-             id="path3004-90-9-9"
-             d="m 1546,577.48657 c -120.5151,0 -218.8779,98.3627 -218.8779,218.87791 0,120.51521 98.3628,218.90462 218.8779,218.90462 120.5152,0 218.878,-98.38941 218.878,-218.90462 0,-120.51521 -98.3628,-218.87791 -218.878,-218.87791 z m -178.4503,218.87596 356.9007,0 c 0,98.99175 -79.4585,178.4809 -178.4504,178.4809 -98.9918,0 -178.4502,-79.48915 -178.4503,-178.4809 z" />
-        </g>
+           transform="matrix(0.48568345,0,0,0.48568345,939.13336,261.57464)" />
       </g>
     </g>
     <path
-       style="color:#000000;fill:none;stroke:url(#linearGradient8296);stroke-width:16;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       transform="matrix(1.2078874,0,0,1.2078874,-53.219171,-165.55366)"
+       style="color:#000000;display:inline;overflow:visible;visibility:visible;fill:none;stroke:url(#linearGradient8296);stroke-width:16;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker:none;enable-background:accumulate"
        id="path8266"
        clip-path="url(#clipPath8286)"
-       d="M 256,612 C 154.49042,612 71.625,694.8655 71.625,796.375 71.625,897.88452 154.49042,980.75 256,980.75 357.50941,980.75 440.34375,897.88452 440.34375,796.375 440.34375,694.8655 357.50941,612 256,612 z m -131.15625,184.375 262.3125,0 c 0,72.77003 -58.38612,131.1875 -131.15625,131.1875 -72.77008,0 -131.15625,-58.41747 -131.15625,-131.1875 z" />
+       d="M 256,612 C 154.49042,612 71.625,694.8655 71.625,796.375 71.625,897.88452 154.49042,980.75 256,980.75 357.50941,980.75 440.34375,897.88452 440.34375,796.375 440.34375,694.8655 357.50941,612 256,612 Z m -131.15625,184.375 262.3125,0 c 0,72.77003 -58.38612,131.1875 -131.15625,131.1875 -72.77008,0 -131.15625,-58.41747 -131.15625,-131.1875 z" />
     <path
-       style="color:#000000;fill:none;stroke:#000000;stroke-width:5;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       style="color:#000000;display:inline;overflow:visible;visibility:visible;fill:none;stroke:#000000;stroke-width:6.03943682;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker:none;enable-background:accumulate"
        id="path6356"
-       d="m 256.01562,611.98717 c -101.50958,0 -184.374995,82.8655 -184.374995,184.375 0,101.50952 82.865415,184.37502 184.374995,184.37502 101.50942,0 184.34375,-82.8655 184.34375,-184.37502 0,-101.5095 -82.83433,-184.375 -184.34375,-184.375 z m -131.18749,184.375 262.34374,0 c 0,72.77003 -58.38613,131.18752 -131.15625,131.18752 -72.77009,0 -131.18749,-58.41749 -131.18749,-131.18752 z" />
+       d="m 256.01887,573.65795 c -122.61215,0 -222.704234,100.09218 -222.704234,222.70424 0,122.61207 100.092084,222.70421 222.704234,222.70421 122.61195,0 222.66649,-100.09215 222.66649,-222.70422 0,-122.61205 -100.05454,-222.70424 -222.66649,-222.70424 z m -158.459716,222.70424 316.881696,0 c 0,87.898 -70.52387,158.45975 -158.42198,158.45975 -87.89808,0 -158.459716,-70.56175 -158.459716,-158.45975 z" />
   </g>
 </svg>
