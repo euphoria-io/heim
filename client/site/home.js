@@ -33,13 +33,13 @@ module.exports = (
           <li className="chat">
             <div className="inner">
               <h2>chat for free</h2>
-              <p className="description">on your computer and phone</p>
+              <p>on your computer and phone</p>
             </div>
           </li>
           <li className="instant">
             <div className="inner">
               <h2>join instantly</h2>
-              <p className="description">no install or sign-up required</p>
+              <p>no install or sign-up required</p>
             </div>
           </li>
         </ul>
