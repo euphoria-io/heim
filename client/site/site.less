@@ -54,6 +54,11 @@ body.page {
       padding-top: 0;
       padding-bottom: 0;
     }
+
+    @media (max-width: @thin-breakpoint) {
+      padding: 9px 0;
+      border-bottom-width: 6px;
+    }
   }
 
   nav {
@@ -135,8 +140,12 @@ body.page {
     @media (max-width: @thin-breakpoint) {
       text-align: center;
 
+      .container {
+        padding: 0 8px;
+      }
+
       a {
-        padding: 0 10px;
+        padding: 0 7px;
       }
     }
   }
@@ -224,7 +233,7 @@ body.welcome {
   }
 
   .splash {
-    margin: 30px 0;
+    margin: 10px 0;
   }
 
   .clicky {
@@ -233,7 +242,6 @@ body.welcome {
     display: inline-block;
     width: @size;
     height: @size;
-    margin-top: -30px;
     border-radius: 100%;
 
     animation-name: grow;
@@ -440,6 +448,7 @@ body.welcome {
         flex: 1;
         align-items: center;
         justify-content: center;
+        margin: 0 2px;
         opacity: .83;
         list-style-type: none;
       }
@@ -497,7 +506,7 @@ body.welcome {
 
     h1 {
       font-size: 20px;
-      margin: 0 30px;
+      margin: 10px 30px 25px;
     }
 
     .info-box {
@@ -505,9 +514,16 @@ body.welcome {
       margin-left: -10px;
       margin-right: -10px;
 
+      .description {
+        padding: 8px;
+      }
+
       .start-chatting {
         width: 100%;
+        padding-left: 0;
+        padding-right: 0;
         box-sizing: border-box;
+        margin-top: 12px;
       }
 
       .features {
