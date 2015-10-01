@@ -23,7 +23,7 @@ module.exports = (
             <common.FauxMessage sender="euphoria" message="we're building a platform for cozy real time discussion spaces" />
             <common.FauxMessage sender="euphoria" message="it's like a mix of chat, forums, and mailing lists">
               <div className="replies">
-                <common.FauxMessage sender="euphoria" message="with your friends, organization, and people around the world." />
+                <common.FauxMessage sender="euphoria" message="with your friends, organizations, and people around the world." />
               </div>
             </common.FauxMessage>
           </div>
