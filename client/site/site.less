@@ -15,185 +15,6 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-body.welcome {
-  overflow: hidden;
-
-  .clicky {
-    @size: 300px;
-    position: absolute;
-    display: block;
-    width: @size;
-    height: @size;
-    margin-left: -@size / 2;
-    margin-top: -@size / 2;
-    left: 50%;
-    top: 50%;
-    border-radius: 100%;
-
-    animation-name: grow;
-    animation-iteration-count: 1;
-    animation-timing-function: ease;
-    animation-duration: 1s;
-    @keyframes grow {
-      0% {
-        transform: scale(.95);
-        opacity: 0;
-      }
-      100% {
-        transform: none;
-        opacity: 1;
-      }
-    }
-
-    .logo, .colors {
-      position: absolute;
-      left: 0;
-      right: 0;
-      top: 0;
-      bottom: 0;
-      border-radius: 100%;
-      overflow: hidden;
-    }
-
-    .logo {
-      background: data-uri('../res/home.svg') no-repeat center center;
-      background-size: contain;
-      text-indent: -9999px;
-      z-index: 100;
-      left: 0;
-      right: 0;
-      top: 0;
-      bottom: 0;
-      transition: transform .1s ease-out;
-    }
-
-    @animation-duration: .45s;
-
-    .colors {
-      padding: 35px;
-      font-size: 0;
-      opacity: 0;
-
-      & > div {
-        display: inline-block;
-        width: 100% / 5;
-        height: 100%;
-        animation-iteration-count: infinite;
-        animation-timing-function: steps(1);
-        animation-duration: @animation-duration;
-      }
-
-      .a {
-        background: #d95d3f;
-        animation-delay: (-1 / 5) * @animation-duration;
-      }
-
-      .b {
-        background: #f29526;
-        animation-delay: (-2 / 5) * @animation-duration;
-      }
-
-      .c {
-        background: #5abe6b;
-        animation-delay: (-3 / 5) * @animation-duration;
-      }
-
-      .d {
-        background: #4d97cb;
-        animation-delay: (-4 / 5) * @animation-duration;
-      }
-
-      .e {
-        background: #7f62b6;
-        animation-delay: (-5 / 5) * @animation-duration;
-      }
-    }
-
-    @keyframes scramble {
-      0% {
-        background: #d95d3f;
-      }
-
-      20% {
-        background: #f29526;
-      }
-
-      40% {
-        background: #5abe6b;
-      }
-
-      60% {
-        background: #4d97cb;
-      }
-
-      80% {
-        background: #7f62b6;
-      }
-
-      100% {
-        background: #d95d3f;
-      }
-    }
-
-    &:hover .logo, .logo:focus {
-      background-image: data-uri('../res/home-outline.svg');
-      transform: scale(1.05);
-      transition-duration: .2s;
-      outline: none;
-    }
-
-    &:hover .colors, .logo:focus + .colors {
-      opacity: 1;
-
-      & > div {
-        animation-name: scramble;
-      }
-    }
-
-    &:active {
-      .logo {
-        transition-duration: .025s;
-        transform: scale(1);
-      }
-    }
-  }
-
-  footer {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 40px;
-    text-align: right;
-
-    animation-name: rise;
-    animation-iteration-count: 1;
-    animation-timing-function: ease;
-    animation-duration: 1s;
-    @keyframes rise {
-      0% {
-        transform: translateY(10px);
-        opacity: 0;
-      }
-      100% {
-        transform: none;
-        opacity: 1;
-      }
-    }
-
-    a {
-      padding-left: 26px;
-      text-decoration: none;
-      color: darkgreen;
-
-      &:last-child {
-        padding-right: 30px;
-      }
-    }
-  }
-}
-
-
 @thin-breakpoint: 420px;
 
 body.page {
@@ -375,6 +196,359 @@ body.page {
       display: block;
       margin-left: 0;
       margin-top: .5em;
+    }
+  }
+}
+
+body.welcome {
+  @keyframes raise {
+    0% {
+      transform: translateY(10px);
+      opacity: 0;
+    }
+    100% {
+      transform: none;
+      opacity: 1;
+    }
+  }
+
+  .container.main {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .splash {
+    margin: 20px 0;
+  }
+
+  .clicky {
+    @size: 235px;
+    position: relative;
+    display: inline-block;
+    width: @size;
+    height: @size;
+    margin-top: -30px;
+    border-radius: 100%;
+
+    animation-name: grow;
+    animation-iteration-count: 1;
+    animation-timing-function: ease;
+    animation-duration: 1s;
+    @keyframes grow {
+      0% {
+        transform: scale(1.15);
+        opacity: 0;
+      }
+      100% {
+        transform: none;
+        opacity: 1;
+      }
+    }
+
+    .logo, .colors {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      border-radius: 100%;
+      overflow: hidden;
+    }
+
+    .logo {
+      background: data-uri('./home-outline.svg') no-repeat center center;
+      background-size: contain;
+      text-indent: -9999px;
+      z-index: 5;
+      left: 0;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      transition: transform .1s ease-out;
+    }
+
+    .delay-parts(@duration) {
+      .a {
+        animation-delay: (-1 / 5) * @duration;
+      }
+
+      .b {
+        animation-delay: (-2 / 5) * @duration;
+      }
+
+      .c {
+        animation-delay: (-3 / 5) * @duration;
+      }
+
+      .d {
+        animation-delay: (-4 / 5) * @duration;
+      }
+
+      .e {
+        animation-delay: (-5 / 5) * @duration;
+      }
+    }
+
+    .colors {
+      padding: 29px;
+      font-size: 0;
+      transform: perspective(0);  // fix overflow clipping in Chrome
+
+      .delay-parts(.35s);
+
+      & > div {
+        display: inline-block;
+        width: 100% / 5;
+        height: 100%;
+
+        animation-name: tron;
+        animation-iteration-count: 1;
+        animation-timing-function: ease-out;
+        animation-duration: .75s;
+        @keyframes tron {
+          0% {
+            transform: translateY(1500px);
+          }
+          100% {
+            transform: none;
+          }
+        }
+      }
+
+      .a {
+        background: #d95d3f;
+      }
+
+      .b {
+        background: #f29526;
+      }
+
+      .c {
+        background: #5abe6b;
+      }
+
+      .d {
+        background: #4d97cb;
+      }
+
+      .e {
+        background: #7f62b6;
+      }
+    }
+
+    @keyframes scramble {
+      0% {
+        background: #d95d3f;
+      }
+
+      20% {
+        background: #f29526;
+      }
+
+      40% {
+        background: #5abe6b;
+      }
+
+      60% {
+        background: #4d97cb;
+      }
+
+      80% {
+        background: #7f62b6;
+      }
+
+      100% {
+        background: #d95d3f;
+      }
+    }
+
+    &:hover .logo, .logo:focus {
+      transform: scale(1.05);
+      transition-duration: .2s;
+      outline: none;
+    }
+
+    &:hover .colors, .logo:focus + .colors {
+      .delay-parts(.45s);
+
+      & > div {
+        animation-name: scramble;
+        animation-iteration-count: infinite;
+        animation-timing-function: steps(1);
+        animation-duration: .45s;
+      }
+    }
+
+    &:active {
+      .logo {
+        transition-duration: .025s;
+        transform: scale(1);
+      }
+    }
+  }
+
+  h1 {
+    font-size: 20px;
+    font-weight: normal;
+    margin-top: 10px;
+    animation: raise .5s ease .5s 1 normal both;
+  }
+
+  .info-box {
+    margin-top: 40px;
+    border-radius: 5px;
+    box-shadow: 0 2px 10px fade(black, 25%);
+    overflow: hidden;
+    animation: raise .5s ease .75s 1 normal both;
+
+    .description {
+      padding: 16px;
+    }
+
+    .messages {
+      text-align: left;
+      font-size: 15px;
+      line-height: 1.25em;
+    }
+
+    .start-chatting {
+      display: inline-block;
+      margin-top: 20px;
+      margin-bottom: 10px;
+      .raised-filled-button(@brand-color);
+      font-size: 1.1em;
+      padding: 11px 48px;
+      border-radius: 4px;
+      box-shadow: 0 4px 4px fade(black, 15%);
+    }
+
+    .features {
+      display: flex;
+      background: #f0f0f0;
+      border-top: 1px solid #e5e5e5;
+      margin: 0;
+      padding: 13px 32px;
+
+      li {
+        display: flex;
+        flex: 1;
+        align-items: center;
+        justify-content: center;
+        opacity: .83;
+        list-style-type: none;
+      }
+
+      .chat {
+        .icon('./feature-chat.svg', 42px, 13px, .85);
+      }
+
+      .instant {
+        .icon('./feature-instant.svg', 38px, 13px, .85);
+      }
+
+      .inner {
+        display: inline-block;
+        text-align: left;
+
+        h2, p {
+          margin: 0;
+          padding: 0;
+        }
+
+        h2 {
+          font-size: 14px;
+          font-weight: normal;
+          margin-bottom: 3px;
+        }
+
+        p {
+          font-size: 11px;
+          opacity: .5;
+        }
+      }
+    }
+  }
+
+  @media (min-width: @thin-breakpoint) {
+    h1 br {
+      display: none;
+    }
+  }
+
+  @media (max-width: @thin-breakpoint) {
+    .clicky {
+      width: 125px;
+      height: 125px;
+    }
+
+    .clicky .colors {
+      padding: 15px;
+    }
+
+    h1 {
+      font-size: 20px;
+      margin: 0 30px;
+    }
+
+    .info-box {
+      margin-top: 15px;
+      margin-left: -10px;
+      margin-right: -10px;
+
+      .start-chatting {
+        padding: 10px 30px;
+      }
+
+      .features {
+        padding: 10px 15px;
+      }
+    }
+  }
+
+  @media (max-width: 320px) {
+    .info-box {
+      .messages {
+        font-size: 14px;
+      }
+
+      .features {
+        display: block;
+        margin-bottom: -15px;
+
+        li {
+          margin-bottom: 15px;
+        }
+      }
+    }
+  }
+}
+
+.messages {
+  margin: -.25em 0;
+
+  .faux-message {
+    font-size: 1em;
+    margin: .35em 0;
+
+    .line {
+      display: flex;
+    }
+
+    .nick {
+      display: inline-block;
+      align-self: flex-start;
+      padding: 0 .4em;
+      font-size: .85em;
+      border-radius: 2px;
+      margin-right: .5em;
+      line-height: 1.5em;
+    }
+
+    .replies {
+      border-left: 2px solid #d2d2d2;
+      padding-left: 1.5em;
     }
   }
 }

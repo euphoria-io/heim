@@ -3,6 +3,9 @@ var React = require('react')
 var classNames = require('classnames')
 var marked = require('marked')
 
+var MessageText = require('../lib/ui/message-text')
+var hueHash = require('../lib/hue-hash')
+
 
 var HEIM_PREFIX = process.env.HEIM_PREFIX || ''
 var heimURL = module.exports.heimURL = function(href) {
@@ -61,7 +64,7 @@ var Footer = module.exports.Footer = React.createClass({
 module.exports.MainPage = React.createClass({
   render: function() {
     return (
-      <Page className="page" title={this.props.title}>
+      <Page className={classNames('page', this.props.className)} title={this.props.title}>
         <Header />
         {this.props.nav}
         <div className="container main">
@@ -101,6 +104,20 @@ module.exports.PolicyNav = React.createClass({
           </ul>
         </div>
       </nav>
+    )
+  },
+})
+
+module.exports.FauxMessage = React.createClass({
+  render: function() {
+    return (
+      <div className="faux-message">
+        <div className="line">
+          <MessageText className="nick" onlyEmoji={true} style={{background: 'hsl(' + hueHash.hue(this.props.sender) + ', 65%, 85%)'}} content={this.props.sender} />
+          <MessageText className="message" content={this.props.message} />
+        </div>
+        {this.props.children}
+      </div>
     )
   },
 })
