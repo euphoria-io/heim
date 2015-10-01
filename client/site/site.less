@@ -197,7 +197,7 @@ body.welcome {
 @thin-breakpoint: 420px;
 
 body.page {
-  header > .container, footer > .container, .container.main {
+  header > .container, footer > .container, nav > .container, .container.main {
     max-width: 930px;
     padding: 0 30px;
     margin: 0 auto;
@@ -208,9 +208,11 @@ body.page {
   }
 
   header {
+    position: relative;
     border-bottom: 10px solid @brand-color;
     padding: 14px 0;
     box-shadow: 0 0 8px fade(black, 25%);
+    z-index: 10;
 
     .logo {
       color: black;
@@ -229,6 +231,58 @@ body.page {
       line-height: 24px;
       padding-top: 0;
       padding-bottom: 0;
+    }
+  }
+
+  nav {
+    display: block;
+    background: #77a377;
+    box-shadow: 0 -4px 8px -4px fade(black, 15%) inset;
+
+    ul, li {
+      display: inline;
+      margin: 0;
+      padding: 0;
+      list-style-type: none;
+    }
+
+    .label, a {
+      color: white;
+    }
+
+    .label {
+      opacity: .75;
+      margin-right: 30px;
+    }
+
+    a {
+      display: inline-block;
+      text-decoration: none;
+      padding: 10px 15px;
+      margin: 0 15px;
+      margin-left: -5px;
+    }
+
+    li.selected a {
+      position: relative;
+      background: white;
+      color: black;
+      box-shadow:
+        -8px 0 8px -8px fade(black, 25%),
+        8px 0 8px -8px fade(black, 25%);
+      z-index: 15;
+
+    }
+
+    @media (max-width: @mobile-breakpoint) {
+      .label {
+        display: none;
+      }
+
+      a {
+        padding: 5px 10px;
+        margin: 0;
+      }
     }
   }
 

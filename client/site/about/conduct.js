@@ -5,7 +5,7 @@ var common = require('../common')
 
 
 module.exports = (
-  <common.MainPage title="euphoria: conduct">
+  <common.MainPage title="euphoria: conduct" nav={<common.PolicyNav selected="conduct" />}>
     <common.Markdown className="policy" content={fs.readFileSync(__dirname + '/conduct.md', 'utf8')} />
   </common.MainPage>
 )

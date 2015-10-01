@@ -1,4 +1,6 @@
+var _ = require('lodash')
 var React = require('react')
+var classNames = require('classnames')
 var marked = require('marked')
 
 
@@ -61,6 +63,7 @@ module.exports.MainPage = React.createClass({
     return (
       <Page className="page" title={this.props.title}>
         <Header />
+        {this.props.nav}
         <div className="container main">
           {this.props.children}
         </div>
@@ -74,6 +77,30 @@ module.exports.Markdown = React.createClass({
   render: function() {
     return (
       <div className={this.props.className} dangerouslySetInnerHTML={{__html: marked(this.props.content)}} />
+    )
+  },
+})
+
+module.exports.PolicyNav = React.createClass({
+  render: function() {
+    var items = [
+      {name: 'values', caption: 'Values'},
+      {name: 'conduct', caption: 'Code of Conduct'},
+    ]
+
+    return (
+      <nav>
+        <div className="container">
+          <span className="label">Platform Policies:</span>
+          <ul>
+            {_.map(items, item =>
+              <li key={item.name} className={classNames(this.props.selected == item.name && 'selected')}>
+                <a href={heimURL('/about/' + item.name)}>{item.caption}</a>
+              </li>
+            )}
+          </ul>
+        </div>
+      </nav>
     )
   },
 })

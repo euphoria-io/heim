@@ -21,7 +21,7 @@ var fs = require('fs')
 var path = require('path')
 var exec = require('child_process').exec
 
-require('node-jsx').install()
+require('node-jsx').install({harmony: true})
 
 var watching = false
 var heimDest = './build/heim'
