@@ -96,15 +96,27 @@
   }
 }
 
-.raised-filled-button(@color) {
+.raised-filled-button(@color, @radius: 3px, @depth: 1px) {
   text-decoration: none;
   color: white;
   font-weight: bold;
   white-space: nowrap;
   background: @color;
   padding: 4px 14px;
-  border-radius: 3px;
-  box-shadow: 0 2px 2px fade(black, 12.5%);
+  border-radius: @radius;
+  box-shadow: 0 2*@depth 2*@depth fade(black, 12.5%);
+  transition: all .15s ease-out;
+
+  &:hover {
+    background: darken(@color, 10%);
+  }
+
+  &:active {
+    background: desaturate(darken(@color, 15%), 5%);
+    box-shadow: 0 0 2*@depth fade(black, 35%);
+    transform: translateY((3/2) * @depth);
+    transition-duration: .035s;
+  }
 }
 
 @neutral-color: #e8e8e8;
