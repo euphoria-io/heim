@@ -79,7 +79,7 @@ module.exports = React.createClass({
       html = autolinker.link(html)
     }
 
-    return <span className={this.props.className} style={this.props.style} dangerouslySetInnerHTML={{
+    return <span className={this.props.className} style={this.props.style} title={this.props.title} dangerouslySetInnerHTML={{
       __html: html
     }} />
   },
