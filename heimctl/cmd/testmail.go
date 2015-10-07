@@ -99,16 +99,21 @@ func (cmd *testmailCmd) run(ctx scope.Context, args []string) error {
 		return err
 	}
 
-	emailer, err := cfg.Email.Get(cfg)
+	heim, err := cfg.Heim(ctx)
 	if err != nil {
 		return err
 	}
 
-	msgID, err := emailer.Send(ctx, args[1], templateName, testCase.Data)
+	account, err := heim.Backend.AccountManager().Resolve(ctx, "email", args[1])
+	if err != nil {
+		return err
+	}
+
+	ref, err := heim.SendEmail(ctx, heim.Backend, account, templateName, testCase.Data)
 	if err != nil {
 		return fmt.Errorf("send failed: %s", err)
 	}
 
-	fmt.Printf("Sent email successfully.\nMessage ID: %s\n", msgID)
+	fmt.Printf("Sent email successfully.\nMessage ID: %s\n", ref.ID)
 	return nil
 }
