@@ -145,11 +145,11 @@ gulp.task('heim-less', function() {
     .pipe(gulp.dest(heimDest))
 })
 
-gulp.task('emoji-less', function() {
+gulp.task('emoji-static', function() {
   var emoji = require('./lib/emoji')
   var twemojiPath = path.dirname(require.resolve('twemoji')) + '/svg/'
   var leadingZeroes = /^0*/
-  var source = _.map(emoji.codes, function(code) {
+  var lessSource = _.map(emoji.codes, function(code) {
     if (!code) {
       return
     }
@@ -160,11 +160,17 @@ gulp.task('emoji-less', function() {
     }
     return '.emoji-' + code + ' { background-image: data-uri("' + emojiPath + '") }'
   }).join('\n')
-  return gfile('emoji.less', source, {src: true})
+
+  var lessFile = gfile('emoji.less', lessSource, {src: true})
     .pipe(less({compress: true}))
     .pipe(gulp.dest(heimDest))
     .pipe(gzip())
     .pipe(gulp.dest(heimDest))
+
+  var indexFile = gfile('emoji.json', JSON.stringify(emoji.index), {src: true})
+    .pipe(gulp.dest(heimDest))
+
+  return merge([lessFile, indexFile])
 })
 
 gulp.task('heim-static', function() {
@@ -258,13 +264,13 @@ watchifyTask('heim-watchify', heimBundler, 'main.js', heimDest)
 watchifyTask('embed-watchify', embedBundler, 'embed.js', embedDest)
 
 gulp.task('build-emails', ['email-templates', 'email-hdrs', 'email-static'])
-gulp.task('build-statics', ['raven-js', 'heim-less', 'emoji-less', 'heim-static', 'embed-static', 'heim-html', 'embed-html', 'site-templates'])
+gulp.task('build-statics', ['raven-js', 'heim-less', 'emoji-static', 'heim-static', 'embed-static', 'heim-html', 'embed-html', 'site-templates'])
 gulp.task('build-browserify', ['heim-js', 'embed-js'])
 
 gulp.task('watch', function() {
   watching = true
   gulp.watch('./lib/**/*.less', ['heim-less'])
-  gulp.watch('./res/**/*', ['heim-less', 'emoji-less'])
+  gulp.watch('./res/**/*', ['heim-less', 'emoji-static'])
   gulp.watch('./site/**/*.less', ['heim-less'])
   gulp.watch('./lib/**/*.html', ['heim-html', 'embed-html'])
   gulp.watch('./static/**/*', ['heim-static', 'embed-static'])
