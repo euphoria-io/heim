@@ -2458,16 +2458,24 @@ func testEmailsLowLevel(s *serverUnderTest) {
 		So(ref.Delivered, ShouldHappenOnOrAfter, ref.Created)
 		So(ref.Failed.IsZero(), ShouldBeTrue)
 
-		fetched, err := et.Get(account.ID(), ref.ID)
-		So(err, ShouldBeNil)
+		// Poll for limited time until email shows as delivered.
+		for i := 0; i < 10; i++ {
+			fetched, err := et.Get(account.ID(), ref.ID)
+			So(err, ShouldBeNil)
+			if fetched.Delivered.IsZero() {
+				time.Sleep(10 * time.Millisecond)
+				continue
+			}
 
-		// For psql, the Location of the timestamps seems to change, but is really the same.
-		// Make sure the times are close and then force them to match in ShouldResemble.
-		So(fetched.Created, ShouldHappenWithin, time.Microsecond, ref.Created)
-		So(fetched.Delivered, ShouldHappenWithin, time.Microsecond, ref.Delivered)
-		fetched.Created = ref.Created
-		fetched.Delivered = ref.Delivered
-		So(normalizeRef(fetched), ShouldResemble, normalizeRef(ref))
+			// For psql, the Location of the timestamps seems to change, but is really the same.
+			// Make sure the times are close and then force them to match in ShouldResemble.
+			So(fetched.Created, ShouldHappenWithin, time.Microsecond, ref.Created)
+			So(fetched.Delivered, ShouldHappenWithin, time.Microsecond, ref.Delivered)
+			fetched.Created = ref.Created
+			fetched.Delivered = ref.Delivered
+			So(normalizeRef(fetched), ShouldResemble, normalizeRef(ref))
+			break
+		}
 
 		_, err = et.Get(otherAccount.ID(), ref.ID)
 		So(err, ShouldEqual, proto.ErrEmailNotFound)
