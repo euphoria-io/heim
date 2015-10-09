@@ -280,7 +280,10 @@ gulp.task('serve-heim', serve({
   port: 8080,
   root: heimDest,
   middleware: function(req, res, next) {
-    req.url = req.url.replace(/^\/static|^\/room\/\w+/, '/')
+    req.url = req.url.replace(/^\/static\/?|^\/room\/\w+\/?/, '/')
+    if (req.url == '/') {
+      req.url = '/room.html'
+    }
     next()
   },
 }))
