@@ -1,11 +1,12 @@
 var hueHash = require('./hue-hash')
 
+
 /**
  * Custom lexicographic comparator on pairs of equal-length
  * arrays. Does not do a deep comparison on sub-arrays.
  */
 function compareArrays(a, b) {
-  var len = a.length;
+  var len = a.length
   for (var i = 0; i < len; i++) {
     var elA = a[i]
     var elB = b[i]
@@ -16,7 +17,7 @@ function compareArrays(a, b) {
     }
     // continue if equal...
   }
-  return 0;
+  return 0
 }
 
 /**
@@ -60,9 +61,11 @@ module.exports.matchPinningCase = function(name, part) {
   var prefix = infix === 0
   var start = contiguous ? infix : subseq
 
-  return [contiguous ? -1 : 0,
-          prefix ? -1 : 0,
-          start]
+  return [
+    contiguous ? -1 : 0,
+    prefix ? -1 : 0,
+    start,
+  ]
 }
 
 /**
@@ -76,23 +79,23 @@ module.exports.scoreMatch = function(name, part) {
   var partLower = part.toLowerCase()
   var nameLower = name.toLowerCase()
 
-  var casefoldScore = module.exports.matchPinningCase(nameLower, partLower)
-  if (!casefoldScore) {
-    return null;
+  var caseFoldScore = module.exports.matchPinningCase(nameLower, partLower)
+  if (!caseFoldScore) {
+    return null
   }
-  var casekeepScore = module.exports.matchPinningCase(name, part)
+  var caseKeepScore = module.exports.matchPinningCase(name, part)
 
   // Inject case-preservation just before last score element, then
   // choose best of the two options (if we have two options.)
 
-  casefoldScore.splice(2, 0, 0)
-  if (casekeepScore) {
-    casekeepScore.splice(2, 0, -1)
-    if (compareArrays(casekeepScore, casefoldScore) <= 0) {
-      return casekeepScore
+  caseFoldScore.splice(2, 0, 0)
+  if (caseKeepScore) {
+    caseKeepScore.splice(2, 0, -1)
+    if (compareArrays(caseKeepScore, caseFoldScore) <= 0) {
+      return caseKeepScore
     }
   }
-  return casefoldScore
+  return caseFoldScore
 }
 
 /**
