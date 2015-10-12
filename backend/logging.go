@@ -1,6 +1,7 @@
 package backend
 
 import (
+	"io"
 	"log"
 	"os"
 
@@ -19,8 +20,8 @@ func Logger(ctx scope.Context) *log.Logger {
 	return log.New(os.Stdout, "[???] ", logFlags)
 }
 
-func LoggingContext(ctx scope.Context, prefix string) scope.Context {
-	logger := log.New(os.Stdout, prefix, logFlags)
+func LoggingContext(ctx scope.Context, w io.Writer, prefix string) scope.Context {
+	logger := log.New(w, prefix, logFlags)
 	ctx.Set(logCtx, logger)
 	return ctx
 }

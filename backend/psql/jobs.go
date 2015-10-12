@@ -66,26 +66,43 @@ type JobService struct {
 	*Backend
 }
 
-func (js *JobService) CreateQueue(ctx scope.Context, name string) (jobs.JobQueue, error) {
-	jq := &JobQueue{Name: name}
-	if err := js.DbMap.Insert(jq); err != nil {
-		if strings.HasPrefix(err.Error(), "pq: duplicate key value") {
-			return nil, jobs.ErrJobQueueAlreadyExists
-		}
-		return nil, err
-	}
-	return jq.Bind(js.Backend), nil
-}
-
 func (js *JobService) GetQueue(ctx scope.Context, name string) (jobs.JobQueue, error) {
-	row, err := js.DbMap.Get(JobQueue{}, name)
+	jq := &JobQueue{Name: name}
+
+	// Loop within transaction in read committed mode to simulate UPSERT.
+	t, err := js.DbMap.Begin()
 	if err != nil {
 		return nil, err
 	}
-	if row == nil {
-		return nil, jobs.ErrJobQueueNotFound
+	for {
+		// Try to fetch.
+		row, err := t.Get(JobQueue{}, name)
+		if row != nil && err == nil {
+			jq = row.(*JobQueue)
+			break
+		}
+		if err != nil && err != sql.ErrNoRows {
+			rollback(ctx, t)
+			return nil, err
+		}
+
+		// If queue didn't exist yet, try to insert. This may fail due to race,
+		// in which case we'll loop and try to get again.
+		if err := t.Insert(jq); err != nil {
+			if !strings.HasPrefix(err.Error(), "pq: duplicate key value") {
+				rollback(ctx, t)
+				return nil, err
+			}
+		} else {
+			break
+		}
 	}
-	return row.(*JobQueue).Bind(js.Backend), nil
+
+	if err := t.Commit(); err != nil {
+		return nil, err
+	}
+
+	return jq.Bind(js.Backend), nil
 }
 
 func (jq *JobQueueBinding) newJob(
@@ -355,16 +372,31 @@ func (jq *JobQueueBinding) Fail(
 }
 
 func (jq *JobQueueBinding) Stats(ctx scope.Context) (jobs.JobQueueStats, error) {
-	var stats jobs.JobQueueStats
+	var row struct {
+		Waiting sql.NullInt64
+		Due     sql.NullInt64
+		Claimed sql.NullInt64
+	}
 
 	err := jq.Backend.DbMap.SelectOne(
-		&stats,
+		&row,
 		"SELECT COUNT(*)-SUM(is_claimed) AS waiting, SUM(is_due) AS due, SUM(is_claimed) AS claimed FROM ("+
 			"SELECT CASE WHEN due <= NOW() THEN 1 ELSE 0 END AS is_due,"+
 			" CASE WHEN jl.job_id IS NOT NULL AND jl.started + job.max_work_duration_seconds * interval '1 second' > NOW() THEN 1 ELSE 0 END AS is_claimed"+
 			" FROM job_item job LEFT JOIN job_log jl ON job.id = jl.job_id AND jl.attempt = job.attempts_made-1"+
 			" WHERE job.queue = $1 AND job.completed IS NULL) AS t1",
 		jq.Name)
+
+	stats := jobs.JobQueueStats{}
+	if row.Waiting.Valid {
+		stats.Waiting = row.Waiting.Int64
+	}
+	if row.Due.Valid {
+		stats.Due = row.Due.Int64
+	}
+	if row.Claimed.Valid {
+		stats.Claimed = row.Claimed.Int64
+	}
 	return stats, err
 }
 

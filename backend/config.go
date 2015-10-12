@@ -18,7 +18,6 @@ import (
 	"euphoria.io/heim/cluster/etcd"
 	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/emails"
-	"euphoria.io/heim/proto/jobs"
 	"euphoria.io/heim/proto/security"
 	"euphoria.io/heim/templates"
 	"euphoria.io/scope"
@@ -190,16 +189,6 @@ func (cfg *ServerConfig) Heim(ctx scope.Context) (*proto.Heim, error) {
 	}
 
 	heim.Backend = backend
-
-	// Make sure required queues exist.
-	if _, err := backend.Jobs().GetQueue(ctx, jobs.EmailQueue); err != nil {
-		if err == jobs.ErrJobQueueNotFound {
-			if _, err := backend.Jobs().CreateQueue(ctx, jobs.EmailQueue); err != nil {
-				return nil, err
-			}
-		}
-	}
-
 	return heim, nil
 }
 

@@ -12,6 +12,7 @@ var (
 	ErrClientKeyNotFound        = fmt.Errorf("client key not found")
 	ErrEditInconsistent         = fmt.Errorf("edit inconsistent")
 	ErrEmailNotFound            = fmt.Errorf("email not found")
+	ErrEmailAlreadyDelivered    = fmt.Errorf("email already delivered")
 	ErrInvalidConfirmationCode  = fmt.Errorf("invalid confirmation code")
 	ErrInvalidNick              = fmt.Errorf("invalid nick")
 	ErrInvalidParent            = fmt.Errorf("invalid parent ID")

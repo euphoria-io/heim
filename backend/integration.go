@@ -448,15 +448,6 @@ func IntegrationTest(t *testing.T, factory proto.BackendFactory) {
 		heim.Backend = backend
 		defer heim.Backend.Close()
 
-		// Make sure queues exist.
-		ctx := scope.New()
-		js := backend.Jobs()
-		if _, err := js.CreateQueue(ctx, jobs.EmailQueue); err != nil {
-			if err != jobs.ErrJobQueueAlreadyExists {
-				t.Fatal(err)
-			}
-		}
-
 		// Set up and start server.
 		app, err := NewServer(heim, "test1", "era1")
 		if err != nil {
@@ -475,8 +466,6 @@ func IntegrationTest(t *testing.T, factory proto.BackendFactory) {
 
 		s := newServerUnderTest(backend, app, server, heim.KMS.(security.MockKMS))
 		Convey(name, t, func() { test(s) })
-		ctx.Terminate(fmt.Errorf("test completed"))
-		ctx.WaitGroup().Wait()
 	}
 
 	runTestWithFactory := func(name string, test factoryTestSuite) {
@@ -2099,7 +2088,7 @@ func testJobsLowLevel(s *serverUnderTest) {
 				ch <- nil
 				return
 			}
-			job, err := jobs.Claim(ctx, jq, "test", 10*time.Millisecond)
+			job, err := jobs.Claim(ctx, jq, "test", 10*time.Millisecond, 0)
 			if err != nil {
 				fmt.Printf("claim job failed: %s", err)
 				ch <- nil
@@ -2110,28 +2099,8 @@ func testJobsLowLevel(s *serverUnderTest) {
 		return ch
 	}
 
-	Convey("Creating queue errors on duplicates", func() {
-		jq, err := js.CreateQueue(ctx, "duptest")
-		So(err, ShouldBeNil)
-		So(jq, ShouldNotBeNil)
-
-		jq, err = js.CreateQueue(ctx, "duptest")
-		So(err, ShouldEqual, jobs.ErrJobQueueAlreadyExists)
-		So(jq, ShouldBeNil)
-
-		jq, err = js.GetQueue(ctx, "duptest")
-		So(err, ShouldBeNil)
-		So(jq, ShouldNotBeNil)
-	})
-
-	Convey("Fetching non-existent queue returns error", func() {
-		jq, err := js.GetQueue(ctx, "doesn't exist")
-		So(err, ShouldEqual, jobs.ErrJobQueueNotFound)
-		So(jq, ShouldBeNil)
-	})
-
 	Convey("Simple job lifecycle", func() {
-		jq, err := js.CreateQueue(ctx, "simple lifecycle")
+		jq, err := js.GetQueue(ctx, "simple lifecycle")
 		So(err, ShouldBeNil)
 
 		// start job claimer
@@ -2160,7 +2129,7 @@ func testJobsLowLevel(s *serverUnderTest) {
 	})
 
 	Convey("Add and claim a job", func() {
-		jq, err := js.CreateQueue(ctx, "add and claim")
+		jq, err := js.GetQueue(ctx, "add and claim")
 		So(err, ShouldBeNil)
 
 		// Start job claimer
@@ -2195,7 +2164,7 @@ func testJobsLowLevel(s *serverUnderTest) {
 	})
 
 	Convey("Cancel a job before it can be claimed", func() {
-		jq, err := js.CreateQueue(ctx, "cancel lifecycle")
+		jq, err := js.GetQueue(ctx, "cancel lifecycle")
 		So(err, ShouldBeNil)
 
 		// add job, then cancel it
@@ -2222,7 +2191,7 @@ func testJobsLowLevel(s *serverUnderTest) {
 	})
 
 	Convey("Claim/complete cycle", func() {
-		jq, err := js.CreateQueue(ctx, "claim/complete")
+		jq, err := js.GetQueue(ctx, "claim/complete")
 		So(err, ShouldBeNil)
 
 		jt, jp := makeJob()
@@ -2231,7 +2200,7 @@ func testJobsLowLevel(s *serverUnderTest) {
 		n := 0
 		for {
 			n += 1
-			job, err := jobs.Claim(ctx, jq, "test", 10*time.Millisecond)
+			job, err := jobs.Claim(ctx, jq, "test", 10*time.Millisecond, 0)
 			So(err, ShouldBeNil)
 			So(job.ID, ShouldEqual, jobID)
 			So(job.AttemptsRemaining, ShouldEqual, 3-n)
@@ -2245,7 +2214,7 @@ func testJobsLowLevel(s *serverUnderTest) {
 	})
 
 	Convey("Steal", func() {
-		jq, err := js.CreateQueue(ctx, "steal")
+		jq, err := js.GetQueue(ctx, "steal")
 		So(err, ShouldBeNil)
 
 		jt1, jp1 := makeJob()
@@ -2258,11 +2227,11 @@ func testJobsLowLevel(s *serverUnderTest) {
 			jobs.JobOptions.MaxAttempts(2))
 		So(err, ShouldBeNil)
 
-		j1, err := jobs.Claim(ctx, jq, "test", 10*time.Millisecond)
+		j1, err := jobs.Claim(ctx, jq, "test", 10*time.Millisecond, 0)
 		So(err, ShouldBeNil)
 		So(j1.ID, ShouldEqual, longJobID)
 
-		j2, err := jobs.Claim(ctx, jq, "test", 10*time.Millisecond)
+		j2, err := jobs.Claim(ctx, jq, "test", 10*time.Millisecond, 0)
 		So(err, ShouldBeNil)
 		So(j2.ID, ShouldEqual, shortJobID)
 		So(j2.AttemptsRemaining, ShouldEqual, 1)
@@ -2289,10 +2258,10 @@ func testJobsLowLevel(s *serverUnderTest) {
 	})
 
 	Convey("Stats", func() {
-		jq, err := js.CreateQueue(ctx, "stats")
+		jq, err := js.GetQueue(ctx, "stats")
 		So(err, ShouldBeNil)
 
-		n := 10
+		n := int64(10)
 
 		jobIDs := make([]snowflake.Snowflake, n)
 		for i := range jobIDs {
@@ -2326,7 +2295,7 @@ func testJobsLowLevel(s *serverUnderTest) {
 			Claimed: 0,
 		})
 
-		job, err := jobs.Claim(ctx, jq, "test", 10*time.Millisecond)
+		job, err := jobs.Claim(ctx, jq, "test", 10*time.Millisecond, 0)
 		So(err, ShouldBeNil)
 		So(job.ID, ShouldNotEqual, notDueJobID)
 
@@ -2353,7 +2322,7 @@ func testJobsLowLevel(s *serverUnderTest) {
 			Claimed: 0,
 		})
 
-		job, err = jobs.Claim(ctx, jq, "test", 10*time.Millisecond)
+		job, err = jobs.Claim(ctx, jq, "test", 10*time.Millisecond, 0)
 		So(err, ShouldBeNil)
 		So(job.ID, ShouldEqual, notDueJobID)
 
@@ -2371,7 +2340,7 @@ func testJobsLowLevel(s *serverUnderTest) {
 		stealableJobID, err := jq.Add(ctx, jt, jp, jobs.JobOptions.MaxWorkDuration(0))
 		So(err, ShouldBeNil)
 
-		job, err = jobs.Claim(ctx, jq, "test", 10*time.Millisecond)
+		job, err = jobs.Claim(ctx, jq, "test", 10*time.Millisecond, 0)
 		So(err, ShouldBeNil)
 		So(job.ID, ShouldEqual, stealableJobID)
 
@@ -2402,10 +2371,7 @@ func (te *testDeliverer) Deliver(ctx scope.Context, ref *emails.EmailRef) error 
 func testEmailsLowLevel(s *serverUnderTest) {
 	ctx := scope.New()
 	js := s.backend.Jobs()
-	jq, err := js.CreateQueue(ctx, jobs.EmailQueue)
-	if err == jobs.ErrJobQueueAlreadyExists {
-		jq, err = js.GetQueue(ctx, jobs.EmailQueue)
-	}
+	jq, err := js.GetQueue(ctx, jobs.EmailQueue)
 	So(err, ShouldBeNil)
 
 	kms := s.app.kms
@@ -2460,7 +2426,7 @@ func testEmailsLowLevel(s *serverUnderTest) {
 
 		// Poll for limited time until email shows as delivered.
 		for i := 0; i < 10; i++ {
-			fetched, err := et.Get(account.ID(), ref.ID)
+			fetched, err := et.Get(ctx, account.ID(), ref.ID)
 			So(err, ShouldBeNil)
 			if fetched.Delivered.IsZero() {
 				time.Sleep(10 * time.Millisecond)
@@ -2477,7 +2443,7 @@ func testEmailsLowLevel(s *serverUnderTest) {
 			break
 		}
 
-		_, err = et.Get(otherAccount.ID(), ref.ID)
+		_, err = et.Get(ctx, otherAccount.ID(), ref.ID)
 		So(err, ShouldEqual, proto.ErrEmailNotFound)
 	})
 
@@ -2487,7 +2453,7 @@ func testEmailsLowLevel(s *serverUnderTest) {
 		So(ref, ShouldNotBeNil)
 		So(ref.Delivered.IsZero(), ShouldBeTrue)
 
-		job, err := jobs.Claim(ctx, jq, jobs.EmailQueue, 10*time.Millisecond)
+		job, err := jobs.Claim(ctx, jq, jobs.EmailQueue, 10*time.Millisecond, 0)
 		So(err, ShouldBeNil)
 		So(job.ID, ShouldEqual, ref.JobID)
 		So(job.AttemptsMade, ShouldEqual, 1)

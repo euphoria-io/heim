@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -129,7 +130,7 @@ func newSession(
 	nextID := atomic.AddUint64(&sessionIDCounter, 1)
 	sessionCount.WithLabelValues(roomName).Set(float64(nextID))
 	sessionID := fmt.Sprintf("%x-%08x", client.Agent.IDString(), nextID)
-	ctx = LoggingContext(ctx, fmt.Sprintf("[%s] ", sessionID))
+	ctx = LoggingContext(ctx, os.Stdout, fmt.Sprintf("[%s] ", sessionID))
 
 	session := &session{
 		id:        sessionID,

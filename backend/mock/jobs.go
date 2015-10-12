@@ -18,28 +18,21 @@ type JobService struct {
 	qs map[string]*JobQueue
 }
 
-func (js *JobService) CreateQueue(ctx scope.Context, name string) (jobs.JobQueue, error) {
+func (js *JobService) GetQueue(ctx scope.Context, name string) (jobs.JobQueue, error) {
 	js.m.Lock()
 	defer js.m.Unlock()
 
+	if jq, ok := js.qs[name]; ok {
+		return jq, nil
+	}
+
 	if js.qs == nil {
 		js.qs = map[string]*JobQueue{}
-	}
-	if _, ok := js.qs[name]; ok {
-		return nil, jobs.ErrJobQueueAlreadyExists
 	}
 
 	jq := &JobQueue{}
 	jq.c = sync.NewCond(&jq.m)
 	js.qs[name] = jq
-	return jq, nil
-}
-
-func (js *JobService) GetQueue(ctx scope.Context, name string) (jobs.JobQueue, error) {
-	jq, ok := js.qs[name]
-	if !ok {
-		return nil, jobs.ErrJobQueueNotFound
-	}
 	return jq, nil
 }
 

@@ -139,8 +139,11 @@ func (et *EmailTracker) Send(
 	}
 
 	// insert job first, so we know what JobID to associate with the email when we insert it
-	job, err := jq.addAndClaim(
-		ctx, t, jobs.EmailJobType, &jobs.EmailJob{EmailID: ref.ID}, "immediate", jobs.EmailJobOptions...)
+	payload := &jobs.EmailJob{
+		AccountID: account.ID(),
+		EmailID:   ref.ID,
+	}
+	job, err := jq.addAndClaim(ctx, t, jobs.EmailJobType, payload, "immediate", jobs.EmailJobOptions...)
 	if err != nil {
 		rollback(ctx, t)
 		return nil, err
@@ -184,13 +187,17 @@ func (et *EmailTracker) Send(
 	return ref, nil
 }
 
-func (et *EmailTracker) Get(accountID snowflake.Snowflake, id string) (*emails.EmailRef, error) {
+func (et *EmailTracker) Get(ctx scope.Context, accountID snowflake.Snowflake, id string) (*emails.EmailRef, error) {
 	row, err := et.Backend.DbMap.Get(Email{}, id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, proto.ErrEmailNotFound
 		}
 		return nil, err
+	}
+
+	if row == nil {
+		return nil, proto.ErrEmailNotFound
 	}
 
 	ref, err := row.(*Email).ToBackend()
@@ -205,6 +212,44 @@ func (et *EmailTracker) Get(accountID snowflake.Snowflake, id string) (*emails.E
 	return ref, nil
 }
 
-func (et *EmailTracker) List(accountID snowflake.Snowflake, n int, before time.Time) ([]*emails.EmailRef, error) {
+func (et *EmailTracker) List(ctx scope.Context, accountID snowflake.Snowflake, n int, before time.Time) ([]*emails.EmailRef, error) {
 	return nil, notImpl
+}
+
+func (et *EmailTracker) MarkDelivered(ctx scope.Context, accountID snowflake.Snowflake, id string) error {
+	t, err := et.Backend.DbMap.Begin()
+	if err != nil {
+		return err
+	}
+
+	row, err := et.Backend.DbMap.Get(Email{}, id)
+	if err != nil {
+		rollback(ctx, t)
+		if err == sql.ErrNoRows {
+			return proto.ErrEmailNotFound
+		}
+		return err
+	}
+
+	email := row.(*Email)
+	if email.AccountID != accountID.String() {
+		rollback(ctx, t)
+		return proto.ErrEmailNotFound
+	}
+
+	if email.Delivered.Valid {
+		rollback(ctx, t)
+		return proto.ErrEmailAlreadyDelivered
+	}
+
+	if _, err := t.Exec("UPDATE email SET delivered = NOW() WHERE id = $1", id); err != nil {
+		rollback(ctx, t)
+		return err
+	}
+
+	if err := t.Commit(); err != nil {
+		return err
+	}
+
+	return nil
 }

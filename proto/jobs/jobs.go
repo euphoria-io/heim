@@ -32,11 +32,11 @@ var (
 )
 
 type EmailJob struct {
-	EmailID string
+	AccountID snowflake.Snowflake
+	EmailID   string
 }
 
 type JobService interface {
-	CreateQueue(ctx scope.Context, name string) (JobQueue, error)
 	GetQueue(ctx scope.Context, name string) (JobQueue, error)
 }
 
@@ -132,9 +132,9 @@ func (JobOptionConstructor) Due(t time.Time) JobDue { return JobDue(t) }
 var JobOptions JobOptionConstructor
 
 type JobQueueStats struct {
-	Waiting int // number of jobs waiting to be claimed
-	Due     int // number of jobs that are due (whether claimed or waiting)
-	Claimed int // number of jobs currently claimed
+	Waiting int64 // number of jobs waiting to be claimed
+	Due     int64 // number of jobs that are due (whether claimed or waiting)
+	Claimed int64 // number of jobs currently claimed
 }
 
 type Job struct {

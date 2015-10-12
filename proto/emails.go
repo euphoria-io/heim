@@ -22,13 +22,12 @@ const (
 )
 
 type EmailTracker interface {
+	Get(ctx scope.Context, accountID snowflake.Snowflake, id string) (*emails.EmailRef, error)
+	List(ctx scope.Context, accountID snowflake.Snowflake, n int, before time.Time) ([]*emails.EmailRef, error)
+	MarkDelivered(ctx scope.Context, accountID snowflake.Snowflake, id string) error
 	Send(
 		ctx scope.Context, js jobs.JobService, templater *templates.Templater, deliverer emails.Deliverer,
 		account Account, templateName string, data interface{}) (*emails.EmailRef, error)
-
-	Get(accountID snowflake.Snowflake, id string) (*emails.EmailRef, error)
-
-	List(accountID snowflake.Snowflake, n int, before time.Time) ([]*emails.EmailRef, error)
 }
 
 type CommonEmailParams struct {
