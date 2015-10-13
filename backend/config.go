@@ -183,6 +183,10 @@ func (cfg *ServerConfig) Heim(ctx scope.Context) (*proto.Heim, error) {
 		}
 	}
 
+	if err = proto.LoadEmoji("/srv/heim/client/src/build/heim/emoji.json"); err != nil {
+		return nil, err
+	}
+
 	heim.Backend = backend
 	return heim, nil
 }

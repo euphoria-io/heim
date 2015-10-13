@@ -1,6 +1,7 @@
 package proto
 
 import (
+	"strings"
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
@@ -80,5 +81,49 @@ func TestNormalizeNick(t *testing.T) {
 			So(err, ShouldBeNil)
 			So(output, ShouldEqual, testCase[1])
 		}
+	})
+
+	Convey("Emoji are collapsed", t, func() {
+		validEmoji["+1"] = "+1"
+		name := make([]byte, MaxNickLength+len(":+1:")-1)
+		for i := 0; i < MaxNickLength+len(":+1:")-1; i++ {
+			name[i] = 'a'
+		}
+		name[1] = ' '
+		name[4] = ' '
+		name[5] = ' '
+		name[len(name)-len(":+1:")] = ':'
+		name[len(name)-len(":+1:")+1] = '+'
+		name[len(name)-len(":+1:")+2] = '1'
+		name[len(name)-len(":+1:")+3] = ':'
+		expected := "a aa " + string(name[6:])
+		So(pass(string(name)), ShouldEqual, expected)
+	})
+}
+
+func TestNickLen(t *testing.T) {
+	validEmoji["greenduck"] = "greenduck"
+	Convey("Length of nicks without emoji are correct", t, func() {
+		name := ":greenduck"
+		So(nickLen(name), ShouldEqual, len(name))
+		name = ":not an emoji:"
+		So(nickLen(name), ShouldEqual, len(name))
+	})
+
+	Convey("Length of nicks with emoji are correct", t, func() {
+		name := ":greenduck:greenduck:"
+		So(nickLen(name), ShouldEqual, 1+len("greenduck:"))
+		name = "foo:greenduck::greenduck:bar"
+		So(nickLen(name), ShouldEqual, len("foobar")+2)
+	})
+
+	Convey("Testing degenerate cases", t, func() {
+		name := strings.Repeat(":", 1000000)
+		So(nickLen(name), ShouldEqual, len(name))
+	})
+
+	Convey("Testing boundary cases", t, func() {
+		name := ":greenduck:f"
+		So(nickLen(name), ShouldEqual, 2)
 	})
 }
