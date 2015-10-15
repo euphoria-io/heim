@@ -14,8 +14,9 @@ import (
 )
 
 const (
-	PollTime    = 10 * time.Second
-	StealChance = 0.25
+	PollTime      = 2 * time.Second
+	StatsInterval = 10 * time.Second
+	StealChance   = 0.25
 )
 
 var workers = map[string]Worker{}
@@ -62,7 +63,7 @@ func (c *Controller) background(ctx scope.Context) {
 	var lastStatCheck time.Time
 	for {
 		backend.Logger(ctx).Printf("[%s] background loop", c.w.QueueName())
-		if time.Now().Sub(lastStatCheck) > PollTime {
+		if time.Now().Sub(lastStatCheck) > StatsInterval {
 			backend.Logger(ctx).Printf("[%s] collecting stats", c.w.QueueName())
 			stats, err := c.jq.Stats(ctx)
 			if err != nil {
@@ -84,8 +85,11 @@ func (c *Controller) background(ctx scope.Context) {
 }
 
 func (c *Controller) processOne(ctx scope.Context) error {
-	job, err := c.claimOrSteal(ctx)
+	job, err := c.claimOrSteal(ctx.ForkWithTimeout(StatsInterval))
 	if err != nil {
+		if err == scope.TimedOut {
+			return nil
+		}
 		return err
 	}
 
