@@ -110,6 +110,7 @@ module.exports.PolicyNav = React.createClass({
     var items = [
       {name: 'values', caption: <span>Values</span>},
       {name: 'conduct', caption: <span><span className="long">Code of </span>Conduct</span>},
+      {name: 'hosts', caption: <span><span className="long">Hosting </span>Rooms</span>},
     ]
 
     return (

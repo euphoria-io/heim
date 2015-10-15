@@ -200,6 +200,7 @@ gulp.task('site-templates', function() {
     'home',
     'about/values',
     'about/conduct',
+    'about/hosts',
   ]
 
   return merge(_.map(pages, function(name) {
