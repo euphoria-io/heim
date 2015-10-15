@@ -178,9 +178,7 @@ func (cfg *ServerConfig) Heim(ctx scope.Context) (*proto.Heim, error) {
 
 	backend, err := cfg.GetBackend(heim)
 	if err != nil {
-		if err != nil {
-			return nil, err
-		}
+		return nil, err
 	}
 
 	heim.Backend = backend
