@@ -1,7 +1,28 @@
 var _ = require('lodash')
 var React = require('react')
 var classNames = require('classnames')
-var marked = require('marked')
+
+var sectionRe = /^section (\w+)$/
+var md = require('markdown-it')()
+  .use(require('markdown-it-anchor'), {
+    permalink: true,
+    permalinkBefore: true,
+    permalinkSymbol: '#',
+  })
+  .use(require('markdown-it-container'), 'section', {
+    validate: function(params) {
+      return params.trim().match(sectionRe)
+    },
+
+    render: function (tokens, idx) {
+      var m = tokens[idx].info.trim().match(sectionRe)
+      if (tokens[idx].nesting === 1) {
+        return '<section class="' + m[1] + '">\n'
+      } else {
+        return '</section>\n'
+      }
+    }
+  })
 
 var MessageText = require('../lib/ui/message-text')
 var hueHash = require('../lib/hue-hash')
@@ -50,11 +71,11 @@ var Footer = module.exports.Footer = React.createClass({
     return (
       <footer>
         <div className="container">
-          <a href="https://github.com/euphoria-io/heim" target="_blank">source code</a>
-          <a href={heimURL('/about/values')} target="_blank">values</a>
-          <a href={heimURL('/about/conduct')} target="_blank">code of conduct</a>
-          <a href="http://andeuphoria.tumblr.com/" target="_blank">blog</a>
-          <a href="mailto:hi@euphoria.io" target="_blank">contact</a>
+          <a href={heimURL('/about/values')}>values</a>
+          <a href={heimURL('/about/conduct')}><span className="long">code of </span>conduct</a>
+          <a href="https://github.com/euphoria-io/heim"><span className="long">source </span>code</a>
+          <a href="http://andeuphoria.tumblr.com/">blog</a>
+          <a href="mailto:hi@euphoria.io">contact</a>
         </div>
       </footer>
     )
@@ -79,7 +100,7 @@ module.exports.MainPage = React.createClass({
 module.exports.Markdown = React.createClass({
   render: function() {
     return (
-      <div className={this.props.className} dangerouslySetInnerHTML={{__html: marked(this.props.content)}} />
+      <div className={this.props.className} dangerouslySetInnerHTML={{__html: md.render(this.props.content)}} />
     )
   },
 })
@@ -87,8 +108,8 @@ module.exports.Markdown = React.createClass({
 module.exports.PolicyNav = React.createClass({
   render: function() {
     var items = [
-      {name: 'values', caption: 'Values'},
-      {name: 'conduct', caption: 'Code of Conduct'},
+      {name: 'values', caption: <span>Values</span>},
+      {name: 'conduct', caption: <span><span className="long">Code of </span>Conduct</span>},
     ]
 
     return (

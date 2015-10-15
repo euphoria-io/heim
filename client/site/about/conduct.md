@@ -84,7 +84,7 @@ and discuss any disciplinary decisions.
 
 ---
 
-<div class="credits">
+::: section credits
 This Code of Conduct is distributed under a [Creative Commons Attribution-ShareAlike license](http://creativecommons.org/licenses/by-sa/3.0).  
 It is derived partially from the [Citizen Code of Conduct](http://citizencodeofconduct.org).
-</div>
+:::

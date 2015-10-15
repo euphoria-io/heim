@@ -196,7 +196,11 @@ gulp.task('embed-html', function() {
 
 gulp.task('site-templates', function() {
   var page = reload('./site/page.js')
-  var pages = ['home', 'about/values', 'about/conduct']
+  var pages = [
+    'home',
+    'about/values',
+    'about/conduct',
+  ]
 
   return merge(_.map(pages, function(name) {
     var html = page.render(reload('./site/' + name))
