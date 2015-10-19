@@ -1,9 +1,19 @@
 var _ = require('lodash')
 var React = require('react')
 var classNames = require('classnames')
-
 var sectionRe = /^section (\w+)$/
-var md = require('markdown-it')()
+var MarkdownIt = require('markdown-it')
+
+var MessageText = require('../lib/ui/message-text')
+var hueHash = require('../lib/hue-hash')
+
+
+var HEIM_PREFIX = process.env.HEIM_PREFIX || ''
+var heimURL = module.exports.heimURL = function(href) {
+  return HEIM_PREFIX + href
+}
+
+var md = MarkdownIt()
   .use(require('markdown-it-anchor'), {
     permalink: true,
     permalinkBefore: true,
@@ -23,15 +33,6 @@ var md = require('markdown-it')()
       }
     }
   })
-
-var MessageText = require('../lib/ui/message-text')
-var hueHash = require('../lib/hue-hash')
-
-
-var HEIM_PREFIX = process.env.HEIM_PREFIX || ''
-var heimURL = module.exports.heimURL = function(href) {
-  return HEIM_PREFIX + href
-}
 
 var Page = module.exports.Page = React.createClass({
   render: function() {
