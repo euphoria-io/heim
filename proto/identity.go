@@ -1,9 +1,16 @@
 package proto
 
 import (
+	"encoding/json"
+	"io/ioutil"
+	"regexp"
 	"strings"
 	"unicode/utf8"
 )
+
+var validEmoji = map[string]string{}
+
+var possibleEmoji = regexp.MustCompile(":[\\S]+?:")
 
 const MaxNickLength = 36
 
@@ -48,6 +55,35 @@ type IdentityView struct {
 	ServerEra string `json:"server_era"` // the era of the server that captured this view
 }
 
+// LoadEmoji takes a json key-value object stored in the file at path and
+// unmarshals it into the global validEmoji map[string]string.
+func LoadEmoji(path string) error {
+	raw, err := ioutil.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	if err := json.Unmarshal(raw, &validEmoji); err != nil {
+		return err
+	}
+	return nil
+}
+
+func nickLen(nick string) int {
+	indices := possibleEmoji.FindAllStringIndex(nick, 36)
+	for _, item := range indices {
+		s := nick[item[0]+1 : item[1]-1]
+		_, ok := validEmoji[s]
+		if ok {
+			ret := 1 + nickLen(nick[0:item[0]])
+			if item[1] < len(nick) {
+				ret += nickLen(nick[item[1]:])
+			}
+			return ret
+		}
+	}
+	return utf8.RuneCountInString(nick)
+}
+
 // NormalizeNick validates and normalizes a proposed name from a user.
 // If the proposed name is not valid, returns an error. Otherwise, returns
 // the normalized form of the name. Normalization for a nick consists of:
@@ -61,7 +97,7 @@ func NormalizeNick(name string) (string, error) {
 		return "", ErrInvalidNick
 	}
 	normalized := strings.Join(strings.Fields(name), " ")
-	if utf8.RuneCountInString(normalized) > MaxNickLength {
+	if nickLen(normalized) > MaxNickLength {
 		return "", ErrInvalidNick
 	}
 	return normalizeBidi(normalized), nil
