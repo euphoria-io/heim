@@ -181,8 +181,9 @@ func (cfg *ServerConfig) Heim(ctx scope.Context) (*proto.Heim, error) {
 		return nil, err
 	}
 
-	if err = proto.LoadEmoji("/srv/heim/client/src/build/heim/emoji.json"); err != nil {
-		fmt.Printf("error loading emoji: %s\n", err)
+	emojiPath := filepath.Join(cfg.StaticPath, "emoji.json")
+	if err = proto.LoadEmoji(emojiPath); err != nil {
+		fmt.Printf("error loading %s: %s\n", emojiPath, err)
 	}
 
 	heim.Backend = backend
@@ -348,7 +349,8 @@ func (ec *EmailConfig) Get(cfg *ServerConfig) (emails.Emailer, error) {
 	}
 
 	// Load templates and configure email sender.
-	emailer, err := emails.NewSMTPEmailer(filepath.Join(cfg.StaticPath, "email"), localDomain, ec.Server, sslHost, auth)
+	// TODO: replace -static with a better sense of a static root
+	emailer, err := emails.NewSMTPEmailer(filepath.Join(cfg.StaticPath, "..", "email"), localDomain, ec.Server, sslHost, auth)
 	if err != nil {
 		return nil, err
 	}
