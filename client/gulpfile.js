@@ -198,6 +198,7 @@ gulp.task('site-templates', function() {
   var page = reload('./site/page.js')
   var pages = [
     'home',
+    'about',
     'about/values',
     'about/conduct',
     'about/hosts',

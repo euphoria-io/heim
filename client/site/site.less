@@ -29,6 +29,11 @@ body.page {
     }
   }
 
+  .container.main {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
   header {
     position: relative;
     background: white;
@@ -48,7 +53,27 @@ body.page {
       }
     }
 
+    .whats-euphoria {
+      display: inline-block;
+      margin: 0 22px;
+      line-height: 22px;
+      opacity: .6;
+      transition: opacity .15s ease;
+      .raised-filled-button(transparent);
+      padding-top: 0;
+      padding-bottom: 0;
+      font-weight: normal;
+      color: black;
+      border: 1px solid #77a377;
+      border-radius: 100px;
+
+      &:hover {
+        opacity: .8;
+      }
+    }
+
     .start-chatting {
+      display: inline-block;
       float: right;
       .raised-filled-button(@brand-color);
       line-height: 24px;
@@ -59,6 +84,14 @@ body.page {
     @media (max-width: @thin-breakpoint) {
       padding: 9px 0;
       border-bottom-width: 6px;
+
+      .long {
+        display: none;
+      }
+
+      .whats-euphoria {
+        margin: 0 10px;
+      }
     }
   }
 
@@ -128,11 +161,15 @@ body.page {
   }
 
   .container.main {
-    margin: 40px auto;
+    margin: 55px auto;
     flex: 1;
 
+    h1:first-child {
+      margin-top: 0;
+    }
+
     @media (max-width: @thin-breakpoint) {
-      margin: 15px auto;
+      margin: 30px auto;
     }
   }
 
@@ -182,6 +219,7 @@ body.page {
 .policy {
   font-size: 15px;
   max-width: 50em;
+  margin: 0 auto;
   line-height: 1.5em;
 
   h1 {
@@ -317,6 +355,28 @@ body.page {
   }
 }
 
+.delay-parts(@duration) {
+  .a {
+    animation-delay: (-1 / 5) * @duration;
+  }
+
+  .b {
+    animation-delay: (-2 / 5) * @duration;
+  }
+
+  .c {
+    animation-delay: (-3 / 5) * @duration;
+  }
+
+  .d {
+    animation-delay: (-4 / 5) * @duration;
+  }
+
+  .e {
+    animation-delay: (-5 / 5) * @duration;
+  }
+}
+
 body.welcome {
   // thanks to http://subtlepatterns.com/symphony/
   background: data-uri('./symphony.png');
@@ -340,17 +400,10 @@ body.welcome {
   }
 
   .splash {
-    margin: 10px 0;
+    margin: 10px auto;
   }
 
-  .clicky {
-    @size: 200px;
-    position: relative;
-    display: inline-block;
-    width: @size;
-    height: @size;
-    border-radius: 100%;
-
+  .fancy-logo {
     animation-name: grow;
     animation-iteration-count: 1;
     animation-timing-function: ease;
@@ -366,63 +419,10 @@ body.welcome {
       }
     }
 
-    .logo, .colors {
-      position: absolute;
-      left: 0;
-      right: 0;
-      top: 0;
-      bottom: 0;
-      border-radius: 100%;
-      overflow: hidden;
-    }
-
-    .logo {
-      background: data-uri('./home-outline.svg') no-repeat center center;
-      background-size: contain;
-      text-indent: -9999px;
-      z-index: 5;
-      left: 0;
-      right: 0;
-      top: 0;
-      bottom: 0;
-      transition: transform .1s ease-out;
-      box-shadow: 0 1px 6px fade(black, 25%);
-    }
-
-    .delay-parts(@duration) {
-      .a {
-        animation-delay: (-1 / 5) * @duration;
-      }
-
-      .b {
-        animation-delay: (-2 / 5) * @duration;
-      }
-
-      .c {
-        animation-delay: (-3 / 5) * @duration;
-      }
-
-      .d {
-        animation-delay: (-4 / 5) * @duration;
-      }
-
-      .e {
-        animation-delay: (-5 / 5) * @duration;
-      }
-    }
-
-    .colors {
-      padding: 8px;
-      font-size: 0;
-      transform: perspective(0);  // fix overflow clipping in Chrome
-
+    &:not(:hover) .colors {
       .delay-parts(.35s);
 
       & > div {
-        display: inline-block;
-        width: 100% / 5;
-        height: 100%;
-
         animation-name: tron;
         animation-iteration-count: 1;
         animation-timing-function: ease-out;
@@ -435,76 +435,6 @@ body.welcome {
             transform: none;
           }
         }
-      }
-
-      .a {
-        background: #d95d3f;
-      }
-
-      .b {
-        background: #f29526;
-      }
-
-      .c {
-        background: #5abe6b;
-      }
-
-      .d {
-        background: #4d97cb;
-      }
-
-      .e {
-        background: #7f62b6;
-      }
-    }
-
-    @keyframes scramble {
-      0% {
-        background: #d95d3f;
-      }
-
-      20% {
-        background: #f29526;
-      }
-
-      40% {
-        background: #5abe6b;
-      }
-
-      60% {
-        background: #4d97cb;
-      }
-
-      80% {
-        background: #7f62b6;
-      }
-
-      100% {
-        background: #d95d3f;
-      }
-    }
-
-    &:hover .logo, .logo:focus {
-      transform: scale(1.05);
-      transition-duration: .2s;
-      outline: none;
-    }
-
-    &:hover .colors, .logo:focus + .colors {
-      .delay-parts(.45s);
-
-      & > div {
-        animation-name: scramble;
-        animation-iteration-count: infinite;
-        animation-timing-function: steps(1);
-        animation-duration: .45s;
-      }
-    }
-
-    &:active {
-      .logo {
-        transition-duration: .025s;
-        transform: scale(1);
       }
     }
   }
@@ -549,6 +479,7 @@ body.welcome {
       text-align: left;
       font-size: 15px;
       line-height: 1.25em;
+      margin: -.25em 0;
     }
 
     .start-chatting {
@@ -621,12 +552,16 @@ body.welcome {
   }
 
   @media (max-width: @thin-breakpoint) {
-    .clicky {
+    .container.main {
+      margin: 15px auto;
+    }
+
+    .fancy-logo {
       width: 125px;
       height: 125px;
     }
 
-    .clicky .colors {
+    .fancy-logo .colors {
       padding: 5px;
     }
 
@@ -684,30 +619,411 @@ body.welcome {
   }
 }
 
-.messages {
-  margin: -.25em 0;
+body.about {
+  .primary {
+    position: relative;
+    padding-bottom: 55px;
 
+    &:before {
+      display: block;
+      content: '';
+      position: absolute;
+      left: -100%;
+      right: -100%;
+      top: -55px;
+      bottom: 0;
+      background: linear-gradient(to bottom, transparent, fade(#ebf2eb, 50%)), data-uri('./symphony.png');
+      border-bottom: 1px solid fade(black, 25%);
+      z-index: -1;
+    }
+
+    @media (max-width: @mobile-breakpoint) {
+      padding-bottom: 30px;
+    }
+  }
+
+  h1 {
+    display: inline-block;
+    @color: #5d8a5d;
+    position: relative;
+    font-size: 1.75em;
+    color: white;
+    background-color: @color;
+    margin-bottom: 1em;
+    padding: 12px 20px;
+
+    &:before {
+      @size: 20px;
+      content: '';
+      position: absolute;
+      display: block;
+      left: 0;
+      bottom: -@size;
+      border: @size solid @color;
+      border-right: none;
+      border-top-color: transparent;
+      border-bottom-color: transparent;
+    }
+
+    @media (max-width: @mobile-breakpoint) {
+      font-size: 1.25em;
+      padding: 6px 10px;
+
+      &:before {
+        @size: 10px;
+        bottom: -@size;
+        border-width: @size;
+      }
+    }
+  }
+
+  section {
+    margin: 0 1.5rem;
+    clear: both;
+  }
+
+  section, .primary {
+    margin-bottom: 3em;
+
+    @media (max-width: @mobile-breakpoint) {
+      margin-bottom: 2em;
+    }
+  }
+
+  h2 {
+    display: inline-block;
+    font-size: 1.25em;
+    color: white;
+    background: #848484;
+    margin-left: -1.5rem;
+    padding: 5px 12px;
+  }
+
+  @media (max-width: @mobile-breakpoint) {
+    section, h2 {
+      margin-left: 0;
+    }
+  }
+
+  h3 {
+    font-weight: normal;
+    font-size: 1.75em;
+    margin-top: .25em;
+    margin-bottom: .5em;
+  }
+
+  p {
+    font-size: 1.25em;
+    max-width: 45em;
+  }
+
+  section.letter {
+    margin-bottom: 0;
+
+    .end {
+      margin-top: -1em;
+      margin-bottom: -1em;
+      overflow: hidden;
+    }
+
+    .contact {
+      float: left;
+
+      .chat-with-us {
+        .raised-filled-button(@brand-color);
+        margin-left: .75em;
+      }
+
+      @media (max-width: @mobile-breakpoint) {
+        .label {
+          display: block;
+          margin-bottom: 1em;
+        }
+
+        .chat-with-us {
+          margin-left: 0;
+        }
+      }
+    }
+
+    .signature {
+      float: right;
+      margin-left: 2em;
+
+      .nick {
+        margin-left: .5em;
+      }
+
+      @media (max-width: @mobile-breakpoint) {
+        float: left;
+        margin-left: 0;
+        font-size: 1.05em;
+      }
+    }
+  }
+
+  .fancy-logo {
+    float: right;
+    margin-left: 15px;
+    margin-top: 4.75em;
+  }
+
+  .values {
+    margin: .5em 0;
+    padding: 0;
+
+    li {
+      @size: 48px;
+      @padding: 14px;
+      margin: 1.5em 0;
+      margin-left: @size + @padding;
+      list-style-type: none;
+
+      &:before {
+        position: absolute;
+        content: '';
+        display: block;
+        width: @size;
+        height: @size;
+        margin-left: -(@size + @padding);
+      }
+
+      &.welcoming:before {
+        background: data-uri('./city-sunrise.svg') no-repeat center center;
+      }
+
+      &.diverse:before {
+        background: data-uri('./rainbow.svg') no-repeat center center;
+      }
+
+      &.meaningful:before {
+        background: data-uri('./milky-way.svg') no-repeat center center;
+      }
+
+      @media (max-width: @mobile-breakpoint) {
+        @size: 42px;
+        @padding: 10px;
+        margin-left: @size + @padding;
+
+        &:before {
+          width: @size;
+          height: @size;
+          margin-left: -(@size + @padding);
+        }
+      }
+    }
+
+    h4, p {
+      margin: .25em 0;
+    }
+
+    h4 {
+      font-size: 1.5em;
+      font-weight: bold;
+      color: fade(black, 75%);
+
+      @media (max-width: @mobile-breakpoint) {
+        font-size: 1.35em;
+      }
+    }
+  }
+
+  .messages {
+    font-size: 1.25em;
+
+    .faux-message {
+      margin: .75em 0;
+    }
+  }
+
+  @media (max-width: @mobile-breakpoint) {
+    .fancy-logo {
+      display: none;
+    }
+
+    h3 {
+      font-size: 1.5em;
+    }
+  }
+}
+
+.fancy-logo {
+  @size: 200px;
+  position: relative;
+  display: inline-block;
+  width: @size;
+  height: @size;
+  border-radius: 100%;
+
+  .logo, .colors {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    border-radius: 100%;
+    overflow: hidden;
+  }
+
+  .logo {
+    background: data-uri('./home-outline.svg') no-repeat center center;
+    background-size: contain;
+    text-indent: -9999px;
+    z-index: 5;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    transition: transform .1s ease-out;
+    box-shadow: 0 1px 6px fade(black, 25%);
+  }
+
+  .colors {
+    padding: 8px;
+    font-size: 0;
+    transform: perspective(0);  // fix overflow clipping in Chrome
+
+    & > div {
+      display: inline-block;
+      width: 100% / 5;
+      height: 100%;
+    }
+
+    .a {
+      background: #d95d3f;
+    }
+
+    .b {
+      background: #f29526;
+    }
+
+    .c {
+      background: #5abe6b;
+    }
+
+    .d {
+      background: #4d97cb;
+    }
+
+    .e {
+      background: #7f62b6;
+    }
+  }
+
+  @keyframes scramble {
+    0% {
+      background: #d95d3f;
+    }
+
+    20% {
+      background: #f29526;
+    }
+
+    40% {
+      background: #5abe6b;
+    }
+
+    60% {
+      background: #4d97cb;
+    }
+
+    80% {
+      background: #7f62b6;
+    }
+
+    100% {
+      background: #d95d3f;
+    }
+  }
+
+  &:hover .logo, .logo:focus {
+    transform: scale(1.05);
+    transition-duration: .2s;
+    outline: none;
+  }
+
+  &:hover .colors, .logo:focus + .colors {
+    .delay-parts(.45s);
+
+    & > div {
+      animation-name: scramble;
+      animation-iteration-count: infinite;
+      animation-timing-function: steps(1);
+      animation-duration: .45s;
+    }
+  }
+
+  &:active {
+    .logo {
+      transition-duration: .025s;
+      transform: scale(1);
+    }
+  }
+}
+
+.nick {
+  display: inline-block;
+  padding: 0 .4em;
+  border-radius: 2px;
+  line-height: 1.5em;
+}
+
+.messages {
   .faux-message {
     font-size: 1em;
     margin: .35em 0;
 
     .line {
       display: flex;
+      white-space: pre-wrap;
     }
 
     .nick {
-      display: inline-block;
       align-self: flex-start;
-      padding: 0 .4em;
       font-size: .85em;
-      border-radius: 2px;
       margin-right: .5em;
-      line-height: 1.5em;
     }
 
     .replies {
       border-left: 2px solid #d2d2d2;
       padding-left: 1.5em;
+    }
+
+    .embed {
+      display: block;
+      margin-top: .5em;
+      border-radius: 3px;
+
+      .wrapper {
+        position: relative;
+        display: inline-block;
+        .box-outline;
+      }
+
+      img {
+        max-width: 272px;
+        height: 153px;
+        margin: 0;
+      }
+    }
+  }
+
+  @media (max-width: @mobile-breakpoint) {
+    &.wrap {
+      .line {
+        display: block;
+        margin-right: .75em;
+      }
+
+      .content {
+        display: inline;
+        position: relative;
+        left: .75em;
+
+        .message {
+          margin-left: -.75em;
+        }
+      }
     }
   }
 }

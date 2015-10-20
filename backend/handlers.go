@@ -26,7 +26,7 @@ func (s *Server) route() {
 
 	s.r.Handle("/", prometheus.InstrumentHandlerFunc("home", s.handleHomeStatic))
 
-	s.r.PathPrefix("/about/").Handler(
+	s.r.PathPrefix("/about").Handler(
 		prometheus.InstrumentHandler("about", http.HandlerFunc(s.handleAboutStatic)))
 
 	s.r.HandleFunc("/room/{room:[a-z0-9]+}/ws", instrumentSocketHandlerFunc("ws", s.handleRoom))
@@ -73,7 +73,7 @@ func (s *Server) handleHomeStatic(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleAboutStatic(w http.ResponseWriter, r *http.Request) {
 	if s.staticPath == "" || r.URL.Path == "" {
-		http.NotFound(w, r)
+		s.serveGzippedFile(w, r, "about.html", false)
 		return
 	}
 	s.serveGzippedFile(w, r, path.Clean(r.URL.Path) + ".html", false)

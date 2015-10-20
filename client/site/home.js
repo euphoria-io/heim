@@ -6,16 +6,7 @@ var common = require('./common')
 module.exports = (
   <common.MainPage title="euphoria!" className="welcome">
     <div className="splash">
-      <div className="clicky">
-        <a className="logo" href={common.heimURL('/room/welcome/')} tabIndex={1}>welcome</a>
-        <div className="colors">
-          <div className="a"></div>
-          <div className="b"></div>
-          <div className="c"></div>
-          <div className="d"></div>
-          <div className="e"></div>
-        </div>
-      </div>
+      <common.FancyLogo />
       <h1>let's make the internet<br /> feel like home again.</h1>
       <div className="info-box">
         <div className="description">

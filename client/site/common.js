@@ -60,6 +60,7 @@ var Header = module.exports.Header = React.createClass({
       <header>
         <div className="container">
           <a className="logo" href={heimURL('/')}>euphoria</a>
+          <a className="whats-euphoria" href={heimURL('/about')}><span className="long">what's euphoria</span>?</a>
           <a className="start-chatting" href={heimURL('/room/welcome/')} target="_blank">start chatting &raquo;</a>
         </div>
       </header>
@@ -72,6 +73,7 @@ var Footer = module.exports.Footer = React.createClass({
     return (
       <footer>
         <div className="container">
+          <a href={heimURL('/about')}>about</a>
           <a href={heimURL('/about/values')}>values</a>
           <a href={heimURL('/about/conduct')}><span className="long">code of </span>conduct</a>
           <a href="https://github.com/euphoria-io/heim"><span className="long">source </span>code</a>
@@ -106,6 +108,23 @@ module.exports.Markdown = React.createClass({
   },
 })
 
+module.exports.FancyLogo = React.createClass({
+  render: function() {
+    return (
+      <div className="fancy-logo">
+        <a className="logo" href={heimURL('/room/welcome/')} tabIndex={1}>welcome</a>
+        <div className="colors">
+          <div className="a"></div>
+          <div className="b"></div>
+          <div className="c"></div>
+          <div className="d"></div>
+          <div className="e"></div>
+        </div>
+      </div>
+    )
+  },
+})
+
 module.exports.PolicyNav = React.createClass({
   render: function() {
     var items = [
@@ -131,13 +150,26 @@ module.exports.PolicyNav = React.createClass({
   },
 })
 
+var FauxNick = module.exports.FauxNick = React.createClass({
+  render: function() {
+    return <MessageText className="nick" onlyEmoji={true} style={{background: 'hsl(' + hueHash.hue(this.props.nick) + ', 65%, 85%)'}} content={this.props.nick} />
+  },
+})
+
 module.exports.FauxMessage = React.createClass({
   render: function() {
     return (
       <div className="faux-message">
         <div className="line">
-          <MessageText className="nick" onlyEmoji={true} style={{background: 'hsl(' + hueHash.hue(this.props.sender) + ', 65%, 85%)'}} content={this.props.sender} />
-          <MessageText className="message" content={this.props.message} />
+          <FauxNick nick={this.props.sender} />
+          <div className="content">
+            <MessageText className="message" content={this.props.message} />
+            {this.props.embed && <div className="embed">
+              <div className="wrapper">
+                <img className="embed" src={this.props.embed} alt="" />
+              </div>
+            </div>}
+          </div>
         </div>
         {this.props.children}
       </div>
