@@ -380,10 +380,16 @@ func (s *session) serve() error {
 				logger.Printf("error: write message: %s", err)
 				return err
 			}
+			if cmd.Type == proto.LoginEventType {
+				if err := s.sendDisconnect("authentication changed"); err != nil {
+					return err
+				}
+			}
 
 			if cmd.Type == proto.DisconnectEventType {
 				return nil
 			}
+
 		}
 	}
 	return nil

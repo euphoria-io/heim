@@ -454,6 +454,11 @@ func (s *session) handleLoginCommand(cmd *proto.LoginCommand) *response {
 		return &response{err: err}
 	}
 
+	err = s.backend.NotifyUser(s.ctx, s.Identity().ID(), proto.LoginEventType, proto.LoginEvent{AccountID: account.ID()})
+	if err != nil {
+		return &response{err: err}
+	}
+
 	reply := &proto.LoginReply{
 		Success:   true,
 		AccountID: account.ID(),
