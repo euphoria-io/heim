@@ -381,7 +381,7 @@ func (s *session) serve() error {
 				return err
 			}
 			if cmd.Type == proto.LoginEventType {
-				if err := s.sendDisconnect("authentication changed"); err != nil {
+				if err := s.sendDisconnect("successful login"); err != nil {
 					return err
 				}
 			}

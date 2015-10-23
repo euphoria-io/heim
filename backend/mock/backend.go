@@ -114,7 +114,16 @@ func (b *TestBackend) UnbanIP(ctx scope.Context, ip string) error {
 	return nil
 }
 
-func (b *TestBackend) NotifyUser(ctx scope.Context, userID proto.UserID, packetType proto.PacketType, payload interface{}) error {
+func isExcluded(toCheck proto.Session, excluding []proto.Session) bool {
+	for _, excSess := range excluding {
+		if toCheck.ID() == excSess.ID() {
+			return true
+		}
+	}
+	return false
+}
+
+func (b *TestBackend) NotifyUser(ctx scope.Context, userID proto.UserID, packetType proto.PacketType, payload interface{}, excluding ...proto.Session) error {
 	for _, room := range b.rooms {
 		mRoom, _ := room.(*memRoom)
 		sessList, ok := mRoom.live[userID]
@@ -122,6 +131,9 @@ func (b *TestBackend) NotifyUser(ctx scope.Context, userID proto.UserID, packetT
 			continue
 		}
 		for _, sess := range sessList {
+			if isExcluded(sess, excluding) {
+				continue
+			}
 			if err := sess.Send(ctx, packetType, payload); err != nil {
 				return err
 			}

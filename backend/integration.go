@@ -1539,6 +1539,7 @@ func testRoomCreation(s *serverUnderTest) {
 		conn.send("1", "login",
 			`{"namespace":"email","id":"logan%s","password":"loganpass"}`, nonce)
 		conn.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, logan.ID())
+		// conn.expect("", "login-event", `{"account_id":"%s"}`, logan.ID())
 		conn.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
 		conn.isStaff = true
 		conn.Close()
@@ -2760,5 +2761,67 @@ func testStaffInvasion(s *serverUnderTest) {
 		c2.expectSnapshot(s.backend.Version(), []string{id}, []string{msg})
 		c1.expect("", "join-event",
 			`{"session_id":"%s","id":"*","name":"","server_id":"*","server_era":"*","is_staff":true,"is_manager":true}`, c2.sessionID)
+
+func testNotifyUser(s *serverUnderTest) {
+	Convey("Successful login disconnects all sessions associated with user", func() {
+		b := s.backend
+		ctx := scope.New()
+		kms := s.app.kms
+
+		// Create manager account and room.
+		nonce := fmt.Sprintf("notify-%s", time.Now())
+		cammie, _, err := s.Account(ctx, kms, "email", "cammie"+nonce, "cammiepass")
+		So(err, ShouldBeNil)
+
+		_, err = b.CreateRoom(ctx, kms, false, "notify1", cammie)
+		So(err, ShouldBeNil)
+
+		_, err = b.CreateRoom(ctx, kms, false, "notify2", cammie)
+		So(err, ShouldBeNil)
+
+		// Create an initial connection
+		conn1 := s.Connect("notify1")
+		defer conn1.Close()
+		conn1.expectPing()
+		conn1.expectSnapshot(s.backend.Version(), nil, nil)
+
+		// Create a second connection with the same cookie
+		conn2 := conn1
+		s.Reconnect(conn2, "notify1")
+		conn2.Close()
+		conn2.expectPing()
+		conn2.expectSnapshot(s.backend.Version(), nil, nil)
+
+		// Create a third connection with a different cookie
+		conn3 := s.Connect("notify1")
+		defer conn3.Close()
+		conn3.expectPing()
+		conn3.expectSnapshot(s.backend.Version(), nil, nil)
+
+		// Create a connection to a different room, same cookie
+		conn4 := conn1
+		s.Reconnect(conn4, "notify2")
+		defer conn4.Close()
+		conn4.expectPing()
+		conn4.expectSnapshot(s.backend.Version(), nil, nil)
+
+		// Create a connection to a different room, different cookie
+		conn5 := s.Connect("notify2")
+		defer conn5.Close()
+		conn5.expectPing()
+		conn5.expectSnapshot(s.backend.Version(), nil, nil)
+
+		// Log in on first connection, expect a login-reply and disconnect-event
+		conn1.send("1", "login", `{"namespace":"email","id":"cammie%s","password":"cammiepass"}`, nonce)
+		conn1.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, cammie.ID())
+		conn1.expect("", "disconnect-event", `{"reason":"successful login"}`)
+
+		// Same cookie, same room should be disconnected
+		conn2.expect("", "login-event", `{"account_id": "%s"}`, cammie.ID())
+		conn2.expect("", "disconnect-event", `{"reason":"successful login"}`)
+
+		// Same cookie, different room should be disconnected
+		conn4.expect("", "login-event", `{"account_id": "%s"}`, cammie.ID())
+		conn4.expect("", "disconnect-event", `{"reason":"successful login"}`)
 	})
 }

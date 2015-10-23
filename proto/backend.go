@@ -39,7 +39,7 @@ type Backend interface {
 	Version() string
 
 	// NotifyUser broadcasts a packet to all sessions associated with the given userID
-	NotifyUser(ctx scope.Context, userID UserID, packetType PacketType, payload interface{}) error
+	NotifyUser(ctx scope.Context, userID UserID, packetType PacketType, payload interface{}, excluding ...Session) error
 }
 
 type BackendFactory func(*Heim) (Backend, error)
