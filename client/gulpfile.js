@@ -76,7 +76,7 @@ function embedBundler(args) {
 
 gulp.task('heim-git-commit', function(done) {
   shell('git rev-parse HEAD', function(gitRev) {
-    heimOptions.HEIM_GIT_COMMIT = gitRev
+    process.env.HEIM_GIT_COMMIT = heimOptions.HEIM_GIT_COMMIT = gitRev
     done()
   })
 })
@@ -195,7 +195,7 @@ gulp.task('embed-html', function() {
     .pipe(gulp.dest(embedDest))
 })
 
-gulp.task('site-templates', function() {
+gulp.task('site-templates', ['heim-git-commit'], function() {
   var page = reload('./site/page.js')
   var pages = [
     'home',
