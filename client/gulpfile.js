@@ -74,9 +74,10 @@ function embedBundler(args) {
     }))
 }
 
-gulp.task('heim-git-commit', function() {
+gulp.task('heim-git-commit', function(done) {
   shell('git rev-parse HEAD', function(gitRev) {
     heimOptions.HEIM_GIT_COMMIT = gitRev
+    done()
   })
 })
 
