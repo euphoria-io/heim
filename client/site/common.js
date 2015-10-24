@@ -6,12 +6,8 @@ var MarkdownIt = require('markdown-it')
 
 var MessageText = require('../lib/ui/message-text')
 var hueHash = require('../lib/hue-hash')
+var heimURL = require('../lib/heim-url')
 
-
-var HEIM_PREFIX = process.env.HEIM_PREFIX || ''
-var heimURL = module.exports.heimURL = function(href) {
-  return HEIM_PREFIX + href
-}
 
 var md = MarkdownIt()
   .use(require('markdown-it-anchor'), {

@@ -1,6 +1,7 @@
 var React = require('react')
 
 var common = require('./common')
+var heimURL = require('../lib/heim-url')
 
 
 module.exports = (
@@ -18,7 +19,7 @@ module.exports = (
               </div>
             </common.FauxMessage>
           </div>
-          <a className="start-chatting" href={common.heimURL('/room/welcome/')} target="_blank">come check it out. say hello!</a>
+          <a className="start-chatting" href={heimURL('/room/welcome/')} target="_blank">come check it out. say hello!</a>
         </div>
         <ul className="features">
           <li className="chat">

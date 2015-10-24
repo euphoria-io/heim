@@ -1,6 +1,7 @@
 var React = require('react')
 
 var common = require('./common')
+var heimURL = require('../lib/heim-url')
 
 
 module.exports = (
@@ -15,7 +16,7 @@ module.exports = (
         <div className="end">
           <p className="contact">
             <span className="label">Got a question, or want to learn more?</span>
-            <a className="chat-with-us" href={common.heimURL('/room/welcome/')}>chat with us &raquo;</a>
+            <a className="chat-with-us" href={heimURL('/room/welcome/')}>chat with us &raquo;</a>
           </p>
           <p className="signature">
             &mdash;
@@ -43,12 +44,12 @@ module.exports = (
           <p>everyone deserves respect, empathy, and understanding.</p>
         </li>
       </ul>
-      <p>for more details, check out <a href={common.heimURL('/about/values')}>Euphoria's Values</a> statement.</p>
+      <p>for more details, check out <a href={heimURL('/about/values')}>Euphoria's Values</a> statement.</p>
     </section>
     <section>
       <h2>euphoria is open</h2>
       <h3>We believe that online community platforms should be open source.</h3>
-      <p>Our chat server, Heim, is <a href="https://github.com/euphoria-io/heim">available on GitHub</a>. Join our development chat in <a href={common.heimURL('/room/heim')}>&heim</a>.</p>
+      <p>Our chat server, Heim, is <a href="https://github.com/euphoria-io/heim">available on GitHub</a>. Join our development chat in <a href={heimURL('/room/heim')}>&heim</a>.</p>
     </section>
     <section className="who">
       <h2>who we are</h2>
@@ -57,7 +58,7 @@ module.exports = (
         <common.FauxMessage sender="intortus" message="hi, I'm logan. I'm an erstwhile motorcycle racer and one of euphoria's programmers. you can meet new users with me in &welcome or discuss backend development with me in &heim." />
         <common.FauxMessage sender="chromakode" message="hey, I'm Max! I live in San Francisco, where I work on Euphora's user interface and design. you can often find me jamming in &music or working in &heim." />
         <common.FauxMessage sender="greenie" message="oh hai, I’m Kris. I live with too many cats in the deep forest of Vermont. when I’m not busy getting into moose-caused traffic jams, I do community stuff for Euphoria. I tend to be found linking articles in &space and playing bluegrass tunes in &music." />
-        <common.FauxMessage sender="ezzie" message="hi, I'm ezzie, the office dog!" embed={common.heimURL('/static/ezzie.jpg')}>
+        <common.FauxMessage sender="ezzie" message="hi, I'm ezzie, the office dog!" embed={heimURL('/static/ezzie.jpg')}>
           <div className="replies">
             <common.FauxMessage sender="ezzie" message="you can find more photos of me in the room &ezziethedog." />
           </div>

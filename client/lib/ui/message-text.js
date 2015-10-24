@@ -6,6 +6,7 @@ var emoji = require('../emoji')
 
 var chat = require('../stores/chat')
 var hueHash = require('../hue-hash')
+var heimURL = require('../heim-url')
 
 
 var autolinker = new Autolinker({
@@ -53,7 +54,7 @@ module.exports = React.createClass({
 
     if (!this.props.onlyEmoji) {
       html = html.replace(/\B&amp;(\w+)(?=$|[^\w;])/g, function(match, name) {
-        return React.renderToStaticMarkup(<a href={process.env.HEIM_PREFIX + '/room/' + name + '/'} target="_blank">&amp;{name}</a>)
+        return React.renderToStaticMarkup(<a href={heimURL('/room/' + name + '/')} target="_blank">&amp;{name}</a>)
       })
 
       html = html.replace(chat.mentionRe, function(match, name) {
