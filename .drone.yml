@@ -8,7 +8,7 @@ script:
   - ci/test.sh build
 
 services:
-  - postgres
+  - library/postgres:9.1
 
 notify:
   webhook:
