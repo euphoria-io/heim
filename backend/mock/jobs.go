@@ -59,6 +59,7 @@ type JobQueue struct {
 	c         *sync.Cond
 	available jobHeap
 	working   jobHeap
+	logs      map[snowflake.Snowflake]map[int32]*jobs.JobLog
 }
 
 func (jq *JobQueue) newJob(jobType jobs.JobType, payload interface{}, options ...jobs.JobOption) (*jobs.Job, error) {
@@ -145,6 +146,18 @@ func (jq *JobQueue) Complete(ctx scope.Context, jobID snowflake.Snowflake, handl
 	jq.m.Lock()
 	defer jq.m.Unlock()
 
+	if jq.logs == nil {
+		jq.logs = map[snowflake.Snowflake]map[int32]*jobs.JobLog{}
+	}
+	if jq.logs[jobID] == nil {
+		jq.logs[jobID] = map[int32]*jobs.JobLog{}
+	}
+	jq.logs[jobID][attempt] = &jobs.JobLog{
+		AttemptNumber: attempt,
+		HandlerID:     handlerID,
+		Success:       true,
+		Log:           log,
+	}
 	return jq.remove(jobID, nil)
 }
 
@@ -152,6 +165,18 @@ func (jq *JobQueue) Fail(ctx scope.Context, jobID snowflake.Snowflake, handlerID
 	jq.m.Lock()
 	defer jq.m.Unlock()
 
+	if jq.logs == nil {
+		jq.logs = map[snowflake.Snowflake]map[int32]*jobs.JobLog{}
+	}
+	if jq.logs[jobID] == nil {
+		jq.logs[jobID] = map[int32]*jobs.JobLog{}
+	}
+	jq.logs[jobID][attempt] = &jobs.JobLog{
+		AttemptNumber: attempt,
+		HandlerID:     handlerID,
+		FailureReason: reason,
+		Log:           log,
+	}
 	jq.release(jobID, 0)
 	jq.c.Signal()
 	return nil
@@ -310,4 +335,18 @@ func (jq *JobQueue) TrySteal(ctx scope.Context, handlerID string) (*jobs.Job, er
 	}
 
 	return nil, fmt.Errorf("job disappeared")
+}
+
+func (jq *JobQueue) Log(ctx scope.Context, jobID snowflake.Snowflake, attempt int32) (*jobs.JobLog, error) {
+	logs, ok := jq.logs[jobID]
+	if !ok {
+		return nil, jobs.ErrJobNotFound
+	}
+
+	jl, ok := logs[attempt]
+	if !ok {
+		return nil, jobs.ErrJobNotFound
+	}
+
+	return jl, nil
 }

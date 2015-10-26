@@ -400,6 +400,34 @@ func (jq *JobQueueBinding) Stats(ctx scope.Context) (jobs.JobQueueStats, error) 
 	return stats, err
 }
 
+func (jq *JobQueueBinding) Log(ctx scope.Context, jobID snowflake.Snowflake, attemptNumber int32) (*jobs.JobLog, error) {
+	var row struct {
+		HandlerID string `db:"handler_id"`
+		Outcome   sql.NullString
+		Log       []byte
+	}
+	err := jq.Backend.DbMap.SelectOne(
+		&row,
+		"SELECT handler_id, outcome, log FROM job_log WHERE job_id = $1 AND attempt = $2",
+		jobID, attemptNumber)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, jobs.ErrJobNotFound
+		}
+		return nil, err
+	}
+	jl := &jobs.JobLog{
+		AttemptNumber: attemptNumber,
+		HandlerID:     row.HandlerID,
+		FailureReason: row.Outcome.String,
+		Log:           row.Log,
+	}
+	if !row.Outcome.Valid {
+		jl.Success = true
+	}
+	return jl, nil
+}
+
 func newJobQueueListener(b *Backend) *jobQueueListener {
 	jql := &jobQueueListener{
 		Backend: b,

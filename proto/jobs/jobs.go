@@ -92,6 +92,9 @@ type JobQueue interface {
 
 	// Stats returns information about the number of jobs in the queue.
 	Stats(ctx scope.Context) (JobQueueStats, error)
+
+	// Log returns the output of a given job attempt.
+	Log(ctx scope.Context, jobID snowflake.Snowflake, attemptNumber int32) (*JobLog, error)
 }
 
 type JobOption interface {
@@ -186,4 +189,12 @@ func (jc *JobClaim) Complete(ctx scope.Context) error {
 		return ErrJobNotClaimed
 	}
 	return jc.Queue.Complete(ctx, jc.JobID, jc.HandlerID, jc.AttemptNumber, jc.Bytes())
+}
+
+type JobLog struct {
+	AttemptNumber int32
+	HandlerID     string
+	Success       bool
+	FailureReason string
+	Log           []byte
 }

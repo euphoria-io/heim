@@ -2354,6 +2354,44 @@ func testJobsLowLevel(s *serverUnderTest) {
 
 		So(job.Complete(ctx), ShouldBeNil)
 	})
+
+	Convey("Job logs", func() {
+		jq, err := js.GetQueue(ctx, "logs")
+		So(err, ShouldBeNil)
+
+		jt, jp := makeJob()
+		job, err := jq.AddAndClaim(ctx, jt, jp, "test", jobs.JobOptions.MaxAttempts(3))
+		So(err, ShouldBeNil)
+		jobID := job.ID
+
+		fmt.Fprintf(job, "failing\n")
+		So(job.Fail(ctx, "reason"), ShouldBeNil)
+
+		job, err = jobs.Claim(ctx, jq, "test", 10*time.Millisecond, 0)
+		So(err, ShouldBeNil)
+		So(job.ID, ShouldEqual, jobID)
+
+		fmt.Fprintf(job, "succeeding\n")
+		So(job.Complete(ctx), ShouldBeNil)
+
+		jl1, err := jq.Log(ctx, jobID, 0)
+		So(err, ShouldBeNil)
+		So(jl1, ShouldResemble, &jobs.JobLog{
+			AttemptNumber: 0,
+			HandlerID:     "test",
+			FailureReason: "reason",
+			Log:           []byte("failing\n"),
+		})
+
+		jl2, err := jq.Log(ctx, jobID, 1)
+		So(err, ShouldBeNil)
+		So(jl2, ShouldResemble, &jobs.JobLog{
+			AttemptNumber: 1,
+			HandlerID:     "test",
+			Success:       true,
+			Log:           []byte("succeeding\n"),
+		})
+	})
 }
 
 type testDeliverer struct {
