@@ -178,7 +178,7 @@ func (j *Job) Encode() ([]byte, error) { return json.Marshal(j) }
 
 func (j *Job) Exec(ctx scope.Context, f func(scope.Context) error) error {
 	if j.JobClaim == nil {
-		return fmt.Errorf("Exec may only be called on a claimed job")
+		return ErrJobNotClaimed
 	}
 
 	w := io.MultiWriter(os.Stdout, j)
