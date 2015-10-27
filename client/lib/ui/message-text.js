@@ -71,7 +71,10 @@ module.exports = React.createClass({
       if (variant == '\uFE0E') {
         return match
       }
-      var codePoint = twemoji.convert.toCodePoint(icon)
+      var codePoint = emoji.lookupEmojiCharacter(icon)
+      if (!codePoint) {
+        return match
+      }
       var emojiName = emoji.names[codePoint] && ':' + emoji.names[codePoint] + ':'
       return React.renderToStaticMarkup(<div className={'emoji emoji-' + codePoint} title={emojiName}>{icon}</div>)
     })

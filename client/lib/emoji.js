@@ -1,5 +1,6 @@
 var _ = require('lodash')
 require('string.fromcodepoint')
+var twemoji = require('twemoji')
 var unicodeIndex = require('emoji-annotation-to-unicode')
 
 
@@ -28,7 +29,7 @@ index['orange_heart'] = 'orange_heart'
 index['bot'] = 'bot'
 index['greenduck'] = 'greenduck'
 
-module.exports.names = _.invert(index)
+var names = module.exports.names = _.invert(index)
 
 module.exports.codes = _.uniq(_.values(index))
 
@@ -43,4 +44,16 @@ module.exports.nameToUnicode = function(name) {
     return
   }
   return String.fromCodePoint(Number.parseInt(code, 16))
+}
+
+module.exports.lookupEmojiCharacter = function(icon) {
+  var codePoint = twemoji.convert.toCodePoint(icon)
+  if (!names[codePoint]) {
+    return null
+  }
+  // Don't display ™ as an emoji.
+  if (codePoint == '2122') {
+    return null
+  }
+  return codePoint
 }
