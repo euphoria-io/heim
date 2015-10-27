@@ -59,6 +59,14 @@ var schema = []struct {
 	{"password_reset_request", PasswordResetRequest{}, []string{"ID"}},
 	{"personal_identity", PersonalIdentity{}, []string{"Namespace", "ID"}},
 	{"account", Account{}, []string{"ID"}},
+
+	// Keys and capabilities.
+	{"master_key", MessageKey{}, []string{"ID"}},
+	{"capability", Capability{}, []string{"ID"}},
+
+	// Media
+	{"media", MediaObject{}, []string{"MediaID"}},
+	{"transcoding", Transcoding{}, []string{"MediaID"}},
 }
 
 type Backend struct {
@@ -760,4 +768,12 @@ type BroadcastMessage struct {
 	Room    string
 	Exclude []string
 	Event   *proto.Packet
+}
+
+func (b *Backend) AddMedia(m *proto.MediaObject) error {
+	err := b.DbMap.Insert(NewMediaObject(m.ID, m.Uploader.Name, m.Room, m.Storage))
+	if err != nil {
+		return err
+	}
+	return nil
 }
