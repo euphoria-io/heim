@@ -20,7 +20,7 @@ describe('<MessageText>', function() {
   it('automatically links urls', function() {
     var messageContent = renderMessageText('http://google.com')
     assert.equal(messageContent.getDOMNode().innerHTML,
-      '<a href="http://google.com" target="_blank" rel="noreferrer">google.com</a>')
+      '<a href="http://google.com?" target="_blank" rel="noreferrer">google.com</a>')
   })
 
   it('truncates long urls', function() {
