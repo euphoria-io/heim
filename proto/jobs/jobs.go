@@ -1,12 +1,14 @@
 package jobs
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
+	"os"
 	"reflect"
 	"time"
 
+	"euphoria.io/heim/proto/logging"
 	"euphoria.io/heim/proto/snowflake"
 	"euphoria.io/scope"
 )
@@ -41,6 +43,9 @@ type JobService interface {
 }
 
 type JobQueue interface {
+	// Name returns the name of the queue.
+	Name() string
+
 	// Add enqueues a new job, as defined by the given type/payload.
 	// If any callers waiting in WaitForJob (not just in the local
 	// process), at least one should be woken.
@@ -169,26 +174,26 @@ func (j *Job) Payload() (interface{}, error) {
 
 func (j *Job) Encode() ([]byte, error) { return json.Marshal(j) }
 
-type JobClaim struct {
-	bytes.Buffer
-	JobID         snowflake.Snowflake
-	HandlerID     string
-	AttemptNumber int32
-	Queue         JobQueue
-}
-
-func (jc *JobClaim) Fail(ctx scope.Context, reason string) error {
-	if jc == nil {
-		return ErrJobNotClaimed
+func (j *Job) Exec(ctx scope.Context, f func(scope.Context) error) error {
+	if j.JobClaim == nil {
+		return fmt.Errorf("Exec may only be called on a claimed job")
 	}
-	return jc.Queue.Fail(ctx, jc.JobID, jc.HandlerID, jc.AttemptNumber, reason, jc.Bytes())
-}
 
-func (jc *JobClaim) Complete(ctx scope.Context) error {
-	if jc == nil {
-		return ErrJobNotClaimed
+	w := io.MultiWriter(os.Stdout, j)
+	prefix := fmt.Sprintf("[%s-%s] ", j.Queue.Name(), j.HandlerID)
+	child := logging.LoggingContext(ctx.ForkWithTimeout(j.MaxWorkDuration), w, prefix)
+	if err := f(child); err != nil {
+		if ferr := j.Fail(ctx, err.Error()); ferr != nil {
+			return ferr
+		}
+		return err
 	}
-	return jc.Queue.Complete(ctx, jc.JobID, jc.HandlerID, jc.AttemptNumber, jc.Bytes())
+
+	if err := j.Complete(ctx); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 type JobLog struct {

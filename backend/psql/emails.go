@@ -165,24 +165,21 @@ func (et *EmailTracker) Send(
 
 	child := ctx.Fork()
 	child.WaitGroup().Add(1)
-	go func() {
-		defer child.WaitGroup().Done()
+	go job.Exec(child, func(ctx scope.Context) error {
+		defer ctx.WaitGroup().Done()
 
-		fmt.Printf("delivering to %s\n", to)
+		logging.Logger(ctx).Printf("delivering to %s\n", to)
 		if err := deliverer.Deliver(ctx, ref); err != nil {
-			if jerr := job.Fail(ctx, err.Error()); jerr != nil {
-				logging.Logger(ctx).Printf("error reporting job %s failure: %s", job.ID, jerr)
-			}
-			return
+			return err
 		}
-		if err := job.Complete(ctx); err != nil {
-			logging.Logger(ctx).Printf("error reporting job %s completion: %s", job.ID, err)
-		}
-
 		if _, err := et.Backend.DbMap.Exec("UPDATE email SET delivered = $2 WHERE id = $1", ref.ID, ref.Delivered); err != nil {
-			logging.Logger(ctx).Printf("error marking email %s as delivered: %s", ref.ID, err)
+			// Even if we fail to mark the email as delivered, don't return an
+			// error so the job still gets completed. We wouldn't want to spam
+			// someone just because of a DB issue.
+			logging.Logger(ctx).Printf("error marking email %s/%s as delivered: %s", account.ID(), ref.ID, err)
 		}
-	}()
+		return nil
+	})
 
 	return ref, nil
 }

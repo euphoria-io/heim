@@ -2498,5 +2498,17 @@ func testEmailsLowLevel(s *serverUnderTest) {
 		So(job.ID, ShouldEqual, ref.JobID)
 		So(job.AttemptsMade, ShouldEqual, 1)
 		So(job.Complete(ctx), ShouldBeNil)
+
+		jl, err := jq.Log(ctx, job.ID, 0)
+		So(err, ShouldBeNil)
+		So(jl.Log, ShouldNotBeNil)
+		So(string(jl.Log), ShouldStartWith, "[emails-immediate] ")
+		So(string(jl.Log), ShouldContainSubstring, "test deliverer failing intentionally")
+		So(jl, ShouldResemble, &jobs.JobLog{
+			AttemptNumber: 0,
+			HandlerID:     "immediate",
+			FailureReason: "test",
+			Log:           jl.Log,
+		})
 	})
 }

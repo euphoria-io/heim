@@ -1,11 +1,35 @@
 package jobs
 
 import (
+	"bytes"
 	"math/rand"
 	"time"
 
+	"euphoria.io/heim/proto/snowflake"
 	"euphoria.io/scope"
 )
+
+type JobClaim struct {
+	bytes.Buffer
+	JobID         snowflake.Snowflake
+	HandlerID     string
+	AttemptNumber int32
+	Queue         JobQueue
+}
+
+func (jc *JobClaim) Fail(ctx scope.Context, reason string) error {
+	if jc == nil {
+		return ErrJobNotClaimed
+	}
+	return jc.Queue.Fail(ctx, jc.JobID, jc.HandlerID, jc.AttemptNumber, reason, jc.Bytes())
+}
+
+func (jc *JobClaim) Complete(ctx scope.Context) error {
+	if jc == nil {
+		return ErrJobNotClaimed
+	}
+	return jc.Queue.Complete(ctx, jc.JobID, jc.HandlerID, jc.AttemptNumber, jc.Bytes())
+}
 
 func Claim(ctx scope.Context, jq JobQueue, handlerID string, pollTime time.Duration, stealChance float64) (*Job, error) {
 	for ctx.Err() == nil {

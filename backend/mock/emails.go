@@ -85,20 +85,16 @@ func (et *EmailTracker) Send(
 
 	child := ctx.Fork()
 	child.WaitGroup().Add(1)
-	go func() {
-		defer child.WaitGroup().Done()
 
-		fmt.Printf("delivering to %s\n", to)
+	go job.Exec(child, func(ctx scope.Context) error {
+		defer ctx.WaitGroup().Done()
+
+		logging.Logger(ctx).Printf("delivering to %s\n", to)
 		if err := deliverer.Deliver(ctx, ref); err != nil {
-			if jerr := job.Fail(ctx, err.Error()); jerr != nil {
-				logging.Logger(ctx).Printf("error reporting job failure: %s", jerr)
-			}
-			return
+			return err
 		}
-		if err := job.Complete(ctx); err != nil {
-			logging.Logger(ctx).Printf("error reporting job completion: %s", err)
-		}
-	}()
+		return nil
+	})
 
 	return ref, nil
 }

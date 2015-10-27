@@ -105,6 +105,8 @@ func (js *JobService) GetQueue(ctx scope.Context, name string) (jobs.JobQueue, e
 	return jq.Bind(js.Backend), nil
 }
 
+func (jq *JobQueueBinding) Name() string { return jq.JobQueue.Name }
+
 func (jq *JobQueueBinding) newJob(
 	jobType jobs.JobType, payload interface{}, options ...jobs.JobOption) (*jobs.Job, error) {
 
@@ -142,7 +144,7 @@ func (jq *JobQueueBinding) newJob(
 func (jq *JobQueueBinding) insertJob(db gorp.SqlExecutor, job *jobs.Job) error {
 	item := &JobItem{
 		ID:                     int64(job.ID),
-		Queue:                  jq.Name,
+		Queue:                  jq.Name(),
 		JobType:                string(job.Type),
 		Data:                   []byte(job.Data),
 		Created:                job.Created,
@@ -196,7 +198,7 @@ func (jq *JobQueueBinding) Add(
 		return 0, err
 	}
 
-	escaped := strings.Replace(jq.Name, "'", "''", -1)
+	escaped := strings.Replace(jq.Name(), "'", "''", -1)
 	if _, err := t.Exec(fmt.Sprintf("NOTIFY job_item, '%s'", escaped)); err != nil {
 		rollback(ctx, t)
 		return 0, err
@@ -266,7 +268,7 @@ func (jq *JobQueueBinding) WaitForJob(ctx scope.Context) error {
 		// synchronize with caller
 		<-ch
 		jq.m.Unlock()
-		jq.Backend.jobQueueListener().wait(jq.Name)
+		jq.Backend.jobQueueListener().wait(jq.Name())
 		ch <- nil
 	}()
 
@@ -278,7 +280,7 @@ func (jq *JobQueueBinding) WaitForJob(ctx scope.Context) error {
 
 	select {
 	case <-ctx.Done():
-		jq.Backend.jobQueueListener().wakeAll(jq.Name)
+		jq.Backend.jobQueueListener().wakeAll(jq.Name())
 		<-ch
 		return ctx.Err()
 	case err := <-ch:
@@ -295,7 +297,7 @@ func (jq *JobQueueBinding) TryClaim(ctx scope.Context, handlerID string) (*jobs.
 	err = jq.Backend.DbMap.SelectOne(
 		&row,
 		fmt.Sprintf("SELECT %s FROM job_claim($1, $2)", cols),
-		jq.Name, handlerID)
+		jq.Name(), handlerID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, jobs.ErrJobNotFound
@@ -327,7 +329,7 @@ func (jq *JobQueueBinding) TrySteal(ctx scope.Context, handlerID string) (*jobs.
 	if err != nil {
 		return nil, err
 	}
-	err = jq.Backend.DbMap.SelectOne(&row, fmt.Sprintf("SELECT %s FROM job_steal($1, $2)", cols), jq.Name, handlerID)
+	err = jq.Backend.DbMap.SelectOne(&row, fmt.Sprintf("SELECT %s FROM job_steal($1, $2)", cols), jq.Name(), handlerID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, jobs.ErrJobNotFound
@@ -385,7 +387,7 @@ func (jq *JobQueueBinding) Stats(ctx scope.Context) (jobs.JobQueueStats, error) 
 			" CASE WHEN jl.job_id IS NOT NULL AND jl.started + job.max_work_duration_seconds * interval '1 second' > NOW() THEN 1 ELSE 0 END AS is_claimed"+
 			" FROM job_item job LEFT JOIN job_log jl ON job.id = jl.job_id AND jl.attempt = job.attempts_made-1"+
 			" WHERE job.queue = $1 AND job.completed IS NULL) AS t1",
-		jq.Name)
+		jq.Name())
 
 	stats := jobs.JobQueueStats{}
 	if row.Waiting.Valid {

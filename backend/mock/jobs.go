@@ -30,7 +30,7 @@ func (js *JobService) GetQueue(ctx scope.Context, name string) (jobs.JobQueue, e
 		js.qs = map[string]*JobQueue{}
 	}
 
-	jq := &JobQueue{}
+	jq := &JobQueue{name: name}
 	jq.c = sync.NewCond(&jq.m)
 	js.qs[name] = jq
 	return jq, nil
@@ -57,10 +57,13 @@ func (es *jobHeap) Pop() interface{} {
 type JobQueue struct {
 	m         sync.Mutex
 	c         *sync.Cond
+	name      string
 	available jobHeap
 	working   jobHeap
 	logs      map[snowflake.Snowflake]map[int32]*jobs.JobLog
 }
+
+func (jq *JobQueue) Name() string { return jq.name }
 
 func (jq *JobQueue) newJob(jobType jobs.JobType, payload interface{}, options ...jobs.JobOption) (*jobs.Job, error) {
 	jobID, err := snowflake.New()
