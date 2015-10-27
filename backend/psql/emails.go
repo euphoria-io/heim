@@ -92,7 +92,11 @@ func (et *EmailTracker) Send(
 	if err != nil {
 		return nil, err
 	}
-	msgID := fmt.Sprintf("<%s@%s>", sf, deliverer.LocalName())
+	domain := "heim"
+	if deliverer != nil {
+		domain = deliverer.LocalName()
+	}
+	msgID := fmt.Sprintf("<%s@%s>", sf, domain)
 
 	// choose an address to send to
 	to := ""
@@ -169,6 +173,9 @@ func (et *EmailTracker) Send(
 		defer ctx.WaitGroup().Done()
 
 		logging.Logger(ctx).Printf("delivering to %s\n", to)
+		if deliverer == nil {
+			return fmt.Errorf("deliverer not configured")
+		}
 		if err := deliverer.Deliver(ctx, ref); err != nil {
 			return err
 		}
