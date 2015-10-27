@@ -1,3 +1,6 @@
+require('babel-polyfill')
+
+
 function writeEnv(doc, hash) {
   var prefix = process.env.HEIM_PREFIX
   var query = hash ? '?v=' + hash : ''
@@ -91,8 +94,6 @@ if (!window.frameElement) {
       yy: '%d years',
     }
   })
-
-  require('setimmediate')
 
   var isTextInput = require('./is-text-input')
   var BatchTransition = require('./batch-transition')
