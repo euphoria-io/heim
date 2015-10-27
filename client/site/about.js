@@ -19,10 +19,7 @@ module.exports = (
             <a className="chat-with-us" href={heimURL('/room/welcome/')}>chat with us &raquo;</a>
           </p>
           <p className="signature">
-            &mdash;
-            <common.FauxNick nick="intortus" />,
-            <common.FauxNick nick="chromakode" />, and
-            <common.FauxNick nick="greenie" />
+            &mdash; <common.FauxNick nick="intortus" />, <common.FauxNick nick="chromakode" />, and <common.FauxNick nick="greenie" />
           </p>
         </div>
       </section>
