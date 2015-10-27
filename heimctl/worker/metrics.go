@@ -9,10 +9,28 @@ var (
 		Help:      "Number of claimed jobs per queue",
 	}, []string{"queue"})
 
+	completedCounter = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name:      "completed",
+		Subsystem: "jobs",
+		Help:      "Counter of job claims completed by this worker.",
+	}, []string{"queue"})
+
 	dueGauge = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Name:      "due",
 		Subsystem: "jobs",
 		Help:      "Number of past-due jobs per queue",
+	}, []string{"queue"})
+
+	failedCounter = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name:      "failed",
+		Subsystem: "jobs",
+		Help:      "Counter of job claims failed by this worker.",
+	}, []string{"queue"})
+
+	processedCounter = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name:      "processed",
+		Subsystem: "jobs",
+		Help:      "Counter of job claims processed by this worker.",
 	}, []string{"queue"})
 
 	waitingGauge = prometheus.NewGaugeVec(prometheus.GaugeOpts{
@@ -25,5 +43,6 @@ var (
 func init() {
 	prometheus.MustRegister(claimedGauge)
 	prometheus.MustRegister(dueGauge)
+	prometheus.MustRegister(processedCounter)
 	prometheus.MustRegister(waitingGauge)
 }

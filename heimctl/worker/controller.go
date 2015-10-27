@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+
 	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/jobs"
 	"euphoria.io/heim/proto/logging"
@@ -100,7 +102,16 @@ func (c *Controller) processOne(ctx scope.Context) error {
 		return err
 	}
 
-	return job.Exec(ctx, func(ctx scope.Context) error { return c.w.Work(ctx, job, payload) })
+	return job.Exec(ctx, func(ctx scope.Context) error {
+		labels := prometheus.Labels{"queue": c.jq.Name()}
+		defer processedCounter.With(labels).Inc()
+		if err := c.w.Work(ctx, job, payload); err != nil {
+			failedCounter.With(labels).Inc()
+			return err
+		}
+		completedCounter.With(labels).Inc()
+		return nil
+	})
 }
 
 func (c *Controller) claimOrSteal(ctx scope.Context) (*jobs.Job, error) {
