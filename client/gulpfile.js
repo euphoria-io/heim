@@ -1,3 +1,8 @@
+// string.js (a dep) clashes with core-js string polyfill, so require first
+require('markdown-it-anchor')
+
+require('babel-core/register')
+
 var _ = require('lodash')
 var merge = require('merge-stream')
 var gulp = require('gulp')
@@ -20,8 +25,6 @@ var serve = require('gulp-serve')
 var fs = require('fs')
 var path = require('path')
 var exec = require('child_process').exec
-
-require('node-jsx').install({harmony: true})
 
 var watching = false
 var heimDest = './build/heim'
