@@ -2260,6 +2260,21 @@ func testJobsLowLevel(s *serverUnderTest) {
 	})
 
 	Convey("Wake waiters on job failure", func() {
+		jq, err := js.GetQueue(ctx, "failures")
+		So(err, ShouldBeNil)
+
+		ch := claimJob("failures")
+
+		jt, jp := makeJob()
+		job, err := jq.AddAndClaim(ctx, jt, jp, "test", jobs.JobOptions.MaxAttempts(3))
+		So(err, ShouldBeNil)
+		jobID := job.ID
+		So(job.Fail(ctx, "test"), ShouldBeNil)
+
+		job = <-ch
+		So(job.ID, ShouldEqual, jobID)
+		So(job.AttemptNumber, ShouldEqual, 1)
+		So(job.Complete(ctx), ShouldBeNil)
 	})
 
 	Convey("Stats", func() {
