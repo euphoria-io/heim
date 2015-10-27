@@ -22,6 +22,8 @@ const (
 type JobType string
 
 var (
+	BackoffDuration = 5 * time.Second
+
 	EmailJobType    = JobType("email")
 	EmailJobOptions = []JobOption{
 		JobOptions.MaxAttempts(3),
@@ -181,8 +183,16 @@ func (j *Job) Exec(ctx scope.Context, f func(scope.Context) error) error {
 
 	w := io.MultiWriter(os.Stdout, j)
 	prefix := fmt.Sprintf("[%s-%s] ", j.Queue.Name(), j.HandlerID)
+	deadline := time.Now().Add(j.MaxWorkDuration)
 	child := logging.LoggingContext(ctx.ForkWithTimeout(j.MaxWorkDuration), w, prefix)
 	if err := f(child); err != nil {
+		if err != scope.TimedOut {
+			delay := time.Duration(j.AttemptsMade+1) * BackoffDuration
+			if time.Now().Add(delay).After(deadline) {
+				delay = deadline.Sub(time.Now())
+			}
+			time.Sleep(delay)
+		}
 		if ferr := j.Fail(ctx, err.Error()); ferr != nil {
 			return ferr
 		}

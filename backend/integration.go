@@ -2070,6 +2070,10 @@ func testBotsAndHumans(s *serverUnderTest) {
 }
 
 func testJobsLowLevel(s *serverUnderTest) {
+	save := jobs.BackoffDuration
+	jobs.BackoffDuration = 10 * time.Millisecond
+	defer func() { jobs.BackoffDuration = save }()
+
 	js := s.backend.Jobs()
 	ctx := scope.New()
 
@@ -2409,6 +2413,10 @@ func (te *testDeliverer) Deliver(ctx scope.Context, ref *emails.EmailRef) error 
 }
 
 func testEmailsLowLevel(s *serverUnderTest) {
+	save := jobs.BackoffDuration
+	jobs.BackoffDuration = 10 * time.Millisecond
+	defer func() { jobs.BackoffDuration = save }()
+
 	ctx := scope.New()
 	js := s.backend.Jobs()
 	jq, err := js.GetQueue(ctx, jobs.EmailQueue)
