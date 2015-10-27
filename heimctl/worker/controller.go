@@ -2,8 +2,6 @@ package worker
 
 import (
 	"fmt"
-	"io"
-	"os"
 	"time"
 
 	"euphoria.io/heim/proto"
@@ -102,21 +100,7 @@ func (c *Controller) processOne(ctx scope.Context) error {
 		return err
 	}
 
-	w := io.MultiWriter(os.Stdout, job)
-	prefix := fmt.Sprintf("[%s-%s] ", c.w.QueueName(), c.id)
-	child := logging.LoggingContext(ctx.ForkWithTimeout(job.MaxWorkDuration), w, prefix)
-	if err := c.w.Work(child, job, payload); err != nil {
-		if ferr := job.Fail(ctx, err.Error()); ferr != nil {
-			return ferr
-		}
-		return nil
-	}
-
-	if err := job.Complete(ctx); err != nil {
-		return err
-	}
-
-	return nil
+	return job.Exec(ctx, func(ctx scope.Context) error { return c.w.Work(ctx, job, payload) })
 }
 
 func (c *Controller) claimOrSteal(ctx scope.Context) (*jobs.Job, error) {
