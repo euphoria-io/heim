@@ -43,6 +43,11 @@ describe('<MessageText>', function() {
   })
 
   it('processes emoji', function() {
+    // Unicode / emoji cheat sheet:
+    // U+25B6 BLACK RIGHT-POINTING TRIANGLE (:arrow_forward:)
+    // U+1F514 BELL (:bell:)
+    // U+2122 TRADE MARK SIGN (:tm:)
+    // U+00A9 COPYRIGHT SIGN (no emoji)
     var messageContent = renderMessageText(':euphoria: \u25b6 \ud83d\udd14 \u2122 \u00a9')
     assert.equal(messageContent.getDOMNode().innerHTML,
       '<div class="emoji emoji-euphoria" title=":euphoria:">:euphoria:</div> <div class="emoji emoji-25b6" title=":arrow_forward:">\u25b6</div> <div class="emoji emoji-1f514" title=":bell:">\ud83d\udd14</div> \u2122 \u00a9')
