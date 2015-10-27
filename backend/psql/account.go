@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"euphoria.io/heim/backend"
 	"euphoria.io/heim/proto"
+	"euphoria.io/heim/proto/logging"
 	"euphoria.io/heim/proto/security"
 	"euphoria.io/heim/proto/snowflake"
 	"euphoria.io/scope"
@@ -255,7 +255,7 @@ func (b *AccountManagerBinding) ChangeClientKey(
 
 	rollback := func() {
 		if err := t.Rollback(); err != nil {
-			backend.Logger(ctx).Printf("rollback error: %s", err)
+			logging.Logger(ctx).Printf("rollback error: %s", err)
 		}
 	}
 
@@ -352,7 +352,7 @@ func (b *AccountManagerBinding) Register(
 
 	rollback := func() {
 		if err := t.Rollback(); err != nil {
-			backend.Logger(ctx).Printf("rollback error: %s", err)
+			logging.Logger(ctx).Printf("rollback error: %s", err)
 		}
 	}
 
@@ -404,7 +404,7 @@ func (b *AccountManagerBinding) Register(
 	if err := t.Commit(); err != nil {
 		return nil, nil, err
 	}
-	backend.Logger(ctx).Printf("registered new account %s for %s:%s", account.ID, namespace, id)
+	logging.Logger(ctx).Printf("registered new account %s for %s:%s", account.ID, namespace, id)
 
 	ab := account.Bind(b.Backend)
 	ab.identities = []proto.PersonalIdentity{&PersonalIdentityBinding{personalIdentity}}
@@ -416,7 +416,7 @@ func (b *AccountManagerBinding) Resolve(ctx scope.Context, namespace, id string)
 	account, err := b.resolve(t, namespace, id)
 	if err != nil {
 		if rerr := t.Rollback(); rerr != nil {
-			backend.Logger(ctx).Printf("rollback error: %s", err)
+			logging.Logger(ctx).Printf("rollback error: %s", err)
 		}
 		return nil, err
 	}
@@ -454,7 +454,7 @@ func (b *AccountManagerBinding) Get(ctx scope.Context, id snowflake.Snowflake) (
 	account, err := b.get(t, id)
 	if err != nil {
 		if rerr := t.Rollback(); rerr != nil {
-			backend.Logger(ctx).Printf("rollback error: %s", err)
+			logging.Logger(ctx).Printf("rollback error: %s", err)
 		}
 		return nil, err
 	}
@@ -565,7 +565,7 @@ func (b *AccountManagerBinding) GrantStaff(
 
 	rollback := func() {
 		if err := t.Rollback(); err != nil {
-			backend.Logger(ctx).Printf("rollback error: %s", err)
+			logging.Logger(ctx).Printf("rollback error: %s", err)
 		}
 	}
 
@@ -623,7 +623,7 @@ func (b *AccountManagerBinding) RequestPasswordReset(
 
 	rollback := func() {
 		if err := t.Rollback(); err != nil {
-			backend.Logger(ctx).Printf("rollback error: %s", err)
+			logging.Logger(ctx).Printf("rollback error: %s", err)
 		}
 	}
 
@@ -674,7 +674,7 @@ func (b *AccountManagerBinding) ConfirmPasswordReset(
 
 	rollback := func() {
 		if err := t.Rollback(); err != nil {
-			backend.Logger(ctx).Printf("rollback error: %s", err)
+			logging.Logger(ctx).Printf("rollback error: %s", err)
 		}
 	}
 

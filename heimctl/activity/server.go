@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"sync"
 
-	"euphoria.io/heim/backend"
+	"euphoria.io/heim/proto/logging"
 	"euphoria.io/scope"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -36,7 +36,7 @@ func Serve(ctx scope.Context, addr string) {
 		closeListener()
 	}()
 
-	backend.Logger(ctx).Printf("serving /metrics on %s", addr)
+	logging.Logger(ctx).Printf("serving /metrics on %s", addr)
 	if err := http.Serve(listener, nil); err != nil {
 		fmt.Printf("http[%s]: %s\n", addr, err)
 		ctx.Terminate(err)

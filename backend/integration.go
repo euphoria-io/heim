@@ -18,6 +18,7 @@ import (
 	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/emails"
 	"euphoria.io/heim/proto/jobs"
+	"euphoria.io/heim/proto/logging"
 	"euphoria.io/heim/proto/security"
 	"euphoria.io/heim/proto/snowflake"
 	"euphoria.io/scope"
@@ -2401,6 +2402,7 @@ type testDeliverer struct {
 
 func (te *testDeliverer) Deliver(ctx scope.Context, ref *emails.EmailRef) error {
 	if !te.ok {
+		logging.Logger(ctx).Printf("test deliverer failing intentionally")
 		return fmt.Errorf("test")
 	}
 	return te.TestDeliverer.Deliver(ctx, ref)

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"euphoria.io/heim/backend"
 	"euphoria.io/heim/proto"
+	"euphoria.io/heim/proto/logging"
 	"euphoria.io/scope"
 )
 
@@ -37,7 +37,7 @@ func (lm ListenerMap) Broadcast(ctx scope.Context, event *proto.Packet, exclude 
 			bounceAgentID = bounceEvent.AgentID
 			bounceIP = bounceEvent.IP
 		} else {
-			backend.Logger(ctx).Printf("wtf? expected *proto.BounceEvent, got %T", payload)
+			logging.Logger(ctx).Printf("wtf? expected *proto.BounceEvent, got %T", payload)
 		}
 	}
 
@@ -63,10 +63,10 @@ func (lm ListenerMap) Broadcast(ctx scope.Context, event *proto.Packet, exclude 
 		if _, ok := excludeSet[sessionID]; !ok {
 			if bounceAgentID != "" {
 				if listener.Session.Identity().ID().String() == bounceAgentID {
-					backend.Logger(ctx).Printf("sending disconnect to %s: %#v", listener.ID(), payload)
+					logging.Logger(ctx).Printf("sending disconnect to %s: %#v", listener.ID(), payload)
 					discEvent := &proto.DisconnectEvent{Reason: payload.(*proto.BounceEvent).Reason}
 					if err := listener.Send(ctx, proto.DisconnectEventType, discEvent); err != nil {
-						backend.Logger(ctx).Printf("error sending disconnect event to %s: %s",
+						logging.Logger(ctx).Printf("error sending disconnect event to %s: %s",
 							listener.ID(), err)
 					}
 				}
@@ -74,10 +74,10 @@ func (lm ListenerMap) Broadcast(ctx scope.Context, event *proto.Packet, exclude 
 			}
 			if bounceIP != "" {
 				if listener.Client.IP == bounceIP {
-					backend.Logger(ctx).Printf("sending disconnect to %s: %#v", listener.ID(), payload)
+					logging.Logger(ctx).Printf("sending disconnect to %s: %#v", listener.ID(), payload)
 					discEvent := &proto.DisconnectEvent{Reason: payload.(*proto.BounceEvent).Reason}
 					if err := listener.Send(ctx, proto.DisconnectEventType, discEvent); err != nil {
-						backend.Logger(ctx).Printf("error sending disconnect event to %s: %s",
+						logging.Logger(ctx).Printf("error sending disconnect event to %s: %s",
 							listener.ID(), err)
 					}
 				}
@@ -90,7 +90,7 @@ func (lm ListenerMap) Broadcast(ctx scope.Context, event *proto.Packet, exclude 
 			}
 			if !listener.enabled {
 				// The event occurred before the listener joined, so don't deliver it.
-				backend.Logger(ctx).Printf("not delivering event %s before %s joined",
+				logging.Logger(ctx).Printf("not delivering event %s before %s joined",
 					event.Type, listener.ID())
 				continue
 			}

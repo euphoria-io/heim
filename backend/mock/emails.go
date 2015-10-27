@@ -5,10 +5,10 @@ import (
 	"sync"
 	"time"
 
-	"euphoria.io/heim/backend"
 	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/emails"
 	"euphoria.io/heim/proto/jobs"
+	"euphoria.io/heim/proto/logging"
 	"euphoria.io/heim/proto/snowflake"
 	"euphoria.io/heim/templates"
 	"euphoria.io/scope"
@@ -91,12 +91,12 @@ func (et *EmailTracker) Send(
 		fmt.Printf("delivering to %s\n", to)
 		if err := deliverer.Deliver(ctx, ref); err != nil {
 			if jerr := job.Fail(ctx, err.Error()); jerr != nil {
-				backend.Logger(ctx).Printf("error reporting job failure: %s", jerr)
+				logging.Logger(ctx).Printf("error reporting job failure: %s", jerr)
 			}
 			return
 		}
 		if err := job.Complete(ctx); err != nil {
-			backend.Logger(ctx).Printf("error reporting job completion: %s", err)
+			logging.Logger(ctx).Printf("error reporting job completion: %s", err)
 		}
 	}()
 

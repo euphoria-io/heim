@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"euphoria.io/heim/backend"
 	"euphoria.io/heim/proto"
+	"euphoria.io/heim/proto/logging"
 	"euphoria.io/heim/proto/security"
 	"euphoria.io/heim/proto/snowflake"
 	"euphoria.io/scope"
@@ -17,7 +17,6 @@ import (
 )
 
 var notImpl = fmt.Errorf("not implemented")
-var logger = backend.Logger
 var global *Room
 
 type Room struct {
@@ -194,7 +193,7 @@ func (rb *RoomBinding) EditMessage(
 
 	rollback := func() {
 		if err := t.Rollback(); err != nil {
-			backend.Logger(ctx).Printf("rollback error: %s", err)
+			logging.Logger(ctx).Printf("rollback error: %s", err)
 		}
 	}
 
@@ -350,14 +349,14 @@ func (rb *RoomBinding) GenerateMessageKey(ctx scope.Context, kms security.KMS) (
 
 	if err := transaction.Insert(&rmkb.MessageKey); err != nil {
 		if rerr := transaction.Rollback(); rerr != nil {
-			backend.Logger(ctx).Printf("rollback error: %s", rerr)
+			logging.Logger(ctx).Printf("rollback error: %s", rerr)
 		}
 		return nil, err
 	}
 
 	if err := transaction.Insert(&rmkb.RoomMessageKey); err != nil {
 		if rerr := transaction.Rollback(); rerr != nil {
-			backend.Logger(ctx).Printf("rollback error: %s", rerr)
+			logging.Logger(ctx).Printf("rollback error: %s", rerr)
 		}
 		return nil, err
 	}
@@ -621,7 +620,7 @@ func (rb *RoomBinding) RemoveManager(
 
 	rollback := func() {
 		if err := t.Rollback(); err != nil {
-			backend.Logger(ctx).Printf("rollback error: %s", err)
+			logging.Logger(ctx).Printf("rollback error: %s", err)
 		}
 	}
 

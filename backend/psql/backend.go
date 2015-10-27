@@ -12,10 +12,10 @@ import (
 	"sync"
 	"time"
 
-	"euphoria.io/heim/backend"
 	"euphoria.io/heim/cluster"
 	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/jobs"
+	"euphoria.io/heim/proto/logging"
 	"euphoria.io/heim/proto/security"
 	"euphoria.io/heim/proto/snowflake"
 	"euphoria.io/scope"
@@ -301,7 +301,7 @@ func (b *Backend) CreateRoom(
 		return nil, err
 	}
 
-	backend.Logger(ctx).Printf("creating room: %s", name)
+	logging.Logger(ctx).Printf("creating room: %s", name)
 	room := &Room{
 		Name:  name,
 		IV:    sec.KeyPair.IV,
@@ -370,19 +370,19 @@ func (b *Backend) CreateRoom(
 
 	rollback := func() {
 		if err := t.Rollback(); err != nil {
-			backend.Logger(ctx).Printf("rollback error: %s", err)
+			logging.Logger(ctx).Printf("rollback error: %s", err)
 		}
 	}
 
 	if err := t.Insert(room); err != nil {
-		backend.Logger(ctx).Printf("room creation error on %s: %s", name, err)
+		logging.Logger(ctx).Printf("room creation error on %s: %s", name, err)
 		rollback()
 		return nil, err
 	}
 
 	if rmkb != nil {
 		if err := t.Insert(&rmkb.MessageKey, &rmkb.RoomMessageKey); err != nil {
-			backend.Logger(ctx).Printf("room creation error on %s (message key): %s", name, err)
+			logging.Logger(ctx).Printf("room creation error on %s (message key): %s", name, err)
 			rollback()
 			return nil, err
 		}
@@ -394,7 +394,7 @@ func (b *Backend) CreateRoom(
 	}
 	for i, capability := range managerCaps {
 		if err := managerCapTable.Save(ctx, managers[i], capability); err != nil {
-			backend.Logger(ctx).Printf(
+			logging.Logger(ctx).Printf(
 				"room creation error on %s (manager %s): %s", name, managers[i].ID().String(), err)
 			rollback()
 			return nil, err
@@ -407,7 +407,7 @@ func (b *Backend) CreateRoom(
 	}
 	for i, capability := range accessCaps {
 		if err := messageCapTable.Save(ctx, managers[i], capability); err != nil {
-			backend.Logger(ctx).Printf(
+			logging.Logger(ctx).Printf(
 				"room creation error on %s (access capability): %s", name, err)
 			rollback()
 			return nil, err
@@ -415,7 +415,7 @@ func (b *Backend) CreateRoom(
 	}
 
 	if err := t.Commit(); err != nil {
-		backend.Logger(ctx).Printf("room creation error on %s (commit): %s", name, err)
+		logging.Logger(ctx).Printf("room creation error on %s (commit): %s", name, err)
 		return nil, err
 	}
 
@@ -527,7 +527,7 @@ func (b *Backend) join(ctx scope.Context, room *Room, session proto.Session) err
 		return err
 	}
 	if len(agentBans) > 0 {
-		backend.Logger(ctx).Printf("access denied to %s: %#v", session.Identity().ID(), agentBans)
+		logging.Logger(ctx).Printf("access denied to %s: %#v", session.Identity().ID(), agentBans)
 		if err := t.Rollback(); err != nil {
 			return err
 		}
@@ -546,7 +546,7 @@ func (b *Backend) join(ctx scope.Context, room *Room, session proto.Session) err
 		return err
 	}
 	if len(ipBans) > 0 {
-		backend.Logger(ctx).Printf("access denied to %s: %#v", client.IP, ipBans)
+		logging.Logger(ctx).Printf("access denied to %s: %#v", client.IP, ipBans)
 		if err := t.Rollback(); err != nil {
 			return err
 		}
@@ -564,13 +564,13 @@ func (b *Backend) join(ctx scope.Context, room *Room, session proto.Session) err
 	}
 	if _, err := t.Delete(entry); err != nil {
 		if rerr := t.Rollback(); rerr != nil {
-			backend.Logger(ctx).Printf("rollback error: %s", rerr)
+			logging.Logger(ctx).Printf("rollback error: %s", rerr)
 		}
 		return err
 	}
 	if err := t.Insert(entry); err != nil {
 		if rerr := t.Rollback(); rerr != nil {
-			backend.Logger(ctx).Printf("rollback error: %s", rerr)
+			logging.Logger(ctx).Printf("rollback error: %s", rerr)
 		}
 		return err
 	}
@@ -630,7 +630,7 @@ func (b *Backend) part(ctx scope.Context, room *Room, session proto.Session) err
 		room.Name, b.desc.ID, b.desc.Era, session.ID())
 	if err != nil {
 		rollback(ctx, t)
-		backend.Logger(ctx).Printf("failed to persist departure: %s", err)
+		logging.Logger(ctx).Printf("failed to persist departure: %s", err)
 		return err
 	}
 
@@ -744,7 +744,7 @@ func (b *Backend) latest(ctx scope.Context, room *Room, n int, before snowflake.
 
 // invalidatePeer must be called with lock held
 func (b *Backend) invalidatePeer(ctx scope.Context, id, era string) {
-	logger := backend.Logger(ctx)
+	logger := logging.Logger(ctx)
 	packet, err := proto.MakeEvent(&proto.NetworkEvent{
 		Type:      "partition",
 		ServerID:  id,

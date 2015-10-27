@@ -6,8 +6,8 @@ import (
 
 	"encoding/json"
 
-	"euphoria.io/heim/backend"
 	"euphoria.io/heim/proto"
+	"euphoria.io/heim/proto/logging"
 	"euphoria.io/heim/proto/security"
 	"euphoria.io/heim/proto/snowflake"
 	"euphoria.io/scope"
@@ -180,11 +180,11 @@ func (m *accountManager) Register(
 
 	agent, err := m.b.AgentTracker().Get(ctx, agentID)
 	if err != nil {
-		backend.Logger(ctx).Printf(
+		logging.Logger(ctx).Printf(
 			"error locating agent %s for new account %s:%s: %s", agentID, namespace, id, err)
 	} else {
 		if err := agent.SetClientKey(agentKey, clientKey); err != nil {
-			backend.Logger(ctx).Printf(
+			logging.Logger(ctx).Printf(
 				"error associating agent %s with new account %s:%s: %s", agentID, namespace, id, err)
 		}
 		agent.AccountID = account.ID().String()

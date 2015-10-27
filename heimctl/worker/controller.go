@@ -6,9 +6,9 @@ import (
 	"os"
 	"time"
 
-	"euphoria.io/heim/backend"
 	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/jobs"
+	"euphoria.io/heim/proto/logging"
 	"euphoria.io/heim/proto/snowflake"
 	"euphoria.io/scope"
 )
@@ -62,12 +62,12 @@ func (c *Controller) background(ctx scope.Context) {
 
 	var lastStatCheck time.Time
 	for {
-		backend.Logger(ctx).Printf("[%s] background loop", c.w.QueueName())
+		logging.Logger(ctx).Printf("[%s] background loop", c.w.QueueName())
 		if time.Now().Sub(lastStatCheck) > StatsInterval {
-			backend.Logger(ctx).Printf("[%s] collecting stats", c.w.QueueName())
+			logging.Logger(ctx).Printf("[%s] collecting stats", c.w.QueueName())
 			stats, err := c.jq.Stats(ctx)
 			if err != nil {
-				backend.Logger(ctx).Printf("error: %s stats: %s", c.w.QueueName(), err)
+				logging.Logger(ctx).Printf("error: %s stats: %s", c.w.QueueName(), err)
 				return
 			}
 			lastStatCheck = time.Now()
@@ -78,7 +78,7 @@ func (c *Controller) background(ctx scope.Context) {
 		}
 		if err := c.processOne(ctx); err != nil {
 			// TODO: retry a couple times before giving up
-			backend.Logger(ctx).Printf("error: %s: %s", c.w.QueueName(), err)
+			logging.Logger(ctx).Printf("error: %s: %s", c.w.QueueName(), err)
 			return
 		}
 	}
@@ -104,7 +104,7 @@ func (c *Controller) processOne(ctx scope.Context) error {
 
 	w := io.MultiWriter(os.Stdout, job)
 	prefix := fmt.Sprintf("[%s-%s] ", c.w.QueueName(), c.id)
-	child := backend.LoggingContext(ctx.ForkWithTimeout(job.MaxWorkDuration), w, prefix)
+	child := logging.LoggingContext(ctx.ForkWithTimeout(job.MaxWorkDuration), w, prefix)
 	if err := c.w.Work(child, job, payload); err != nil {
 		if ferr := job.Fail(ctx, err.Error()); ferr != nil {
 			return ferr
@@ -120,6 +120,6 @@ func (c *Controller) processOne(ctx scope.Context) error {
 }
 
 func (c *Controller) claimOrSteal(ctx scope.Context) (*jobs.Job, error) {
-	backend.Logger(ctx).Printf("[%s] attempting to claim", c.w.QueueName())
+	logging.Logger(ctx).Printf("[%s] attempting to claim", c.w.QueueName())
 	return jobs.Claim(ctx, c.jq, c.id, PollTime, StealChance)
 }

@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	"euphoria.io/heim/backend"
 	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/emails"
 	"euphoria.io/heim/proto/jobs"
+	"euphoria.io/heim/proto/logging"
 	"euphoria.io/heim/proto/snowflake"
 	"euphoria.io/heim/templates"
 	"euphoria.io/scope"
@@ -171,16 +171,16 @@ func (et *EmailTracker) Send(
 		fmt.Printf("delivering to %s\n", to)
 		if err := deliverer.Deliver(ctx, ref); err != nil {
 			if jerr := job.Fail(ctx, err.Error()); jerr != nil {
-				backend.Logger(ctx).Printf("error reporting job %s failure: %s", job.ID, jerr)
+				logging.Logger(ctx).Printf("error reporting job %s failure: %s", job.ID, jerr)
 			}
 			return
 		}
 		if err := job.Complete(ctx); err != nil {
-			backend.Logger(ctx).Printf("error reporting job %s completion: %s", job.ID, err)
+			logging.Logger(ctx).Printf("error reporting job %s completion: %s", job.ID, err)
 		}
 
 		if _, err := et.Backend.DbMap.Exec("UPDATE email SET delivered = $2 WHERE id = $1", ref.ID, ref.Delivered); err != nil {
-			backend.Logger(ctx).Printf("error marking email %s as delivered: %s", ref.ID, err)
+			logging.Logger(ctx).Printf("error marking email %s as delivered: %s", ref.ID, err)
 		}
 	}()
 

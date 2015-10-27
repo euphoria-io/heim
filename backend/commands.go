@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"euphoria.io/heim/proto"
+	"euphoria.io/heim/proto/logging"
 	"euphoria.io/heim/proto/security"
 	"euphoria.io/heim/proto/snowflake"
 )
@@ -538,7 +539,7 @@ func (s *session) handleRegisterAccountCommand(cmd *proto.RegisterAccountCommand
 	// Kick off on-registration tasks.
 	if err := s.heim.OnAccountRegistration(s.ctx, s.backend, account, clientKey); err != nil {
 		// Log this error only.
-		Logger(s.ctx).Printf("error on account registration: %s", err)
+		logging.Logger(s.ctx).Printf("error on account registration: %s", err)
 	}
 
 	// Authorize session's agent to unlock account.
@@ -593,7 +594,7 @@ func (s *session) handleAuthCommand(msg *proto.AuthCommand) *response {
 		authFailures.WithLabelValues(s.roomName).Inc()
 		s.authFailCount++
 		if s.authFailCount >= MaxAuthFailures {
-			Logger(s.ctx).Printf(
+			logging.Logger(s.ctx).Printf(
 				"max authentication failures on room %s by %s", s.roomName, s.Identity().ID())
 			authTerminations.WithLabelValues(s.roomName).Inc()
 			s.state = s.ignoreState

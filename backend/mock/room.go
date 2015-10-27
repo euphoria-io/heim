@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"euphoria.io/heim/backend"
 	"euphoria.io/heim/proto"
+	"euphoria.io/heim/proto/logging"
 	"euphoria.io/heim/proto/security"
 	"euphoria.io/heim/proto/snowflake"
 	"euphoria.io/scope"
@@ -283,7 +283,7 @@ func (r *memRoom) RenameUser(
 	r.m.Lock()
 	defer r.m.Unlock()
 
-	backend.Logger(ctx).Printf(
+	logging.Logger(ctx).Printf(
 		"renaming %s from %s to %s\n", session.ID(), formerName, session.Identity().Name())
 	payload := &proto.NickEvent{
 		SessionID: session.ID(),

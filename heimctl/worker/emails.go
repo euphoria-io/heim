@@ -1,10 +1,10 @@
 package worker
 
 import (
-	"euphoria.io/heim/backend"
 	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/emails"
 	"euphoria.io/heim/proto/jobs"
+	"euphoria.io/heim/proto/logging"
 	"euphoria.io/heim/proto/snowflake"
 	"euphoria.io/scope"
 )
@@ -42,7 +42,7 @@ func (w *EmailWorker) send(ctx scope.Context, accountID snowflake.Snowflake, msg
 		// We failed to mark the email as delivered, which is unfortunate,
 		// but not quite as unfortunate as delivering it twice would be.
 		// So we swallow the error here but log it noisily.
-		backend.Logger(ctx).Printf("failed to mark email %s/%s as delivered: %s", accountID, msgID, err)
+		logging.Logger(ctx).Printf("failed to mark email %s/%s as delivered: %s", accountID, msgID, err)
 	}
 
 	return nil

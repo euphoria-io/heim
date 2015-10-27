@@ -8,8 +8,8 @@ import (
 
 	"encoding/base64"
 
-	"euphoria.io/heim/backend"
 	"euphoria.io/heim/proto"
+	"euphoria.io/heim/proto/logging"
 	"euphoria.io/heim/proto/security"
 	"euphoria.io/heim/proto/snowflake"
 	"euphoria.io/scope"
@@ -90,7 +90,7 @@ func (atb *AgentTrackerBinding) Register(ctx scope.Context, agent *proto.Agent) 
 		return err
 	}
 
-	backend.Logger(ctx).Printf("registered agent %s", agent.IDString())
+	logging.Logger(ctx).Printf("registered agent %s", agent.IDString())
 	return nil
 }
 
@@ -154,7 +154,7 @@ func (atb *AgentTrackerBinding) SetClientKey(
 
 	rollback := func() {
 		if err := t.Rollback(); err != nil {
-			backend.Logger(ctx).Printf("rollback error: %s", err)
+			logging.Logger(ctx).Printf("rollback error: %s", err)
 		}
 	}
 

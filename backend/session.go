@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"euphoria.io/heim/proto"
+	"euphoria.io/heim/proto/logging"
 	"euphoria.io/heim/proto/security"
 	"euphoria.io/scope"
 
@@ -130,7 +131,7 @@ func newSession(
 	nextID := atomic.AddUint64(&sessionIDCounter, 1)
 	sessionCount.WithLabelValues(roomName).Set(float64(nextID))
 	sessionID := fmt.Sprintf("%x-%08x", client.Agent.IDString(), nextID)
-	ctx = LoggingContext(ctx, os.Stdout, fmt.Sprintf("[%s] ", sessionID))
+	ctx = logging.LoggingContext(ctx, os.Stdout, fmt.Sprintf("[%s] ", sessionID))
 
 	session := &session{
 		id:        sessionID,
@@ -157,7 +158,7 @@ func newSession(
 }
 
 func (s *session) Close() {
-	logger := Logger(s.ctx)
+	logger := logging.Logger(s.ctx)
 	logger.Printf("closing session")
 	s.ctx.Cancel()
 }
@@ -213,7 +214,7 @@ func (s *session) serve() error {
 		}
 	}()
 
-	logger := Logger(s.ctx)
+	logger := logging.Logger(s.ctx)
 	logger.Printf("client connected")
 
 	key, err := s.room.MessageKey(s.ctx)
@@ -388,7 +389,7 @@ func (s *session) serve() error {
 }
 
 func (s *session) readMessages() {
-	logger := Logger(s.ctx)
+	logger := logging.Logger(s.ctx)
 	defer s.Close()
 
 	for s.ctx.Err() == nil {
@@ -478,7 +479,7 @@ func (s *session) join() error {
 	}
 
 	if err := s.room.Join(s.ctx, s); err != nil {
-		Logger(s.ctx).Printf("join failed: %s", err)
+		logging.Logger(s.ctx).Printf("join failed: %s", err)
 		return err
 	}
 
@@ -490,7 +491,7 @@ func (s *session) join() error {
 	}
 
 	if err := s.sendSnapshot(msgs, listing); err != nil {
-		Logger(s.ctx).Printf("snapshot failed: %s", err)
+		logging.Logger(s.ctx).Printf("snapshot failed: %s", err)
 		return err
 	}
 
@@ -499,7 +500,7 @@ func (s *session) join() error {
 }
 
 func (s *session) sendHello(roomIsPrivate, accountHasAccess bool) error {
-	logger := Logger(s.ctx)
+	logger := logging.Logger(s.ctx)
 	event := &proto.HelloEvent{
 		SessionView:      s.View(),
 		AccountHasAccess: accountHasAccess,
@@ -530,7 +531,7 @@ func (s *session) sendHello(roomIsPrivate, accountHasAccess bool) error {
 }
 
 func (s *session) sendPing() error {
-	logger := Logger(s.ctx)
+	logger := logging.Logger(s.ctx)
 	now := time.Now()
 	cmd, err := proto.MakeEvent(&proto.PingEvent{
 		UnixTime:     proto.Time(now),
@@ -560,7 +561,7 @@ func (s *session) CheckAbandoned() error {
 	s.m.Lock()
 	defer s.m.Unlock()
 
-	logger := Logger(s.ctx)
+	logger := logging.Logger(s.ctx)
 
 	if s.maybeAbandoned {
 		// already in fast-keepalive state

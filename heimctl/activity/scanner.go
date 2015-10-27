@@ -5,16 +5,16 @@ import (
 
 	"encoding/json"
 
-	"euphoria.io/heim/backend"
 	"euphoria.io/heim/backend/psql"
 	"euphoria.io/heim/proto"
+	"euphoria.io/heim/proto/logging"
 	"euphoria.io/scope"
 )
 
 func ScanLoop(ctx scope.Context, listener *pq.Listener) {
 	defer ctx.WaitGroup().Done()
 
-	logger := backend.Logger(ctx)
+	logger := logging.Logger(ctx)
 	for {
 		select {
 		case <-ctx.Done():

@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"strings"
 
-	"euphoria.io/heim/backend"
+	"euphoria.io/heim/proto/logging"
 	"euphoria.io/scope"
 
 	"gopkg.in/gorp.v1"
@@ -13,7 +13,7 @@ import (
 
 func rollback(ctx scope.Context, t *gorp.Transaction) {
 	if err := t.Rollback(); err != nil {
-		backend.Logger(ctx).Printf("rollback error: %s", err)
+		logging.Logger(ctx).Printf("rollback error: %s", err)
 	}
 }
 
