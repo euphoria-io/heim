@@ -1,32 +1,48 @@
-var React = require('react/addons')
-var classNames = require('classnames')
-var Reflux = require('reflux')
+import React from 'react/addons'
+import classNames from 'classnames'
+import Reflux from 'reflux'
 
-var actions = require('../actions')
-var chat = require('../stores/chat')
-var mention = require('../mention')
+import actions from '../actions'
+import { Pane } from '../stores/ui'
+import chat from '../stores/chat'
+import mention from '../mention'
+import KeyboardActionHandler from './keyboard-action-handler'
+import EntryMixin from './entry-mixin'
+import EntryDragHandle from './entry-drag-handle'
 
-var KeyboardActionHandler = require('./keyboard-action-handler')
-var EntryDragHandle = require('./entry-drag-handle')
 
-module.exports = React.createClass({
+export default React.createClass({
   displayName: 'ChatEntry',
 
+  propTypes: {
+    pane: React.PropTypes.instanceOf(Pane).isRequired,
+    onChange: React.PropTypes.func,
+  },
+
   mixins: [
-    require('./entry-mixin'),
+    EntryMixin,
     Reflux.ListenerMixin,
     Reflux.connect(chat.store, 'chat'),
   ],
 
-  componentWillMount: function() {
+  getInitialState() {
+    return {
+      pane: this.props.pane.store.getInitialState(),
+      nickText: null,
+      nickFocused: false,
+      empty: true,
+    }
+  },
+
+  componentWillMount() {
     this.setState({empty: !this.state.chat.entryText})
   },
 
-  componentDidMount: function() {
+  componentDidMount() {
     this.listenTo(this.props.pane.store, state => this.setState({'pane': state}))
     this.listenTo(this.props.pane.focusEntry, 'focus')
     this.listenTo(this.props.pane.blurEntry, 'blur')
-    var input = this.refs.input.getDOMNode()
+    const input = this.refs.input.getDOMNode()
     input.value = this.state.pane.entryText
     // in Chrome, it appears that setting the selection range can focus the
     // input without changing document.activeElement (!)
@@ -36,17 +52,53 @@ module.exports = React.createClass({
     this.autoSize(true)
   },
 
-  getInitialState: function() {
-    return {
-      pane: this.props.pane.store.getInitialState(),
-      nickText: null,
-      nickFocused: false,
-      empty: true,
+  componentDidUpdate() {
+    this.autoSize()
+  },
+
+  onNickChange(ev) {
+    this.setState({nickText: ev.target.value})
+  },
+
+  onNickKeyDown(ev) {
+    const input = this.refs.input.getDOMNode()
+    if (ev.key === 'Enter') {
+      // Delay focus event to avoid double key insertion in Chrome.
+      setImmediate(() => input.focus())
+      ev.stopPropagation()
+    } else if (ev.key === 'Escape') {
+      this.setState({nickText: this.state.chat.nick}, () => input.focus())
+      ev.stopPropagation()
+    } else if (/^Arrow/.test(ev.key) || ev.key === 'Tab' || ev.key === 'Backspace') {
+      // don't let the keyboard action handler react to these
+      ev.stopPropagation()
     }
   },
 
-  chatSend: function(ev) {
-    var input = this.refs.input.getDOMNode()
+  onNickFocus(ev) {
+    this.setState({nickText: ev.target.value, nickFocused: true})
+  },
+
+  onNickBlur(ev) {
+    actions.setNick(ev.target.value)
+    this.setState({nickText: null, nickFocused: false})
+  },
+
+  onChange(ev) {
+    this.saveEntryState()
+    if (this.props.onChange) {
+      this.props.onChange(ev)
+    }
+  },
+
+  saveEntryState() {
+    const input = this.refs.input.getDOMNode()
+    this.props.pane.setEntryText(input.value, input.selectionStart, input.selectionEnd)
+    this.setState({empty: !input.value.length})
+  },
+
+  chatSend(ev) {
+    const input = this.refs.input.getDOMNode()
 
     ev.preventDefault()
 
@@ -72,31 +124,32 @@ module.exports = React.createClass({
     this.props.pane.scrollToEntry()
   },
 
-  isEmpty: function() {
+  isEmpty() {
     return this.refs.input.getDOMNode().value.length === 0
   },
 
-  isMultiline: function() {
+  isMultiline() {
     return /\n/.test(this.refs.input.getDOMNode().value)
   },
 
-  complete: function() {
-    var input = this.refs.input.getDOMNode()
-    var text = input.value
-    var charRe = /\S/
+  complete() {
+    const input = this.refs.input.getDOMNode()
+    const text = input.value
+    const charRe = /\S/
 
-    var wordEnd = input.selectionStart
+    let wordEnd = input.selectionStart
     if (wordEnd < 1) {
       return
     }
 
-    for (var wordStart = wordEnd - 1; wordStart >= 0; wordStart--) {
+    let wordStart
+    for (wordStart = wordEnd - 1; wordStart >= 0; wordStart--) {
       if (!charRe.test(text[wordStart])) {
         break
       }
     }
     wordStart++
-    if (text[wordStart] == '@') {
+    if (text[wordStart] === '@') {
       wordStart++
     }
 
@@ -110,67 +163,32 @@ module.exports = React.createClass({
       return
     }
 
-    var word = text.substring(wordStart, wordEnd)
-    var nameSeq = this.state.chat.who
+    const word = text.substring(wordStart, wordEnd)
+    const nameSeq = this.state.chat.who
       .toSeq()
       .map(user => user.get('name', ''))
-    var match = mention.rankCompletions(nameSeq, word).first()
+    const match = mention.rankCompletions(nameSeq, word).first()
 
     if (!match) {
       return
     }
-    var completed = (text[wordStart - 1] != '@' ? '@' : '') + match
+    const completed = (text[wordStart - 1] !== '@' ? '@' : '') + match
     input.value = input.value.substring(0, wordStart) + completed + input.value.substring(wordEnd)
     this.saveEntryState()
   },
 
-  onNickChange: function(ev) {
-    this.setState({nickText: ev.target.value})
-  },
-
-  onNickKeyDown: function(ev) {
-    var input = this.refs.input.getDOMNode()
-    if (ev.key == 'Enter') {
-      // Delay focus event to avoid double key insertion in Chrome.
-      setImmediate(function() {
-        input.focus()
-      })
-      ev.stopPropagation()
-    } else if (ev.key == 'Escape') {
-      this.setState({nickText: this.state.chat.nick}, function() {
-        input.focus()
-      })
-      ev.stopPropagation()
-    } else if (/^Arrow/.test(ev.key) || ev.key == 'Tab' || ev.key == 'Backspace') {
-      // don't let the keyboard action handler react to these
-      ev.stopPropagation()
+  autoSize(force) {
+    const input = this.refs.input.getDOMNode()
+    const measure = this.refs.measure.getDOMNode()
+    if (force || input.value !== this.state.chat.entryText) {
+      measure.style.width = input.offsetWidth + 'px'
+      measure.value = input.value
+      input.style.height = measure.scrollHeight + 'px'
     }
   },
 
-  onNickFocus: function(ev) {
-    this.setState({nickText: ev.target.value, nickFocused: true})
-  },
-
-  onNickBlur: function(ev) {
-    actions.setNick(ev.target.value)
-    this.setState({nickText: null, nickFocused: false})
-  },
-
-  saveEntryState: function() {
-    var input = this.refs.input.getDOMNode()
-    this.props.pane.setEntryText(input.value, input.selectionStart, input.selectionEnd)
-    this.setState({empty: !input.value.length})
-  },
-
-  onChange: function(ev) {
-    this.saveEntryState()
-    if (this.props.onChange) {
-      this.props.onChange(ev)
-    }
-  },
-
-  render: function() {
-    var nick
+  render() {
+    let nick
     if (this.state.nickFocused) {
       nick = this.state.nickText
     } else {
@@ -206,19 +224,5 @@ module.exports = React.createClass({
         </form>
       </KeyboardActionHandler>
     )
-  },
-
-  autoSize: function(force) {
-    var input = this.refs.input.getDOMNode()
-    var measure = this.refs.measure.getDOMNode()
-    if (force || input.value != this.state.chat.entryText) {
-      measure.style.width = input.offsetWidth + 'px'
-      measure.value = input.value
-      input.style.height = measure.scrollHeight + 'px'
-    }
-  },
-
-  componentDidUpdate: function() {
-    this.autoSize()
   },
 })

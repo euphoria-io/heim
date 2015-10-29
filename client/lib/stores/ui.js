@@ -1,17 +1,17 @@
-var _ = require('lodash')
-var Reflux = require('reflux')
-var React = require('react/addons')
-var Immutable = require('immutable')
+import _ from 'lodash'
+import Reflux from 'reflux'
+import React from 'react/addons'
+import Immutable from 'immutable'
 
-var clamp = require('../clamp')
-var actions = require('../actions')
-var storage = require('./storage')
-var chat = require('./chat')
-var notification = require('./notification')
-var MessageData = require('../message-data')
+import clamp from '../clamp'
+import actions from '../actions'
+import storage from './storage'
+import chat from './chat'
+import notification from './notification'
+import MessageData from '../message-data'
 
 
-var storeActions = module.exports.actions = Reflux.createActions([
+const storeActions = Reflux.createActions([
   'keydownOnPage',
   'setUISize',
   'focusEntry',
@@ -56,373 +56,17 @@ storeActions.panViewTo.sync = true
 // temporarily sync while testing this commit
 storeActions.focusPane.sync = true
 
-var store = module.exports.store = Reflux.createStore({
-  listenables: [
-    actions,
-    storeActions,
-    {storageChange: storage.store},
-    {chatChange: chat.store},
-    {notificationChange: notification.store},
-  ],
-
-  init: function() {
-    this.state = {
-      thin: false,
-      scrollEdgeSpace: 156,
-      showTimestamps: true,
-      focusedPane: 'main',
-      panes: Immutable.Map({
-        main: createPaneStore('main'),
-      }),
-      visiblePanes: Immutable.OrderedSet(['main']),
-      popupPane: null,
-      panPos: 'main',
-      sidebarPaneExpanded: false,
-      infoPaneExpanded: false,
-      frozenThreadList: null,
-      frozenNotifications: null,
-      selectedThread: null,
-      lastSelectedThread: null,
-      threadPopupAnchorEl: null,
-      managerMode: false,
-      managerToolboxAnchorEl: null,
-      draggingMessageSelection: false,
-      draggingMessageSelectionToggle: null,
-    }
-
-    this.threadData = new MessageData({selected: false})
-
-    this._thawInfoDebounced = _.debounce(this._thawInfo, 1500)
-  },
-
-  getInitialState: function() {
-    return this.state
-  },
-
-  storageChange: function(data) {
-    if (!data) {
-      return
-    }
-    this.state.infoPaneExpanded = _.get(data, ['room', this.chatState.roomName, 'infoPaneExpanded'], false)
-    this.state.sidebarPaneExpanded = _.get(data, ['room', this.chatState.roomName, 'sidebarPaneExpanded'], false)
-    this.trigger(this.state)
-  },
-
-  chatChange: function(state) {
-    this.chatState = state
-  },
-
-  notificationChange: function(state) {
-    this.notificationState = state
-  },
-
-  setUISize: function(width, height) {
-    var thin = width < 650
-    if (this.state.thin != thin) {
-      this.deselectThread()
-    }
-    this.state.thin = thin
-    this.state.scrollEdgeSpace = height < 650 ? 50 : 156
-    this.state.showTimestamps = width > 525
-    this.trigger(this.state)
-  },
-
-  collapseInfoPane: function() {
-    if (this.state.thin) {
-      storeActions.panViewTo('main')
-    } else {
-      storage.setRoom(this.chatState.roomName, 'infoPaneExpanded', false)
-    }
-  },
-
-  expandInfoPane: function() {
-    if (this.state.thin) {
-      storeActions.panViewTo('info')
-    } else {
-      storage.setRoom(this.chatState.roomName, 'infoPaneExpanded', true)
-    }
-  },
-
-  toggleUserList: function() {
-    if (this.state.thin) {
-      storeActions.panViewTo(this.state.panPos == 'sidebar' ? 'main' : 'sidebar')
-    } else {
-      storage.setRoom(this.chatState.roomName, 'sidebarPaneExpanded', !this.state.sidebarPaneExpanded)
-    }
-  },
-
-  freezeInfo: function() {
-    this._thawInfoDebounced.cancel()
-    if (!this.state.frozenThreadList || !this.state.frozenNotifications) {
-      this.state.frozenThreadList = this.chatState.messages.threads.clone()
-      this.state.frozenNotifications = this.notificationState.notifications
-      this.trigger(this.state)
-    }
-  },
-
-  thawInfo: function() {
-    this._thawInfoDebounced()
-  },
-
-  _thawInfo: function() {
-    if (this.state.threadPopupAnchorEl) {
-      return
-    }
-    this.state.frozenThreadList = null
-    this.state.frozenNotifications = null
-    this.trigger(this.state)
-  },
-
-  _touchThreadPane: function(threadId) {
-    var paneId = 'thread-' + threadId
-    if (!this.state.panes.has(paneId)) {
-      this.state.panes = this.state.panes.set(paneId, createPaneStore(paneId, {rootId: threadId}))
-    }
-    var pane = this.state.panes.get(paneId)
-    pane.focusMessage(threadId)
-    return pane
-  },
-
-  selectThread: function(id, el) {
-    React.addons.batchedUpdates(() => {
-      var pane = this._touchThreadPane(id)
-      if (this.state.selectedThread && this.state.selectedThread != id) {
-        this.threadData.set(this.state.selectedThread, {selected: false})
-      }
-      this.threadData.set(id, {selected: true})
-      this.state.selectedThread = id
-      if (this.state.thin) {
-        storeActions.panViewTo('main')
-        this.focusPane(pane.id)
-      } else {
-        this.freezeInfo()
-        this.state.popupPane = pane.id
-        this.state.threadPopupAnchorEl = el
-        this.focusPane(pane.id)
-      }
-      this.trigger(this.state)
-    })
-  },
-
-  deselectThread: function() {
-    if (!this.state.selectedThread) {
-      return
-    }
-    React.addons.batchedUpdates(() => {
-      this.threadData.set(this.state.selectedThread, {selected: false})
-      this.state.lastSelectedThread = this.state.selectedThread
-      this.state.selectedThread = null
-      if (!this.state.thin) {
-        if (!this.state.popupPane) {
-          return
-        }
-        this.thawInfo()
-        this.state.threadPopupAnchorEl = null
-        this.state.popupPane = null
-      }
-      storeActions.panViewTo('main')
-      storeActions.focusPane('main')
-      this.trigger(this.state)
-    })
-  },
-
-  openThreadPane: function(threadId) {
-    React.addons.batchedUpdates(() => {
-      var pane = this._touchThreadPane(threadId)
-      this.state.visiblePanes = this.state.visiblePanes.add(pane.id)
-      this.deselectThread()
-      this.chatState.messages.mergeNodes(threadId, {_inPane: pane.id})
-      this.focusPane(pane.id)
-      this.trigger(this.state)
-    })
-  },
-
-  popupToThreadPane: function() {
-    this.openThreadPane(this.state.selectedThread)
-  },
-
-  closeThreadPane: function(threadId) {
-    React.addons.batchedUpdates(() => {
-      var paneId = 'thread-' + threadId
-      this.focusPane('main')
-      this.state.panes = this.state.panes.delete(paneId)
-      this.state.visiblePanes = this.state.visiblePanes.remove(paneId)
-      this.chatState.messages.mergeNodes(threadId, {_inPane: false})
-      this.trigger(this.state)
-    })
-  },
-
-  closeFocusedThreadPane: function() {
-    if (!/^thread-/.test(this.state.focusedPane)) {
-      return
-    }
-    this.closeThreadPane(this._focusedPane().store.state.rootId)
-  },
-
-  _focusedPane: function() {
-    return this.state.panes.get(this.state.focusedPane)
-  },
-
-  focusPane: function(id) {
-    if (this.state.focusedPane == id) {
-      return
-    }
-
-    React.addons.batchedUpdates(() => {
-      var lastFocused = this.state.focusedPane
-      this.state.focusedPane = id
-      this.trigger(this.state)
-
-      require('react/lib/ReactUpdates').asap(() => {
-        var lastFocusedPane = this.state.panes.get(lastFocused)
-        if (lastFocusedPane) {
-          // the pane has been removed while the batching occurred
-          lastFocusedPane.blurEntry()
-        }
-        if (!Heim.isTouch) {
-          this.state.panes.get(id).focusEntry()
-        }
-      })
-    })
-  },
-
-  _moveFocusedPane: function(delta) {
-    var focusablePanes = this.state.visiblePanes
-      .toKeyedSeq()
-      .map(paneId => this.state.panes.get(paneId))
-      .filterNot(pane => pane.readOnly)
-      .cacheResult()
-
-    var idx
-    if (this.state.focusedPane == this.state.popupPane) {
-      idx = -1
-    } else {
-      idx = focusablePanes.keySeq().indexOf(this.state.focusedPane)
-    }
-    idx = clamp(-1, idx + delta, focusablePanes.size - 1)
-
-    if (idx == -1) {
-      if (this.state.thin || !this.state.infoPaneExpanded) {
-        storeActions.panViewTo('info')
-      } else {
-        this.onViewPan('info')
-      }
-    } else {
-      storeActions.panViewTo('main')
-      var paneId = focusablePanes.entrySeq().get(idx)[0]
-      this.focusPane(paneId)
-    }
-  },
-
-  focusLeftPane: function() {
-    this._moveFocusedPane(-1)
-  },
-
-  focusRightPane: function() {
-    this._moveFocusedPane(1)
-  },
-
-  focusEntry: function(character) {
-    this._focusedPane().focusEntry(character)
-  },
-
-  onViewPan: function(target) {
-    this.state.panPos = target
-    this.trigger(this.state)
-    if (this.state.thin) {
-      if (target == 'info') {
-        this.freezeInfo()
-      } else {
-        this.thawInfo()
-      }
-    } else {
-      if (target == 'info') {
-        if (!this.state.selectedThread) {
-          storeActions.selectThreadInList(this.state.lastSelectedThread)
-          return
-        }
-      } else {
-        this.deselectThread()
-      }
-    }
-  },
-
-  keydownOnPage: function(ev) {
-    this._focusedPane().keydownOnPane(ev)
-  },
-
-  gotoMessageInPane: function(messageId) {
-    var parentPaneId = Immutable.Seq(this.chatState.messages.iterAncestorsOf(messageId))
-      .map(ancestor => 'thread-' + ancestor.get('id'))
-      .find(threadId => this.state.visiblePanes.has(threadId))
-
-    var parentPane = this.state.panes.get(parentPaneId || 'main')
-
-    React.addons.batchedUpdates(() => {
-      parentPane.revealMessage(messageId)
-      parentPane.focusMessage(messageId)
-      parentPane.scrollToEntry()
-    })
-  },
-
-  gotoPopupMessage: function() {
-    var mainPane = this.state.panes.get('main')
-    React.addons.batchedUpdates(() => {
-      mainPane.revealMessage(this.state.selectedThread)
-      mainPane.focusMessage(this.state.selectedThread)
-      this.deselectThread()
-    })
-  },
-
-  _createCustomPane: function(paneId, options) {
-    var newPane = createPaneStore(paneId, options)
-    this.state.panes = this.state.panes.set(paneId, newPane)
-    this.trigger(this.state)
-    return newPane
-  },
-
-  toggleManagerMode: function() {
-    this.state.managerMode = !this.state.managerMode
-    if (!this.state.managerMode) {
-      chat.deselectAll()
-      this.closeManagerToolbox()
-    }
-    this.trigger(this.state)
-  },
-
-  openManagerToolbox: function(anchorEl) {
-    this.state.managerToolboxAnchorEl = anchorEl
-    if (this.state.thin) {
-      storeActions.panViewTo('main')
-    }
-    this.trigger(this.state)
-  },
-
-  closeManagerToolbox: function() {
-    this.state.managerToolboxAnchorEl = null
-    this.trigger(this.state)
-  },
-
-  startMessageSelectionDrag: function(toggleState) {
-    this.state.draggingMessageSelection = true
-    this.state.draggingMessageSelectionToggle = toggleState
-    this.trigger(this.state)
-  },
-
-  finishMessageSelectionDrag: function() {
-    this.state.draggingMessageSelection = false
-    this.trigger(this.state)
-  },
-})
-
-module.exports.createCustomPane = function(paneId, options) {
-  return store._createCustomPane(paneId, options)
+const Pane = module.exports.Pane = class Pane {
+  constructor(paneActions, store, id, readOnly) {
+    this.store = store
+    this.id = id
+    this.readOnly = readOnly
+    _.extend(this, paneActions)
+  }
 }
 
-function createPaneStore(paneId, createOptions) {
-  createOptions = createOptions || {}
-
-  var paneActions = Reflux.createActions([
+function createPaneStore(paneId, createOptions = {}) {
+  const paneActions = Reflux.createActions([
     'sendMessage',
     'focusMessage',
     'toggleFocusMessage',
@@ -461,14 +105,14 @@ function createPaneStore(paneId, createOptions) {
   // sync so that message data changes take effect immediately (in relation to scrolling, etc)
   paneActions.setMessageData.sync = true
 
-  var paneStore = Reflux.createStore({
+  const paneStore = Reflux.createStore({
     listenables: [
       paneActions,
       {chatChange: chat.store},
       {chatMessageReceived: chat.messageReceived},
     ],
 
-    init: function() {
+    init() {
       this.state = {
         rootId: createOptions.rootId || '__root',
         focusedMessage: null,
@@ -490,49 +134,49 @@ function createPaneStore(paneId, createOptions) {
       this.messageRenderFinished = _.debounce(paneActions.afterMessagesRendered, 0, {leading: true, trailing: false})
     },
 
-    getInitialState: function() {
+    getInitialState() {
       return this.state
     },
 
-    _set: function(data) {
+    _set(data) {
       _.assign(this.state, data)
       this.trigger(this.state)
     },
 
-    chatChange: function(state) {
+    chatChange(state) {
       this.chatState = state
     },
 
-    chatMessageReceived: function(message) {
-      if (this.state.focusOwnNextMessage && message.get('_own') && message.get('parent') == '__root') {
+    chatMessageReceived(message) {
+      if (this.state.focusOwnNextMessage && message.get('_own') && message.get('parent') === '__root') {
         this.focusMessage(message.get('id'))
       }
     },
 
-    sendMessage: function(content) {
-      var parentId = this.state.focusedMessage
+    sendMessage(content) {
+      const parentId = this.state.focusedMessage
       actions.sendMessage(content, parentId)
 
       if (parentId) {
         this.setMessageData(parentId, {repliesExpanded: true})
       }
 
-      if (!parentId || parentId == '__root') {
+      if (!parentId || parentId === '__root') {
         this.state.focusOwnNextMessage = true
       }
     },
 
-    focusMessage: function(messageId) {
+    focusMessage(messageId) {
       if (!this.chatState.nick) {
         return
       }
 
-      messageId = messageId || this.state.rootId
-      if (messageId == '__root') {
-        messageId = null
+      let targetId = messageId || this.state.rootId
+      if (targetId === '__root') {
+        targetId = null
       }
 
-      if (messageId == this.state.focusedMessage) {
+      if (targetId === this.state.focusedMessage) {
         return
       }
 
@@ -541,10 +185,10 @@ function createPaneStore(paneId, createOptions) {
         if (this.state.focusedMessage) {
           this.setMessageData(this.state.focusedMessage, {focused: false})
         }
-        if (messageId) {
-          this.setMessageData(messageId, {focused: true})
+        if (targetId) {
+          this.setMessageData(targetId, {focused: true})
         }
-        this.state.focusedMessage = messageId
+        this.state.focusedMessage = targetId
         this.trigger(this.state)
 
         require('react/lib/ReactUpdates').asap(() => {
@@ -553,13 +197,12 @@ function createPaneStore(paneId, createOptions) {
       })
     },
 
-    toggleFocusMessage: function(messageId, parentId) {
-      var focusParent
-      if (parentId == '__root') {
-        parentId = null
-        focusParent = this.state.focusedMessage == messageId
+    toggleFocusMessage(messageId, parentId) {
+      let focusParent
+      if (parentId === '__root') {
+        focusParent = this.state.focusedMessage === messageId
       } else {
-        focusParent = this.state.focusedMessage != parentId
+        focusParent = this.state.focusedMessage !== parentId
       }
 
       if (focusParent) {
@@ -569,7 +212,7 @@ function createPaneStore(paneId, createOptions) {
       }
     },
 
-    revealMessage: function(messageId) {
+    revealMessage(messageId) {
       React.addons.batchedUpdates(() => {
         Immutable.Seq(this.chatState.messages.iterAncestorsOf(messageId))
           .forEach(ancestor => {
@@ -579,16 +222,16 @@ function createPaneStore(paneId, createOptions) {
       })
     },
 
-    escape: function() {
+    escape() {
       storeActions.deselectThread()
       paneActions.moveMessageFocus('top')
     },
 
-    setMessageData: function(messageId, data) {
+    setMessageData(messageId, data) {
       this.messageData.set(messageId, data)
     },
 
-    setEntryText: function(text, selectionStart, selectionEnd) {
+    setEntryText(text, selectionStart, selectionEnd) {
       this.state.entryText = text
       this.state.entrySelectionStart = selectionStart
       this.state.entrySelectionEnd = selectionEnd
@@ -596,26 +239,26 @@ function createPaneStore(paneId, createOptions) {
       // used to persist entry state across focus changes.
     },
 
-    startEntryDrag: function() {
+    startEntryDrag() {
       this.state.draggingEntry = true
       this.trigger(this.state)
     },
 
-    finishEntryDrag: function() {
+    finishEntryDrag() {
       this.state.draggingEntry = false
       this.state.draggingEntryCommand = null
       this.trigger(this.state)
     },
 
-    setEntryDragCommand: function(command) {
-      if (command == this.state.draggingEntryCommand) {
+    setEntryDragCommand(command) {
+      if (command === this.state.draggingEntryCommand) {
         return
       }
       this.state.draggingEntryCommand = command
       this.trigger(this.state)
     },
 
-    openFocusedMessageInPane: function() {
+    openFocusedMessageInPane() {
       if (!this.state.focusedMessage) {
         return
       }
@@ -623,9 +266,368 @@ function createPaneStore(paneId, createOptions) {
     },
   })
 
-  paneActions.store = paneStore
-  paneActions.id = paneId
-  paneActions.readOnly = Boolean(createOptions.readOnly)
+  return new Pane(paneActions, paneStore, paneId, Boolean(createOptions.readOnly))
+}
 
-  return paneActions
+const store = module.exports.store = Reflux.createStore({
+  listenables: [
+    actions,
+    storeActions,
+    {storageChange: storage.store},
+    {chatChange: chat.store},
+    {notificationChange: notification.store},
+  ],
+
+  init() {
+    this.state = {
+      thin: false,
+      scrollEdgeSpace: 156,
+      showTimestamps: true,
+      focusedPane: 'main',
+      panes: Immutable.Map({
+        main: createPaneStore('main'),
+      }),
+      visiblePanes: Immutable.OrderedSet(['main']),
+      popupPane: null,
+      panPos: 'main',
+      sidebarPaneExpanded: false,
+      infoPaneExpanded: false,
+      frozenThreadList: null,
+      frozenNotifications: null,
+      selectedThread: null,
+      lastSelectedThread: null,
+      threadPopupAnchorEl: null,
+      managerMode: false,
+      managerToolboxAnchorEl: null,
+      draggingMessageSelection: false,
+      draggingMessageSelectionToggle: null,
+    }
+
+    this.threadData = new MessageData({selected: false})
+
+    this._thawInfoDebounced = _.debounce(this._thawInfo, 1500)
+  },
+
+  getInitialState() {
+    return this.state
+  },
+
+  storageChange(data) {
+    if (!data) {
+      return
+    }
+    this.state.infoPaneExpanded = _.get(data, ['room', this.chatState.roomName, 'infoPaneExpanded'], false)
+    this.state.sidebarPaneExpanded = _.get(data, ['room', this.chatState.roomName, 'sidebarPaneExpanded'], false)
+    this.trigger(this.state)
+  },
+
+  chatChange(state) {
+    this.chatState = state
+  },
+
+  notificationChange(state) {
+    this.notificationState = state
+  },
+
+  setUISize(width, height) {
+    const thin = width < 650
+    if (this.state.thin !== thin) {
+      this.deselectThread()
+    }
+    this.state.thin = thin
+    this.state.scrollEdgeSpace = height < 650 ? 50 : 156
+    this.state.showTimestamps = width > 525
+    this.trigger(this.state)
+  },
+
+  collapseInfoPane() {
+    if (this.state.thin) {
+      storeActions.panViewTo('main')
+    } else {
+      storage.setRoom(this.chatState.roomName, 'infoPaneExpanded', false)
+    }
+  },
+
+  expandInfoPane() {
+    if (this.state.thin) {
+      storeActions.panViewTo('info')
+    } else {
+      storage.setRoom(this.chatState.roomName, 'infoPaneExpanded', true)
+    }
+  },
+
+  toggleUserList() {
+    if (this.state.thin) {
+      storeActions.panViewTo(this.state.panPos === 'sidebar' ? 'main' : 'sidebar')
+    } else {
+      storage.setRoom(this.chatState.roomName, 'sidebarPaneExpanded', !this.state.sidebarPaneExpanded)
+    }
+  },
+
+  freezeInfo() {
+    this._thawInfoDebounced.cancel()
+    if (!this.state.frozenThreadList || !this.state.frozenNotifications) {
+      this.state.frozenThreadList = this.chatState.messages.threads.clone()
+      this.state.frozenNotifications = this.notificationState.notifications
+      this.trigger(this.state)
+    }
+  },
+
+  thawInfo() {
+    this._thawInfoDebounced()
+  },
+
+  _thawInfo() {
+    if (this.state.threadPopupAnchorEl) {
+      return
+    }
+    this.state.frozenThreadList = null
+    this.state.frozenNotifications = null
+    this.trigger(this.state)
+  },
+
+  _touchThreadPane(threadId) {
+    const paneId = 'thread-' + threadId
+    if (!this.state.panes.has(paneId)) {
+      this.state.panes = this.state.panes.set(paneId, createPaneStore(paneId, {rootId: threadId}))
+    }
+    const pane = this.state.panes.get(paneId)
+    pane.focusMessage(threadId)
+    return pane
+  },
+
+  selectThread(id, el) {
+    React.addons.batchedUpdates(() => {
+      const pane = this._touchThreadPane(id)
+      if (this.state.selectedThread && this.state.selectedThread !== id) {
+        this.threadData.set(this.state.selectedThread, {selected: false})
+      }
+      this.threadData.set(id, {selected: true})
+      this.state.selectedThread = id
+      if (this.state.thin) {
+        storeActions.panViewTo('main')
+        this.focusPane(pane.id)
+      } else {
+        this.freezeInfo()
+        this.state.popupPane = pane.id
+        this.state.threadPopupAnchorEl = el
+        this.focusPane(pane.id)
+      }
+      this.trigger(this.state)
+    })
+  },
+
+  deselectThread() {
+    if (!this.state.selectedThread) {
+      return
+    }
+    React.addons.batchedUpdates(() => {
+      this.threadData.set(this.state.selectedThread, {selected: false})
+      this.state.lastSelectedThread = this.state.selectedThread
+      this.state.selectedThread = null
+      if (!this.state.thin) {
+        if (!this.state.popupPane) {
+          return
+        }
+        this.thawInfo()
+        this.state.threadPopupAnchorEl = null
+        this.state.popupPane = null
+      }
+      storeActions.panViewTo('main')
+      storeActions.focusPane('main')
+      this.trigger(this.state)
+    })
+  },
+
+  openThreadPane(threadId) {
+    React.addons.batchedUpdates(() => {
+      const pane = this._touchThreadPane(threadId)
+      this.state.visiblePanes = this.state.visiblePanes.add(pane.id)
+      this.deselectThread()
+      this.chatState.messages.mergeNodes(threadId, {_inPane: pane.id})
+      this.focusPane(pane.id)
+      this.trigger(this.state)
+    })
+  },
+
+  popupToThreadPane() {
+    this.openThreadPane(this.state.selectedThread)
+  },
+
+  closeThreadPane(threadId) {
+    React.addons.batchedUpdates(() => {
+      const paneId = 'thread-' + threadId
+      this.focusPane('main')
+      this.state.panes = this.state.panes.delete(paneId)
+      this.state.visiblePanes = this.state.visiblePanes.remove(paneId)
+      this.chatState.messages.mergeNodes(threadId, {_inPane: false})
+      this.trigger(this.state)
+    })
+  },
+
+  closeFocusedThreadPane() {
+    if (!/^thread-/.test(this.state.focusedPane)) {
+      return
+    }
+    this.closeThreadPane(this._focusedPane().store.state.rootId)
+  },
+
+  _focusedPane() {
+    return this.state.panes.get(this.state.focusedPane)
+  },
+
+  focusPane(id) {
+    if (this.state.focusedPane === id) {
+      return
+    }
+
+    React.addons.batchedUpdates(() => {
+      const lastFocused = this.state.focusedPane
+      this.state.focusedPane = id
+      this.trigger(this.state)
+
+      require('react/lib/ReactUpdates').asap(() => {
+        const lastFocusedPane = this.state.panes.get(lastFocused)
+        if (lastFocusedPane) {
+          // the pane has been removed while the batching occurred
+          lastFocusedPane.blurEntry()
+        }
+        if (!Heim.isTouch) {
+          this.state.panes.get(id).focusEntry()
+        }
+      })
+    })
+  },
+
+  _moveFocusedPane(delta) {
+    const focusablePanes = this.state.visiblePanes
+      .toKeyedSeq()
+      .map(paneId => this.state.panes.get(paneId))
+      .filterNot(pane => pane.readOnly)
+      .cacheResult()
+
+    let idx
+    if (this.state.focusedPane === this.state.popupPane) {
+      idx = -1
+    } else {
+      idx = focusablePanes.keySeq().indexOf(this.state.focusedPane)
+    }
+    idx = clamp(-1, idx + delta, focusablePanes.size - 1)
+
+    if (idx === -1) {
+      if (this.state.thin || !this.state.infoPaneExpanded) {
+        storeActions.panViewTo('info')
+      } else {
+        this.onViewPan('info')
+      }
+    } else {
+      storeActions.panViewTo('main')
+      const paneId = focusablePanes.entrySeq().get(idx)[0]
+      this.focusPane(paneId)
+    }
+  },
+
+  focusLeftPane() {
+    this._moveFocusedPane(-1)
+  },
+
+  focusRightPane() {
+    this._moveFocusedPane(1)
+  },
+
+  focusEntry(character) {
+    this._focusedPane().focusEntry(character)
+  },
+
+  onViewPan(target) {
+    this.state.panPos = target
+    this.trigger(this.state)
+    if (this.state.thin) {
+      if (target === 'info') {
+        this.freezeInfo()
+      } else {
+        this.thawInfo()
+      }
+    } else {
+      if (target === 'info') {
+        if (!this.state.selectedThread) {
+          storeActions.selectThreadInList(this.state.lastSelectedThread)
+          return
+        }
+      } else {
+        this.deselectThread()
+      }
+    }
+  },
+
+  keydownOnPage(ev) {
+    this._focusedPane().keydownOnPane(ev)
+  },
+
+  gotoMessageInPane(messageId) {
+    const parentPaneId = Immutable.Seq(this.chatState.messages.iterAncestorsOf(messageId))
+      .map(ancestor => 'thread-' + ancestor.get('id'))
+      .find(threadId => this.state.visiblePanes.has(threadId))
+
+    const parentPane = this.state.panes.get(parentPaneId || 'main')
+
+    React.addons.batchedUpdates(() => {
+      parentPane.revealMessage(messageId)
+      parentPane.focusMessage(messageId)
+      parentPane.scrollToEntry()
+    })
+  },
+
+  gotoPopupMessage() {
+    const mainPane = this.state.panes.get('main')
+    React.addons.batchedUpdates(() => {
+      mainPane.revealMessage(this.state.selectedThread)
+      mainPane.focusMessage(this.state.selectedThread)
+      this.deselectThread()
+    })
+  },
+
+  _createCustomPane(paneId, options) {
+    const newPane = createPaneStore(paneId, options)
+    this.state.panes = this.state.panes.set(paneId, newPane)
+    this.trigger(this.state)
+    return newPane
+  },
+
+  toggleManagerMode() {
+    this.state.managerMode = !this.state.managerMode
+    if (!this.state.managerMode) {
+      chat.deselectAll()
+      this.closeManagerToolbox()
+    }
+    this.trigger(this.state)
+  },
+
+  openManagerToolbox(anchorEl) {
+    this.state.managerToolboxAnchorEl = anchorEl
+    if (this.state.thin) {
+      storeActions.panViewTo('main')
+    }
+    this.trigger(this.state)
+  },
+
+  closeManagerToolbox() {
+    this.state.managerToolboxAnchorEl = null
+    this.trigger(this.state)
+  },
+
+  startMessageSelectionDrag(toggleState) {
+    this.state.draggingMessageSelection = true
+    this.state.draggingMessageSelectionToggle = toggleState
+    this.trigger(this.state)
+  },
+
+  finishMessageSelectionDrag() {
+    this.state.draggingMessageSelection = false
+    this.trigger(this.state)
+  },
+})
+
+module.exports.createCustomPane = function createCustomPane(paneId, options) {
+  return store._createCustomPane(paneId, options)
 }

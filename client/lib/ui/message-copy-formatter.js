@@ -1,44 +1,44 @@
-var _ = require('lodash')
-var React = require('react/addons')
+import _ from 'lodash'
+import React from 'react/addons'
 
-var findParent = require('../find-parent')
-var domWalkForward = require('../dom-walk-forward')
-var emoji = require('../emoji')
+import findParent from '../find-parent'
+import domWalkForward from '../dom-walk-forward'
+import emoji from '../emoji'
 
 
-module.exports = function handleCopy(ev) {
-  var selection = uiwindow.getSelection()
-  var range = selection.getRangeAt(0)
+export default function handleCopy(ev) {
+  const selection = uiwindow.getSelection()
+  const range = selection.getRangeAt(0)
 
   // first, if the selection start and end are within the same message
   // line, do nothing.
   function findParentMessageLine(el) {
-    return findParent(el, el => el.classList && (el.classList.contains('line') || el.classList.contains('message-node')))
+    return findParent(el, el2 => el2.classList && (el2.classList.contains('line') || el2.classList.contains('message-node')))
   }
-  var startMessageEl = findParentMessageLine(range.startContainer)
-  var endMessageEl = findParentMessageLine(range.endContainer)
+  const startMessageEl = findParentMessageLine(range.startContainer)
+  const endMessageEl = findParentMessageLine(range.endContainer)
   if (!startMessageEl || !endMessageEl) {
     return
   }
 
-  var contentEl = startMessageEl.querySelector('.content')
+  const contentEl = startMessageEl.querySelector('.content')
   if (startMessageEl && contentEl.contains(range.startContainer) && contentEl.contains(range.endContainer)) {
     return
   }
 
-  var entryEl = startMessageEl.querySelector('.entry')
+  const entryEl = startMessageEl.querySelector('.entry')
   if (entryEl && entryEl.contains(range.startContainer)) {
     return
   }
 
-  var messageEls = []
-  var minDepth
-  domWalkForward(startMessageEl, endMessageEl, function(el) {
+  const messageEls = []
+  let minDepth
+  domWalkForward(startMessageEl, endMessageEl, el => {
     if (!el.classList || !el.classList.contains('line')) {
       return
     }
     messageEls.push(el)
-    var depth = el.parentNode.dataset.depth
+    const depth = el.parentNode.dataset.depth
     if (!minDepth || depth < minDepth) {
       minDepth = depth
     }
@@ -48,19 +48,19 @@ module.exports = function handleCopy(ev) {
     return content.replace(emoji.namesRe, (match, name) => emoji.nameToUnicode(name) || match)
   }
 
-  var textParts = []
-  var htmlLines = []
+  const textParts = []
+  const htmlLines = []
   _.each(messageEls, lineEl => {
-    var el = lineEl.parentNode
-    var messageId = el.dataset.messageId
-    var message = Heim.chat.store.state.messages.get(messageId)
+    const el = lineEl.parentNode
+    const messageId = el.dataset.messageId
+    const message = Heim.chat.store.state.messages.get(messageId)
 
-    var preContent = []
-    preContent.push(_.repeat(' ', 2 * (el.dataset.depth - minDepth)))
-    preContent.push('[')
-    preContent.push(message.getIn(['sender', 'name']))
-    preContent.push('] ')
-    preContent = preContent.join('')
+    const preContentItems = []
+    preContentItems.push(_.repeat(' ', 2 * (el.dataset.depth - minDepth)))
+    preContentItems.push('[')
+    preContentItems.push(message.getIn(['sender', 'name']))
+    preContentItems.push('] ')
+    const preContent = preContentItems.join('')
     textParts.push(preContent)
     textParts.push(message.get('content').trim().replace(/\n/g, '\n' + _.repeat(' ', preContent.length)))
     textParts.push('\n')

@@ -1,15 +1,20 @@
-var React = require('react')
+import React from 'react'
+import Immutable from 'immutable'
 
-var MessageText = require('./message-text')
+import MessageText from './message-text'
 
 
-module.exports = React.createClass({
+export default React.createClass({
   displayName: 'UserList',
+
+  propTypes: {
+    users: React.PropTypes.instanceOf(Immutable.Map),
+  },
 
   mixins: [require('react-immutable-render-mixin')],
 
-  render: function() {
-    var list
+  render() {
+    let list
 
     list = this.props.users
       .toSeq()
@@ -20,7 +25,7 @@ module.exports = React.createClass({
       .groupBy(user => /^bot:/.test(user.get('id')) ? 'bot' : 'human')
 
     function formatUser(user) {
-      return <MessageText key={user.get('session_id')} className="nick" onlyEmoji={true} style={{background: 'hsl(' + user.get('hue') + ', 65%, 85%)'}} content={user.get('name')} title={user.get('name')} />
+      return <MessageText key={user.get('session_id')} className="nick" onlyEmoji style={{background: 'hsl(' + user.get('hue') + ', 65%, 85%)'}} content={user.get('name')} title={user.get('name')} />
     }
 
     return (

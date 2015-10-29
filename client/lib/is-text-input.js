@@ -1,5 +1,5 @@
-module.exports = function(el) {
-  var isTextArea = el.nodeName == 'TEXTAREA'
-  var isTextInput = el.nodeName == 'INPUT' && (el.type == 'text' || el.type == 'password')
-  return isTextArea || isTextInput
+export default function isTextInput(el) {
+  const isTextAreaEl = el.nodeName === 'TEXTAREA'
+  const isTextInputEl = el.nodeName === 'INPUT' && (el.type === 'text' || el.type === 'password')
+  return isTextAreaEl || isTextInputEl
 }

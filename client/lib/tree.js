@@ -1,37 +1,40 @@
-var _ = require('lodash')
-var Immutable = require('immutable')
-var EventEmitter = require('eventemitter3')
+import _ from 'lodash'
+import Immutable from 'immutable'
+import EventEmitter from 'eventemitter3'
 
 
-function Tree(sortProp, updateFunc) {
-  this.sortProp = sortProp
-  this.updateFunc = updateFunc || _.noop
-  this.changes = new EventEmitter()
-  this.reset()
-}
+export default class Tree {
+  constructor(sortProp, updateFunc) {
+    this.sortProp = sortProp
+    if (!this.updateFunc) {
+      // subclasses can define updateFunc in their prototype
+      this.updateFunc = updateFunc || _.noop
+    }
+    this.changes = new EventEmitter()
+    this.reset()
+  }
 
-_.extend(Tree.prototype, {
-  _node: function(entry) {
-    return Immutable.fromJS(entry || {})
+  _node(entry = {}) {
+    return Immutable.fromJS(entry)
       .merge({
         'children': Immutable.OrderedSet(),
       })
-  },
+  }
 
-  _add: function(entry, _changed, _needsSort) {
+  _add(entry, _changed, _needsSort) {
     if (entry.parent === undefined) {
       entry.parent = '__root'
     }
 
-    var newId = entry.id
-    var newNode = this._node(entry)
-    var parentId = entry.parent
+    const newId = entry.id
+    let newNode = this._node(entry)
+    const parentId = entry.parent
 
     if (parentId) {
-      var parentNode = this.index[parentId]
+      const parentNode = this.index[parentId]
       if (parentNode) {
-        var siblings = parentNode.get('children')
-        var canAppend = siblings.size === 0 || entry[this.sortProp] >= this.index[siblings.last()].get(this.sortProp)
+        const siblings = parentNode.get('children')
+        const canAppend = siblings.size === 0 || entry[this.sortProp] >= this.index[siblings.last()].get(this.sortProp)
         if (canAppend) {
           // avoiding a re-sort can save a lot of time with large child lists
           this.index[parentId] = parentNode.set('children', siblings.delete(newId).add(newId))
@@ -45,7 +48,7 @@ _.extend(Tree.prototype, {
         }
       } else {
         // create unreachable orphan parent
-        parentNode = this.index[parentId] = this._node().set('id', parentId).mergeIn(['children'], [newId])
+        this.index[parentId] = this._node().set('id', parentId).mergeIn(['children'], [newId])
         _changed[parentId] = _changed[parentId] || true
         this.size++
         _needsSort[parentId] = true
@@ -53,10 +56,10 @@ _.extend(Tree.prototype, {
     }
 
     if (_.has(this.index, newId)) {
-      var oldNode = this.index[newId]
+      const oldNode = this.index[newId]
 
-      var oldParentId = oldNode.get('parent')
-      var oldParent = oldParentId && oldParentId != parentId && this.index[oldParentId]
+      const oldParentId = oldNode.get('parent')
+      const oldParent = oldParentId && oldParentId !== parentId && this.index[oldParentId]
       if (oldParent) {
         this.index[oldParentId] = oldParent.set('children', oldParent.get('children').remove(newId))
         _changed[oldParentId] = _changed[oldParentId] || oldParent
@@ -80,13 +83,13 @@ _.extend(Tree.prototype, {
         this._lastValue = entry[this.sortProp]
       }
     }
-  },
+  }
 
-  _updateChanged: function(changed) {
+  _updateChanged(changed) {
     if (!_.isEmpty(changed)) {
-      var updateNode = node => {
-        var nodeId = node.get('id')
-        var existing = this.index[nodeId]
+      const updateNode = node => {
+        const nodeId = node.get('id')
+        const existing = this.index[nodeId]
         if (!Immutable.is(node, existing)) {
           changed[nodeId] = changed[nodeId] || existing
           this.index[nodeId] = node
@@ -95,29 +98,26 @@ _.extend(Tree.prototype, {
       }
       this.updateFunc(changed, updateNode)
 
-      var changedIds = _.keys(changed)
+      const changedIds = _.keys(changed)
       _.each(changedIds, id => {
         this.changes.emit(id, this.index[id])
       })
       this.changes.emit('__all', changedIds)
     }
-  },
+  }
 
-  add: function(entries, _sorted) {
-    if (!_.isArray(entries)) {
-      entries = [entries]
-    }
+  add(entries, _sorted) {
+    const entryArray = _.isArray(entries) ? entries : [entries]
 
-    var _changed = {}
-    var _needsSort = {}
-
-    _.each(entries, entry => {
+    const _changed = {}
+    const _needsSort = {}
+    _.each(entryArray, entry => {
       this._add(entry, _changed, _needsSort)
     })
 
     if (!_sorted) {
       _.each(_needsSort, (x, id) => {
-        var resorted = this.index[id].get('children').sortBy(childId => {
+        const resorted = this.index[id].get('children').sortBy(childId => {
           return this.index[childId].get(this.sortProp)
         })
         this.index[id] = this.index[id].set('children', resorted)
@@ -130,25 +130,23 @@ _.extend(Tree.prototype, {
     }
 
     this._updateChanged(_changed)
-  },
+  }
 
-  mergeNodes: function(ids, data) {
-    if (!_.isArray(ids)) {
-      ids = [ids]
-    }
+  mergeNodes(ids, data) {
+    const idArray = _.isArray(ids) ? ids : [ids]
 
-    var changed = {}
-    _.each(ids, id => {
-      var old = this.index[id]
+    const changed = {}
+    _.each(idArray, id => {
+      const old = this.index[id]
       this.index[id] = this.index[id].mergeDeep(data)
-      if (old != this.index[id]) {
+      if (old !== this.index[id]) {
         changed[id] = old
       }
     })
     this._updateChanged(changed)
-  },
+  }
 
-  reset: function(entries) {
+  reset(entries) {
     this.index = {}
     this.index.__root = this._node({id: '__root'})
     this._lastId = null
@@ -162,73 +160,62 @@ _.extend(Tree.prototype, {
       this.changes.emit('__all', ['__root'])
     }
     return this
-  },
+  }
 
-  get: function(id) {
+  get(id) {
     return this.index[id]
-  },
+  }
 
-  lazyMapDFS: function(visit, thisArg, nodeId, depth) {
-    if (!nodeId) {
-      nodeId = '__root'
-    }
-
-    if (depth === undefined) {
-      depth = 0
-    }
-
-    var node = this.index[nodeId]
-    var children = node.get('children').toSeq().map((childId) =>
+  lazyMapDFS(visit, thisArg, nodeId = '__root', depth = 0) {
+    const node = this.index[nodeId]
+    const children = node.get('children').toSeq().map((childId) =>
       this.lazyMapDFS(visit, thisArg, childId, depth + 1)
     )
 
     return visit.call(thisArg, node, children, depth)
-  },
+  }
 
-  mapDFS: function(visit, thisArg, nodeId, depth) {
-    var visitStrict = (node, children, depth) => visit.call(thisArg, node, children.cacheResult(), depth)
+  mapDFS(visit, thisArg, nodeId, depth) {
+    const visitStrict = (node, children, vdepth) => visit.call(thisArg, node, children.cacheResult(), vdepth)
     return this.lazyMapDFS(visitStrict, thisArg, nodeId, depth)
-  },
+  }
 
-  iterChildrenOf: function(nodeId) {
-    var children = this.index[nodeId].get('children').toJS()
+  iterChildrenOf(nodeId) {
+    const children = this.index[nodeId].get('children').toJS()
     return {
       next: () => {
-        var childId = children.shift()
+        const childId = children.shift()
         if (!childId) {
           return {done: true}
-        } else {
-          return {done: false, value: this.index[childId]}
         }
+        return {done: false, value: this.index[childId]}
       },
     }
-  },
+  }
 
-  iterAncestorsOf: function(nodeId) {
+  iterAncestorsOf(nodeId) {
+    let curNodeId = nodeId
     return {
       next: () => {
-        nodeId = this.index[nodeId].get('parent')
-        if (!nodeId) {
+        curNodeId = this.index[curNodeId].get('parent')
+        if (!curNodeId) {
           return {done: true}
-        } else {
-          return {done: false, value: this.index[nodeId]}
         }
+        return {done: false, value: this.index[curNodeId]}
       },
     }
-  },
+  }
 
-  last: function() {
+  last() {
     return this.index[this._lastId]
-  },
+  }
 
-  clone: function() {
-    var newTree = new Tree(this.sortProp, this.updateFunc)
+  clone() {
+    const newTree = new Tree(this.sortProp, this.updateFunc)
     newTree.index = _.clone(this.index)
     newTree._lastId = this._lastId
     newTree._lastValue = this._lastValue
     newTree.size = this.size
     return newTree
-  },
-})
-
-module.exports = Tree
+  }
+}

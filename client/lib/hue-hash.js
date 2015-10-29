@@ -1,30 +1,30 @@
-var Immutable = require('immutable')
-var emoji = require('./emoji')
+import Immutable from 'immutable'
+import emoji from './emoji'
 
 
-module.exports.stripSpaces = function(text) {
+export function stripSpaces(text) {
   return text.replace(/[^\S]/g, '')
 }
 
-module.exports.normalize = function(text) {
-  text = text.replace(emoji.namesRe, '')
-  return text.replace(/[^\w_-]/g, '').toLowerCase()
+export function normalize(text) {
+  return text
+    .replace(emoji.namesRe, '')
+    .replace(/[^\w_-]/g, '')
+    .toLowerCase()
 }
 
-function hueHash(text, offset) {
-  offset = offset || 0
-
+function hueHash(text, offset = 0) {
   // DJBX33A-ish
-  var val = 0
-  for (var i = 0; i < text.length; i++) {
+  let val = 0
+  for (let i = 0; i < text.length; i++) {
     // scramble char codes across [0-255]
     // prime multiple chosen so @greenie can green, and @redtaboo red.
-    var charVal = (text.charCodeAt(i) * 439) % 256
+    const charVal = (text.charCodeAt(i) * 439) % 256
 
     // multiply val by 33 while constraining within signed 32 bit int range.
     // this keeps the value within Number.MAX_SAFE_INTEGER without throwing out
     // information.
-    var origVal = val
+    const origVal = val
     val = val << 5
     val += origVal
 
@@ -44,22 +44,24 @@ function hueHash(text, offset) {
   return (val + offset) % 255
 }
 
-var cache = {data: Immutable.Map()}
+const cache = {data: Immutable.Map()}
 
-var greenieOffset = 148 - hueHash('greenie')
+const greenieOffset = 148 - hueHash('greenie')
 
-module.exports.hue = function(text) {
-  var cached = cache.data.get(text)
+export function hue(text) {
+  const cached = cache.data.get(text)
   if (cached) {
     return cached
   }
 
-  var normalized = module.exports.normalize(text)
+  let normalized = module.exports.normalize(text)
   if (!normalized.length) {
     normalized = text
   }
 
-  var val = hueHash(normalized, greenieOffset)
+  const val = hueHash(normalized, greenieOffset)
   cache.data = cache.data.set(text, val)
   return val
 }
+
+export default { stripSpaces, normalize, hue }

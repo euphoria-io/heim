@@ -1,12 +1,12 @@
 require('./support/setup')
-var assert = require('assert')
+import assert from 'assert'
+
+import Hooks from '../lib/hooks'
 
 
-describe('Hooks', function() {
-  var Hooks = require('../lib/hooks')
-
-  it('should create hooks named in the constructor arguments', function() {
-    var hooks = new Hooks('a', 'b', 'c')
+describe('Hooks', () => {
+  it('should create hooks named in the constructor arguments', () => {
+    const hooks = new Hooks('a', 'b', 'c')
     assert.deepEqual(hooks._hooks, {
       'a': [],
       'b': [],
@@ -14,9 +14,9 @@ describe('Hooks', function() {
     })
   })
 
-  describe('create', function() {
-    it('should add a hook to the index', function() {
-      var hooks = new Hooks()
+  describe('create', () => {
+    it('should add a hook to the index', () => {
+      const hooks = new Hooks()
       assert.deepEqual(hooks._hooks, {})
       hooks.create('z')
       assert.deepEqual(hooks._hooks, {
@@ -25,10 +25,10 @@ describe('Hooks', function() {
     })
   })
 
-  describe('register', function() {
-    it('should add a callback to a hook', function() {
+  describe('register', () => {
+    it('should add a callback to a hook', () => {
       function callback() {}
-      var hooks = new Hooks('x')
+      const hooks = new Hooks('x')
       hooks.register('x', callback)
       assert.deepEqual(hooks._hooks, {
         'x': [callback],
@@ -36,9 +36,9 @@ describe('Hooks', function() {
     })
   })
 
-  describe('run', function() {
-    it('should run all callbacks registered to a hook in order and return the results', function() {
-      var hooks = new Hooks('x')
+  describe('run', () => {
+    it('should run all callbacks registered to a hook in order and return the results', () => {
+      const hooks = new Hooks('x')
       hooks.register('x', () => 1)
       hooks.register('x', () => 2)
       hooks.register('x', () => 3)

@@ -1,26 +1,43 @@
-var React = require('react/addons')
-var classNames = require('classnames')
-var Reflux = require('reflux')
+import React from 'react/addons'
+import classNames from 'classnames'
+import Reflux from 'reflux'
 
-var toolbox = require('../stores/toolbox')
-var FastButton = require('./fast-button')
-var domWalkForward = require('../dom-walk-forward')
+import toolbox from '../stores/toolbox'
+import FastButton from './fast-button'
+import domWalkForward from '../dom-walk-forward'
 
 
-module.exports = React.createClass({
+export default React.createClass({
   displayName: 'ManagerToolbox',
 
   mixins: [
     Reflux.connect(toolbox.store, 'toolbox'),
   ],
 
-  selectCommand: function(ev) {
+  onCopy(ev) {
+    const selection = uiwindow.getSelection()
+    const range = selection.getRangeAt(0)
+
+    const ids = []
+    domWalkForward(range.startContainer, range.endContainer, childEl => {
+      const el = childEl.parentNode
+      if (!el.classList || !el.classList.contains('id')) {
+        return
+      }
+      ids.push(el.textContent)
+    })
+
+    ev.clipboardData.setData('text/plain', "'" + ids.join("', '") + "'")
+    ev.preventDefault()
+  },
+
+  selectCommand(ev) {
     toolbox.chooseCommand(ev.target.value)
   },
 
-  apply: function() {
-    var commandParams
-    if (this.state.toolbox.selectedCommand == 'ban') {
+  apply() {
+    let commandParams
+    if (this.state.toolbox.selectedCommand === 'ban') {
       commandParams = {
         seconds: {
           h: 60 * 60,
@@ -34,27 +51,10 @@ module.exports = React.createClass({
     toolbox.apply(commandParams)
   },
 
-  onCopy: function(ev) {
-    var selection = uiwindow.getSelection()
-    var range = selection.getRangeAt(0)
-
-    var ids = []
-    domWalkForward(range.startContainer, range.endContainer, function(childEl) {
-      var el = childEl.parentNode
-      if (!el.classList || !el.classList.contains('id')) {
-        return
-      }
-      ids.push(el.textContent)
-    })
-
-    ev.clipboardData.setData('text/plain', "'" + ids.join("', '") + "'")
-    ev.preventDefault()
-  },
-
-  render: function() {
-    var toolboxData = this.state.toolbox
-    var isEmpty = !toolboxData.items.size
-    var selectedCommand = this.state.toolbox.selectedCommand
+  render() {
+    const toolboxData = this.state.toolbox
+    const isEmpty = !toolboxData.items.size
+    const selectedCommand = this.state.toolbox.selectedCommand
     return (
       <div className="manager-toolbox">
         <div className={classNames('items', {'empty': isEmpty})} onCopy={this.onCopy}>
@@ -72,7 +72,7 @@ module.exports = React.createClass({
             <option value="ban">ban</option>
           </select>
           <div className="preview">{toolboxData.activeItemSummary}</div>
-          {!isEmpty && selectedCommand == 'ban' && <select ref="banDuration" defaultValue={60 * 60}>
+          {!isEmpty && selectedCommand === 'ban' && <select ref="banDuration" defaultValue={60 * 60}>
             <option value="h">for 1 hour</option>
             <option value="d">for 1 day</option>
             <option value="w">for 1 week</option>

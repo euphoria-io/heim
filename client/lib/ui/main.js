@@ -1,30 +1,30 @@
-var _ = require('lodash')
-var React = require('react/addons')
-var classNames = require('classnames')
-var ReactCSSTransitionGroup = React.addons.CSSTransitionGroup
-var Reflux = require('reflux')
+import _ from 'lodash'
+import React from 'react/addons'
+import classNames from 'classnames'
+const ReactCSSTransitionGroup = React.addons.CSSTransitionGroup
+import Reflux from 'reflux'
 
-var chat = require('../stores/chat')
-var ui = require('../stores/ui')
-var notification = require('../stores/notification')
-var activity = require('../stores/activity')
-var ChatPane = require('./chat-pane')
-var ChatTopBar = require('./chat-top-bar')
-var MessageText = require('./message-text')
-var NotificationSettings = require('./notification-settings')
-var NotificationList = require('./notification-list')
-var ThreadList = require('./thread-list')
-var UserList = require('./user-list')
-var Bubble = require('./bubble')
-var FastButton = require('./fast-button')
-var Panner = require('./panner')
+import chat from '../stores/chat'
+import ui from '../stores/ui'
+import notification from '../stores/notification'
+import activity from '../stores/activity'
+import HooksMixin from './hooks-mixin'
+import ChatPane from './chat-pane'
+import ChatTopBar from './chat-top-bar'
+import MessageText from './message-text'
+import NotificationSettings from './notification-settings'
+import NotificationList from './notification-list'
+import ThreadList from './thread-list'
+import UserList from './user-list'
+import Bubble from './bubble'
+import FastButton from './fast-button'
+import Panner from './panner'
 
-
-module.exports = React.createClass({
+export default React.createClass({
   displayName: 'Main',
 
   mixins: [
-    require('./hooks-mixin'),
+    HooksMixin,
     Reflux.ListenerMixin,
     Reflux.connect(chat.store, 'chat'),
     Reflux.connect(activity.store, 'activity'),
@@ -36,7 +36,7 @@ module.exports = React.createClass({
     Reflux.listenTo(ui.panViewTo, 'panViewTo'),
   ],
 
-  componentWillMount: function() {
+  componentWillMount() {
     this._onResizeThrottled = _.throttle(this.onResize, 1000 / 30)
     Heim.addEventListener(uiwindow, 'resize', this._onResizeThrottled)
     this._threadScrollQueued = false
@@ -45,35 +45,31 @@ module.exports = React.createClass({
     this.listenTo(ui.globalMouseUp, 'globalMouseUp')
   },
 
-  componentDidMount: function() {
+  componentDidMount() {
     ui.focusEntry()
   },
 
-  onResize: function() {
+  onResize() {
     ui.setUISize(uiwindow.innerWidth, uiwindow.innerHeight)
   },
 
-  onScrollbarSize: function(width) {
+  onScrollbarSize(width) {
     this.setState({scrollbarWidth: width})
   },
 
-  onMouseDown: function() {
+  onMouseDown() {
     // FIXME: preventing/canceling a mousedown in React doesn't seem to stop
     // the subsequent click event, so we have to resort to this hack.
     this._isFocusClick = Date.now() - this.state.activity.focusChangedAt < 100
   },
 
-  _ignoreClick: function(ev) {
-    return !uiwindow.getSelection().isCollapsed || ev.target.nodeName == 'BUTTON'
-  },
-
-  onClick: function(ev) {
+  onClick(ev) {
     if (this._ignoreClick(ev)) {
       return
     }
 
     // prevent clicks to focus window and link clicks from triggering elements
-    if (this._isFocusClick || ev.target.nodeName == 'A') {
+    if (this._isFocusClick || ev.target.nodeName === 'A') {
       ev.stopPropagation()
     }
 
@@ -82,23 +78,23 @@ module.exports = React.createClass({
     }
   },
 
-  onPaneClick: function(paneId, ev) {
+  onPaneClick(paneId, ev) {
     if (this._ignoreClick(ev)) {
       return
     }
 
-    if ((this.state.ui.thin || paneId == 'main') && this.state.ui.panPos != paneId) {
+    if ((this.state.ui.thin || paneId === 'main') && this.state.ui.panPos !== paneId) {
       ui.focusPane(paneId)
       ui.panViewTo(paneId)
       ev.stopPropagation()
     }
   },
 
-  onTouchMove: function(ev) {
+  onTouchMove(ev) {
     // prevent inertial scrolling of non-scrollable elements in Mobile Safari
     if (Heim.isiOS) {
-      var el = ev.target
-      while (el && el != uidocument.body) {
+      let el = ev.target
+      while (el && el !== uidocument.body) {
         if (el.classList.contains('top-bar')) {
           ev.preventDefault()
           return
@@ -113,91 +109,29 @@ module.exports = React.createClass({
     }
   },
 
-  selectThread: function(id, itemEl) {
-    // poor man's scrollIntoViewIfNeeded
-    var parentEl = this.refs.threadList.getDOMNode()
-    var itemBox = itemEl.getBoundingClientRect()
-    var parentBox = parentEl.getBoundingClientRect()
-    if (itemBox.top < parentBox.top) {
-      this._threadScrollQueued = true
-      itemEl.scrollIntoView(true)
-    } else if (itemBox.bottom > parentBox.bottom) {
-      this._threadScrollQueued = true
-      itemEl.scrollIntoView(false)
-    }
-
-    ui.selectThread(id, itemEl)
-  },
-
-  dismissThreadPopup: function(ev) {
-    if (!this.refs.threadList.getDOMNode().contains(ev.target)) {
-      ui.deselectThread()
-    }
-  },
-
-  onThreadSelect: function(ev, id) {
-    if (ev.button == 1) {
-      ui.openThreadPane(id)
-    } else if (this.state.ui.selectedThread == id && this.state.ui.threadPopupAnchorEl) {
-      ui.deselectThread()
-    } else {
-      this.selectThread(id, ev.currentTarget)
-    }
-  },
-
-  onThreadsScroll: function() {
-    if (!this._threadScrollQueued && !this.state.ui.thin) {
-      ui.deselectThread()
-    }
-    this._threadScrollQueued = false
-  },
-
-  selectThreadInList: function(id) {
-    var threadListEl = this.refs.threadList.getDOMNode()
-    var el = threadListEl.querySelector('[data-thread-id="' + id + '"]')
-    if (!el) {
-      el = threadListEl.querySelector('[data-thread-id]')
-      id = el.dataset.threadId
-    }
-    this.selectThread(id, el)
-  },
-
-  panViewTo: function(x) {
-    this.refs.panner.flingTo(x)
-  },
-
-  onNotificationSelect: function(ev, id) {
-    notification.dismissNotification(id)
-    ui.gotoMessageInPane(id)
-  },
-
-  openManagerToolbox: function() {
-    ui.openManagerToolbox(this.refs.toolboxButton.getDOMNode())
-  },
-
-  onKeyDown: function(ev) {
+  onKeyDown(ev) {
     if (Heim.tabPressed) {
-      if (ev.key == 'ArrowLeft') {
+      if (ev.key === 'ArrowLeft') {
         ui.focusLeftPane()
         return
-      } else if (ev.key == 'ArrowRight') {
+      } else if (ev.key === 'ArrowRight') {
         ui.focusRightPane()
         return
-      } else if (ev.key == 'ArrowUp' || ev.key == 'ArrowDown') {
+      } else if (ev.key === 'ArrowUp' || ev.key === 'ArrowDown') {
         if (!this.state.ui.threadPopupAnchorEl) {
           return
         }
 
         ev.preventDefault()
 
-        var threadListEl = this.refs.threadList.getDOMNode()
-        var threadEls = threadListEl.querySelectorAll('[data-thread-id]')
-        var idx = _.indexOf(threadEls, threadListEl.querySelector('[data-thread-id="' + this.state.ui.selectedThread + '"]'))
-        if (idx == -1) {
+        const threadListEl = this.refs.threadList.getDOMNode()
+        const threadEls = threadListEl.querySelectorAll('[data-thread-id]')
+        let idx = _.indexOf(threadEls, threadListEl.querySelector('[data-thread-id="' + this.state.ui.selectedThread + '"]'))
+        if (idx === -1) {
           throw new Error('could not locate current thread in list')
         }
 
-        if (ev.key == 'ArrowUp') {
+        if (ev.key === 'ArrowUp') {
           if (idx === 0) {
             return
           }
@@ -210,10 +144,10 @@ module.exports = React.createClass({
         }
         this.selectThread(threadEls[idx].dataset.threadId, threadEls[idx])
         return
-      } else if (ev.key == 'Enter' && this.state.ui.focusedPane == this.state.ui.popupPane) {
+      } else if (ev.key === 'Enter' && this.state.ui.focusedPane === this.state.ui.popupPane) {
         ui.popupToThreadPane()
         return
-      } else if (ev.key == 'Backspace') {
+      } else if (ev.key === 'Backspace') {
         if (/^thread-/.test(this.state.ui.focusedPane)) {
           ui.closeFocusedThreadPane()
           return
@@ -226,33 +160,100 @@ module.exports = React.createClass({
     ui.keydownOnPage(ev)
   },
 
-  globalMouseUp: function() {
+  onThreadSelect(ev, id) {
+    if (ev.button === 1) {
+      ui.openThreadPane(id)
+    } else if (this.state.ui.selectedThread === id && this.state.ui.threadPopupAnchorEl) {
+      ui.deselectThread()
+    } else {
+      this.selectThread(id, ev.currentTarget)
+    }
+  },
+
+  onThreadsScroll() {
+    if (!this._threadScrollQueued && !this.state.ui.thin) {
+      ui.deselectThread()
+    }
+    this._threadScrollQueued = false
+  },
+
+  onNotificationSelect(ev, id) {
+    notification.dismissNotification(id)
+    ui.gotoMessageInPane(id)
+  },
+
+  _ignoreClick(ev) {
+    return !uiwindow.getSelection().isCollapsed || ev.target.nodeName === 'BUTTON'
+  },
+
+  selectThread(id, itemEl) {
+    // poor man's scrollIntoViewIfNeeded
+    const parentEl = this.refs.threadList.getDOMNode()
+    const itemBox = itemEl.getBoundingClientRect()
+    const parentBox = parentEl.getBoundingClientRect()
+    if (itemBox.top < parentBox.top) {
+      this._threadScrollQueued = true
+      itemEl.scrollIntoView(true)
+    } else if (itemBox.bottom > parentBox.bottom) {
+      this._threadScrollQueued = true
+      itemEl.scrollIntoView(false)
+    }
+
+    ui.selectThread(id, itemEl)
+  },
+
+  dismissThreadPopup(ev) {
+    if (!this.refs.threadList.getDOMNode().contains(ev.target)) {
+      ui.deselectThread()
+    }
+  },
+
+  selectThreadInList(id) {
+    const threadListEl = this.refs.threadList.getDOMNode()
+    let el = threadListEl.querySelector('[data-thread-id="' + id + '"]')
+    let targetId = id
+    if (!el) {
+      el = threadListEl.querySelector('[data-thread-id]')
+      targetId = el.dataset.threadId
+    }
+    this.selectThread(targetId, el)
+  },
+
+  panViewTo(x) {
+    this.refs.panner.flingTo(x)
+  },
+
+  openManagerToolbox() {
+    ui.openManagerToolbox(this.refs.toolboxButton.getDOMNode())
+  },
+
+  globalMouseUp() {
     if (this.state.ui.draggingMessageSelection) {
       ui.finishMessageSelectionDrag()
     }
   },
 
-  render: function() {
-    var thin = this.state.ui.thin
-    var selectedThread = this.state.ui.selectedThread
+  render() {
+    const thin = this.state.ui.thin
+    const selectedThread = this.state.ui.selectedThread
 
-    var mainPaneThreadId
+    let mainPaneThreadId
     if (thin && selectedThread) {
       mainPaneThreadId = 'thread-' + selectedThread
     }
 
-    var threadPanes = this.state.ui.visiblePanes
+    const threadPanes = this.state.ui.visiblePanes
       .filter((v, k) => /^thread-/.test(k))
       .toKeyedSeq()
       .map(paneId => this.state.ui.panes.get(paneId))
-    var extraPanes = this.templateHook('thread-panes')
-    var threadPanesFlex = threadPanes.size + extraPanes.length
+    const extraPanes = this.templateHook('thread-panes')
+    const threadPanesFlex = threadPanes.size + extraPanes.length
 
-    var infoPaneHidden = thin || !this.state.ui.infoPaneExpanded
-    var infoPaneOpen = infoPaneHidden ? this.state.ui.panPos == 'info' : this.state.ui.infoPaneExpanded
-    var sidebarPaneHidden = thin
+    const infoPaneHidden = thin || !this.state.ui.infoPaneExpanded
+    const infoPaneOpen = infoPaneHidden ? this.state.ui.panPos === 'info' : this.state.ui.infoPaneExpanded
+    const sidebarPaneHidden = thin
 
-    var snapPoints = {main: 0}
+    const snapPoints = {main: 0}
     if (infoPaneHidden) {
       snapPoints.info = 240
     }
@@ -260,12 +261,12 @@ module.exports = React.createClass({
       snapPoints.sidebar = -150
     }
 
-    var selectedMessageCount = this.state.chat.selectedMessages.size
+    const selectedMessageCount = this.state.chat.selectedMessages.size
     // lazy load manager toolbox ui (and store)
-    var ManagerToolbox = this.state.ui.managerMode && require('./manager-toolbox')
+    const ManagerToolbox = this.state.ui.managerMode && require('./manager-toolbox')
 
     return (
-      <Panner ref="panner" id="ui" snapPoints={snapPoints} onMove={ui.onViewPan} className={classNames({'disconnected': this.state.chat.connected === false, 'info-pane-hidden': infoPaneHidden, 'sidebar-pane-hidden': sidebarPaneHidden, 'info-pane-focused': this.state.ui.focusedPane == this.state.ui.popupPane, 'manager-mode': this.state.ui.managerMode})} onMouseDownCapture={this.onMouseDown} onClickCapture={this.onClick} onTouchMove={this.onTouchMove} onKeyDown={this.onKeyDown}>
+      <Panner ref="panner" id="ui" snapPoints={snapPoints} onMove={ui.onViewPan} className={classNames({'disconnected': this.state.chat.connected === false, 'info-pane-hidden': infoPaneHidden, 'sidebar-pane-hidden': sidebarPaneHidden, 'info-pane-focused': this.state.ui.focusedPane === this.state.ui.popupPane, 'manager-mode': this.state.ui.managerMode})} onMouseDownCapture={this.onMouseDown} onClickCapture={this.onClick} onTouchMove={this.onTouchMove} onKeyDown={this.onKeyDown}>
         {this.state.storage && this.state.storage.useOpenDyslexic && <link rel="stylesheet" type="text/css" id="css" href="/static/od.css" />}
         <div className="info-pane" onMouseEnter={ui.freezeInfo} onMouseLeave={ui.thawInfo}>
           {this.state.ui.managerMode && <FastButton ref="toolboxButton" className={classNames('toolbox-button', {'empty': !this.state.chat.selectedMessages.size, 'selected': !!this.state.ui.managerToolboxAnchorEl})} onClick={this.state.ui.managerToolboxAnchorEl ? ui.closeManagerToolbox : this.openManagerToolbox}>toolbox {selectedMessageCount > -1 && <span className="count">{selectedMessageCount} selected</span>}</FastButton>}
@@ -277,7 +278,7 @@ module.exports = React.createClass({
           <NotificationList tree={this.state.chat.messages} notifications={this.state.ui.frozenNotifications || this.state.notification.notifications} onNotificationSelect={this.onNotificationSelect} animate={!this.state.ui.thin} />
         </div>
         <div className="chat-pane-container main-pane" onClickCapture={_.partial(this.onPaneClick, 'main')}>
-          <ChatTopBar who={this.state.chat.who} roomName={this.state.chat.roomName} connected={this.state.chat.connected} joined={this.state.chat.joined} authType={this.state.chat.authType} isManager={this.state.chat.isManager} managerMode={this.state.ui.managerMode} updateReady={this.state.update.get('ready')} working={this.state.chat.loadingLogs} showInfoPaneButton={!thin || !Heim.isTouch} infoPaneOpen={infoPaneOpen} collapseInfoPane={ui.collapseInfoPane} expandInfoPane={ui.expandInfoPane} toggleUserList={ui.toggleUserList} toggleManagerMode={ui.toggleManagerMode} />
+          <ChatTopBar who={this.state.chat.who} roomName={this.state.chat.roomName} connected={this.state.chat.connected} joined={!!this.state.chat.joined} authType={this.state.chat.authType} isManager={this.state.chat.isManager} managerMode={this.state.ui.managerMode} updateReady={this.state.update.get('ready')} working={this.state.chat.loadingLogs} showInfoPaneButton={!thin || !Heim.isTouch} infoPaneOpen={infoPaneOpen} collapseInfoPane={ui.collapseInfoPane} expandInfoPane={ui.expandInfoPane} toggleUserList={ui.toggleUserList} toggleManagerMode={ui.toggleManagerMode} />
           {this.templateHook('main-pane-top')}
           <div className="main-pane-stack">
             <ChatPane pane={this.state.ui.panes.get('main')} showTimeStamps={this.state.ui.showTimestamps} onScrollbarSize={this.onScrollbarSize} disabled={!!mainPaneThreadId} />
@@ -287,7 +288,7 @@ module.exports = React.createClass({
                   <MessageText className="title" content={this.state.chat.messages.get(selectedThread).get('content')} />
                   <FastButton className="close" onClick={ui.deselectThread} />
                 </div>
-                <ChatPane key={mainPaneThreadId} pane={this.state.ui.panes.get(mainPaneThreadId)} showTimeStamps={this.state.ui.showTimestamps} showParent={true} showAllReplies={true} onScrollbarSize={this.onScrollbarSize} />
+                <ChatPane key={mainPaneThreadId} pane={this.state.ui.panes.get(mainPaneThreadId)} showTimeStamps={this.state.ui.showTimestamps} showParent showAllReplies onScrollbarSize={this.onScrollbarSize} />
               </div>}
               {thin && this.state.ui.managerToolboxAnchorEl && <div key="manager-toolbox" className="main-pane-cover">
                 <ManagerToolbox />
@@ -302,14 +303,14 @@ module.exports = React.createClass({
         {!thin && <div className="thread-panes" style={{flex: threadPanesFlex, WebkitFlex: threadPanesFlex}}>
           {extraPanes}
           {threadPanes.entrySeq().map(([paneId, pane], idx) => {
-            var threadId = paneId.substr('thread-'.length)
+            const threadId = paneId.substr('thread-'.length)
             return (
               <div key={paneId} className="chat-pane-container" style={{zIndex: threadPanes.size - idx}} onClickCapture={_.partial(this.onPaneClick, paneId)}>
                 <div className="top-bar">
                   <MessageText className="title" content={this.state.chat.messages.get(threadId).get('content')} />
                   <FastButton className="close" onClick={_.partial(ui.closeThreadPane, threadId)} />
                 </div>
-                <ChatPane pane={pane} showParent={true} showAllReplies={true} />
+                <ChatPane pane={pane} showParent showAllReplies />
               </div>
             )
           }).toArray()}
@@ -319,7 +320,7 @@ module.exports = React.createClass({
             <FastButton className="to-pane" onClick={ui.popupToThreadPane}>new pane</FastButton>
             <FastButton className="scroll-to" onClick={ui.gotoPopupMessage}>go to</FastButton>
           </div>
-          {selectedThread && <ChatPane key={this.state.ui.popupPane} pane={this.state.ui.panes.get(this.state.ui.popupPane)} afterRender={() => this.refs.threadPopup.reposition()} showParent={true} showAllReplies={true} />}
+          {selectedThread && <ChatPane key={this.state.ui.popupPane} pane={this.state.ui.panes.get(this.state.ui.popupPane)} afterRender={() => this.refs.threadPopup.reposition()} showParent showAllReplies />}
         </Bubble>}
         {!thin && this.state.ui.managerMode && <Bubble ref="managerToolboxPopup" className="manager-toolbox-popup bubble-from-top" anchorEl={this.state.ui.managerToolboxAnchorEl} visible={!!this.state.ui.managerToolboxAnchorEl} offset={anchorBox => ({ left: anchorBox.width, top: -anchorBox.height })}>
           <ManagerToolbox />

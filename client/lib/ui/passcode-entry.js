@@ -1,33 +1,27 @@
-var _ = require('lodash')
-var React = require('react')
-var Reflux = require('reflux')
+import _ from 'lodash'
+import React from 'react'
+import Reflux from 'reflux'
 
-var actions = require('../actions')
-var chat = require('../stores/chat')
+import actions from '../actions'
+import chat from '../stores/chat'
+import { Pane } from '../stores/ui'
+import EntryMixin from './entry-mixin'
 
 
-module.exports = React.createClass({
+export default React.createClass({
   displayName: 'PasscodeEntry',
+
+  propTypes: {
+    pane: React.PropTypes.instanceOf(Pane).isRequired,
+  },
 
   mixins: [
     React.addons.LinkedStateMixin,
-    require('./entry-mixin'),
+    EntryMixin,
     Reflux.listenTo(chat.store, '_onChatUpdate'),
   ],
 
-  componentWillMount: function() {
-    // debounce state changes to reduce jank from fast responses
-    // TODO: break out into a debounced connect mixin, once chat store is fully immutable?
-    this._onChatUpdate = _.debounce(this.onChatUpdate, 250, {leading: true, trailing: true})
-  },
-
-  componentDidMount: function() {
-    this.listenTo(this.props.pane.focusEntry, 'focus')
-    this.listenTo(this.props.pane.blurEntry, 'blur')
-    this.listenTo(this.props.pane.keydownOnPane, 'proxyKeyDown')
-  },
-
-  getInitialState: function() {
+  getInitialState() {
     return {
       value: '',
       connected: null,
@@ -35,18 +29,30 @@ module.exports = React.createClass({
     }
   },
 
-  onChatUpdate: function(chatState) {
+  componentWillMount() {
+    // debounce state changes to reduce jank from fast responses
+    // TODO: break out into a debounced connect mixin, once chat store is fully immutable?
+    this._onChatUpdate = _.debounce(this.onChatUpdate, 250, {leading: true, trailing: true})
+  },
+
+  componentDidMount() {
+    this.listenTo(this.props.pane.focusEntry, 'focus')
+    this.listenTo(this.props.pane.blurEntry, 'blur')
+    this.listenTo(this.props.pane.keydownOnPane, 'proxyKeyDown')
+  },
+
+  onChatUpdate(chatState) {
     this.setState({
       connected: chatState.connected,
       authState: chatState.authState,
     })
   },
 
-  tryPasscode: function(ev) {
+  tryPasscode(ev) {
     this.refs.input.getDOMNode().focus()
     ev.preventDefault()
 
-    if (this.state.authState == 'trying') {
+    if (this.state.authState === 'trying') {
       return
     }
 
@@ -54,16 +60,24 @@ module.exports = React.createClass({
     this.setState({value: ''})
   },
 
-  render: function() {
+  render() {
+    let label
+    switch (this.authState) {
+    case 'trying':
+      label = 'trying...'
+      break
+    case 'failed':
+      label = 'no dice. try again:'
+      break
+    default:
+      label = 'passcode:'
+    }
+
     return (
       <div className="entry-box passcode">
         <p className="message">This room requires a passcode.</p>
         <form className="entry focus-target" onSubmit={this.tryPasscode}>
-          <label>{
-            this.state.authState == 'trying' ? 'trying...'
-              : this.state.authState == 'failed' ? 'no dice. try again:'
-                : 'passcode:'
-          }</label>
+          <label>{label}</label>
           <input key="passcode" ref="input" type="password" className="entry-text" autoFocus valueLink={this.linkState('value')} disabled={this.state.connected === false} />
         </form>
       </div>

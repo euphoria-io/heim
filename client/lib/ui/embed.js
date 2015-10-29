@@ -1,62 +1,66 @@
-var _ = require('lodash')
-var React = require('react')
-var classNames = require('classnames')
-var EventEmitter = require('eventemitter3')
-var queryString = require('querystring')
+import _ from 'lodash'
+import React from 'react'
+import classNames from 'classnames'
+import EventEmitter from 'eventemitter3'
+import queryString from 'querystring'
 
-var actions = require('../actions')
+import actions from '../actions'
 
-var nextEmbedId = 0
-var embedIndex = new EventEmitter()
+let nextEmbedId = 0
+const embedIndex = new EventEmitter()
 actions.embedMessage.listen(data => embedIndex.emit(data.id, data))
 
-module.exports = React.createClass({
+export default React.createClass({
   displayName: 'Embed',
+
+  propTypes: {
+    className: React.PropTypes.string,
+  },
 
   mixins: [
     require('react-immutable-render-mixin'),
   ],
 
-  getInitialState: function() {
+  getInitialState() {
     return {
       width: null,
     }
   },
 
-  componentWillMount: function() {
+  componentWillMount() {
     this.embedId = nextEmbedId
     embedIndex.on(this.embedId, this.onMessage)
     nextEmbedId++
   },
 
-  componentWillUnmount: function() {
+  componentWillUnmount() {
     embedIndex.off(this.embedId, this.onMessage)
   },
 
-  onMessage: function(msg) {
-    if (msg.type == 'size') {
+  onMessage(msg) {
+    if (msg.type === 'size') {
       this.setState({
-        width: msg.data.width
+        width: msg.data.width,
       })
     }
   },
 
-  _sendMessage: function(data) {
+  _sendMessage(data) {
     this.refs.iframe.getDOMNode().contentWindow.postMessage(data, process.env.EMBED_ORIGIN)
   },
 
-  freeze: function() {
+  freeze() {
     this._sendMessage({type: 'freeze'})
   },
 
-  unfreeze: function() {
+  unfreeze() {
     this._sendMessage({type: 'unfreeze'})
   },
 
-  render: function() {
-    var data = _.extend({}, this.props, {id: this.embedId})
+  render() {
+    const data = _.extend({}, this.props, {id: this.embedId})
     delete data.className
-    var url = process.env.EMBED_ORIGIN + '/?' + queryString.stringify(data)
+    const url = process.env.EMBED_ORIGIN + '/?' + queryString.stringify(data)
     return <iframe key={url} ref="iframe" className={classNames('embed', this.props.className)} style={{width: this.state.width}} src={url} />
   },
 })

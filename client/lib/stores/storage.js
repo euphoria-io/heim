@@ -1,8 +1,8 @@
-var _ = require('lodash')
-var Reflux = require('reflux')
+import _ from 'lodash'
+import Reflux from 'reflux'
 
 
-var storeActions = Reflux.createActions([
+const storeActions = Reflux.createActions([
   'load',
   'set',
   'setRoom',
@@ -15,28 +15,28 @@ storeActions.load.sync = true
 module.exports.store = Reflux.createStore({
   listenables: storeActions,
 
-  init: function() {
+  init() {
     this.state = null
     this._dirtyChanges = {}
     this._saveThrottled = _.throttle(this._save, 1000, {leading: false})
   },
 
-  getInitialState: function() {
+  getInitialState() {
     return this.state
   },
 
-  load: function() {
+  load() {
     if (this.state) {
       return
     }
 
-    var data
+    let data
 
     try {
       data = localStorage.getItem('data')
     } catch (e) {
       // localStorage is probably disabled / private browsing mode in Safari
-      console.warn('unable to read localStorage')
+      console.warn('unable to read localStorage')  // eslint-disable-line no-console
     }
 
     if (data) {
@@ -52,24 +52,24 @@ module.exports.store = Reflux.createStore({
     this.trigger(this.state)
   },
 
-  storageChange: function(ev) {
+  storageChange(ev) {
     if (!this.state) {
       return
     }
 
-    if (ev.key != 'data') {
+    if (ev.key !== 'data') {
       return
     }
 
-    var newData = JSON.parse(ev.newValue)
-    var newState = _.merge(_.assign({}, this.state, newData), this._dirtyChanges)
+    const newData = JSON.parse(ev.newValue)
+    const newState = _.merge(_.assign({}, this.state, newData), this._dirtyChanges)
     if (!_.isEqual(this.state, newState)) {
       this.state = newState
       this.trigger(this.state)
     }
   },
 
-  set: function(key, value) {
+  set(key, value) {
     if (_.isEqual(this.state[key], value)) {
       return
     }
@@ -79,7 +79,7 @@ module.exports.store = Reflux.createStore({
     this._saveThrottled()
   },
 
-  setRoom: function(room, key, value) {
+  setRoom(room, key, value) {
     if (this.state.room[room] && _.isEqual(this.state.room[room][key], value)) {
       return
     }
@@ -101,13 +101,13 @@ module.exports.store = Reflux.createStore({
     this._saveThrottled()
   },
 
-  _save: function() {
-    var data = JSON.stringify(this.state)
+  _save() {
+    const data = JSON.stringify(this.state)
     try {
       localStorage.setItem('data', data)
     } catch (e) {
       // localStorage is probably disabled / private browsing mode in Safari
-      console.warn('unable to write localStorage')
+      console.warn('unable to write localStorage')  // eslint-disable-line no-console
     }
     this._dirtyChanges = {}
   },

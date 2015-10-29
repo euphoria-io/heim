@@ -1,21 +1,31 @@
-var _ = require('lodash')
-var React = require('react')
+import _ from 'lodash'
+import React from 'react'
 
 
 // A button that triggers on touch start on mobile to increase responsiveness.
-module.exports = React.createClass({
+export default React.createClass({
   displayName: 'FastButton',
 
-  getDefaultProps: function() {
+  propTypes: {
+    vibrate: React.PropTypes.bool,
+    disabled: React.PropTypes.bool,
+    fastTouch: React.PropTypes.bool,
+    empty: React.PropTypes.bool,
+    onClick: React.PropTypes.func,
+    component: React.PropTypes.string,
+    children: React.PropTypes.node,
+  },
+
+  getDefaultProps() {
     return {
       component: 'button',
       tabIndex: 0,
     }
   },
 
-  onClick: function(ev) {
+  onClick(ev) {
     if (Heim.isTouch) {
-      if (ev.type == 'touchstart') {
+      if (ev.type === 'touchstart') {
         if (this.props.vibrate && !this.props.disabled && Heim.isAndroid && navigator.vibrate) {
           navigator.vibrate(7)
         }
@@ -34,22 +44,22 @@ module.exports = React.createClass({
     }
   },
 
-  onTouchStart: function(ev) {
+  onTouchStart(ev) {
     this.getDOMNode().classList.add('touching')
     this.onClick(ev)
   },
 
-  onTouchEnd: function() {
+  onTouchEnd() {
     this.getDOMNode().classList.remove('touching')
   },
 
-  onKeyDown: function(ev) {
-    if (ev.key == 'Enter' || ev.key == 'Space') {
+  onKeyDown(ev) {
+    if (ev.key === 'Enter' || ev.key === 'Space') {
       this.props.onClick(ev)
     }
   },
 
-  render: function() {
+  render() {
     // https://bugzilla.mozilla.org/show_bug.cgi?id=984869#c2
     return React.createElement(
       this.props.component,

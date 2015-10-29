@@ -1,34 +1,48 @@
-var React = require('react')
-var Reflux = require('reflux')
-var classNames = require('classnames')
+import React from 'react'
+import Reflux from 'reflux'
+import classNames from 'classnames'
 
-var FastButton = require('./fast-button')
-var MessageText = require('./message-text')
-var LiveTimeAgo = require('./live-time-ago')
+import FastButton from './fast-button'
+import MessageText from './message-text'
+import LiveTimeAgo from './live-time-ago'
+import Tree from '../tree'
+import MessageData from '../message-data'
+import TreeNodeMixin from './tree-node-mixin'
+import MessageDataMixin from './message-data-mixin'
 
 
-var ThreadListItem = module.exports = React.createClass({
+const ThreadListItem = React.createClass({
   displayName: 'ThreadListItem',
+
+  propTypes: {
+    nodeId: React.PropTypes.string.isRequired,
+    tree: React.PropTypes.instanceOf(Tree).isRequired,
+    threadNodeId: React.PropTypes.string.isRequired,
+    threadTree: React.PropTypes.instanceOf(Tree).isRequired,
+    depth: React.PropTypes.number,
+    threadData: React.PropTypes.instanceOf(MessageData),
+    onClick: React.PropTypes.func,
+  },
 
   mixins: [
     require('react-immutable-render-mixin'),
-    require('./tree-node-mixin')('thread'),
-    require('./tree-node-mixin')(),
-    require('./message-data-mixin')(props => props.threadData, 'threadData'),
+    TreeNodeMixin('thread'),
+    TreeNodeMixin(),
+    MessageDataMixin(props => props.threadData, 'threadData'),
     Reflux.connect(require('../stores/clock').minute, 'now'),
   ],
 
-  getDefaultProps: function() {
+  getDefaultProps() {
     return {
       depth: 0,
     }
   },
 
-  render: function() {
-    var thread = this.state.threadNode
-    var message = this.state.node
+  render() {
+    const thread = this.state.threadNode
+    const message = this.state.node
 
-    var count = this.props.tree.getCount(this.props.nodeId)
+    const count = this.props.tree.getCount(this.props.nodeId)
     if (!count) {
       // FIXME: due to react batching when new logs are loaded, this component
       // can update after the node has been cleared (with shadow data) but
@@ -36,12 +50,12 @@ var ThreadListItem = module.exports = React.createClass({
       return <div />
     }
 
-    var newCount = count.get('newDescendants')
-    var children = thread.get('children')
-    var timestamp
+    let newCount = count.get('newDescendants')
+    const children = thread.get('children')
+    let timestamp
 
     if (children.size) {
-      var childrenNewCount = children
+      const childrenNewCount = children
         .map(childId => this.props.tree.getCount(childId).get('newDescendants'))
         .reduce((a, b) => a + b, 0)
       newCount -= childrenNewCount
@@ -50,7 +64,7 @@ var ThreadListItem = module.exports = React.createClass({
       timestamp = count.get('latestDescendantTime')
     }
 
-    var isActive = this.state.now - timestamp * 1000 < 30 * 60 * 1000
+    const isActive = this.state.now - timestamp * 1000 < 30 * 60 * 1000
 
     return (
       <div className="thread">
@@ -68,3 +82,5 @@ var ThreadListItem = module.exports = React.createClass({
     )
   },
 })
+
+export default ThreadListItem

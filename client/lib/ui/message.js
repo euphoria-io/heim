@@ -1,31 +1,46 @@
-var _ = require('lodash')
-var React = require('react')
-var classNames = require('classnames')
-var Immutable = require('immutable')
-var moment = require('moment')
+import _ from 'lodash'
+import React from 'react'
+import classNames from 'classnames'
+import Immutable from 'immutable'
+import moment from 'moment'
 
-var ui = require('../stores/ui')
-var chat = require('../stores/chat')
-var FastButton = require('./fast-button')
-var Embed = require('./embed')
-var MessageText = require('./message-text')
-var ChatEntry = require('./chat-entry')
-var LiveTimeAgo = require('./live-time-ago')
-var KeyboardActionHandler = require('./keyboard-action-handler')
-var EntryDragHandle = require('./entry-drag-handle')
+import ui, { Pane } from '../stores/ui'
+import chat from '../stores/chat'
+import Tree from '../tree'
+import FastButton from './fast-button'
+import Embed from './embed'
+import MessageText from './message-text'
+import ChatEntry from './chat-entry'
+import LiveTimeAgo from './live-time-ago'
+import KeyboardActionHandler from './keyboard-action-handler'
+import EntryDragHandle from './entry-drag-handle'
+import TreeNodeMixin from './tree-node-mixin'
+import MessageDataMixin from './message-data-mixin'
 
 
-var linearEasing = t => t
-var snapEasing = t => (Math.pow(2.02 * t - 1.0303, 17) + t) / 3.5 + 0.475
-var colorShouldStep = (x, last) => x - last > 0.01
+const linearEasing = t => t
+const snapEasing = t => (Math.pow(2.02 * t - 1.0303, 17) + t) / 3.5 + 0.475
+const colorShouldStep = (x, last) => x - last > 0.01
 
-var Message = module.exports = React.createClass({
+const Message = React.createClass({
   displayName: 'Message',
+
+  propTypes: {
+    nodeId: React.PropTypes.string.isRequired,
+    tree: React.PropTypes.instanceOf(Tree).isRequired,
+    pane: React.PropTypes.instanceOf(Pane).isRequired,
+    showTimeStamps: React.PropTypes.bool,
+    showTimeAgo: React.PropTypes.bool,
+    showAllReplies: React.PropTypes.bool,
+    depth: React.PropTypes.number,
+    visibleCount: React.PropTypes.number,
+    roomSettings: React.PropTypes.instanceOf(Immutable.Map),
+  },
 
   mixins: [
     require('react-immutable-render-mixin'),
-    require('./tree-node-mixin')(),
-    require('./message-data-mixin')(props => props.pane.store.messageData, 'paneData'),
+    TreeNodeMixin(),
+    MessageDataMixin(props => props.pane.store.messageData, 'paneData'),
   ],
 
   statics: {
@@ -33,7 +48,7 @@ var Message = module.exports = React.createClass({
     newFadeDuration: 60 * 1000,
   },
 
-  getDefaultProps: function() {
+  getDefaultProps() {
     return {
       depth: 0,
       visibleCount: this.visibleCount - 1,
@@ -44,7 +59,71 @@ var Message = module.exports = React.createClass({
     }
   },
 
-  onClick: function() {
+  componentDidMount() {
+    const node = this.getDOMNode()
+
+    if (node.classList.contains('new') && this._sinceNew < Message.newFadeDuration) {
+      const lineEl = node.querySelector('.line')
+      Heim.transition.add({
+        startOffset: -this._sinceNew,
+        step: x => {
+          if (x < 1) {
+            lineEl.style.background = 'rgba(0, 128, 0, ' + (1 - x) * 0.075 + ')'
+          } else {
+            lineEl.style.background = ''
+          }
+        },
+        shouldStep: colorShouldStep,
+        ease: linearEasing,
+        duration: 60 * 1000,
+        fps: 10,
+      })
+    }
+
+    this.afterRender()
+  },
+
+  componentDidUpdate(prevProps, prevState) {
+    if (this.state.node.get('_seen') && !prevState.node.get('_seen') && !this._hideSeen) {
+      const node = this.getDOMNode()
+
+      const lineEl = node.querySelector('.line')
+      Heim.transition.add({
+        step: x => {
+          if (x < 1) {
+            lineEl.style.borderLeftColor = 'rgba(0, 128, 0, ' + (1 - x) * 0.75 + ')'
+          } else {
+            lineEl.style.borderLeftColor = ''
+          }
+        },
+        shouldStep: colorShouldStep,
+        ease: snapEasing,
+        duration: 15 * 1000,
+        fps: 30,
+      })
+
+      if (this.props.showTimeStamps) {
+        const timestampEl = node.querySelector('.timestamp')
+        Heim.transition.add({
+          step: x => {
+            if (x < 1) {
+              timestampEl.style.color = 'rgb(170, ' + Math.round(170 + (241 - 170) * (1 - x)) + ', 170)'
+            } else {
+              timestampEl.style.color = ''
+            }
+          },
+          shouldStep: colorShouldStep,
+          ease: snapEasing,
+          duration: 60 * 1000,
+          fps: 30,
+        })
+      }
+    }
+
+    this.afterRender()
+  },
+
+  onClick() {
     if (ui.store.state.managerMode) {
       return
     }
@@ -56,30 +135,83 @@ var Message = module.exports = React.createClass({
     this.props.pane.toggleFocusMessage(this.props.nodeId, this.state.node.get('parent'))
   },
 
-  onMouseDown: function(ev) {
+  onMouseDown(ev) {
     if (ui.store.state.managerMode) {
-      var selected = this.state.node.get('_selected')
+      const selected = this.state.node.get('_selected')
       chat.setSelected(this.props.nodeId, !selected)
       ui.startMessageSelectionDrag(!selected)
       ev.preventDefault()
     }
   },
 
-  onMouseEnter: function() {
+  onMouseEnter() {
     if (ui.store.state.managerMode && ui.store.state.draggingMessageSelection) {
       chat.setSelected(this.props.nodeId, ui.store.state.draggingMessageSelectionToggle)
     }
   },
 
-  render: function() {
-    var message = this.state.node
+  afterRender() {
+    if (this.refs.message && this.props.roomSettings.get('collapse') !== false) {
+      const msgNode = this.refs.message.getDOMNode()
+      if (msgNode.getBoundingClientRect().height > 200) {
+        this.setState({contentTall: true})
+      }
+    }
+
+    this.props.pane.messageRenderFinished()
+  },
+
+  expandContent(ev) {
+    this.props.pane.setMessageData(this.props.nodeId, {contentExpanded: true})
+    // don't focus the message
+    ev.stopPropagation()
+  },
+
+  collapseContent(ev) {
+    this.props.pane.setMessageData(this.props.nodeId, {contentExpanded: false})
+    ev.stopPropagation()
+  },
+
+  expandReplies() {
+    if (this.state.node.get('repliesExpanded')) {
+      return
+    }
+    this.props.pane.setMessageData(this.props.nodeId, {repliesExpanded: true})
+    if (this.state.paneData.get('focused')) {
+      this.props.pane.focusEntry()
+    }
+  },
+
+  collapseReplies() {
+    this.props.pane.setMessageData(this.props.nodeId, {repliesExpanded: false})
+  },
+
+  freezeEmbed(idx) {
+    this.refs['embed' + idx].freeze()
+  },
+
+  unfreezeEmbed(idx) {
+    this.refs['embed' + idx].unfreeze()
+  },
+
+  openInPane() {
+    ui.openThreadPane(this.props.nodeId)
+  },
+
+  focusOtherPane(ev) {
+    ui.focusPane(this.state.node.get('_inPane'))
+    ev.stopPropagation()
+  },
+
+  render() {
+    const message = this.state.node
 
     if (message.get('deleted')) {
       return <div data-message-id={message.get('id')} className="message-node deleted" />
     }
 
-    var time = moment.unix(message.get('time'))
-    if (this.props.nodeId == '__lastVisit') {
+    const time = moment.unix(message.get('time'))
+    if (this.props.nodeId === '__lastVisit') {
       return (
         <div className="line marker last-visit">
           <hr />
@@ -89,13 +221,13 @@ var Message = module.exports = React.createClass({
       )
     }
 
-    var children = message.get('children')
-    var paneData = this.state.paneData
-    var count = this.props.tree.getCount(this.props.nodeId)
-    var focused = paneData.get('focused')
-    var contentExpanded = paneData.get('contentExpanded')
+    let children = message.get('children')
+    const paneData = this.state.paneData
+    const count = this.props.tree.getCount(this.props.nodeId)
+    const focused = paneData.get('focused')
+    const contentExpanded = paneData.get('contentExpanded')
 
-    var repliesExpanded
+    let repliesExpanded
     if (this.props.showAllReplies) {
       repliesExpanded = true
     } else {
@@ -105,10 +237,10 @@ var Message = module.exports = React.createClass({
       }
     }
 
-    var messagePane = message.get('_inPane')
-    var repliesInOtherPane = messagePane && messagePane != this.props.pane.id
-    var seen = message.get('_seen')
-    var mention = message.get('_mention')
+    const messagePane = message.get('_inPane')
+    const repliesInOtherPane = messagePane && messagePane !== this.props.pane.id
+    const seen = message.get('_seen')
+    const mention = message.get('_mention')
 
     if (!chat.store.lastActive) {
       // hack: if the room hasn't been visited before (we're within the first
@@ -118,21 +250,21 @@ var Message = module.exports = React.createClass({
     }
 
     this._sinceNew = Date.now() - time < Message.newFadeDuration
-    var messageClasses = {
+    const messageClasses = {
       'mention': mention,
       'unseen': !seen && !this._hideSeen,
       'new': this._sinceNew,
       'selected': message.get('_selected'),
     }
 
-    var lineClasses = {
+    const lineClasses = {
       'line': true,
       'expanded': contentExpanded,
     }
 
-    var pane = this.props.pane
-    var messageReplies
-    var messageIndentedReplies
+    const pane = this.props.pane
+    let messageReplies
+    let messageIndentedReplies
     if (repliesInOtherPane) {
       messageIndentedReplies = (
         <FastButton component="div" className={classNames('replies', 'in-pane', {'focus-target': focused})} onClick={this.focusOtherPane}>
@@ -155,18 +287,25 @@ var Message = module.exports = React.createClass({
         )
       }
     } else if (children.size > 0 || focused) {
-      var composingReply = focused && children.size === 0
-      var inlineReplies = composingReply || this.props.visibleCount > 0 || this.props.showAllReplies
-      var childCount, childNewCount
+      const composingReply = focused && children.size === 0
+      const inlineReplies = composingReply || this.props.visibleCount > 0 || this.props.showAllReplies
+      let childCount
+      let childNewCount
       if (!inlineReplies && !repliesExpanded) {
         childCount = count.get('descendants')
         childNewCount = count.get('newDescendants')
+        let replyLabel
+        if (childCount === 0) {
+          replyLabel = 'reply'
+        } else if (childCount === 1) {
+          replyLabel = '1 reply'
+        } else {
+          replyLabel = childCount + ' replies'
+        }
         messageIndentedReplies = (
           <div>
             <FastButton key="replies" component="div" className={classNames('replies', 'collapsed', {'focus-target': focused, 'empty': childCount === 0})} onClick={this.expandReplies}>
-              {childCount === 0 ? 'reply'
-                : childCount == 1 ? '1 reply'
-                  : childCount + ' replies'}
+              {replyLabel}
               {childNewCount > 0 && <span className={classNames('new-count', {'new-mention': count.get('newMentionDescendants') > 0})}>{childNewCount}</span>}
               {childCount > 0 && <LiveTimeAgo className="ago" time={count.get('latestDescendantTime')} nowText="active" />}
               {<MessageText className="message-preview" content={this.props.tree.get(count.get('latestDescendant')).get('content').trim()} />}
@@ -190,11 +329,11 @@ var Message = module.exports = React.createClass({
           )
         }
       } else {
-        var focusAction
-        var expandRestOfReplies
-        var canCollapse = !this.props.showAllReplies && children.size > this.props.visibleCount
+        let focusAction
+        let expandRestOfReplies
+        const canCollapse = !this.props.showAllReplies && children.size > this.props.visibleCount
         if (canCollapse && !repliesExpanded) {
-          var descCount = this.props.tree.calculateDescendantCount(this.props.nodeId, this.props.visibleCount)
+          const descCount = this.props.tree.calculateDescendantCount(this.props.nodeId, this.props.visibleCount)
           childCount = descCount.get('descendants')
           childNewCount = descCount.get('newDescendants')
           expandRestOfReplies = (
@@ -228,12 +367,16 @@ var Message = module.exports = React.createClass({
           // (triggering expando) won't disrupt typing
           focusAction = <ChatEntry pane={pane} onChange={this.expandReplies} />
         }
+        let collapseAction
+        if (canCollapse) {
+          collapseAction = repliesExpanded ? this.collapseReplies : this.expandReplies
+        }
         messageReplies = (
           <div ref="replies" className={classNames('replies', {'collapsible': canCollapse, 'expanded': canCollapse && repliesExpanded, 'inline': inlineReplies, 'empty': children.size === 0, 'focused': focused})}>
-            <FastButton className="indent-line" onClick={canCollapse && (repliesExpanded ? this.collapseReplies : this.expandReplies)} empty={true} />
+            <FastButton className="indent-line" onClick={collapseAction} empty />
             <div className="content">
               {children.toIndexedSeq().map((nodeId, idx) =>
-                <Message key={nodeId} pane={this.props.pane} tree={this.props.tree} nodeId={nodeId} depth={this.props.depth + 1} visibleCount={repliesExpanded ? Message.visibleCount : Math.floor((this.props.visibleCount - 1) / 2)} showTimeAgo={!expandRestOfReplies && idx == children.size - 1} showTimeStamps={this.props.showTimeStamps} roomSettings={this.props.roomSettings} />
+                <Message key={nodeId} pane={this.props.pane} tree={this.props.tree} nodeId={nodeId} depth={this.props.depth + 1} visibleCount={repliesExpanded ? Message.visibleCount : Math.floor((this.props.visibleCount - 1) / 2)} showTimeAgo={!expandRestOfReplies && idx === children.size - 1} showTimeStamps={this.props.showTimeStamps} roomSettings={this.props.roomSettings} />
               ).toArray()}
               {focusAction}
             </div>
@@ -242,10 +385,9 @@ var Message = module.exports = React.createClass({
       }
     }
 
-    var content = message.get('content')
-    var embeds = []
+    let content = message.get('content')
+    const embeds = []
     content = content.replace(/(?:https?:\/\/)?(?:www\.|i\.|m\.)?imgur\.com\/(\w+)(\.\w+)?(\S*)/g, (match, id, ext, rest, offset, string) => {
-      // jshint camelcase: false
       if (rest) {
         return string
       }
@@ -270,9 +412,9 @@ var Message = module.exports = React.createClass({
     })
     content = _.trim(content)
 
-    var messageAgo = (this.props.showTimeAgo || children.size >= 3 || mention) && <LiveTimeAgo className="ago" time={time} />
+    const messageAgo = (this.props.showTimeAgo || children.size >= 3 || mention) && <LiveTimeAgo className="ago" time={time} />
 
-    var messageRender
+    let messageRender
     if (!content) {
       messageRender = null
     } else if (/^\/me/.test(content) && content.length < 240) {
@@ -285,8 +427,8 @@ var Message = module.exports = React.createClass({
       )
       lineClasses['line-emote'] = true
     } else if (this.state.contentTall && this.props.roomSettings.get('collapse') !== false) {
-      var action = contentExpanded ? 'collapse' : 'expand'
-      var actionMethod = action + 'Content'
+      const action = contentExpanded ? 'collapse' : 'expand'
+      const actionMethod = action + 'Content'
       messageRender = (
         <div className="message-tall">
           <div className="message expando" onClick={this[actionMethod]}>
@@ -305,7 +447,7 @@ var Message = module.exports = React.createClass({
       )
     }
 
-    var messageEmbeds
+    let messageEmbeds
     if (embeds.length) {
       messageEmbeds = (
         <div className="embeds">
@@ -326,7 +468,7 @@ var Message = module.exports = React.createClass({
           {time.format('h:mma')}
         </time>}
         <div className={classNames(lineClasses)} onClick={this.onClick} onMouseDown={this.onMouseDown} onMouseEnter={this.onMouseEnter}>
-          <MessageText className="nick" onlyEmoji={true} style={{background: 'hsl(' + message.getIn(['sender', 'hue']) + ', 65%, 85%)'}} content={message.getIn(['sender', 'name'])} />
+          <MessageText className="nick" onlyEmoji style={{background: 'hsl(' + message.getIn(['sender', 'hue']) + ', 65%, 85%)'}} content={message.getIn(['sender', 'name'])} />
           <span className="content">
             {messageRender}
             {messageEmbeds}
@@ -338,121 +480,6 @@ var Message = module.exports = React.createClass({
       </div>
     )
   },
-
-  componentDidMount: function() {
-    var node = this.getDOMNode()
-
-    if (node.classList.contains('new') && this._sinceNew < Message.newFadeDuration) {
-      var lineEl = node.querySelector('.line')
-      Heim.transition.add({
-        startOffset: -this._sinceNew,
-        step: x => {
-          if (x < 1) {
-            lineEl.style.background = 'rgba(0, 128, 0, ' + (1 - x) * 0.075 + ')'
-          } else {
-            lineEl.style.background = ''
-          }
-        },
-        shouldStep: colorShouldStep,
-        ease: linearEasing,
-        duration: 60 * 1000,
-        fps: 10,
-      })
-    }
-
-    this.afterRender()
-  },
-
-  componentDidUpdate: function(prevProps, prevState) {
-    if (this.state.node.get('_seen') && !prevState.node.get('_seen') && !this._hideSeen) {
-      var node = this.getDOMNode()
-
-      var lineEl = node.querySelector('.line')
-      Heim.transition.add({
-        step: x => {
-          if (x < 1) {
-            lineEl.style.borderLeftColor = 'rgba(0, 128, 0, ' + (1 - x) * 0.75 + ')'
-          } else {
-            lineEl.style.borderLeftColor = ''
-          }
-        },
-        shouldStep: colorShouldStep,
-        ease: snapEasing,
-        duration: 15 * 1000,
-        fps: 30,
-      })
-
-      if (this.props.showTimeStamps) {
-        var timestampEl = node.querySelector('.timestamp')
-        Heim.transition.add({
-          step: x => {
-            if (x < 1) {
-              timestampEl.style.color = 'rgb(170, ' + Math.round(170 + (241 - 170) * (1 - x)) + ', 170)'
-            } else {
-              timestampEl.style.color = ''
-            }
-          },
-          shouldStep: colorShouldStep,
-          ease: snapEasing,
-          duration: 60 * 1000,
-          fps: 30,
-        })
-      }
-    }
-
-    this.afterRender()
-  },
-
-  afterRender: function() {
-    if (this.refs.message && this.props.roomSettings.get('collapse') !== false) {
-      var msgNode = this.refs.message.getDOMNode()
-      if (msgNode.getBoundingClientRect().height > 200) {
-        this.setState({contentTall: true})
-      }
-    }
-
-    this.props.pane.messageRenderFinished()
-  },
-
-  expandContent: function(ev) {
-    this.props.pane.setMessageData(this.props.nodeId, {contentExpanded: true})
-    // don't focus the message
-    ev.stopPropagation()
-  },
-
-  collapseContent: function(ev) {
-    this.props.pane.setMessageData(this.props.nodeId, {contentExpanded: false})
-    ev.stopPropagation()
-  },
-
-  expandReplies: function() {
-    if (this.state.node.get('repliesExpanded')) {
-      return
-    }
-    this.props.pane.setMessageData(this.props.nodeId, {repliesExpanded: true})
-    if (this.state.paneData.get('focused')) {
-      this.props.pane.focusEntry()
-    }
-  },
-
-  collapseReplies: function() {
-    this.props.pane.setMessageData(this.props.nodeId, {repliesExpanded: false})
-  },
-
-  freezeEmbed: function(idx) {
-    this.refs['embed' + idx].freeze()
-  },
-
-  unfreezeEmbed: function(idx) {
-    this.refs['embed' + idx].unfreeze()
-  },
-
-  openInPane: function() {
-    ui.openThreadPane(this.props.nodeId)
-  },
-
-  focusOtherPane: function(ev) {
-    ui.focusPane(this.state.node.get('_inPane'))
-    ev.stopPropagation()
-  },
 })
+
+export default Message

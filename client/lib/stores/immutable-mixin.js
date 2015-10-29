@@ -1,11 +1,11 @@
-var Immutable = require('immutable')
+import Immutable from 'immutable'
 
 
-module.exports = {
-  triggerUpdate: function(newState) {
+export default {
+  triggerUpdate(newState) {
     if (!Immutable.is(this.state, newState)) {
       this.state = newState
       this.trigger(this.state)
     }
-  }
+  },
 }

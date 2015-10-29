@@ -1,19 +1,12 @@
-// ignore Text, Image redefinition
-// jshint -W079
+import React from 'react'
 
-var React = require('react')
-
-var email = require('./email')
-var Item = email.Item
-var Text = email.Text
-var Link = email.Link
-var common = require('./common')
-var textDefaults = common.textDefaults
+import { Item, Text, Link } from './email'
+import { StandardEmail, TopBubbleBox, BodyBox, standardFooter, textDefaults } from './common'
 
 
 module.exports = (
-  <common.StandardEmail>
-    <common.TopBubbleBox logo="logo-active.png">
+  <StandardEmail>
+    <TopBubbleBox logo="logo-active.png">
       <Item align="center">
         <Text {...textDefaults} fontSize={18}><strong>{'{{.SenderName}}'}</strong> invites you to join</Text>
       </Item>
@@ -22,17 +15,15 @@ module.exports = (
           <Text {...textDefaults} fontSize={32} color={null}>&{'{{.RoomName}}'}</Text>
         </Link>
       </Item>
-    </common.TopBubbleBox>
-    <common.BodyBox>
+    </TopBubbleBox>
+    <BodyBox>
       <Item align="center">
         <Text {...textDefaults} color="#7d7d7d">a note from {'{{.SenderName}}'}:</Text>
       </Item>
       <Item>
         <Text {...textDefaults}>{'{{.SenderMessage}}'}</Text>
       </Item>
-    </common.BodyBox>
-    <common.Footer>
-      {common.standardFooter}
-    </common.Footer>
-  </common.StandardEmail>
+    </BodyBox>
+    {standardFooter}
+  </StandardEmail>
 )

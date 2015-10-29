@@ -1,29 +1,37 @@
-var React = require('react')
-var ReactTransitionGroup = React.addons.TransitionGroup
+import React from 'react'
+const ReactTransitionGroup = React.addons.TransitionGroup
+import Immutable from 'immutable'
 
-var NotificationListItem = require('./notification-list-item')
+import NotificationListItem from './notification-list-item'
+import Tree from '../tree'
 
 
-module.exports = React.createClass({
+export default React.createClass({
   displayName: 'NotificationList',
 
-  render: function() {
-    var notifications = this.props.notifications.map((kind, messageId) =>
+  propTypes: {
+    tree: React.PropTypes.instanceOf(Tree).isRequired,
+    notifications: React.PropTypes.instanceOf(Immutable.OrderedMap).isRequired,
+    onNotificationSelect: React.PropTypes.func,
+    animate: React.PropTypes.bool,
+  },
+
+  render() {
+    const notifications = this.props.notifications.map((kind, messageId) =>
       <NotificationListItem key={messageId} tree={this.props.tree} nodeId={messageId} kind={kind} onClick={this.props.onNotificationSelect} />
     ).toArray()
 
     if (this.props.animate) {
-      return  (
+      return (
         <ReactTransitionGroup component="div" className="notification-list">
           {notifications}
         </ReactTransitionGroup>
       )
-    } else {
-      return  (
-        <div className="notification-list">
-          {notifications}
-        </div>
-      )
     }
+    return (
+      <div className="notification-list">
+        {notifications}
+      </div>
+    )
   },
 })

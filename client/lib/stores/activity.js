@@ -1,10 +1,10 @@
-var _ = require('lodash')
-var Reflux = require('reflux')
+import _ from 'lodash'
+import Reflux from 'reflux'
 
-var storage = require('./storage')
+import storage from './storage'
 
 
-var storeActions = Reflux.createActions([
+const storeActions = Reflux.createActions([
   'windowFocused',
   'windowBlurred',
   'touch',
@@ -25,7 +25,7 @@ module.exports.store = Reflux.createStore({
   idleTime: 2 * 60 * 1000,
   absenceTime: 30 * 60 * 1000,
 
-  init: function() {
+  init() {
     this.state = {
       active: false,
       windowFocused: false,
@@ -38,11 +38,11 @@ module.exports.store = Reflux.createStore({
     this._setIdleDebounced = _.debounce(this._setInactive, this.idleTime)
   },
 
-  getInitialState: function() {
+  getInitialState() {
     return this.state
   },
 
-  storageChange: function(data) {
+  storageChange(data) {
     if (!data) {
       return
     }
@@ -53,9 +53,9 @@ module.exports.store = Reflux.createStore({
     this.trigger(this.state)
   },
 
-  _flushActivity: function() {
+  _flushActivity() {
     _.each(this._active, (touchTime, roomName) => {
-      var lastActive = this.state.lastActive[roomName]
+      const lastActive = this.state.lastActive[roomName]
       if (touchTime - lastActive >= this.absenceTime) {
         storage.setRoom(roomName, 'lastVisit', lastActive)
       }
@@ -63,21 +63,21 @@ module.exports.store = Reflux.createStore({
     })
   },
 
-  windowFocused: function() {
+  windowFocused() {
     this.state.windowFocused = true
     this.state.focusChangedAt = Date.now()
     this.trigger(this.state)
   },
 
-  windowBlurred: function() {
+  windowBlurred() {
     this.state.windowFocused = false
     this.state.focusChangedAt = Date.now()
     this._setInactive()  // triggers
   },
 
-  _setInactive: function() {
+  _setInactive() {
     this._setIdleDebounced.cancel()
-    var wasActive = this.state.active
+    const wasActive = this.state.active
     this.state.active = false
     this.trigger(this.state)
 
@@ -86,8 +86,8 @@ module.exports.store = Reflux.createStore({
     }
   },
 
-  touch: function(roomName) {
-    var wasActive = this.state.active
+  touch(roomName) {
+    const wasActive = this.state.active
     this.state.active = true
     this.trigger(this.state)
     this._setIdleDebounced()

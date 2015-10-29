@@ -1,24 +1,24 @@
-var _ = require('lodash')
+import _ from 'lodash'
 
 
-module.exports = function EventListeners() {
-  this._listeners = []
-}
+export default class EventListeners {
+  constructor() {
+    this._listeners = []
+  }
 
-_.extend(module.exports.prototype, {
-  addEventListener: function(target, type, listener, useCapture) {
+  addEventListener(target, type, listener, useCapture) {
     target.addEventListener(type, listener, useCapture)
     this._listeners.push(_.toArray(arguments))
-  },
+  }
 
-  removeEventListener: function(target, type, listener, useCapture) {
+  removeEventListener(target, type, listener, useCapture) {
     target.removeEventListener(type, listener, useCapture)
-    var toRemove = _.toArray(arguments)
+    const toRemove = _.toArray(arguments)
     _.remove(this._listeners, l => _.isEqual(l, toRemove))
-  },
+  }
 
-  removeAllEventListeners: function() {
+  removeAllEventListeners() {
     // iterate in reverse order so removals don't affect iteration
     _.eachRight(this._listeners, l => this.removeEventListener.apply(this, l))
-  },
-})
+  }
+}

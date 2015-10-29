@@ -19,8 +19,6 @@ var buffer = require('vinyl-buffer')
 var watchify = require('watchify')
 var browserify = require('browserify')
 var envify = require('envify/custom')
-var react = require('gulp-react')
-var jshint = require('gulp-jshint')
 var serve = require('gulp-serve')
 var fs = require('fs')
 var path = require('path')
@@ -150,7 +148,7 @@ gulp.task('heim-less', function() {
 })
 
 gulp.task('emoji-static', function() {
-  var emoji = require('./lib/emoji')
+  var emoji = require('./lib/emoji').default
   var twemojiPath = path.dirname(require.resolve('twemoji')) + '/svg/'
   var leadingZeroes = /^0*/
   var lessSource = _.map(emoji.codes, function(code) {
@@ -219,15 +217,16 @@ gulp.task('site-templates', ['heim-git-commit'], function() {
 })
 
 gulp.task('email-templates', function() {
-  var email = reload('./emails/email.js')
+  require('./emails/email/injectReactAttributes').default()
+  var renderEmail = require('./emails/email/renderEmail').default
   var emails = ['welcome', 'room-invitation', 'room-invitation-welcome', 'password-changed', 'password-reset']
 
   var htmls = merge(_.map(emails, function(name) {
-    var html = email.renderEmail(reload('./emails/' + name))
+    var html = renderEmail(reload('./emails/' + name))
     return gfile(name + '.html', html, {src: true})
   }))
 
-  var txtCommon = reload('./emails/common-txt.js')
+  var txtCommon = reload('./emails/common-txt.js').default
   var txts = merge(_.map(emails, function(name) {
     return gulp.src('./emails/' + name + '.txt')
       .pipe(gtemplate(txtCommon))
@@ -243,14 +242,6 @@ gulp.task('email-hdrs', function() {
 
 gulp.task('email-static', function() {
   return gulp.src('./emails/static/*.png').pipe(gulp.dest(emailDest+'/static'))
-})
-
-gulp.task('lint', function() {
-  return gulp.src(['./lib/**/*.js', './emails/*.js', './test/**/*.js', './gulpfile.js'])
-    .pipe(react())
-    .pipe(jshint())
-    .pipe(jshint.reporter('default'))
-    .pipe(jshint.reporter('fail'))
 })
 
 function watchifyTask(name, bundler, outFile, dest) {

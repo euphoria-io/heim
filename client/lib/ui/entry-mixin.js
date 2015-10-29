@@ -1,6 +1,6 @@
-module.exports = {
-  focus: function(withChar) {
-    var node
+export default {
+  focus(withChar) {
+    let node
     if (this.getDOMNode().contains(uidocument.activeElement)) {
       node = uidocument.activeElement
     } else {
@@ -15,23 +15,22 @@ module.exports = {
     node.focus()
   },
 
-  blur: function() {
+  blur() {
     this.refs.input.getDOMNode().blur()
   },
 
-  proxyKeyDown: function(ev) {
-    var node = this.refs.input.getDOMNode()
-    if (ev.key == 'Backspace' && ev.target != node) {
+  proxyKeyDown(ev) {
+    const node = this.refs.input.getDOMNode()
+    if (ev.key === 'Backspace' && ev.target !== node) {
       node.value = node.value.substr(0, node.value.length - 1)
       node.focus()
       return true
-    } else {
-      return false
     }
+    return false
   },
 
-  componentWillUnmount: function() {
+  componentWillUnmount() {
     // FIXME: hack to work around Reflux #156.
-    this.replaceState = function() {}
+    this.replaceState = () => {}
   },
 }

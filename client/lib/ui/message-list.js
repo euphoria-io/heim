@@ -1,36 +1,46 @@
-var React = require('react/addons')
+import React from 'react/addons'
 
-var Message = require('./message')
+import Message from './message'
+import Tree from '../tree'
+import { Pane } from '../stores/ui'
+import TreeNodeMixin from './tree-node-mixin'
 
 
-module.exports = React.createClass({
+export default React.createClass({
   displayName: 'MessageList',
+
+  propTypes: {
+    pane: React.PropTypes.instanceOf(Pane).isRequired,
+    tree: React.PropTypes.instanceOf(Tree).isRequired,
+    showTimeStamps: React.PropTypes.bool,
+    roomSettings: React.PropTypes.object,
+  },
 
   mixins: [
     require('react-immutable-render-mixin'),
-    require('./tree-node-mixin')(),
+    TreeNodeMixin(),
   ],
 
-  getDefaultProps: function() {
+  getDefaultProps() {
     return {nodeId: '__root', depth: 0}
   },
 
-  render: function() {
-    var children = this.state.node.get('children')
+  componentDidMount() {
+    this.props.pane.messageRenderFinished()
+  },
+
+  componentDidUpdate() {
+    this.props.pane.messageRenderFinished()
+  },
+
+  render() {
+    const children = this.state.node.get('children')
     return (
       <div className="message-list">
         {children.toIndexedSeq().map((nodeId, idx) =>
-          <Message key={nodeId} pane={this.props.pane} tree={this.props.tree} nodeId={nodeId} showTimeAgo={idx == children.size - 1} showTimeStamps={this.props.showTimeStamps} roomSettings={this.props.roomSettings} />
+          <Message key={nodeId} pane={this.props.pane} tree={this.props.tree} nodeId={nodeId} showTimeAgo={idx === children.size - 1} showTimeStamps={this.props.showTimeStamps} roomSettings={this.props.roomSettings} />
         ).toArray()}
       </div>
     )
-  },
-
-  componentDidMount: function() {
-    this.props.pane.messageRenderFinished()
-  },
-
-  componentDidUpdate: function() {
-    this.props.pane.messageRenderFinished()
   },
 })

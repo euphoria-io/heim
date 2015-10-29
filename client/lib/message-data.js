@@ -1,24 +1,21 @@
-var _ = require('lodash')
-var Immutable = require('immutable')
-var EventEmitter = require('eventemitter3')
+import Immutable from 'immutable'
+import EventEmitter from 'eventemitter3'
 
 
-function MessageData(initMessageData) {
-  this.initMessageData = Immutable.fromJS(initMessageData)
-  this.data = {}
-  this.changes = new EventEmitter()
-}
+export default class MessageData {
+  constructor(initMessageData) {
+    this.initMessageData = Immutable.fromJS(initMessageData)
+    this.data = {}
+    this.changes = new EventEmitter()
+  }
 
-_.extend(MessageData.prototype, {
-  get: function(messageId) {
+  get(messageId) {
     return this.data[messageId] || this.initMessageData
-  },
+  }
 
-  set: function(messageId, data) {
-    var messageData = this.data[messageId] || this.initMessageData
-    messageData = this.data[messageId] = messageData.merge(data)
-    this.changes.emit(messageId, messageData)
-  },
-})
-
-module.exports = MessageData
+  set(messageId, data) {
+    const messageData = this.data[messageId] || this.initMessageData
+    const newMessageData = this.data[messageId] = messageData.merge(data)
+    this.changes.emit(messageId, newMessageData)
+  }
+}

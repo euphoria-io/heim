@@ -1,31 +1,29 @@
-var sinon = require('sinon')
+import sinon from 'sinon'
+import Immutable from 'immutable'
+import Reflux from 'reflux'
+import _ from 'lodash'
 
-var Immutable = require('immutable')
+
 Immutable.Iterable.noLengthWarning = true
-
-var Reflux = require('reflux')
 Reflux.nextTick(callback => window.setTimeout(callback, 0))
 
-var support = {}
-
-support.setupClock = function() {
-  var clock = sinon.useFakeTimers()
+export function setupClock() {
+  const clock = sinon.useFakeTimers()
 
   // manually fix Sinon #624 until it updates Lolex to 1.2.0
-  Date.now = function() { return Date().getTime() }
+  Date.now = () => { return Date().getTime() }
 
   // set up fake clock to work with lodash
-  var _ = require('lodash')
 
-  var origDebounce = _.debounce
-  var origThrottle = _.throttle
+  const origDebounce = _.debounce
+  const origThrottle = _.throttle
 
-  var mock_ = _.runInContext(window)
+  const mock_ = _.runInContext(window)
   _.debounce = mock_.debounce
   _.throttle = mock_.throttle
 
-  var origRestore = clock.restore.bind(clock)
-  clock.restore = function() {
+  const origRestore = clock.restore.bind(clock)
+  clock.restore = () => {
     _.debounce = origDebounce
     _.throttle = origThrottle
     origRestore()
@@ -41,34 +39,34 @@ support.setupClock = function() {
   return clock
 }
 
-support.listenOnce = function(listenable, callback) {
-  var remove = listenable.listen(function() {
+export function listenOnce(listenable, callback) {
+  const remove = listenable.listen(function handleOnce() {
     remove()
     callback.apply(this, arguments)
   })
 }
 
-support.resetStore = function(store) {
+export function resetStore(store) {
   store.init()
   store.emitter.removeAllListeners()
 }
 
-support.fakeEnv = function(env) {
-  var origProcessEnv
+export function fakeEnv(env) {
+  let origProcessEnv
 
-  before(function() {
+  before(() => {
     origProcessEnv = process.env
     process.env = env
   })
 
-  after(function() {
+  after(() => {
     process.env = origProcessEnv
   })
 }
 
 window.Heim = {
-  setFavicon: function() {},
-  setTitleMsg: function() {},
+  setFavicon: () => {},
+  setTitleMsg: () => {},
 }
 
-module.exports = support
+export default { setupClock, listenOnce, resetStore, fakeEnv }

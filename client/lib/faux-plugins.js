@@ -1,16 +1,15 @@
-var React = require('react/addons')
-var Reflux = require('reflux')
-var Immutable = require('immutable')
+/* eslint-disable react/no-multi-comp */
+
+import React from 'react/addons'
+import Reflux from 'reflux'
+import Immutable from 'immutable'
 
 
-// allow var redeclaration for import dupes
-// jshint -W004
-
-module.exports = function(roomName) {
-  if (roomName == 'thedrawingroom' || roomName == 'lovenest' || roomName == 'has') {
-    Heim.hook('page-bottom', function() {
+export default function initPlugins(roomName) {
+  if (roomName === 'thedrawingroom' || roomName === 'lovenest' || roomName === 'has') {
+    Heim.hook('page-bottom', () => {
       return (
-        <style key="drawingroom-style" dangerouslySetInnerHTML={{__html:`
+        <style key="drawingroom-style" dangerouslySetInnerHTML={{__html: `
           .chat-pane.timestamps-visible {
             background: #333;
           }
@@ -48,11 +47,10 @@ module.exports = function(roomName) {
     })
   }
 
-  if (roomName == 'space') {
-    var Embed = require('./ui/embed')
+  if (roomName === 'space') {
+    const Embed = require('./ui/embed').default
 
-    Heim.hook('main-sidebar', function() {
-      // jshint camelcase: false
+    Heim.hook('main-sidebar', () => {
       return (
         <div key="norman" className="norman">
           <p>norman</p>
@@ -61,9 +59,9 @@ module.exports = function(roomName) {
       )
     })
 
-    Heim.hook('page-bottom', function() {
+    Heim.hook('page-bottom', () => {
       return (
-        <style key="norman-style" dangerouslySetInnerHTML={{__html:`
+        <style key="norman-style" dangerouslySetInnerHTML={{__html: `
           .norman {
             opacity: .5;
             transition: opacity .15s ease;
@@ -88,31 +86,31 @@ module.exports = function(roomName) {
     })
   }
 
-  if (roomName == 'music' || roomName == 'youtube') {
-    var Embed = require('./ui/embed')
-    var MessageText = require('./ui/message-text')
+  if (roomName === 'music' || roomName === 'youtube') {
+    const Embed = require('./ui/embed').default
+    const MessageText = require('./ui/message-text').default
 
-    var clientTimeOffset = 0
-    Heim.chat.store.socket.on('receive', function(ev) {
-      if (ev.type == 'ping-event') {
+    let clientTimeOffset = 0
+    Heim.chat.store.socket.on('receive', ev => {
+      if (ev.type === 'ping-event') {
         clientTimeOffset = Date.now() / 1000 - ev.data.time
       }
     })
 
-    var TVActions = Reflux.createActions([
+    const TVActions = Reflux.createActions([
       'changeVideo',
       'changeNotice',
     ])
 
     Heim.ui.createCustomPane('youtube-tv', {readOnly: true})
 
-    var TVStore = Reflux.createStore({
+    const TVStore = Reflux.createStore({
       listenables: [
         TVActions,
         {chatChange: Heim.chat.store},
       ],
 
-      init: function() {
+      init() {
         this.state = Immutable.fromJS({
           video: {
             time: 0,
@@ -128,30 +126,36 @@ module.exports = function(roomName) {
         })
       },
 
-      getInitialState: function() {
+      getInitialState() {
         return this.state
       },
 
-      changeVideo: function(video) {
+      changeVideo(video) {
         this.state = this.state.set('video', Immutable.fromJS(video))
         this.trigger(this.state)
       },
 
-      changeNotice: function(notice) {
+      changeNotice(notice) {
         this.state = this.state.set('notice', Immutable.fromJS(notice))
         this.trigger(this.state)
       },
     })
 
-    var SyncedEmbed = React.createClass({
+    const SyncedEmbed = React.createClass({
       displayName: 'SyncedEmbed',
 
-      shouldComponentUpdate: function(nextProps) {
-        return nextProps.youtubeId != this.props.youtubeId || nextProps.youtubeTime != this.props.youtubeTime
+      propTypes: {
+        youtubeId: React.PropTypes.string,
+        youtubeTime: React.PropTypes.number,
+        startedAt: React.PropTypes.number,
+        className: React.PropTypes.string,
       },
 
-      render: function() {
-        // jshint camelcase: false
+      shouldComponentUpdate(nextProps) {
+        return nextProps.youtubeId !== this.props.youtubeId || nextProps.youtubeTime !== this.props.youtubeTime
+      },
+
+      render() {
         return (
           <Embed
             className={this.props.className}
@@ -161,10 +165,10 @@ module.exports = function(roomName) {
             youtube_id={this.props.youtubeId}
           />
         )
-      }
+      },
     })
 
-    var YouTubeTV = React.createClass({
+    const YouTubeTV = React.createClass({
       displayName: 'YouTubeTV',
 
       mixins: [
@@ -172,8 +176,7 @@ module.exports = function(roomName) {
         React.addons.PureRenderMixin,
       ],
 
-      render: function() {
-        // jshint camelcase: false
+      render() {
         return (
           <SyncedEmbed
             className="youtube-tv"
@@ -182,10 +185,10 @@ module.exports = function(roomName) {
             youtubeTime={this.state.tv.getIn(['video', 'youtubeTime'])}
           />
         )
-      }
+      },
     })
 
-    var YouTubePane = React.createClass({
+    const YouTubePane = React.createClass({
       displayName: 'YouTubePane',
 
       mixins: [
@@ -193,8 +196,7 @@ module.exports = function(roomName) {
         React.addons.PureRenderMixin,
       ],
 
-      render: function() {
-        // jshint camelcase: false
+      render() {
         return (
           <div className="chat-pane-container youtube-pane">
             <div className="top-bar">
@@ -206,42 +208,42 @@ module.exports = function(roomName) {
             <MessageText className="notice" content={this.state.tv.getIn(['notice', 'content'])} />
           </div>
         )
-      }
+      },
     })
 
-    var parseYoutubeTime = function(time) {
-      var timeReg = /([0-9]+h)?([0-9]+m)?([0-9]+s?)?/
-      var match = time.match(timeReg)
+    const parseYoutubeTime = function parseYoutubeTime(time) {
+      const timeReg = /([0-9]+h)?([0-9]+m)?([0-9]+s?)?/
+      const match = time.match(timeReg)
       if (!match) {
         return 0
       }
-      var hours = parseInt(match[1] || 0, 10)
-      var minutes = parseInt(match[2] || 0, 10)
-      var seconds = parseInt(match[3] || 0, 10)
+      const hours = parseInt(match[1] || 0, 10)
+      const minutes = parseInt(match[2] || 0, 10)
+      const seconds = parseInt(match[3] || 0, 10)
       return hours * 3600 + minutes * 60 + seconds
     }
 
-    Heim.hook('thread-panes', function() {
+    Heim.hook('thread-panes', () => {
       return <YouTubePane key="youtube-tv" />
     })
 
-    Heim.hook('main-pane-top', function() {
+    Heim.hook('main-pane-top', () => {
       return this.state.ui.thin ? <YouTubeTV key="youtube-tv" /> : null
     })
 
-    Heim.chat.messagesChanged.listen(function(ids, state) {
-      var candidates = Immutable.Seq(ids)
+    Heim.chat.messagesChanged.listen(function onMessagesChanged(ids, state) {
+      const candidates = Immutable.Seq(ids)
         .map(messageId => {
-          var msg = state.messages.get(messageId)
-          var valid = messageId != '__root' && msg.get('content')
+          const msg = state.messages.get(messageId)
+          const valid = messageId !== '__root' && msg.get('content')
           return valid && msg
         })
         .filter(Boolean)
 
-      var playRe = /!play [^?]*\?v=([-\w]+)(?:&t=([0-9hms]+))?/
-      var video = candidates
+      const playRe = /!play [^?]*\?v=([-\w]+)(?:&t=([0-9hms]+))?/
+      const video = candidates
         .map(msg => {
-          var match = msg.get('content').match(playRe)
+          const match = msg.get('content').match(playRe)
           return match && {
             time: msg.get('time'),
             messageId: msg.get('id'),
@@ -251,17 +253,17 @@ module.exports = function(roomName) {
           }
         })
         .filter(Boolean)
-        .sortBy(video => video.time)
+        .sortBy(v => v.time)
         .last()
 
       if (video && video.time > TVStore.state.getIn(['video', 'time'])) {
         TVActions.changeVideo(video)
       }
 
-      var noticeRe = /^!notice(\S*?)\s([^]*)$/
-      var notices = candidates
+      const noticeRe = /^!notice(\S*?)\s([^]*)$/
+      const notices = candidates
         .map(msg => {
-          var match = msg.get('content').match(noticeRe)
+          const match = msg.get('content').match(noticeRe)
           return match && {
             id: msg.get('id'),
             time: msg.get('time'),
@@ -272,10 +274,10 @@ module.exports = function(roomName) {
         .filter(Boolean)
         .cacheResult()
 
-      var noticeMaxSummaryLength = 80
+      const noticeMaxSummaryLength = 80
       notices.forEach(notice => {
-        var lines = notice.content.split('\n')
-        var content = lines[0]
+        const lines = notice.content.split('\n')
+        let content = lines[0]
         if (content.length >= noticeMaxSummaryLength || lines.length > 1) {
           content = content.substr(0, noticeMaxSummaryLength) + '…'
         }
@@ -284,7 +286,7 @@ module.exports = function(roomName) {
         })
       })
 
-      var latestNotice = notices
+      const latestNotice = notices
         .filter(n => n.display)
         .sortBy(notice => notice.time)
         .last()
@@ -294,9 +296,9 @@ module.exports = function(roomName) {
       }
     })
 
-    Heim.hook('page-bottom', function() {
+    Heim.hook('page-bottom', () => {
       return (
-        <style key="youtubetv-style" dangerouslySetInnerHTML={{__html:`
+        <style key="youtubetv-style" dangerouslySetInnerHTML={{__html: `
           .youtube-pane {
             z-index: 9;
           }
@@ -346,10 +348,10 @@ module.exports = function(roomName) {
     })
   }
 
-  if (roomName == 'adventure' || roomName == 'chess' || roomName == 'monospace') {
-    Heim.hook('page-bottom', function() {
+  if (roomName === 'adventure' || roomName === 'chess' || roomName === 'monospace') {
+    Heim.hook('page-bottom', () => {
       return (
-        <style key="adventure-style" dangerouslySetInnerHTML={{__html:`
+        <style key="adventure-style" dangerouslySetInnerHTML={{__html: `
           .messages-container, .messages-container input, .messages-container textarea {
             font-family: Droid Sans Mono, monospace;
           }
@@ -360,10 +362,10 @@ module.exports = function(roomName) {
     Heim.chat.setRoomSettings({collapse: false})
   }
 
-  if (location.hash.substr(1) == 'spooky') {
-    Heim.hook('page-bottom', function() {
+  if (location.hash.substr(1) === 'spooky') {
+    Heim.hook('page-bottom', () => {
       return (
-        <style key="spooky-style" dangerouslySetInnerHTML={{__html:`
+        <style key="spooky-style" dangerouslySetInnerHTML={{__html: `
           #ui {
             background: #281f3d;
           }

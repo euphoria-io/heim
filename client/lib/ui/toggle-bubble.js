@@ -1,34 +1,40 @@
-var _ = require('lodash')
-var React = require('react/addons')
+import _ from 'lodash'
+import React from 'react/addons'
 
-var Bubble = require('./bubble')
+import Bubble from './bubble'
 
 
-module.exports = React.createClass({
+export default React.createClass({
   displayName: 'ToggleBubble',
+
+  propTypes: {
+    visible: React.PropTypes.bool,
+    sticky: React.PropTypes.bool,
+    children: React.PropTypes.node,
+  },
 
   mixins: [require('react-immutable-render-mixin')],
 
-  componentWillMount: function() {
+  getInitialState() {
+    return {visible: false}
+  },
+
+  componentWillMount() {
     // queue cancelable hide so that if the click triggers a show, we don't
     // hide and then immediately reshow.
     this._hide = _.debounce(this.hide, 0)
   },
 
-  getInitialState: function() {
-    return {visible: false}
-  },
-
-  show: function() {
+  show() {
     this.setState({visible: true})
     this._hide.cancel()
   },
 
-  hide: function() {
+  hide() {
     this.setState({visible: false})
   },
 
-  toggle: function() {
+  toggle() {
     if (this.state.visible) {
       this._hide()
     } else {
@@ -36,7 +42,7 @@ module.exports = React.createClass({
     }
   },
 
-  render: function() {
+  render() {
     return (
       <Bubble {...this.props} visible={this.props.visible || this.state.visible} onDismiss={this.props.sticky ? null : this._hide}>
         {this.props.children}

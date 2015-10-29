@@ -1,34 +1,75 @@
-var React = require('react/addons')
-var classNames = require('classnames')
-var ReactCSSTransitionGroup = React.addons.CSSTransitionGroup
+import React from 'react/addons'
+import classNames from 'classnames'
+const ReactCSSTransitionGroup = React.addons.CSSTransitionGroup
 
 
-module.exports = React.createClass({
+export default React.createClass({
   displayName: 'Bubble',
+
+  propTypes: {
+    visible: React.PropTypes.bool,
+    anchorEl: React.PropTypes.any,
+    className: React.PropTypes.string,
+    offset: React.PropTypes.func,
+    edgeSpacing: React.PropTypes.number,
+    onDismiss: React.PropTypes.func,
+    children: React.PropTypes.node,
+  },
 
   mixins: [require('react-immutable-render-mixin')],
 
-  getDefaultProps: function() {
+  getDefaultProps() {
     return {
       edgeSpacing: 10,
     }
   },
 
-  componentWillMount: function() {
+  componentWillMount() {
     Heim.addEventListener(uidocument.body, Heim.isTouch ? 'touchstart' : 'click', this.onOutsideClick, false)
   },
 
-  componentWillUnmount: function() {
+  componentDidMount() {
+    this.reposition()
+  },
+
+  componentDidUpdate() {
+    this.reposition()
+  },
+
+  componentWillUnmount() {
     Heim.removeEventListener(uidocument.body, Heim.isTouch ? 'touchstart' : 'click', this.onOutsideClick, false)
   },
 
-  onOutsideClick: function(ev) {
+  onOutsideClick(ev) {
     if (this.props.visible && !this.getDOMNode().contains(ev.target) && this.props.onDismiss) {
       this.props.onDismiss(ev)
     }
   },
 
-  render: function() {
+  reposition() {
+    // FIXME: only handles left anchors. expand/complexify to work for multiple
+    // orientations when necessary.
+    if (this.props.visible && this.props.anchorEl) {
+      const box = this.props.anchorEl.getBoundingClientRect()
+      const node = this.refs.bubble.getDOMNode()
+
+      let top = box.top
+      top -= Math.max(0, top + node.clientHeight + this.props.edgeSpacing - uiwindow.innerHeight)
+
+      let left = box.right
+
+      if (this.props.offset) {
+        const offsetBox = this.props.offset(box)
+        left -= offsetBox.left || 0
+        top -= offsetBox.top || 0
+      }
+
+      node.style.left = left + 'px'
+      node.style.top = top + 'px'
+    }
+  },
+
+  render() {
     return (
       <ReactCSSTransitionGroup transitionName="bubble">
         {this.props.visible &&
@@ -38,36 +79,5 @@ module.exports = React.createClass({
         }
       </ReactCSSTransitionGroup>
     )
-  },
-
-  componentDidMount: function() {
-    this.reposition()
-  },
-
-  componentDidUpdate: function() {
-    this.reposition()
-  },
-
-  reposition: function() {
-    // FIXME: only handles left anchors. expand/complexify to work for multiple
-    // orientations when necessary.
-    if (this.props.visible && this.props.anchorEl) {
-      var box = this.props.anchorEl.getBoundingClientRect()
-      var node = this.refs.bubble.getDOMNode()
-
-      var top = box.top
-      top -= Math.max(0, top + node.clientHeight + this.props.edgeSpacing - uiwindow.innerHeight)
-
-      var left = box.right
-
-      if (this.props.offset) {
-        var offsetBox = this.props.offset(box)
-        left -= offsetBox.left || 0
-        top -= offsetBox.top || 0
-      }
-
-      node.style.left = left + 'px'
-      node.style.top = top + 'px'
-    }
   },
 })

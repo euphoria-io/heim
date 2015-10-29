@@ -1,21 +1,32 @@
-var React = require('react')
+import React from 'react'
 
-var ThreadListItem = require('./thread-list-item')
+import Tree from '../tree'
+import ThreadListItem from './thread-list-item'
+import MessageData from '../message-data'
+import TreeNodeMixin from './tree-node-mixin'
 
 
-module.exports = React.createClass({
+export default React.createClass({
   displayName: 'ThreadList',
+
+  propTypes: {
+    tree: React.PropTypes.instanceOf(Tree).isRequired,
+    threadTree: React.PropTypes.instanceOf(Tree).isRequired,
+    threadData: React.PropTypes.instanceOf(MessageData),
+    onScroll: React.PropTypes.func,
+    onThreadSelect: React.PropTypes.func,
+  },
 
   mixins: [
     require('react-immutable-render-mixin'),
-    require('./tree-node-mixin')('thread'),
+    TreeNodeMixin('thread'),
   ],
 
-  getDefaultProps: function() {
+  getDefaultProps() {
     return {threadNodeId: '__root'}
   },
 
-  render: function() {
+  render() {
     return (
       <div className="thread-list" onScroll={this.props.onScroll}>
         {this.state.threadNode.get('children').toSeq().map((threadId) =>

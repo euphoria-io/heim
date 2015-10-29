@@ -1,37 +1,43 @@
-var React = require('react')
-var Reflux = require('reflux')
+import React from 'react'
+import Reflux from 'reflux'
 
-var actions = require('../actions')
+import actions from '../actions'
+import { Pane } from '../stores/ui'
+import EntryMixin from './entry-mixin'
 
 
-module.exports = React.createClass({
+export default React.createClass({
   displayName: 'NickEntry',
+
+  propTypes: {
+    pane: React.PropTypes.instanceOf(Pane).isRequired,
+  },
 
   mixins: [
     React.addons.LinkedStateMixin,
-    require('./entry-mixin'),
+    EntryMixin,
     Reflux.ListenerMixin,
     Reflux.connect(require('../stores/chat').store, 'chat'),
   ],
 
-  componentDidMount: function() {
+  getInitialState() {
+    return {value: ''}
+  },
+
+  componentDidMount() {
     this.listenTo(this.props.pane.focusEntry, 'focus')
     this.listenTo(this.props.pane.blurEntry, 'blur')
     this.listenTo(this.props.pane.keydownOnPane, 'proxyKeyDown')
   },
 
-  getInitialState: function() {
-    return {value: ''}
-  },
-
-  setNick: function(ev) {
+  setNick(ev) {
     this.refs.input.getDOMNode().focus()
     ev.preventDefault()
 
     actions.setNick(this.state.value)
   },
 
-  render: function() {
+  render() {
     return (
       <div className="entry-box welcome">
         <div className="message">
