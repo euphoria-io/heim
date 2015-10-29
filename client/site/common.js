@@ -69,9 +69,13 @@ var Footer = module.exports.Footer = React.createClass({
     return (
       <footer>
         <div className="container">
+          <a href={heimURL('/about/terms')}>terms<span className="long"> of service</span></a>
+          <a href={heimURL('/about/privacy')}>privacy<span className="long"> policy</span></a>
+          <span className="spacer" />
           <a href={heimURL('/about')}>about</a>
           <a href={heimURL('/about/values')}>values</a>
           <a href={heimURL('/about/conduct')}><span className="long">code of </span>conduct</a>
+          <span className="spacer" />
           <a href="https://github.com/euphoria-io/heim"><span className="long">source </span>code</a>
           <a href="http://andeuphoria.tumblr.com/">blog</a>
           <a href="mailto:hi@euphoria.io">contact</a>
@@ -127,6 +131,8 @@ module.exports.PolicyNav = React.createClass({
       {name: 'values', caption: <span>Values</span>},
       {name: 'conduct', caption: <span><span className="long">Code of </span>Conduct</span>},
       {name: 'hosts', caption: <span><span className="long">Hosting </span>Rooms</span>},
+      {name: 'terms', caption: <span>Terms<span className="long"> of Service</span></span>},
+      {name: 'privacy', caption: <span>Privacy<span className="long"> Policy</span></span>},
     ]
 
     return (
