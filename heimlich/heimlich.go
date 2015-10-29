@@ -1,6 +1,7 @@
 package main
 
 import (
+	"archive/zip"
 	"fmt"
 	"io"
 	"os"
@@ -8,8 +9,6 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
-
-	patchzip "github.com/sanderhahn/gozip/patchzip"
 )
 
 func swallow(self string, binary string, paths []string) error {
@@ -30,7 +29,9 @@ func swallow(self string, binary string, paths []string) error {
 	if err := sf.Close(); err != nil {
 		return fmt.Errorf("close %s: %s", self, err)
 	}
-	zw := patchzip.NewWriterAt(f, n)
+
+	zw := zip.NewWriter(f)
+	zw.SetOffset(n)
 	if err := swallowFile(zw, binary); err != nil {
 		f.Close()
 		return fmt.Errorf("swallow %s: %s", binary, err)
@@ -47,7 +48,7 @@ func swallow(self string, binary string, paths []string) error {
 	return f.Close()
 }
 
-func swallowFile(zw *patchzip.Writer, path string) error {
+func swallowFile(zw *zip.Writer, path string) error {
 	fmt.Printf("  archiving %s ...\n", path)
 	f, err := os.Open(path)
 	if err != nil {
@@ -57,7 +58,7 @@ func swallowFile(zw *patchzip.Writer, path string) error {
 	if err != nil {
 		return fmt.Errorf("stat %s: %s", path, err)
 	}
-	fh, err := patchzip.FileInfoHeader(fi)
+	fh, err := zip.FileInfoHeader(fi)
 	if err != nil {
 		return fmt.Errorf("fileinfoheader %s: %s", path, err)
 	}
@@ -83,7 +84,7 @@ func extract(hzp string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	zr, err := patchzip.NewReader(f, fi.Size())
+	zr, err := zip.NewReader(f, fi.Size())
 	if err != nil {
 		return "", err
 	}
@@ -93,7 +94,7 @@ func extract(hzp string) (string, error) {
 	return filepath.Abs(filepath.Join(root, zr.File[0].Name))
 }
 
-func extractFile(root string, file *patchzip.File) error {
+func extractFile(root string, file *zip.File) error {
 	fmt.Printf("  extracting %s ...\n", file.Name)
 	path := filepath.Join(root, file.Name)
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
