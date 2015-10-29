@@ -1,11 +1,11 @@
-var fs = require('fs')
-var React = require('react')
+import fs from 'fs'
+import React from 'react'
 
-var common = require('../common')
+import { MainPage, PolicyNav, Markdown } from '../common'
 
 
 module.exports = (
-  <common.MainPage title="euphoria: conduct" nav={<common.PolicyNav selected="conduct" />}>
-    <common.Markdown className="policy" content={fs.readFileSync(__dirname + '/conduct.md', 'utf8')} />
-  </common.MainPage>
+  <MainPage title="euphoria: conduct" nav={<PolicyNav selected="conduct" />}>
+    <Markdown className="policy" content={fs.readFileSync(__dirname + '/conduct.md', 'utf8')} />
+  </MainPage>
 )

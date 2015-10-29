@@ -1,7 +1,7 @@
-var React = require('react')
+import React from 'react'
 
 
-module.exports.render = function(pageComponent) {
-  var doctype = '<!doctype html>'
+export function render(pageComponent) {
+  const doctype = '<!doctype html>'
   return doctype + React.renderToStaticMarkup(pageComponent)
 }

@@ -1,11 +1,11 @@
-var React = require('react')
+import React from 'react'
 
-var common = require('./common')
-var heimURL = require('../lib/heim-url')
+import { MainPage, FancyLogo, FauxNick, FauxMessage } from './common'
+import heimURL from '../lib/heim-url'
 
 
 module.exports = (
-  <common.MainPage title="about euphoria" className="about">
+  <MainPage title="about euphoria" className="about">
     <div className="primary">
       <h1>what's euphoria?</h1>
       <section className="letter">
@@ -19,14 +19,14 @@ module.exports = (
             <a className="chat-with-us" href={heimURL('/room/welcome/')}>chat with us &raquo;</a>
           </p>
           <p className="signature">
-            &mdash; <common.FauxNick nick="intortus" />, <common.FauxNick nick="chromakode" />, and <common.FauxNick nick="greenie" />
+            &mdash; <FauxNick nick="intortus" />, <FauxNick nick="chromakode" />, and <FauxNick nick="greenie" />
           </p>
         </div>
       </section>
     </div>
     <section>
       <h2>our values (in emoji form)</h2>
-      <common.FancyLogo />
+      <FancyLogo />
       <ul className="values">
         <li className="welcoming">
           <h4>euphoria is welcoming</h4>
@@ -52,15 +52,15 @@ module.exports = (
       <h2>who we are</h2>
       <h3>We're a small team who care deeply about online socialization and citizenship.</h3>
       <div className="messages wrap">
-        <common.FauxMessage sender="intortus" message="hi, I'm logan. I'm an erstwhile motorcycle racer and one of euphoria's programmers. you can meet new users with me in &welcome or discuss backend development with me in &heim." />
-        <common.FauxMessage sender="chromakode" message="hey, I'm Max! I live in San Francisco, where I work on Euphora's user interface and design. you can often find me jamming in &music or working in &heim." />
-        <common.FauxMessage sender="greenie" message="oh hai, I’m Kris. I live with too many cats in the deep forest of Vermont. when I’m not busy getting into moose-caused traffic jams, I do community stuff for Euphoria. I tend to be found linking articles in &space and playing bluegrass tunes in &music." />
-        <common.FauxMessage sender="ezzie" message="hi, I'm ezzie, the office dog!" embed={heimURL('/static/ezzie.jpg')}>
+        <FauxMessage sender="intortus" message="hi, I'm logan. I'm an erstwhile motorcycle racer and one of euphoria's programmers. you can meet new users with me in &welcome or discuss backend development with me in &heim." />
+        <FauxMessage sender="chromakode" message="hey, I'm Max! I live in San Francisco, where I work on Euphora's user interface and design. you can often find me jamming in &music or working in &heim." />
+        <FauxMessage sender="greenie" message="oh hai, I’m Kris. I live with too many cats in the deep forest of Vermont. when I’m not busy getting into moose-caused traffic jams, I do community stuff for Euphoria. I tend to be found linking articles in &space and playing bluegrass tunes in &music." />
+        <FauxMessage sender="ezzie" message="hi, I'm ezzie, the office dog!" embed={heimURL('/static/ezzie.jpg')}>
           <div className="replies">
-            <common.FauxMessage sender="ezzie" message="you can find more photos of me in the room &ezziethedog." />
+            <FauxMessage sender="ezzie" message="you can find more photos of me in the room &ezziethedog." />
           </div>
-        </common.FauxMessage>
+        </FauxMessage>
       </div>
     </section>
-  </common.MainPage>
+  </MainPage>
 )

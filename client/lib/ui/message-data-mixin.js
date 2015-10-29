@@ -1,23 +1,23 @@
-module.exports = function(getter, fieldName) {
-  var mixin = {
-    getInitialState: function() {
+export default function(getter, fieldName) {
+  const mixin = {
+    getInitialState() {
       // TODO: es6
-      var state = {}
+      const state = {}
       state[fieldName] = getter(this.props).get(this.props.nodeId)
       return state
     },
 
-    componentWillMount: function() {
+    componentWillMount() {
       getter(this.props).changes.on(this.props.nodeId, this.onDataUpdate)
     },
 
-    componentWillUnmount: function() {
+    componentWillUnmount() {
       getter(this.props).changes.off(this.props.nodeId, this.onDataUpdate)
     },
 
-    onDataUpdate: function(newValue) {
+    onDataUpdate(newValue) {
       // TODO: es6
-      var update = {}
+      const update = {}
       update[fieldName] = newValue
       this.setState(update)
     },

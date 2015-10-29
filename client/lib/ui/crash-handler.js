@@ -1,19 +1,25 @@
-module.exports = function(ev) {
+export default function displayCrashDialog(ev) {
   if (uidocument.getElementById('crash-dialog')) {
     return
   }
 
   // defer loading until we are actually rendering a crash dialog (speeds up initial client.js connection)
-  var fs = require('fs')
-  var React = require('react')
-  var crashedSVG = 'data:image/svg+xml;base64,' + fs.readFileSync(__dirname + '/../../res/crashed.svg', 'base64')
-  var crashedCSS = fs.readFileSync(__dirname + '/../../build/heim/crashed.css')
+  const fs = require('fs')
+  const React = require('react')
+  const crashedSVG = 'data:image/svg+xml;base64,' + fs.readFileSync(__dirname + '/../../res/crashed.svg', 'base64')
+  const crashedCSS = fs.readFileSync(__dirname + '/../../build/heim/crashed.css')
 
-  var CrashDialog = React.createClass({
+  const CrashDialog = React.createClass({
     displayName: 'CrashDialog',
 
-    render: function() {
-      var ravenStatus
+    propTypes: {
+      ravenEventId: React.PropTypes.oneOfType([React.PropTypes.string, React.PropTypes.bool]),
+      onReload: React.PropTypes.func,
+      onIgnore: React.PropTypes.func,
+    },
+
+    render() {
+      let ravenStatus
       if (this.props.ravenEventId) {
         ravenStatus = <p className="saved">saved an error report. <span style={{whiteSpace: 'nowrap'}}>please send us this code:</span> <strong><code>{this.props.ravenEventId}</code></strong></p>
       } else if (this.props.ravenEventId === false) {
@@ -40,22 +46,23 @@ module.exports = function(ev) {
     },
   })
 
-  var container = uidocument.createElement('div')
+  const container = uidocument.createElement('div')
   container.id = 'crash-dialog'
 
-  var component = <CrashDialog
-    onReload={() => uiwindow.location.reload()}
-    onIgnore={() => container.parentNode.removeChild(container)}
-  />
-  var crashDialog = React.render(component, container)
+  const component = (
+    <CrashDialog
+      onReload={() => uiwindow.location.reload()}
+      onIgnore={() => container.parentNode.removeChild(container)}
+    />
+  )
+  React.render(component, container)
   uidocument.body.appendChild(container)
 
   function onRavenSent(responseEv) {
     ev.srcElement.removeEventListener('ravenSuccess', onRavenSent, false)
     ev.srcElement.removeEventListener('ravenFailure', onRavenSent, false)
-    var ravenEventId = false
-    if (responseEv.type == 'ravenSuccess') {
-      // jshint camelcase: false
+    let ravenEventId = false
+    if (responseEv.type === 'ravenSuccess') {
       ravenEventId = responseEv.data.event_id
     }
     crashDialog.setProps({ravenEventId: ravenEventId})

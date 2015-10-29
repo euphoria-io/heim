@@ -1,20 +1,26 @@
-var React = require('react')
-var Reflux = require('reflux')
+import React from 'react'
+import Reflux from 'reflux'
 
 
-module.exports = React.createClass({
+export default React.createClass({
   displayName: 'KeyboardActionHandler',
+
+  propTypes: {
+    listenTo: React.PropTypes.func,
+    keys: React.PropTypes.objectOf(React.PropTypes.func),
+    children: React.PropTypes.node,
+  },
 
   mixins: [
     Reflux.ListenerMixin,
   ],
 
-  componentDidMount: function() {
+  componentDidMount() {
     this.listenTo(this.props.listenTo, 'onKeyDown')
   },
 
-  onKeyDown: function(ev) {
-    var key = ev.key
+  onKeyDown(ev) {
+    let key = ev.key
 
     if (ev.ctrlKey) {
       key = 'Control' + key
@@ -32,18 +38,18 @@ module.exports = React.createClass({
       key = 'Meta' + key
     }
 
-    if (key != 'Tab' && Heim.tabPressed) {
+    if (key !== 'Tab' && Heim.tabPressed) {
       key = 'Tab' + key
     }
 
-    var handler = this.props.keys[key]
+    const handler = this.props.keys[key]
     if (handler && handler(ev) !== false) {
       ev.stopPropagation()
       ev.preventDefault()
     }
   },
 
-  render: function() {
+  render() {
     return (
       <div onKeyDown={this.onKeyDown} {...this.props}>
         {this.props.children}

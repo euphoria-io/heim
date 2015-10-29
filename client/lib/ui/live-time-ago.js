@@ -1,24 +1,36 @@
-var React = require('react/addons')
-var Reflux = require('reflux')
-var classNames = require('classnames')
-var moment = require('moment')
+import React from 'react/addons'
+import Reflux from 'reflux'
+import classNames from 'classnames'
+import moment from 'moment'
 
 
-module.exports = React.createClass({
+function checkIsMoment(props, propName) {
+  if (!moment.isMoment(props[propName])) {
+    return new Error('not a Moment instance')
+  }
+}
+
+export default React.createClass({
   displayName: 'LiveTimeAgo',
+
+  propTypes: {
+    time: React.PropTypes.oneOfType([React.PropTypes.number, checkIsMoment]),
+    nowText: React.PropTypes.string,
+    className: React.PropTypes.string,
+  },
 
   mixins: [
     Reflux.connect(require('../stores/clock').minute, 'now'),
   ],
 
-  render: function() {
-    var t = this.props.time
+  render() {
+    let t = this.props.time
     if (!moment.isMoment(t)) {
       t = moment.unix(t)
     }
 
-    var display
-    var className
+    let display
+    let className
     if (moment(this.state.now).diff(t, 'minutes') === 0) {
       display = this.props.nowText
       className = 'now'

@@ -1,8 +1,9 @@
-module.exports = function(el, predicate) {
-  while (el) {
-    if (predicate(el)) {
-      return el
+export default function(el, predicate) {
+  let curEl = el
+  while (curEl) {
+    if (predicate(curEl)) {
+      return curEl
     }
-    el = el.parentNode
+    curEl = curEl.parentNode
   }
 }

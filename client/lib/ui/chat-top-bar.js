@@ -1,24 +1,43 @@
-var fs = require('fs')
-var React = require('react/addons')
-var classNames = require('classnames')
-var ReactCSSTransitionGroup = React.addons.CSSTransitionGroup
+const fs = require('fs')  // needs to be a require to work with brfs for now: https://github.com/babel/babelify/issues/81
+import React from 'react/addons'
+import classNames from 'classnames'
+const ReactCSSTransitionGroup = React.addons.CSSTransitionGroup
+import Immutable from 'immutable'
 
-var update = require('../stores/update')
-var FastButton = require('./fast-button')
-var Bubble = require('./toggle-bubble')
-var RoomTitle = require('./room-title')
+import update from '../stores/update'
+import FastButton from './fast-button'
+import Bubble from './toggle-bubble'
+import RoomTitle from './room-title'
 
 
-var hexLeftSVG = fs.readFileSync(__dirname + '/../../res/hex-left-side.svg')
-var hexRightSVG = hexLeftSVG.toString().replace('transform=""', 'transform="translate(7, 0) scale(-1, 1)"')
+const hexLeftSVG = fs.readFileSync(__dirname + '/../../res/hex-left-side.svg')
+const hexRightSVG = hexLeftSVG.toString().replace('transform=""', 'transform="translate(7, 0) scale(-1, 1)"')
 
-module.exports = React.createClass({
+export default React.createClass({
   displayName: 'ChatTopBar',
+
+  propTypes: {
+    who: React.PropTypes.instanceOf(Immutable.Map),
+    showInfoPaneButton: React.PropTypes.bool,
+    infoPaneOpen: React.PropTypes.bool,
+    collapseInfoPane: React.PropTypes.func,
+    expandInfoPane: React.PropTypes.func,
+    toggleUserList: React.PropTypes.func,
+    roomName: React.PropTypes.string.isRequired,
+    authType: React.PropTypes.string,
+    connected: React.PropTypes.bool,
+    joined: React.PropTypes.bool,
+    isManager: React.PropTypes.bool,
+    managerMode: React.PropTypes.bool,
+    toggleManagerMode: React.PropTypes.func,
+    working: React.PropTypes.bool,
+    updateReady: React.PropTypes.bool,
+  },
 
   mixins: [require('react-immutable-render-mixin')],
 
-  render: function() {
-    var userCount = this.props.who.filter(user => user.get('name') && !/^bot:/.test(user.get('id'))).size
+  render() {
+    const userCount = this.props.who.filter(user => user.get('name') && !/^bot:/.test(user.get('id'))).size
 
     // use an outer container element so we can z-index the bar above the
     // bubbles. this makes the bubbles slide from "underneath" the bar.

@@ -1,36 +1,27 @@
-// ignore Text, Image redefinition
-// jshint -W079
+import React from 'react'
 
-var React = require('react')
-
-var email = require('./email')
-var Item = email.Item
-var Text = email.Text
-var Link = email.Link
-var common = require('./common')
-var textDefaults = common.textDefaults
+import { Item, Text, Link } from './email'
+import { StandardEmail, TopBubbleBox, BodyBox, BigButton, standardFooter, textDefaults } from './common'
 
 
 module.exports = (
-  <common.StandardEmail>
-    <common.TopBubbleBox logo="logo-warning.png" padding={15}>
+  <StandardEmail>
+    <TopBubbleBox logo="logo-warning.png" padding={15}>
       <Item align="center">
         <Text {...textDefaults} fontSize={24}>would you like to reset your password?</Text>
       </Item>
-    </common.TopBubbleBox>
-    <common.BodyBox>
+    </TopBubbleBox>
+    <BodyBox>
       <Item>
         <Text {...textDefaults}>hey {'{{.AccountName}}'}, we've received a password reset request for your <Link {...textDefaults} href="{{.SiteURL}}">{'{{.SiteName}}'}</Link> account:</Text>
       </Item>
-      <common.BigButton color="#dca955" href="{{.ResetPasswordURL}}">
+      <BigButton color="#dca955" href="{{.ResetPasswordURL}}">
         reset your password
-      </common.BigButton>
+      </BigButton>
       <Item>
         <Text {...textDefaults}>if you did not make this request and suspect something fishy is going on, please reply to this email immediately.</Text>
       </Item>
-    </common.BodyBox>
-    <common.Footer>
-      {common.standardFooter}
-    </common.Footer>
-  </common.StandardEmail>
+    </BodyBox>
+    {standardFooter}
+  </StandardEmail>
 )

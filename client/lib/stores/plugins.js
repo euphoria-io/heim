@@ -1,15 +1,16 @@
-var _ = require('lodash')
-var Reflux = require('reflux')
+import _ from 'lodash'
+import Reflux from 'reflux'
 
-var Hooks = require('../hooks')
+import Hooks from '../hooks'
+import fauxPlugins from '../faux-plugins'
 
 
-var storeActions = Reflux.createActions([
+const storeActions = Reflux.createActions([
   'load',
 ])
 _.extend(module.exports, storeActions)
 
-var hooks = module.exports.hooks = new Hooks(
+const hooks = module.exports.hooks = new Hooks(
   'page-bottom',
   'main-sidebar',
   'thread-panes',
@@ -22,7 +23,7 @@ module.exports.hook = hooks.register.bind(hooks)
 module.exports.store = Reflux.createStore({
   listenables: storeActions,
 
-  load: function(roomName) {
-    require('../faux-plugins')(roomName)
+  load(roomName) {
+    fauxPlugins(roomName)
   },
 })

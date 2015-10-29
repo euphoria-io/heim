@@ -1,22 +1,22 @@
-require('babel-polyfill')
+import 'babel-polyfill'
 
 
 function writeEnv(doc, hash) {
-  var prefix = process.env.HEIM_PREFIX
-  var query = hash ? '?v=' + hash : ''
+  const prefix = process.env.HEIM_PREFIX
+  const query = hash ? '?v=' + hash : ''
   doc.write('<link rel="stylesheet" type="text/css" id="css" href="' + prefix + '/static/main.css' + query + '">')
   doc.write('<link rel="stylesheet" type="text/css" id="emoji-css" href="' + prefix + '/static/emoji.css' + query + '">')
-  doc.write('<script src="' + prefix + '/static/raven.js' + query +  '"></script>')
-  doc.write('<script src="' + prefix + '/static/main.js' + query +  '"></script>')
+  doc.write('<script src="' + prefix + '/static/raven.js' + query + '"></script>')
+  doc.write('<script src="' + prefix + '/static/main.js' + query + '"></script>')
   doc.close()
 }
 
-var crashHandlerSetup = false
+let crashHandlerSetup = false
 function setupCrashHandler(evs) {
   if (crashHandlerSetup) {
     return
   }
-  var crashHandler = require('./ui/crash-handler')
+  const crashHandler = require('./ui/crash-handler').default
   evs.addEventListener(document, 'ravenHandle', crashHandler)
   evs.addEventListener(uidocument, 'ravenHandle', crashHandler)
   crashHandlerSetup = true
@@ -29,33 +29,33 @@ if (!window.frameElement) {
   window.uiwindow = window.top
   window.uidocument = window.top.document
 
-  var queryString = require('querystring')
-  var _ = require('lodash')
-  var EventListeners = require('./event-listeners')
+  const queryString = require('querystring')
+  const _ = require('lodash')
+  const EventListeners = require('./event-listeners').default
 
-  var evs = new EventListeners()
+  const evs = new EventListeners()
   if (!window.onReady) {
     // if this is the first frame, register crash handlers early
     setupCrashHandler(evs)
   }
 
   // read url hash flags pertaining to socket connection
-  var roomName = location.pathname.match(/(\w+)\/$/)[1]
-  var hashFlags = queryString.parse(location.hash.substr(1))
-  var connectEndpoint = process.env.HEIM_ORIGIN + process.env.HEIM_PREFIX
-  if (process.env.NODE_ENV != 'production' && hashFlags.connect) {
+  const roomName = location.pathname.match(/(\w+)\/$/)[1]
+  const hashFlags = queryString.parse(location.hash.substr(1))
+  let connectEndpoint = process.env.HEIM_ORIGIN + process.env.HEIM_PREFIX
+  if (process.env.NODE_ENV !== 'production' && hashFlags.connect) {
     connectEndpoint = hashFlags.connect
   }
-  var socketLog = _.has(hashFlags, 'socket')
+  const socketLog = _.has(hashFlags, 'socket')
 
   // connect websocket as early as possible so we can start streaming data
-  var Socket = require('./heim/socket')
-  var socket = new Socket()
+  const Socket = require('./heim/socket').default
+  const socket = new Socket()
   socket.startBuffering()
   socket.connect(connectEndpoint, roomName, {log: socketLog})
 
   // set up general environment
-  var moment = require('moment')
+  const moment = require('moment')
   moment.relativeTimeThreshold('s', 0)
   moment.relativeTimeThreshold('m', 60)
 
@@ -74,7 +74,7 @@ if (!window.frameElement) {
       MM: '%dmo',
       y: '1y',
       yy: '%dy',
-    }
+    },
   })
 
   moment.locale('en', {
@@ -92,20 +92,20 @@ if (!window.frameElement) {
       MM: '%d months',
       y: 'a year',
       yy: '%d years',
-    }
+    },
   })
 
-  var isTextInput = require('./is-text-input')
-  var BatchTransition = require('./batch-transition')
+  const isTextInput = require('./is-text-input').default
+  const BatchTransition = require('./batch-transition').default
 
-  Heim = {
+  window.Heim = {
     addEventListener: evs.addEventListener.bind(evs),
     removeEventListener: evs.removeEventListener.bind(evs),
 
     tabPressed: false,
 
-    setFavicon: function(favicon) { Heim._favicon = favicon },
-    setTitleMsg: function(msg) { Heim._titleMsg = msg },
+    setFavicon(favicon) { Heim._favicon = favicon },
+    setTitleMsg(msg) { Heim._titleMsg = msg },
 
     transition: new BatchTransition(),
 
@@ -116,7 +116,7 @@ if (!window.frameElement) {
     isiOS: /ipad|iphone|ipod/i.test(navigator.userAgent),
 
     socket: {
-      devSend: function(packet) {
+      devSend(packet) {
         Heim.chat.store.socket.send(packet, true)
       },
     },
@@ -139,18 +139,18 @@ if (!window.frameElement) {
   Heim.hook = Heim.plugins.hook
 
   if (_.has(hashFlags, 'perf')) {
-    var React = require('react/addons')
+    const React = require('react/addons')
     if (React.addons && React.addons.Perf) {
       uiwindow.ReactPerf = React.addons.Perf
       uiwindow.ReactPerf.start()
     }
   }
 
-  Heim.loadCSS = function(id) {
-    var cssEl = uidocument.getElementById(id)
-    var cssURL = document.getElementById(id).getAttribute('href')
-    if (!cssEl || cssEl.parentNode != uidocument.head || cssEl.getAttribute('href') != cssURL) {
-      var newCSSEl = uidocument.createElement('link')
+  Heim.loadCSS = function loadCSS(id) {
+    const cssEl = uidocument.getElementById(id)
+    const cssURL = document.getElementById(id).getAttribute('href')
+    if (!cssEl || cssEl.parentNode !== uidocument.head || cssEl.getAttribute('href') !== cssURL) {
+      const newCSSEl = uidocument.createElement('link')
       newCSSEl.id = id
       newCSSEl.rel = 'stylesheet'
       newCSSEl.type = 'text/css'
@@ -161,31 +161,29 @@ if (!window.frameElement) {
         cssEl.id = id + '-old'
 
         // allow both stylesheets to coexist briefly in an attempt to avoid FOUSC
-        setTimeout(function() {
-          cssEl.parentNode.removeChild(cssEl)
-        }, 30)
+        setTimeout(() => cssEl.parentNode.removeChild(cssEl), 30)
       }
     }
   }
 
-  Heim.attachUI = function() {
+  Heim.attachUI = function attachUI() {
     setupCrashHandler(evs)
 
-    var Reflux = require('reflux')
+    const Reflux = require('reflux')
 
     // IE9+ requires this bind: https://msdn.microsoft.com/en-us/library/ie/gg622930(v=vs.85).aspx
     Reflux.nextTick(setImmediate.bind(window))
 
-    var React = require('react/addons')
-    var SyntheticKeyboardEvent = require('react/lib/SyntheticKeyboardEvent')
-    var Main = require('./ui/main')
+    const React = require('react/addons')
+    const SyntheticKeyboardEvent = require('react/lib/SyntheticKeyboardEvent')
+    const Main = require('./ui/main').default
 
     Heim.loadCSS('css')
     Heim.loadCSS('emoji-css')
 
     Heim.addEventListener(uiwindow, 'storage', Heim.storage.storageChange, false)
 
-    Heim.addEventListener(uiwindow, 'focus', function() {
+    Heim.addEventListener(uiwindow, 'focus', () => {
       Heim.activity.windowFocused()
       Heim.activity.touch(roomName)
     }, false)
@@ -194,13 +192,13 @@ if (!window.frameElement) {
       Heim.activity.windowFocused()
     }
 
-    Heim.addEventListener(uiwindow, 'message', function(ev) {
-      if (ev.origin == process.env.EMBED_ORIGIN) {
+    Heim.addEventListener(uiwindow, 'message', ev => {
+      if (ev.origin === process.env.EMBED_ORIGIN) {
         Heim.actions.embedMessage(ev.data)
       }
     }, false)
 
-    Heim.addEventListener(uidocument.body, 'keypress', function(ev) {
+    Heim.addEventListener(uidocument.body, 'keypress', ev => {
       if (!uiwindow.getSelection().isCollapsed) {
         return
       }
@@ -213,29 +211,27 @@ if (!window.frameElement) {
         return
       }
 
-      var character = String.fromCharCode(ev.which)
+      const character = String.fromCharCode(ev.which)
       if (character) {
         // in Chrome, if we focus synchronously, the input receives the
         // keypress event -- not so in Firefox. we'll delay the focus event to
         // avoid double key insertion in Chrome.
-        setImmediate(function() {
-          Heim.ui.focusEntry(character)
-        })
+        setImmediate(() => Heim.ui.focusEntry(character))
       }
     }, true)
 
-    Heim.addEventListener(uidocument.body, 'keydown', function(originalEv) {
+    Heim.addEventListener(uidocument.body, 'keydown', originalEv => {
       Heim.activity.touch(roomName)
 
       // dig into React a little so it normalizes the event (namely ev.key).
-      var ev = new SyntheticKeyboardEvent(null, null, originalEv)
+      const ev = new SyntheticKeyboardEvent(null, null, originalEv)
 
       // prevent backspace from navigating the page
-      if (ev.key == 'Backspace' && ev.target == uidocument.body) {
+      if (ev.key === 'Backspace' && ev.target === uidocument.body) {
         ev.preventDefault()
       }
 
-      if (ev.key == 'Tab') {
+      if (ev.key === 'Tab') {
         Heim.tabPressed = true
       }
 
@@ -244,49 +240,40 @@ if (!window.frameElement) {
       }
     }, false)
 
-    Heim.addEventListener(uidocument.body, 'keyup', function(originalEv) {
-      var ev = new SyntheticKeyboardEvent(null, null, originalEv)
-      if (ev.key == 'Tab') {
+    Heim.addEventListener(uidocument.body, 'keyup', originalEv => {
+      const ev = new SyntheticKeyboardEvent(null, null, originalEv)
+      if (ev.key === 'Tab') {
         Heim.tabPressed = false
       }
     })
 
     // helpers for catching those pesky mouse-escaped-window-and-released cases
-    Heim.addEventListener(uiwindow, 'mouseup', function(ev) {
-      Heim.ui.globalMouseUp(ev)
-    }, false)
-
-    Heim.addEventListener(uiwindow, 'mousemove', function(ev) {
-      Heim.ui.globalMouseMove(ev)
-    }, false)
+    Heim.addEventListener(uiwindow, 'mouseup', ev => Heim.ui.globalMouseUp(ev), false)
+    Heim.addEventListener(uiwindow, 'mousemove', ev => Heim.ui.globalMouseMove(ev), false)
 
     if (Heim.isTouch) {
       React.initializeTouchEvents()
       uidocument.body.classList.add('touch')
 
-      Heim.addEventListener(uidocument.body, 'touchstart', function(ev) {
+      Heim.addEventListener(uidocument.body, 'touchstart', ev => {
         Heim.activity.touch(roomName)
         ev.target.classList.add('touching')
       }, false)
 
-      Heim.addEventListener(uidocument.body, 'touchend', function(ev) {
+      Heim.addEventListener(uidocument.body, 'touchend', ev => {
         ev.target.classList.remove('touching')
       }, false)
     } else {
-      Heim.addEventListener(uidocument.body, 'mousedown', function() {
-        Heim.activity.touch(roomName)
-      }, false)
+      Heim.addEventListener(uidocument.body, 'mousedown', () => Heim.activity.touch(roomName), false)
     }
 
-    Heim.setFavicon = _.partial(require('./set-favicon'), uidocument)
+    Heim.setFavicon = _.partial(require('./set-favicon').default, uidocument)
     if (Heim._favicon) {
       Heim.setFavicon(Heim._favicon)
       delete Heim._favicon
     }
 
-    Heim.setTitleMsg = function(msg) {
-      uidocument.title = msg ? roomName + ' (' + msg + ')' : roomName
-    }
+    Heim.setTitleMsg = msg => uidocument.title = msg ? roomName + ' (' + msg + ')' : roomName
     if (Heim._titleMsg) {
       Heim.setTitleMsg(Heim._titleMsg)
       delete Heim._titleMsg
@@ -306,29 +293,29 @@ if (!window.frameElement) {
     Heim.activity.touch(roomName)
   }
 
-  Heim.detachUI = function() {
+  Heim.detachUI = function detachUI() {
     uidocument.body.classList.remove('ready', 'visible')
     evs.removeAllEventListeners()
     Heim.mainComponent.unmountComponent()
   }
 
-  Heim.prepareUpdate = function(hash) {
+  Heim.prepareUpdate = function prepareUpdate(hash) {
     Heim.update.setReady(false)
 
-    var frame = uidocument.getElementById('env-update')
-    if (frame) {
-      frame.parentNode.removeChild(frame)
+    const oldFrame = uidocument.getElementById('env-update')
+    if (oldFrame) {
+      oldFrame.parentNode.removeChild(oldFrame)
     }
 
-    frame = uidocument.createElement('iframe')
+    const frame = uidocument.createElement('iframe')
     frame.id = 'env-update'
     frame.className = 'js'
     uidocument.body.appendChild(frame)
 
     frame.contentDocument.open()
-    var context = frame.contentWindow
-    context.onReady = function() {
-      var removeListener = context.Heim.chat.store.listen(function(chatState) {
+    const context = frame.contentWindow
+    context.onReady = function onReady() {
+      const removeListener = context.Heim.chat.store.listen(function preUpdateChatHandler(chatState) {
         if (chatState.joined) {
           removeListener()
 
@@ -355,7 +342,7 @@ if (!window.frameElement) {
   Heim.plugins.load(roomName)
   Heim.actions.setup(roomName)
 
-  setImmediate(function() {
+  setImmediate(() => {
     if (window.onReady) {
       window.onReady()
     } else {

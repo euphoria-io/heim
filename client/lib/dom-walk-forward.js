@@ -1,5 +1,5 @@
-module.exports = function walkForward(startEl, endEl, callback) {
-  var el = startEl
+export default function walkForward(startEl, endEl, callback) {
+  let el = startEl
   while (el) {
     callback(el)
 
@@ -8,7 +8,7 @@ module.exports = function walkForward(startEl, endEl, callback) {
     } else {
       while (!el.nextSibling) {
         el = el.parentNode
-        if (!el || el == endEl) {
+        if (!el || el === endEl) {
           return
         }
       }

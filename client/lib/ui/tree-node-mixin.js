@@ -1,22 +1,22 @@
-var _ = require('lodash')
+import _ from 'lodash'
 
 
-module.exports = function(prefix) {
-  var treeField = prefix ? prefix + 'Tree' : 'tree'
-  var nodeField = prefix ? prefix + 'Node' : 'node'
-  var nodeIdField = prefix ? prefix + 'NodeId' : 'nodeId'
-  var onNodeUpdateField = prefix ? 'on' + _.capitalize(prefix) + 'NodeUpdate' : 'onNodeUpdate'
+export default function(prefix) {
+  const treeField = prefix ? prefix + 'Tree' : 'tree'
+  const nodeField = prefix ? prefix + 'Node' : 'node'
+  const nodeIdField = prefix ? prefix + 'NodeId' : 'nodeId'
+  const onNodeUpdateField = prefix ? 'on' + _.capitalize(prefix) + 'NodeUpdate' : 'onNodeUpdate'
 
-  var mixin = {
-    getInitialState: function() {
+  const mixin = {
+    getInitialState() {
       // TODO: es6
-      var state = {}
+      const state = {}
       state[nodeField] = this.props[treeField].get(this.props[nodeIdField])
       return state
     },
 
-    componentWillReceiveProps: function(nextProps) {
-      if (this.props[treeField] != nextProps[treeField] || this.props[nodeIdField] != nextProps[nodeIdField]) {
+    componentWillReceiveProps(nextProps) {
+      if (this.props[treeField] !== nextProps[treeField] || this.props[nodeIdField] !== nextProps[nodeIdField]) {
         // stop listening to old tree/node
         this.props[treeField].changes.off(this.props[nodeIdField], this[onNodeUpdateField])
 
@@ -28,18 +28,18 @@ module.exports = function(prefix) {
       }
     },
 
-    componentWillMount: function() {
+    componentWillMount() {
       this.props[treeField].changes.on(this.props[nodeIdField], this[onNodeUpdateField])
     },
 
-    componentWillUnmount: function() {
+    componentWillUnmount() {
       this.props[treeField].changes.off(this.props[nodeIdField], this[onNodeUpdateField])
     },
   }
 
-  mixin[onNodeUpdateField] = function(newValue) {
+  mixin[onNodeUpdateField] = function handleNodeUpdateField(newValue) {
     // TODO: es6
-    var update = {}
+    const update = {}
     update[nodeField] = newValue
     this.setState(update)
   }

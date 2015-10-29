@@ -1,7 +1,6 @@
-var sound = new Audio(process.env.HEIM_PREFIX + '/static/alert.mp3')
+const sound = new Audio(process.env.HEIM_PREFIX + '/static/alert.mp3')
 
-module.exports = {}
-module.exports.play = function() {
+export function play() {
   if (sound.readyState !== 0) {
     sound.currentTime = 0
   }

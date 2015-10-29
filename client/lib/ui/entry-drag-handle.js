@@ -1,30 +1,36 @@
-var React = require('react/addons')
-var classNames = require('classnames')
-var Reflux = require('reflux')
+import React from 'react/addons'
+import classNames from 'classnames'
+import Reflux from 'reflux'
 
-module.exports = React.createClass({
+import { Pane } from '../stores/ui'
+
+export default React.createClass({
   displayName: 'EntryDragHandle',
+
+  propTypes: {
+    pane: React.PropTypes.instanceOf(Pane).isRequired,
+  },
 
   mixins: [
     Reflux.ListenerMixin,
   ],
 
-  componentDidMount: function() {
-    this.listenTo(this.props.pane.store, state => this.setState({'pane': state}))
-  },
-
-  getInitialState: function() {
+  getInitialState() {
     return {
       pane: this.props.pane.store.getInitialState(),
     }
   },
 
-  render: function() {
-    var showJumpToBottom = this.state.pane.draggingEntry && this.state.pane.focusedMessage !== null
+  componentDidMount() {
+    this.listenTo(this.props.pane.store, state => this.setState({'pane': state}))
+  },
+
+  render() {
+    const showJumpToBottom = this.state.pane.draggingEntry && this.state.pane.focusedMessage !== null
     return (
       <div className="drag-handle-container">
         <button className={classNames('drag-handle', {'touching': this.state.pane.draggingEntry})} />
-        {showJumpToBottom && <button className={classNames('jump-to-bottom', {'touching': this.state.pane.draggingEntryCommand == 'to-bottom'})} />}
+        {showJumpToBottom && <button className={classNames('jump-to-bottom', {'touching': this.state.pane.draggingEntryCommand === 'to-bottom'})} />}
       </div>
     )
   },

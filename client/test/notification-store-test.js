@@ -1,19 +1,20 @@
-var support = require('./support/setup')
-var _ = require('lodash')
-var assert = require('assert')
-var sinon = require('sinon')
+import support from './support/setup'
+import _ from 'lodash'
+import assert from 'assert'
+import sinon from 'sinon'
+
+import ChatTree from '../lib/chat-tree'
+import notification from '../lib/stores/notification'
+import storage from '../lib/stores/storage'
+import ui from '../lib/stores/ui'
 
 
-describe('notification store', function() {
-  var ChatTree = require('../lib/chat-tree')
-  var notification = require('../lib/stores/notification')
-  var storage = require('../lib/stores/storage')
-  var ui = require('../lib/stores/ui')
-  var clock
-  var _Notification = window.Notification
-  var startTime
+describe('notification store', () => {
+  const _Notification = window.Notification
+  let startTime
+  let clock
 
-  beforeEach(function() {
+  beforeEach(() => {
     clock = support.setupClock()
     clock.tick()
     startTime = Date.now()
@@ -23,7 +24,7 @@ describe('notification store', function() {
     sinon.stub(Heim, 'setTitleMsg')
   })
 
-  afterEach(function() {
+  afterEach(() => {
     clock.restore()
     window.Notification = _Notification
     storage.set.restore()
@@ -32,60 +33,60 @@ describe('notification store', function() {
     Heim.setTitleMsg.restore()
   })
 
-  describe('when unsupported', function() {
-    beforeEach(function() {
+  describe('when unsupported', () => {
+    beforeEach(() => {
       delete window.Notification
       support.resetStore(notification.store)
     })
 
-    it('should set unsupported', function() {
+    it('should set unsupported', () => {
       assert.equal(notification.store.getInitialState().popupsSupported, false)
     })
   })
 
-  describe('when supported but not permitted', function() {
-    beforeEach(function() {
+  describe('when supported but not permitted', () => {
+    beforeEach(() => {
       window.Notification = {popupsPermission: 'default'}
       support.resetStore(notification.store)
     })
 
-    it('should set supported', function() {
+    it('should set supported', () => {
       assert.equal(notification.store.getInitialState().popupsSupported, true)
     })
 
-    it('should set no permission', function() {
+    it('should set no permission', () => {
       assert.equal(notification.store.getInitialState().popupsPermission, false)
     })
 
-    describe('enabling popups', function() {
-      beforeEach(function() {
+    describe('enabling popups', () => {
+      beforeEach(() => {
         Notification.requestPermission = sinon.spy()
       })
 
-      it('should request permission', function() {
+      it('should request permission', () => {
         notification.store.enablePopups()
         sinon.assert.calledWithExactly(Notification.requestPermission, notification.store.onPermission)
       })
     })
 
-    describe('receiving permission', function() {
-      it('should set popupsPermission', function(done) {
-        support.listenOnce(notification.store, function(state) {
+    describe('receiving permission', () => {
+      it('should set popupsPermission', done => {
+        support.listenOnce(notification.store, state => {
           assert.equal(state.popupsPermission, true)
           done()
         })
         notification.store.onPermission('granted')
       })
 
-      it('should store enabled', function() {
+      it('should store enabled', () => {
         notification.store.onPermission('granted')
         sinon.assert.calledWithExactly(storage.set, 'notify', true)
       })
     })
 
-    describe('receiving denial', function() {
-      it('should set no popupsPermission', function(done) {
-        support.listenOnce(notification.store, function(state) {
+    describe('receiving denial', () => {
+      it('should set no popupsPermission', done => {
+        support.listenOnce(notification.store, state => {
           assert.equal(state.popupsPermission, false)
           done()
         })
@@ -94,8 +95,8 @@ describe('notification store', function() {
     })
   })
 
-  describe('when supported and permitted', function() {
-    var message1 = {
+  describe('when supported and permitted', () => {
+    const message1 = {
       'id': 'id1',
       'time': 123456,
       'sender': {
@@ -105,7 +106,7 @@ describe('notification store', function() {
       'content': 'hello, ezzie!',
     }
 
-    var message2 = {
+    const message2 = {
       'id': 'id2',
       'time': 123457,
       'sender': {
@@ -115,7 +116,7 @@ describe('notification store', function() {
       'content': 'woof!',
     }
 
-    var message3 = {
+    const message3 = {
       'id': 'id3',
       'time': 123458,
       'sender': {
@@ -125,7 +126,7 @@ describe('notification store', function() {
       'content': 'whoa',
     }
 
-    var messageOld = {
+    const messageOld = {
       'id': 'id0',
       'time': 123450,
       'sender': {
@@ -135,11 +136,11 @@ describe('notification store', function() {
       'content': '/me yawns',
     }
 
-    var message2Own = _.merge({}, message2, {
+    const message2Own = _.merge({}, message2, {
       '_own': true,
     })
 
-    var messageMention = {
+    const messageMention = {
       'id': 'id3',
       'time': 123457,
       'sender': {
@@ -150,21 +151,21 @@ describe('notification store', function() {
       '_mention': true,
     }
 
-    var messageMentionSeen = _.merge({}, messageMention, {
+    const messageMentionSeen = _.merge({}, messageMention, {
       '_seen': true,
     })
 
-    var messageMentionShadow = {
+    const messageMentionShadow = {
       'id': 'id3',
       'parent': null,
       '_mention': true,
     }
 
-    var messageMentionDeleted = _.merge({}, messageMention, {
+    const messageMentionDeleted = _.merge({}, messageMention, {
       'deleted': true,
     })
 
-    var message2Reply1 = {
+    const message2Reply1 = {
       'id': 'id4',
       'time': 123458,
       'parent': 'id2',
@@ -175,7 +176,7 @@ describe('notification store', function() {
       'content': 'kitty?',
     }
 
-    var message2Reply2Own = {
+    const message2Reply2Own = {
       'id': 'id5',
       'time': 123459,
       'parent': 'id2',
@@ -187,7 +188,7 @@ describe('notification store', function() {
       '_own': true,
     }
 
-    var message2Reply3 = {
+    const message2Reply3 = {
       'id': 'id6',
       'time': 123460,
       'parent': 'id2',
@@ -198,109 +199,109 @@ describe('notification store', function() {
       'content': 'mew?',
     }
 
-    var emptyChatState = {
+    const emptyChatState = {
       roomName: 'ezzie',
       messages: new ChatTree(),
     }
 
-    var mockChatState = {
+    const mockChatState = {
       roomName: 'ezzie',
       messages: new ChatTree().reset([
         message1,
-      ])
+      ]),
     }
 
-    var mockChatState2 = {
+    const mockChatState2 = {
       roomName: 'ezzie',
       messages: new ChatTree().reset([
         message1,
         message2,
-      ])
+      ]),
     }
 
-    var mockChatState3 = {
+    const mockChatState3 = {
       roomName: 'ezzie',
       messages: new ChatTree().reset([
         message1,
         message2,
         message3,
-      ])
+      ]),
     }
 
-    var mockChatState3Old = {
+    const mockChatState3Old = {
       roomName: 'ezzie',
       messages: new ChatTree().reset([
         messageOld,
         message1,
         message2,
         message3,
-      ])
+      ]),
     }
 
-    var mockChatState2Own = {
+    const mockChatState2Own = {
       roomName: 'ezzie',
       messages: new ChatTree().reset([
         message1,
         message2Own,
-      ])
+      ]),
     }
 
-    var mockChatStateMention = {
+    const mockChatStateMention = {
       roomName: 'ezzie',
       messages: new ChatTree().reset([
         message1,
         message2,
         messageMention,
-      ])
+      ]),
     }
 
-    var mockChatStateMentionSeen = {
+    const mockChatStateMentionSeen = {
       roomName: 'ezzie',
       messages: new ChatTree().reset([
         message1,
         message2,
         messageMentionSeen,
-      ])
+      ]),
     }
 
-    var mockChatStateMentionShadow = {
+    const mockChatStateMentionShadow = {
       roomName: 'ezzie',
       messages: new ChatTree().reset([
         message1,
         message2,
         messageMentionShadow,
-      ])
+      ]),
     }
 
-    var mockChatStateMentionDeleted = {
+    const mockChatStateMentionDeleted = {
       roomName: 'ezzie',
       messages: new ChatTree().reset([
         message1,
         message2,
         messageMentionDeleted,
-      ])
+      ]),
     }
 
-    var mockChatState2Reply2Own = {
+    const mockChatState2Reply2Own = {
       roomName: 'ezzie',
       messages: new ChatTree().reset([
         message1,
         message2,
         message2Reply1,
         message2Reply2Own,
-      ])
+      ]),
     }
 
-    var mockChatState2OwnReply = {
+    const mockChatState2OwnReply = {
       roomName: 'ezzie',
       messages: new ChatTree().reset([
         message1,
         message2Own,
         message2Reply1,
-      ])
+      ]),
     }
 
-    var mockChatState2Reply3 = {
+    const mockChatState2Reply3 = {
       roomName: 'ezzie',
       messages: new ChatTree().reset([
         message1,
@@ -308,18 +309,18 @@ describe('notification store', function() {
         message2Reply1,
         message2Reply2Own,
         message2Reply3,
-      ])
+      ]),
     }
 
-    var mockChatStateOrphan = {
+    const mockChatStateOrphan = {
       roomName: 'ezzie',
       messages: new ChatTree().reset([
         message1,
         message2Reply1,
-      ])
+      ]),
     }
 
-    var storageMock = {
+    const storageMock = {
       notify: true,
       notifyPausedUntil: 0,
       room: {ezzie: {notifyMode: 'message'}},
@@ -332,11 +333,11 @@ describe('notification store', function() {
       )
     }
 
-    var fakeNotification
+    let fakeNotification
 
-    beforeEach(function() {
-      window.Notification = sinon.spy(function() {
-        this.close = sinon.spy(function() {
+    beforeEach(() => {
+      window.Notification = sinon.spy(function create() {
+        this.close = sinon.spy(() => {
           if (this.onclose) {
             this.onclose()
           }
@@ -347,40 +348,40 @@ describe('notification store', function() {
       support.resetStore(notification.store)
     })
 
-    it('should set supported', function() {
+    it('should set supported', () => {
       assert.equal(notification.store.getInitialState().popupsSupported, true)
     })
 
-    it('should set popupsPermission', function() {
+    it('should set popupsPermission', () => {
       assert.equal(notification.store.getInitialState().popupsPermission, true)
     })
 
-    describe('enabling popups', function() {
-      it('should store enabled and reset pause time', function() {
+    describe('enabling popups', () => {
+      it('should store enabled and reset pause time', () => {
         notification.store.enablePopups()
         sinon.assert.calledWithExactly(storage.set, 'notify', true)
         sinon.assert.calledWithExactly(storage.set, 'notifyPausedUntil', null)
       })
     })
 
-    describe('disabling popups', function() {
-      it('should store disabled and reset pause time', function() {
+    describe('disabling popups', () => {
+      it('should store disabled and reset pause time', () => {
         notification.store.disablePopups()
         sinon.assert.calledWithExactly(storage.set, 'notify', false)
         sinon.assert.calledWithExactly(storage.set, 'notifyPausedUntil', null)
       })
     })
 
-    describe('pausing popups for a time', function() {
-      it('should store pause time', function() {
-        var time = startTime + 1000
+    describe('pausing popups for a time', () => {
+      it('should store pause time', () => {
+        const time = startTime + 1000
         notification.store.pausePopupsUntil(time)
         sinon.assert.calledWithExactly(storage.set, 'notifyPausedUntil', time)
       })
     })
 
-    describe('when popup state changes in another tab', function() {
-      beforeEach(function() {
+    describe('when popup state changes in another tab', () => {
+      beforeEach(() => {
         notification.store.chatStateChange({connected: true, joined: true})
         notification.store.onInactive()
         notification.store.storageChange(storageMock)
@@ -389,14 +390,14 @@ describe('notification store', function() {
         sinon.assert.calledOnce(Notification)
       })
 
-      it('should close popups if paused', function() {
+      it('should close popups if paused', () => {
         notification.store.storageChange(_.extend({}, storageMock, {
           notifyPausedUntil: Date.now() + 1000,
         }))
         sinon.assert.calledOnce(fakeNotification.close)
       })
 
-      it('should close popups if disabled', function() {
+      it('should close popups if disabled', () => {
         notification.store.storageChange(_.extend({}, storageMock, {
           notify: false,
         }))
@@ -404,23 +405,23 @@ describe('notification store', function() {
       })
     })
 
-    describe('setting a room notification mode', function() {
-      it('should store mode', function() {
+    describe('setting a room notification mode', () => {
+      it('should store mode', () => {
         notification.store.setRoomNotificationMode('ezzie', 'none')
         sinon.assert.calledWithExactly(storage.setRoom, 'ezzie', 'notifyMode', 'none')
       })
     })
 
-    describe('when disconnected', function() {
-      it('should set favicon', function() {
+    describe('when disconnected', () => {
+      it('should set favicon', () => {
         notification.store.chatStateChange({connected: false, joined: false})
         sinon.assert.calledOnce(Heim.setFavicon)
         sinon.assert.calledWithExactly(Heim.setFavicon, notification.favicons.disconnected)
       })
     })
 
-    describe('when popups enabled', function() {
-      beforeEach(function() {
+    describe('when popups enabled', () => {
+      beforeEach(() => {
         notification.store.chatStateChange({connected: true, joined: true})
         Heim.setFavicon.reset()
         notification.store.onInactive()
@@ -428,20 +429,20 @@ describe('notification store', function() {
       })
 
       function checkNotify(opts) {
-        it('should ' + (opts.expectFavicon ? '' : 'not ') + 'set favicon', function() {
+        it('should ' + (opts.expectFavicon ? '' : 'not ') + 'set favicon', () => {
           clock.tick(0)
           sinon.assert.calledOnce(Heim.setFavicon)
           sinon.assert.calledWithExactly(Heim.setFavicon, opts.expectFavicon ? opts.expectFavicon : '/static/favicon.png')
         })
 
-        it('should set correct page title', function() {
+        it('should set correct page title', () => {
           clock.tick(0)
           sinon.assert.calledOnce(Heim.setTitleMsg)
           sinon.assert.calledWithExactly(Heim.setTitleMsg, opts.expectTitleMsg)
         })
 
-        it('should add notification', function(done) {
-          support.listenOnce(notification.store, function(state) {
+        it('should add notification', done => {
+          support.listenOnce(notification.store, state => {
             _.each(opts.messageIds, messageId =>
               assert.equal(state.notifications.get(messageId), opts.expectKind)
             )
@@ -450,7 +451,7 @@ describe('notification store', function() {
           clock.tick(0)
         })
 
-        it('should ' + (opts.expectPopupBody ? '' : 'not ') + 'display a popup', function() {
+        it('should ' + (opts.expectPopupBody ? '' : 'not ') + 'display a popup', () => {
           clock.tick(0)
           if (opts.expectPopupBody) {
             sinon.assert.calledOnce(Notification)
@@ -464,15 +465,15 @@ describe('notification store', function() {
         })
       }
 
-      describe('before joined', function() {
-        beforeEach(function() {
+      describe('before joined', () => {
+        beforeEach(() => {
           notification.store.chatStateChange({connected: true, joined: false})
           Heim.setFavicon.reset()
         })
 
-        describe('when page inactive', function() {
-          describe('receiving logged messages', function() {
-            beforeEach(function() {
+        describe('when page inactive', () => {
+          describe('receiving logged messages', () => {
+            beforeEach(() => {
               notification.store.messagesChanged([message2Reply1.id, message2Reply3.id], mockChatState2Reply3)
             })
 
@@ -485,15 +486,15 @@ describe('notification store', function() {
           })
         })
 
-        describe('when page active', function() {
-          beforeEach(function() {
+        describe('when page active', () => {
+          beforeEach(() => {
             notification.store.onActive()
             Heim.setFavicon.reset()
             Heim.setTitleMsg.reset()
           })
 
-          describe('receiving logged messages', function() {
-            beforeEach(function() {
+          describe('receiving logged messages', () => {
+            beforeEach(() => {
               notification.store.messagesChanged([message2Reply1.id, message2Reply3.id], mockChatState2Reply3)
             })
 
@@ -507,11 +508,11 @@ describe('notification store', function() {
         })
       })
 
-      describe('receiving a message while notifications paused', function() {
-        it('should add a notification and not display a popup', function(done) {
+      describe('receiving a message while notifications paused', () => {
+        it('should add a notification and not display a popup', done => {
           notification.store.storageChange(_.extend({}, storageMock, {notifyPausedUntil: startTime + 1000}))
           simulateMessages(['id1'], mockChatState)
-          support.listenOnce(notification.store, function(state) {
+          support.listenOnce(notification.store, state => {
             sinon.assert.notCalled(Notification)
             assert.equal(state.notifications.get('id1'), 'new-message')
             done()
@@ -522,8 +523,8 @@ describe('notification store', function() {
 
       function testNotifyModes(opts) {
         function test(expectPopup, mode) {
-          describe('if notify mode is ' + JSON.stringify(mode) + '', function() {
-            beforeEach(function() {
+          describe('if notify mode is ' + JSON.stringify(mode) + '', () => {
+            beforeEach(() => {
               notification.store.storageChange({notify: true, room: {ezzie: {notifyMode: mode}}})
               simulateMessages(opts.messageIds, opts.state)
             })
@@ -535,7 +536,7 @@ describe('notification store', function() {
         test(opts.popupModes.mention, undefined)
       }
 
-      describe('receiving a message', function() {
+      describe('receiving a message', () => {
         testNotifyModes({
           popupModes: {
             message: true,
@@ -553,8 +554,8 @@ describe('notification store', function() {
         })
       })
 
-      describe('receiving the same message again', function() {
-        it('should not display a popup', function() {
+      describe('receiving the same message again', () => {
+        it('should not display a popup', () => {
           simulateMessages(['id1'], mockChatState)
           clock.tick(0)
           fakeNotification.close()
@@ -565,8 +566,8 @@ describe('notification store', function() {
         })
       })
 
-      describe('when the same message has 2 changes triggered in the same tick', function() {
-        it('should only increment the page title once', function() {
+      describe('when the same message has 2 changes triggered in the same tick', () => {
+        it('should only increment the page title once', () => {
           simulateMessages(['id1'], mockChatState)
           notification.store.messagesChanged(['id1'], mockChatState)
           clock.tick(0)
@@ -575,13 +576,13 @@ describe('notification store', function() {
         })
       })
 
-      describe('closing and receiving a new message', function() {
-        it('should display a second popup', function(done) {
+      describe('closing and receiving a new message', () => {
+        it('should display a second popup', done => {
           simulateMessages(['id1'], mockChatState)
           clock.tick(0)
           fakeNotification.close()
           simulateMessages(['id2'], mockChatState2)
-          support.listenOnce(notification.store, function(state) {
+          support.listenOnce(notification.store, state => {
             sinon.assert.calledTwice(Notification)
             assert.equal(state.notifications.get(message1.id), 'new-message')
             done()
@@ -590,12 +591,12 @@ describe('notification store', function() {
         })
       })
 
-      describe('receiving old messages', function() {
-        it('should not replace existing newer notifications', function(done) {
+      describe('receiving old messages', () => {
+        it('should not replace existing newer notifications', done => {
           simulateMessages([message1.id, message2.id, message3.id], mockChatState3)
           clock.tick(0)
           simulateMessages([messageOld.id], mockChatState3Old)
-          support.listenOnce(notification.store, function(state) {
+          support.listenOnce(notification.store, state => {
             assert.equal(state.notifications.get(message1.id), 'new-message')
             assert.equal(state.notifications.get(message2.id), 'new-message')
             assert.equal(state.notifications.get(message3.id), 'new-message')
@@ -605,8 +606,8 @@ describe('notification store', function() {
         })
       })
 
-      describe('receiving a child reply', function() {
-        describe('when joined', function() {
+      describe('receiving a child reply', () => {
+        describe('when joined', () => {
           testNotifyModes({
             popupModes: {
               message: true,
@@ -623,12 +624,12 @@ describe('notification store', function() {
             expectKind: 'new-reply',
           })
 
-          it('should replace an existing new-message notification', function() {
+          it('should replace an existing new-message notification', () => {
             simulateMessages(['id1'], mockChatState)
             clock.tick(0)
             assert.equal(notification.store.alerts['new-message'].messageId, message1.id)
             sinon.assert.calledOnce(Notification)
-            var messageNotification = fakeNotification
+            const messageNotification = fakeNotification
 
             notification.store.messagesChanged([message2Reply1.id], mockChatState2OwnReply)
             clock.tick(0)
@@ -639,8 +640,8 @@ describe('notification store', function() {
         })
       })
 
-      describe('receiving a sibling reply', function() {
-        describe('when joined', function() {
+      describe('receiving a sibling reply', () => {
+        describe('when joined', () => {
           testNotifyModes({
             popupModes: {
               message: true,
@@ -659,8 +660,8 @@ describe('notification store', function() {
         })
       })
 
-      describe('receiving a mention', function() {
-        describe('when joined', function() {
+      describe('receiving a mention', () => {
+        describe('when joined', () => {
           testNotifyModes({
             popupModes: {
               message: true,
@@ -677,7 +678,7 @@ describe('notification store', function() {
             expectKind: 'new-mention',
           })
 
-          it('if seen before should not add a notification and not display a popup', function() {
+          it('if seen before should not add a notification and not display a popup', () => {
             notification.store.messagesChanged([messageMention.id], mockChatStateMentionSeen)
             clock.tick(0)
             sinon.assert.notCalled(Notification)
@@ -685,10 +686,10 @@ describe('notification store', function() {
             assert(!notification.store.state.notifications.has('id3'))
           })
 
-          describe('and dismissing it and updating the mention again', function() {
-            it('should not create another notification', function(done) {
+          describe('and dismissing it and updating the mention again', () => {
+            it('should not create another notification', done => {
               notification.store.messagesChanged([messageMention.id], mockChatStateMention)
-              support.listenOnce(notification.store, function(state) {
+              support.listenOnce(notification.store, state => {
                 assert.equal(state.notifications.get(messageMention.id), 'new-mention')
                 notification.store.dismissNotification(messageMention.id)
                 clock.tick(0)
@@ -702,16 +703,16 @@ describe('notification store', function() {
             })
           })
 
-          describe('and reconnecting later', function() {
+          describe('and reconnecting later', () => {
             function testReset(expectHas, done, resetCallback) {
               notification.store.messagesChanged([messageMention.id], mockChatStateMention)
-              support.listenOnce(notification.store, function(state) {
+              support.listenOnce(notification.store, state => {
                 assert.equal(state.notifications.get(messageMention.id), 'new-mention')
                 sinon.assert.calledOnce(Notification)
-                var mentionNotification = fakeNotification
+                const mentionNotification = fakeNotification
                 resetCallback()
-                support.listenOnce(notification.store, function(state) {
-                  assert.equal(state.notifications.has(messageMention.id), expectHas)
+                support.listenOnce(notification.store, state2 => {
+                  assert.equal(state2.notifications.has(messageMention.id), expectHas)
                   sinon.assert.calledOnce(mentionNotification.close)
                   done()
                 })
@@ -720,8 +721,8 @@ describe('notification store', function() {
               clock.tick(0)
             }
 
-            describe('with the message no longer loaded', function() {
-              it('should remove the notification and alert', function(done) {
+            describe('with the message no longer loaded', () => {
+              it('should remove the notification and alert', done => {
                 testReset(false, done, () => {
                   notification.store.messagesChanged(['__root'], emptyChatState)
                   notification.store.messagesChanged([message1.id], mockChatState)
@@ -729,8 +730,8 @@ describe('notification store', function() {
               })
             })
 
-            describe('with the message as a shadow node', function() {
-              it('should remove the notification and alert', function(done) {
+            describe('with the message as a shadow node', () => {
+              it('should remove the notification and alert', done => {
                 testReset(false, done, () => {
                   notification.store.messagesChanged(['__root'], mockChatStateMentionShadow)
                   notification.store.messagesChanged([message1.id], mockChatState)
@@ -738,8 +739,8 @@ describe('notification store', function() {
               })
             })
 
-            describe('with the message re-loaded', function() {
-              it('should remove the notification and alert', function(done) {
+            describe('with the message re-loaded', () => {
+              it('should remove the notification and alert', done => {
                 testReset(true, done, () => {
                   notification.store.messagesChanged(['__root'], emptyChatState)
                   clock.tick(0)
@@ -749,15 +750,15 @@ describe('notification store', function() {
             })
           })
 
-          describe('which is then deleted', function() {
-            it('should remove the notification and alert', function(done) {
+          describe('which is then deleted', () => {
+            it('should remove the notification and alert', done => {
               notification.store.messagesChanged([messageMention.id], mockChatStateMention)
-              support.listenOnce(notification.store, function(state) {
+              support.listenOnce(notification.store, state => {
                 assert.equal(state.notifications.get(messageMention.id), 'new-mention')
                 sinon.assert.calledOnce(Notification)
                 notification.store.messagesChanged([messageMention.id], mockChatStateMentionDeleted)
-                support.listenOnce(notification.store, function(state) {
-                  assert(!state.notifications.has(messageMention.id))
+                support.listenOnce(notification.store, state2 => {
+                  assert(!state2.notifications.has(messageMention.id))
                   sinon.assert.calledOnce(fakeNotification.close)
                   done()
                 })
@@ -768,13 +769,13 @@ describe('notification store', function() {
           })
         })
 
-        describe('receiving multiple messages', function() {
-          beforeEach(function() {
+        describe('receiving multiple messages', () => {
+          beforeEach(() => {
             simulateMessages([message2Reply1.id, message2Reply3.id], mockChatState2Reply3)
           })
 
-          it('should display a popup for the latest message', function(done) {
-            support.listenOnce(notification.store, function() {
+          it('should display a popup for the latest message', done => {
+            support.listenOnce(notification.store, () => {
               sinon.assert.calledOnce(Notification)
               sinon.assert.calledWithExactly(Notification, 'ezzie', {
                 icon: notification.icons.active,
@@ -787,9 +788,9 @@ describe('notification store', function() {
         })
       })
 
-      describe('updating an orphaned message', function() {
-        describe('when joined', function() {
-          it('should not set favicon, add a notification, or display a popup', function() {
+      describe('updating an orphaned message', () => {
+        describe('when joined', () => {
+          it('should not set favicon, add a notification, or display a popup', () => {
             notification.store.messagesChanged([message2Reply1.id], mockChatStateOrphan)
             clock.tick(0)
             sinon.assert.notCalled(Heim.setFavicon)
@@ -799,8 +800,8 @@ describe('notification store', function() {
         })
       })
 
-      describe('removing an alert with mismatched message id', function() {
-        it('should have no effect', function() {
+      describe('removing an alert with mismatched message id', () => {
+        it('should have no effect', () => {
           notification.store.messagesChanged([messageMention.id], mockChatStateMention)
           clock.tick(0)
           sinon.assert.calledOnce(Notification)
@@ -810,8 +811,8 @@ describe('notification store', function() {
       })
 
       // workaround for Chrome behavior
-      describe('closing an alert when the browser that doesn\'t call onclose consistently', function() {
-        it('should try again in 500ms', function() {
+      describe('closing an alert when the browser that doesn\'t call onclose consistently', () => {
+        it('should try again in 500ms', () => {
           notification.store.messagesChanged([messageMention.id], mockChatStateMention)
           clock.tick(0)
           sinon.assert.calledOnce(Notification)
@@ -823,7 +824,7 @@ describe('notification store', function() {
           sinon.assert.calledOnce(fakeNotification.close)
         })
 
-        it('should not try again in 500ms if onclose was called', function() {
+        it('should not try again in 500ms if onclose was called', () => {
           notification.store.messagesChanged([messageMention.id], mockChatStateMention)
           clock.tick(0)
           sinon.assert.calledOnce(Notification)
@@ -836,50 +837,50 @@ describe('notification store', function() {
       })
     })
 
-    describe('own messages', function() {
-      beforeEach(function() {
+    describe('own messages', () => {
+      beforeEach(() => {
         notification.store.chatStateChange({connected: true, joined: true})
         sinon.stub(notification, 'dismissNotification')
       })
 
-      afterEach(function() {
+      afterEach(() => {
         notification.dismissNotification.restore()
       })
 
-      it('should dismiss notifications on parent and sibling messages', function() {
+      it('should dismiss notifications on parent and sibling messages', () => {
         simulateMessages(['id5'], mockChatState2Reply2Own)
         sinon.assert.calledWithExactly(notification.dismissNotification, message2.id)
         sinon.assert.calledWithExactly(notification.dismissNotification, message2Reply1.id)
       })
 
-      it('should not dismiss notifications on top level messages (children of root)', function() {
+      it('should not dismiss notifications on top level messages (children of root)', () => {
         simulateMessages(['id2'], mockChatState2Own)
         sinon.assert.notCalled(notification.dismissNotification)
       })
     })
 
-    describe('activity tracking', function() {
-      beforeEach(function() {
+    describe('activity tracking', () => {
+      beforeEach(() => {
         notification.store.chatStateChange({connected: true, joined: true})
         Heim.setFavicon.reset()
       })
 
-      it('should start active', function() {
+      it('should start active', () => {
         assert.equal(notification.store.active, true)
       })
 
-      it('should set active when page becomes active', function() {
+      it('should set active when page becomes active', () => {
         notification.store.onActive()
         assert.equal(notification.store.active, true)
       })
 
-      it('should set inactive when page becomes inactive', function() {
+      it('should set inactive when page becomes inactive', () => {
         notification.store.onInactive()
         assert.equal(notification.store.active, false)
       })
 
-      describe('when active and message received', function() {
-        beforeEach(function() {
+      describe('when active and message received', () => {
+        beforeEach(() => {
           notification.store.onActive()
           notification.store.storageChange(storageMock)
           simulateMessages(['id1'], mockChatState)
@@ -887,31 +888,31 @@ describe('notification store', function() {
           clock.tick(0)
         })
 
-        it('should not open popups', function() {
+        it('should not open popups', () => {
           sinon.assert.notCalled(Notification)
         })
 
-        it('should not alter page title', function() {
+        it('should not alter page title', () => {
           sinon.assert.calledOnce(Heim.setTitleMsg)
           sinon.assert.calledWithExactly(Heim.setTitleMsg, '')
         })
       })
 
-      describe('when inactive and message received', function() {
-        beforeEach(function() {
+      describe('when inactive and message received', () => {
+        beforeEach(() => {
           notification.store.onInactive()
           notification.store.storageChange(storageMock)
           simulateMessages(['id1'], mockChatState)
           clock.tick(0)
         })
 
-        it('should close popup when window becomes active', function() {
+        it('should close popup when window becomes active', () => {
           sinon.assert.calledOnce(Notification)
           notification.store.onActive()
           sinon.assert.calledOnce(fakeNotification.close)
         })
 
-        it('should reset favicon when window becomes active', function() {
+        it('should reset favicon when window becomes active', () => {
           sinon.assert.calledOnce(Heim.setFavicon)
           Heim.setFavicon.reset()
 
@@ -920,7 +921,7 @@ describe('notification store', function() {
           sinon.assert.calledWithExactly(Heim.setFavicon, '/static/favicon.png')
         })
 
-        it('should reset page title when window becomes active', function() {
+        it('should reset page title when window becomes active', () => {
           sinon.assert.calledOnce(Heim.setTitleMsg)
           Heim.setTitleMsg.reset()
 
@@ -931,8 +932,8 @@ describe('notification store', function() {
       })
     })
 
-    describe('with a popup showing', function() {
-      beforeEach(function() {
+    describe('with a popup showing', () => {
+      beforeEach(() => {
         notification.store.chatStateChange({connected: true, joined: true})
         Heim.setFavicon.reset()
         notification.store.onInactive()
@@ -943,30 +944,30 @@ describe('notification store', function() {
         window.uiwindow = {focus: sinon.stub()}
       })
 
-      afterEach(function() {
+      afterEach(() => {
         ui.gotoMessageInPane.restore()
         delete window.uiwindow
       })
 
-      it('should replace with another popup', function() {
+      it('should replace with another popup', () => {
         simulateMessages(['id2'], mockChatState2)
         clock.tick(0)
         sinon.assert.calledTwice(Notification)
       })
 
-      it('should focus window and go to message when clicked', function() {
+      it('should focus window and go to message when clicked', () => {
         fakeNotification.onclick()
         sinon.assert.calledOnce(window.uiwindow.focus)
         sinon.assert.calledOnce(ui.gotoMessageInPane)
         sinon.assert.calledWithExactly(ui.gotoMessageInPane, 'id1')
       })
 
-      it('should close after 3 seconds', function() {
+      it('should close after 3 seconds', () => {
         clock.tick(3000)
         sinon.assert.calledOnce(fakeNotification.close)
       })
 
-      it('should retain favicon state after timeout and reconnect', function() {
+      it('should retain favicon state after timeout and reconnect', () => {
         clock.tick(3000)
         notification.store.chatStateChange({connected: false, joined: false})
         Heim.setFavicon.reset()
@@ -975,55 +976,55 @@ describe('notification store', function() {
         sinon.assert.calledWithExactly(Heim.setFavicon, notification.favicons.active)
       })
 
-      describe('when window unloading', function() {
-        it('should close the popup', function() {
+      describe('when window unloading', () => {
+        it('should close the popup', () => {
           notification.store.removeAllAlerts()
           sinon.assert.calledOnce(fakeNotification.close)
         })
       })
     })
 
-    describe('old seen notifications', function() {
-      beforeEach(function() {
+    describe('old seen notifications', () => {
+      beforeEach(() => {
         notification.store.chatStateChange({connected: true, joined: true})
         notification.store.storageChange(storageMock)
       })
 
       function test(expectRemoved, done, seenTime, action) {
-          var mockChatStateSeen = {
-            roomName: 'ezzie',
-            messages: new ChatTree().reset([
-              message1,
-            ])
-          }
-          simulateMessages([message1.id], mockChatStateSeen)
-          support.listenOnce(notification.store, function(state) {
-            assert.equal(state.notifications.get(message1.id), 'new-message')
-            mockChatStateSeen.messages.mergeNodes(message1.id, {_seen: Date.now()})
-            notification.store.messagesChanged([message1.id], mockChatStateSeen)
-            clock.tick(seenTime)
-            action(mockChatStateSeen)
-            support.listenOnce(notification.store, function(state) {
-              assert.equal(expectRemoved, !state.notifications.has(message1.id))
-              done()
-            })
-            clock.tick(seenTime)
+        const mockChatStateSeen = {
+          roomName: 'ezzie',
+          messages: new ChatTree().reset([
+            message1,
+          ]),
+        }
+        simulateMessages([message1.id], mockChatStateSeen)
+        support.listenOnce(notification.store, state => {
+          assert.equal(state.notifications.get(message1.id), 'new-message')
+          mockChatStateSeen.messages.mergeNodes(message1.id, {_seen: Date.now()})
+          notification.store.messagesChanged([message1.id], mockChatStateSeen)
+          clock.tick(seenTime)
+          action(mockChatStateSeen)
+          support.listenOnce(notification.store, state2 => {
+            assert.equal(expectRemoved, !state2.notifications.has(message1.id))
+            done()
           })
-          clock.tick(0)
+          clock.tick(seenTime)
+        })
+        clock.tick(0)
       }
 
-      it('should be removed when becoming inactive', function(done) {
+      it('should be removed when becoming inactive', done => {
         test(true, done, 40 * 1000, notification.store.onInactive)
       })
 
-      it('should be removed if seen more than 30s ago when new messages come in', function(done) {
+      it('should be removed if seen more than 30s ago when new messages come in', done => {
         test(true, done, 60 * 1000, state => {
           state.messages.add(message2)
           simulateMessages([message2.id], state)
         })
       })
 
-      it('should not be removed if seen less than 30s ago', function(done) {
+      it('should not be removed if seen less than 30s ago', done => {
         test(false, done, 20 * 1000, state => {
           state.messages.add(message2)
           simulateMessages([message2.id], state)
@@ -1031,15 +1032,15 @@ describe('notification store', function() {
       })
     })
 
-    describe('dismissing a nonexistent notification', function() {
-      it('should have no effect', function() {
+    describe('dismissing a nonexistent notification', () => {
+      it('should have no effect', () => {
         assert(!notification.store.state.notifications.has('nonexistent'))
         notification.store.dismissNotification('nonexistent')
       })
     })
 
-    describe('closing a nonexistent alert', function() {
-      it('should have no effect', function() {
+    describe('closing a nonexistent alert', () => {
+      it('should have no effect', () => {
         assert(!_.has(notification.store.alerts, 'new-mention'))
         notification.store.closePopup('new-mention')
       })

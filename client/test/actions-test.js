@@ -1,11 +1,11 @@
-var assert = require('assert')
+import assert from 'assert'
+
+import actions from '../lib/actions'
 
 
-describe('global actions', function() {
-  var actions = require('../lib/actions')
-
-  describe('setup action', function() {
-    it('should be synchronous', function() {
+describe('global actions', () => {
+  describe('setup action', () => {
+    it('should be synchronous', () => {
       assert.equal(actions.setup.sync, true)
     })
   })

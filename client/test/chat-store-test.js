@@ -1,22 +1,23 @@
-var support = require('./support/setup')
-var _ = require('lodash')
-var assert = require('assert')
-var sinon = require('sinon')
-var Immutable = require('immutable')
+import support from './support/setup'
+import _ from 'lodash'
+import assert from 'assert'
+import sinon from 'sinon'
+import Immutable from 'immutable'
+
+import chat from '../lib/stores/chat'
+import storage from '../lib/stores/storage'
 
 
-describe('chat store', function() {
-  var chat = require('../lib/stores/chat')
-  var storage = require('../lib/stores/storage')
-  var clock
+describe('chat store', () => {
+  let clock
 
-  var startTime = chat.store.seenTTL + 100 * 1000
+  const startTime = chat.store.seenTTL + 100 * 1000
   support.fakeEnv({
     HEIM_ORIGIN: 'https://heimhost',
     HEIM_PREFIX: '/test',
   })
 
-  beforeEach(function() {
+  beforeEach(() => {
     clock = support.setupClock()
     clock.tick(startTime)
     sinon.stub(chat.actions, 'messageReceived')
@@ -33,12 +34,12 @@ describe('chat store', function() {
     window.Raven = {setUserContext: sinon.stub()}
   })
 
-  afterEach(function() {
+  afterEach(() => {
     clock.restore()
     chat.actions.messageReceived.restore()
     chat.actions.messagesChanged.restore()
     storage.setRoom.restore()
-    console.warn.restore()
+    console.warn.restore()  // eslint-disable-line no-console
     window.Raven = null
   })
 
@@ -49,18 +50,18 @@ describe('chat store', function() {
     chat.store.socketEvent(ev)
   }
 
-  var helloEvent = {
+  const helloEvent = {
     'type': 'hello-event',
     'data': {
       'session': {
         'id': 'agent:tester1',
         'is_manager': true,
         'is_staff': false,
-      }
-    }
+      },
+    },
   }
 
-  var message1 = {
+  const message1 = {
     'id': 'id1',
     'time': startTime / 1000 - 2,
     'sender': {
@@ -71,7 +72,7 @@ describe('chat store', function() {
     'content': 'test',
   }
 
-  var message2 = {
+  const message2 = {
     'id': 'id2',
     'time': startTime / 1000 - 1,
     'sender': {
@@ -82,7 +83,7 @@ describe('chat store', function() {
     'content': 'test2',
   }
 
-  var message3 = {
+  const message3 = {
     'id': 'id3',
     'parent': 'id2',
     'time': startTime / 1000,
@@ -94,7 +95,7 @@ describe('chat store', function() {
     'content': 'test3',
   }
 
-  var logReply = {
+  const logReply = {
     'id': '0',
     'type': 'log-reply',
     'data': {
@@ -102,11 +103,11 @@ describe('chat store', function() {
         message1,
         message2,
         message3,
-      ]
-    }
+      ],
+    },
   }
 
-  var message0 = {
+  const message0 = {
     'id': 'id0',
     'time': 0,
     'sender': {
@@ -117,7 +118,7 @@ describe('chat store', function() {
     'content': 'test',
   }
 
-  var moreLogReply = {
+  const moreLogReply = {
     'id': '0',
     'type': 'log-reply',
     'data': {
@@ -125,10 +126,10 @@ describe('chat store', function() {
         message0,
       ],
       'before': 'id1',
-    }
+    },
   }
 
-  var whoReply = {
+  const whoReply = {
     'id': '0',
     'type': 'who-reply',
     'data': {
@@ -154,11 +155,11 @@ describe('chat store', function() {
           'server_id': '1x2x3x4x5x6x',
           'server_era': '1y2y3y4y5y6y',
         },
-      ]
-    }
+      ],
+    },
   }
 
-  var nickReply = {
+  const nickReply = {
     'id': '1',
     'type': 'nick-reply',
     'data': {
@@ -166,10 +167,10 @@ describe('chat store', function() {
       'id': 'agent:tester1',
       'from': 'guest',
       'to': 'tester',
-    }
+    },
   }
 
-  var snapshotReply = {
+  const snapshotReply = {
     'id': '',
     'type': 'snapshot-event',
     'data': {
@@ -178,10 +179,10 @@ describe('chat store', function() {
       'session_id': 'aabbccddeeff0011-00000abc',
       'listing': whoReply.data.listing,
       'log': logReply.data.log,
-    }
+    },
   }
 
-  var bounceEvent = {
+  const bounceEvent = {
     'id': '1',
     'type': 'bounce-event',
     'data': {
@@ -190,7 +191,7 @@ describe('chat store', function() {
     },
   }
 
-  var successfulAuthReplyEvent = {
+  const successfulAuthReplyEvent = {
     'id': '1',
     'type': 'auth-reply',
     'data': {
@@ -198,7 +199,7 @@ describe('chat store', function() {
     },
   }
 
-  var mockStorage = {
+  const mockStorage = {
     room: {
       ezzie: {
         nick: 'tester',
@@ -206,11 +207,11 @@ describe('chat store', function() {
           type: 'passcode',
           data: 'hunter2',
         },
-      }
-    }
+      },
+    },
   }
 
-  var mockActivity = {
+  const mockActivity = {
     lastActive: {
       ezzie: startTime - 20 * 1000,
     },
@@ -220,41 +221,41 @@ describe('chat store', function() {
   }
 
   function testErrorLogging(type, error, done) {
-    var errorEvent = {
+    const errorEvent = {
       'type': type,
       'error': error,
     }
-    handleSocket(errorEvent, function() {
-      sinon.assert.calledOnce(console.warn)
-      sinon.assert.calledWithExactly(console.warn, sinon.match.string, errorEvent.error)
+    handleSocket(errorEvent, () => {
+      sinon.assert.calledOnce(console.warn)  // eslint-disable-line no-console
+      sinon.assert.calledWithExactly(console.warn, sinon.match.string, errorEvent.error)  // eslint-disable-line no-console
       done()
     })
   }
 
-  it('should initialize with null connected and false joined state', function() {
+  it('should initialize with null connected and false joined state', () => {
     assert.equal(chat.store.getInitialState().connected, null)
     assert.equal(chat.store.getInitialState().joined, false)
   })
 
-  it('should initialize with empty collections', function() {
-    var initialState = chat.store.getInitialState()
+  it('should initialize with empty collections', () => {
+    const initialState = chat.store.getInitialState()
     assert.equal(initialState.messages.size, 0)
     assert.equal(initialState.who.size, 0)
     assert.deepEqual(initialState.nickHues, {})
     assert(Immutable.is(initialState.roomSettings, Immutable.Map()))
   })
 
-  describe('setup action', function() {
-    beforeEach(function() {
+  describe('setup action', () => {
+    beforeEach(() => {
       sinon.stub(storage, 'load')
     })
 
-    afterEach(function() {
+    afterEach(() => {
       storage.load.restore()
     })
 
-    it('should save room name', function(done) {
-      support.listenOnce(chat.store, function(state) {
+    it('should save room name', done => {
+      support.listenOnce(chat.store, state => {
         assert.equal(state.roomName, 'ezzie')
         done()
       })
@@ -262,39 +263,39 @@ describe('chat store', function() {
       chat.store.setup('ezzie')
     })
 
-    it('should load storage', function() {
+    it('should load storage', () => {
       chat.store.setup('ezzie')
       sinon.assert.calledOnce(storage.load)
     })
   })
 
-  describe('connect action', function() {
-    beforeEach(function() {
+  describe('connect action', () => {
+    beforeEach(() => {
       chat.store.setup('ezzie')
     })
 
-    it('should register event handlers', function() {
+    it('should register event handlers', () => {
       chat.store.connect()
       sinon.assert.calledWithExactly(chat.store.socket.on, 'open', chat.store.socketOpen)
       sinon.assert.calledWithExactly(chat.store.socket.on, 'close', chat.store.socketClose)
       sinon.assert.calledWithExactly(chat.store.socket.on, 'receive', chat.store.socketEvent)
     })
 
-    it('should end socket buffering', function() {
+    it('should end socket buffering', () => {
       chat.store.connect()
       sinon.assert.calledOnce(chat.store.socket.endBuffering)
     })
 
-    describe('then setNick action', function() {
-      var testNick = 'test-nick'
+    describe('then setNick action', () => {
+      const testNick = 'test-nick'
 
-      beforeEach(function() {
+      beforeEach(() => {
         chat.store.setup('ezzie')
         chat.store.connect()
         chat.store.setNick(testNick)
       })
 
-      it('should send a nick change', function() {
+      it('should send a nick change', () => {
         assert.equal(chat.store.state.tentativeNick, testNick)
         sinon.assert.calledWithExactly(chat.store.socket.send, {
           type: 'nick',
@@ -302,7 +303,7 @@ describe('chat store', function() {
         })
       })
 
-      it('should avoid re-sending same nick', function() {
+      it('should avoid re-sending same nick', () => {
         chat.store.storageChange({room: {ezzie: {nick: testNick}}})
         chat.store.setNick(testNick)
         assert(chat.store.socket.send.calledOnce)
@@ -310,9 +311,9 @@ describe('chat store', function() {
     })
   })
 
-  describe('markMessagesSeen action', function() {
-    it('should store messages marked as seen, culling messages seen earlier than the TTL', function() {
-      var mockSeenMessages = {
+  describe('markMessagesSeen action', () => {
+    it('should store messages marked as seen, culling messages seen earlier than the TTL', () => {
+      const mockSeenMessages = {
         'id1': Date.now() - chat.store.seenTTL,
         'id3': Date.now() - chat.store.seenTTL - 1,
       }
@@ -321,15 +322,15 @@ describe('chat store', function() {
       chat.store.socketEvent(logReply)
       chat.store.markMessagesSeen(['id2'])
       sinon.assert.calledOnce(storage.setRoom)
-      var expectedSeenMessages = {
+      const expectedSeenMessages = {
         'id1': mockSeenMessages.id1,
         'id2': Date.now(),
       }
       sinon.assert.calledWithExactly(storage.setRoom, 'ezzie', 'seenMessages', expectedSeenMessages)
     })
 
-    it('should not update the store if seen messages unchanged', function() {
-      var mockSeenMessages = {
+    it('should not update the store if seen messages unchanged', () => {
+      const mockSeenMessages = {
         'id3': Date.now(),
       }
       chat.store.state.roomName = 'ezzie'
@@ -340,9 +341,9 @@ describe('chat store', function() {
     })
   })
 
-  describe('sendMessage action', function() {
-    it('should send a message', function() {
-      var testContent = 'hello, ezzie!'
+  describe('sendMessage action', () => {
+    it('should send a message', () => {
+      const testContent = 'hello, ezzie!'
       chat.store.sendMessage(testContent)
       sinon.assert.calledWithExactly(chat.store.socket.send, {
         type: 'send',
@@ -350,9 +351,9 @@ describe('chat store', function() {
       })
     })
 
-    it('should send a message with a parent', function() {
+    it('should send a message with a parent', () => {
       chat.store.socketEvent(logReply)
-      var testContent = 'hello, ezzie!'
+      const testContent = 'hello, ezzie!'
       chat.store.sendMessage(testContent, 'id1')
       sinon.assert.calledWithExactly(chat.store.socket.send, {
         type: 'send',
@@ -361,18 +362,18 @@ describe('chat store', function() {
     })
   })
 
-  describe('when connected', function() {
-    it('should have connected state: true', function() {
-      support.listenOnce(chat.store, function(state) {
+  describe('when connected', () => {
+    it('should have connected state: true', () => {
+      support.listenOnce(chat.store, state => {
         assert.equal(state.connected, true)
       })
       chat.store.socketOpen()
     })
 
-    it('should send stored passcode authenticaton', function(done) {
+    it('should send stored passcode authenticaton', done => {
       chat.store.state.roomName = 'ezzie'
       chat.store.storageChange(mockStorage)
-      support.listenOnce(chat.store, function() {
+      support.listenOnce(chat.store, () => {
         assert.equal(chat.store.state.authState, 'trying-stored')
         sinon.assert.calledOnce(chat.store.socket.send)
         sinon.assert.calledWithExactly(chat.store.socket.send, {
@@ -388,16 +389,16 @@ describe('chat store', function() {
     })
   })
 
-  describe('when disconnected', function() {
-    it('should have connected state: false', function() {
-      support.listenOnce(chat.store, function(state) {
+  describe('when disconnected', () => {
+    it('should have connected state: false', () => {
+      support.listenOnce(chat.store, state => {
         assert.equal(state.connected, false)
       })
       chat.store.socketClose()
     })
 
-    it('should set joined and canJoin state to false', function(done) {
-      support.listenOnce(chat.store, function(state) {
+    it('should set joined and canJoin state to false', done => {
+      support.listenOnce(chat.store, state => {
         assert.equal(state.joined, false)
         assert.equal(state.canJoin, false)
         done()
@@ -406,8 +407,8 @@ describe('chat store', function() {
     })
   })
 
-  describe('when reconnecting', function() {
-    beforeEach(function() {
+  describe('when reconnecting', () => {
+    beforeEach(() => {
       chat.store.state.roomName = 'ezzie'
       chat.store.storageChange(mockStorage)
       chat.store.joinRoom()
@@ -419,9 +420,9 @@ describe('chat store', function() {
       chat.store.socket.send.reset()
     })
 
-    it('should send stored nick', function(done) {
+    it('should send stored nick', done => {
       chat.store.socketOpen()
-      handleSocket(snapshotReply, function() {
+      handleSocket(snapshotReply, () => {
         sinon.assert.calledWithExactly(chat.store.socket.send, {
           type: 'nick',
           data: {name: mockStorage.room.ezzie.nick},
@@ -430,8 +431,8 @@ describe('chat store', function() {
       })
     })
 
-    it('should send stored passcode authentication', function(done) {
-      support.listenOnce(chat.store, function() {
+    it('should send stored passcode authentication', done => {
+      support.listenOnce(chat.store, () => {
         sinon.assert.calledOnce(chat.store.socket.send)
         sinon.assert.calledWithExactly(chat.store.socket.send, {
           type: 'auth',
@@ -445,22 +446,22 @@ describe('chat store', function() {
       chat.store.socketOpen()
     })
 
-    it('should persist lastVisit node', function(done) {
-      var prevLastVisit = chat.store.state.messages.get('__lastVisit')
+    it('should persist lastVisit node', done => {
+      const prevLastVisit = chat.store.state.messages.get('__lastVisit')
       chat.store.socketOpen()
-      handleSocket(snapshotReply, function(state) {
+      handleSocket(snapshotReply, state => {
         assert(Immutable.is(state.messages.get('__lastVisit'), prevLastVisit))
         done()
       })
     })
 
-    it('should persist shadow nodes (underscored properties)', function(done) {
+    it('should persist shadow nodes (underscored properties)', done => {
       chat.store.state.messages.add({id: 'test', parent: 'id1', _data: 'retained'})
       assert.equal(chat.store.state.messages.get('test').get('parent'), 'id1')
 
       chat.store.socketOpen()
-      handleSocket(snapshotReply, function(state) {
-        var testNode = state.messages.get('test')
+      handleSocket(snapshotReply, state => {
+        const testNode = state.messages.get('test')
         assert(testNode)
         assert.equal(testNode.get('parent'), null)
         assert.equal(testNode.get('_data'), 'retained')
@@ -469,25 +470,25 @@ describe('chat store', function() {
     })
   })
 
-  describe('on storage change', function() {
-    beforeEach(function() {
+  describe('on storage change', () => {
+    beforeEach(() => {
       chat.store.state.roomName = 'ezzie'
     })
 
-    it('should update auth state', function() {
+    it('should update auth state', () => {
       chat.store.state.connected = true
       chat.store.storageChange(mockStorage)
       assert.equal(chat.store.state.authType, 'passcode')
       assert.equal(chat.store.state.authData, 'hunter2')
     })
 
-    it('should set tentative nick if no current nick', function() {
+    it('should set tentative nick if no current nick', () => {
       assert.equal(chat.store.state.nick, null)
       chat.store.storageChange(mockStorage)
       assert.equal(chat.store.state.tentativeNick, 'tester')
     })
 
-    it('should not set tentative nick if current nick', function() {
+    it('should not set tentative nick if current nick', () => {
       chat.store.state.nick = 'test'
       chat.store.state.tentativeNick = 'unchanged'
       chat.store.storageChange(mockStorage)
@@ -495,30 +496,30 @@ describe('chat store', function() {
     })
   })
 
-  describe('on activity change', function() {
-    beforeEach(function() {
+  describe('on activity change', () => {
+    beforeEach(() => {
       chat.store.state.roomName = 'ezzie'
     })
 
-    it('should create last visit tree node', function() {
+    it('should create last visit tree node', () => {
       chat.store.activityChange(mockActivity)
-      var lastVisitNode = chat.store.state.messages.get('__lastVisit')
+      const lastVisitNode = chat.store.state.messages.get('__lastVisit')
       assert(lastVisitNode)
       assert.equal(lastVisitNode.get('time'), mockActivity.lastVisit.ezzie / 1000)
     })
   })
 
-  describe('when ui becomes active', function() {
-    describe('when connected', function() {
-      it('should ping the server', function() {
+  describe('when ui becomes active', () => {
+    describe('when connected', () => {
+      it('should ping the server', () => {
         chat.store.state.connected = true
         chat.store.onActive()
         sinon.assert.calledOnce(chat.store.socket.pingIfIdle)
       })
     })
 
-    describe('when disconnected', function() {
-      it('should do nothing', function() {
+    describe('when disconnected', () => {
+      it('should do nothing', () => {
         chat.store.state.connected = false
         chat.store.onActive()
         sinon.assert.notCalled(chat.store.socket.pingIfIdle)
@@ -526,10 +527,9 @@ describe('chat store', function() {
     })
   })
 
-  describe('received hello events', function() {
-    it('should store user id, manager status, and staff status', function(done) {
-      handleSocket(helloEvent, function(state) {
-        // jshint camelcase: false
+  describe('received hello events', () => {
+    it('should store user id, manager status, and staff status', done => {
+      handleSocket(helloEvent, state => {
         assert.equal(state.id, helloEvent.data.session.id)
         assert.equal(state.isManager, helloEvent.data.session.is_manager)
         assert.equal(state.isStaff, helloEvent.data.session.is_staff)
@@ -537,39 +537,37 @@ describe('chat store', function() {
       })
     })
 
-    it('should set auth type state to public if room not private', function(done) {
-      // jshint camelcase: false
-      var publicHelloEvent = _.merge({}, helloEvent, {data: {room_is_private: false}})
-      handleSocket(publicHelloEvent, function(state) {
+    it('should set auth type state to public if room not private', done => {
+      const publicHelloEvent = _.merge({}, helloEvent, {data: {room_is_private: false}})
+      handleSocket(publicHelloEvent, state => {
         assert.equal(state.authType, 'public')
         done()
       })
     })
 
-    it('should set auth type state to passcode if room private', function(done) {
-      // jshint camelcase: false
-      var privateHelloEvent = _.merge({}, helloEvent, {data: {room_is_private: true}})
-      handleSocket(privateHelloEvent, function(state) {
+    it('should set auth type state to passcode if room private', done => {
+      const privateHelloEvent = _.merge({}, helloEvent, {data: {room_is_private: true}})
+      handleSocket(privateHelloEvent, state => {
         assert.equal(state.authType, 'passcode')
         done()
       })
     })
   })
 
-  describe('received messages', function() {
-    var sendEvent = {
+  describe('received messages', () => {
+    const sendEvent = {
       'id': '0',
       'type': 'send-event',
       'data': message2,
     }
 
-    var sendReplyEvent = {
+    const sendReplyEvent = {
       'id': '1',
       'type': 'send-event',
       'data': message3,
     }
 
-    var sendMentionEvent = {
+    const sendMentionEvent = {
       'id': '2',
       'type': 'send-event',
       'data': {
@@ -581,96 +579,95 @@ describe('chat store', function() {
           'name': 'tester2',
         },
         'content': 'hey @tester',
-      }
+      },
     }
 
-    var pastSendEvent = {
+    const pastSendEvent = {
       'id': '2',
       'type': 'send-event',
       'data': message1,
     }
 
-    it('should be appended to log', function(done) {
-      handleSocket(sendEvent, function(state) {
+    it('should be appended to log', done => {
+      handleSocket(sendEvent, state => {
         assert(state.messages.last().isSuperset(Immutable.fromJS(sendEvent.data)))
         done()
       })
     })
 
-    it('should be assigned a hue', function(done) {
-      handleSocket(sendEvent, function(state) {
+    it('should be assigned a hue', done => {
+      handleSocket(sendEvent, state => {
         assert.equal(state.messages.last().getIn(['sender', 'hue']), 70)
         done()
       })
     })
 
-    it('should update sender lastSent', function(done) {
-      handleSocket(sendEvent, function(state) {
-        // jshint camelcase: false
+    it('should update sender lastSent', done => {
+      handleSocket(sendEvent, state => {
         assert.equal(state.who.get(sendEvent.data.sender.session_id).get('lastSent'), sendEvent.data.time)
         done()
       })
     })
 
-    it('should be stored as children of parent', function(done) {
-      handleSocket(sendEvent, function() {
-        handleSocket(sendReplyEvent, function(state) {
+    it('should be stored as children of parent', done => {
+      handleSocket(sendEvent, () => {
+        handleSocket(sendReplyEvent, state => {
           assert(state.messages.get('id2').get('children').contains('id3'))
           done()
         })
       })
     })
 
-    it('should be sorted by timestamp', function(done) {
-      handleSocket(sendEvent, function() {
-        handleSocket(pastSendEvent, function(state) {
+    it('should be sorted by timestamp', done => {
+      handleSocket(sendEvent, () => {
+        handleSocket(pastSendEvent, state => {
           assert.deepEqual(state.messages.get('__root').get('children').toJS(), ['id1', 'id2'])
           done()
         })
       })
     })
 
-    it('should trigger messageReceived action', function(done) {
-      handleSocket(sendEvent, function(state) {
+    it('should trigger messageReceived action', done => {
+      handleSocket(sendEvent, state => {
         sinon.assert.calledOnce(chat.actions.messageReceived)
         sinon.assert.calledWithExactly(chat.actions.messageReceived, state.messages.last(), state)
         done()
       })
     })
 
-    it('should trigger messagesChanged action', function(done) {
-      handleSocket(sendEvent, function(state) {
+    it('should trigger messagesChanged action', done => {
+      handleSocket(sendEvent, state => {
         sinon.assert.calledOnce(chat.actions.messagesChanged)
         sinon.assert.calledWithExactly(chat.actions.messagesChanged, ['__root', 'id2'], state)
         done()
       })
     })
 
-    it('should be tagged as a mention, if it matches', function(done) {
+    it('should be tagged as a mention, if it matches', done => {
       chat.store.state.tentativeNick = 'test er'
-      handleSocket(sendMentionEvent, function(state) {
+      handleSocket(sendMentionEvent, state => {
         assert(state.messages.last().get('_mention'))
         done()
       })
     })
 
-    it('older than seenTTL should be marked seen = true', function(done) {
-      var msgTime = (Date.now() - chat.store.seenTTL) / 1000 - 10
-      var oldSendEvent = _.merge({}, sendEvent, {data: {time: msgTime}})
-      handleSocket(oldSendEvent, function(state) {
+    it('older than seenTTL should be marked seen = true', done => {
+      const msgTime = (Date.now() - chat.store.seenTTL) / 1000 - 10
+      const oldSendEvent = _.merge({}, sendEvent, {data: {time: msgTime}})
+      handleSocket(oldSendEvent, state => {
         assert.equal(state.messages.last().get('_seen'), true)
         done()
       })
     })
 
-    it('newer than seenTTL should be looked up whether seen', function(done) {
-      var msgTime = Date.now() / 1000 - 5
-      var seenSendEvent = _.merge({}, sendEvent, {data: {time: msgTime}})
-      var mockSeenMessages = {}
-      var seenTime = mockSeenMessages[seenSendEvent.data.id] = msgTime * 1000
+    it('newer than seenTTL should be looked up whether seen', done => {
+      const msgTime = Date.now() / 1000 - 5
+      const seenSendEvent = _.merge({}, sendEvent, {data: {time: msgTime}})
+      const mockSeenMessages = {}
+      const seenTime = mockSeenMessages[seenSendEvent.data.id] = msgTime * 1000
       chat.store.state.roomName = 'ezzie'
       chat.store.storageChange({room: {ezzie: {seenMessages: mockSeenMessages}}})
-      handleSocket(seenSendEvent, function(state) {
+      handleSocket(seenSendEvent, state => {
         assert.equal(state.messages.last().get('_seen'), seenTime)
         done()
       })
@@ -678,15 +675,15 @@ describe('chat store', function() {
   })
 
   function assertMessagesHaveHues(messages) {
-    assert(messages.mapDFS(function(message, children, depth) {
-      var childrenOk = children.every(function(v) { return v })
+    assert(messages.mapDFS((message, children, depth) => {
+      const childrenOk = children.every(_.identity)
       return childrenOk && (depth === 0 || message.hasIn(['sender', 'hue']))
     }))
   }
 
   function checkLogs(msgBody) {
-    it('messages should be assigned to log', function(done) {
-      handleSocket(msgBody, function(state) {
+    it('messages should be assigned to log', done => {
+      handleSocket(msgBody, state => {
         assert.equal(state.messages.size, logReply.data.log.length)
         assert(state.messages.get('id1').isSuperset(Immutable.fromJS(message1)))
         assert(state.messages.get('id2').isSuperset(Immutable.fromJS(message2)))
@@ -696,66 +693,65 @@ describe('chat store', function() {
       })
     })
 
-    it('messages should all be assigned hues', function(done) {
-      handleSocket(msgBody, function(state) {
+    it('messages should all be assigned hues', done => {
+      handleSocket(msgBody, state => {
         assertMessagesHaveHues(state.messages)
         done()
       })
     })
 
-    it('messages should update sender lastSent', function(done) {
-      handleSocket(msgBody, function(state) {
-        // jshint camelcase: false
+    it('messages should update sender lastSent', done => {
+      handleSocket(msgBody, state => {
         assert.equal(state.who.get(message2.sender.session_id).get('lastSent'), message2.time)
         assert.equal(state.who.get(message3.sender.session_id).get('lastSent'), message3.time)
         done()
       })
     })
 
-    it('should update earliestLog', function(done) {
-      handleSocket(msgBody, function(state) {
+    it('should update earliestLog', done => {
+      handleSocket(msgBody, state => {
         assert.equal(state.earliestLog, 'id1')
         done()
       })
     })
   }
 
-  describe('sending messages', function() {
-    it('should log a warning upon error', function(done) {
+  describe('sending messages', () => {
+    it('should log a warning upon error', done => {
       testErrorLogging('send-reply', 'bzzt!', done)
     })
   })
 
   function testEditMessageEvent(type) {
-    var deleteEvent = {
+    const deleteEvent = {
       'id': '0',
       'type': type,
       'data': _.merge({}, message1, {deleted: 12345}),
     }
 
-    it('should update the message data in the tree', function(done) {
+    it('should update the message data in the tree', done => {
       chat.store.socketEvent(logReply)
-      handleSocket(deleteEvent, function(state) {
-        assert(state.messages.get(message1.id).get('deleted') == 12345)
+      handleSocket(deleteEvent, state => {
+        assert(state.messages.get(message1.id).get('deleted') === 12345)
         done()
       })
     })
   }
 
-  describe('received edit-message-event events', function() {
+  describe('received edit-message-event events', () => {
     testEditMessageEvent('edit-message-event')
   })
 
-  describe('received edit-message-reply events', function() {
+  describe('received edit-message-reply events', () => {
     testEditMessageEvent('edit-message-reply')
 
-    it('should log a warning upon error', function(done) {
+    it('should log a warning upon error', done => {
       testErrorLogging('edit-message-reply', 'oh no!', done)
     })
   })
 
-  describe('received ban-reply events', function() {
-    var banReplyEvent = {
+  describe('received ban-reply events', () => {
+    const banReplyEvent = {
       'id': '0',
       'type': 'ban-reply',
       'data': {
@@ -764,23 +760,23 @@ describe('chat store', function() {
       },
     }
 
-    it('should add the id to the banned ids set', function(done) {
-      handleSocket(banReplyEvent, function(state) {
+    it('should add the id to the banned ids set', done => {
+      handleSocket(banReplyEvent, state => {
         assert(state.bannedIds.has(banReplyEvent.data.id))
         done()
       })
     })
 
-    it('should log a warning upon error', function(done) {
+    it('should log a warning upon error', done => {
       testErrorLogging('ban-reply', 'oops!', done)
     })
   })
 
   function checkMessagesChangedEvent(msgBody) {
-    it('should trigger messagesChanged action', function(done) {
+    it('should trigger messagesChanged action', done => {
       chat.actions.messagesChanged.reset()
-      handleSocket(msgBody, function(state) {
-        var ids = Immutable.Seq(msgBody.data.log).map(msg => msg.id).toArray()
+      handleSocket(msgBody, state => {
+        const ids = Immutable.Seq(msgBody.data.log).map(msg => msg.id).toArray()
         ids.unshift('__root')
         sinon.assert.calledOnce(chat.actions.messagesChanged)
         sinon.assert.calledWithExactly(chat.actions.messagesChanged, ids, state)
@@ -789,31 +785,31 @@ describe('chat store', function() {
     })
   }
 
-  describe('received logs', function() {
+  describe('received logs', () => {
     checkLogs(logReply)
     checkMessagesChangedEvent(logReply)
 
-    it('should ignore empty logs', function(done) {
-      var emptyLogReply = {
+    it('should ignore empty logs', done => {
+      const emptyLogReply = {
         'id': '0',
         'type': 'log-reply',
         'data': {
-          'log': []
-        }
+          'log': [],
+        },
       }
 
-      handleSocket(logReply, function() {
-        handleSocket(emptyLogReply, function(state) {
+      handleSocket(logReply, () => {
+        handleSocket(emptyLogReply, state => {
           assert.equal(state.messages.size, 3)
           done()
         })
       })
     })
 
-    describe('receiving more logs', function() {
-      it('messages should be added to logs', function(done) {
-        handleSocket(logReply, function() {
-          handleSocket(moreLogReply, function(state) {
+    describe('receiving more logs', () => {
+      it('messages should be added to logs', done => {
+        handleSocket(logReply, () => {
+          handleSocket(moreLogReply, state => {
             assert.equal(state.messages.size, logReply.data.log.length + 1)
             assert(state.messages.get('id0').isSuperset(Immutable.fromJS(message0)))
             done()
@@ -821,28 +817,27 @@ describe('chat store', function() {
         })
       })
 
-      it('messages should all be assigned hues', function(done) {
-        handleSocket(logReply, function() {
-          handleSocket(moreLogReply, function(state) {
+      it('messages should all be assigned hues', done => {
+        handleSocket(logReply, () => {
+          handleSocket(moreLogReply, state => {
             assertMessagesHaveHues(state.messages)
             done()
           })
         })
       })
 
-      it('messages should update sender lastSent', function(done) {
-        handleSocket(logReply, function() {
-          handleSocket(moreLogReply, function(state) {
-            // jshint camelcase: false
+      it('messages should update sender lastSent', done => {
+        handleSocket(logReply, () => {
+          handleSocket(moreLogReply, state => {
             assert.equal(state.who.get(message0.sender.session_id).get('lastSent'), message0.time)
             done()
           })
         })
       })
 
-      it('should update earliestLog', function(done) {
-        handleSocket(logReply, function() {
-          handleSocket(moreLogReply, function(state) {
+      it('should update earliestLog', done => {
+        handleSocket(logReply, () => {
+          handleSocket(moreLogReply, state => {
             assert.equal(state.earliestLog, 'id0')
             done()
           })
@@ -850,32 +845,32 @@ describe('chat store', function() {
       })
     })
 
-    describe('receiving redundant logs', function() {
-      beforeEach(function() {
+    describe('receiving redundant logs', () => {
+      beforeEach(() => {
         chat.store.socketEvent(logReply)
       })
 
-      describe('should not change', function() {
+      describe('should not change', () => {
         checkLogs(logReply)
       })
 
-      it('should not trigger messagesChanged action', function(done) {
-        var logReplyWithBefore = _.merge(_.clone(logReply), {data: {before: 'id0'}})
+      it('should not trigger messagesChanged action', done => {
+        const logReplyWithBefore = _.merge(_.clone(logReply), {data: {before: 'id0'}})
         chat.actions.messagesChanged.reset()
-        handleSocket(logReplyWithBefore, function() {
+        handleSocket(logReplyWithBefore, () => {
           sinon.assert.notCalled(chat.actions.messagesChanged)
           done()
         })
       })
     })
 
-    describe('loadMoreLogs action', function() {
-      it('should not make a request if initial logs not loaded yet', function() {
+    describe('loadMoreLogs action', () => {
+      it('should not make a request if initial logs not loaded yet', () => {
         chat.store.loadMoreLogs()
         sinon.assert.notCalled(chat.store.socket.send)
       })
 
-      it('should request 50 more logs before the earliest message', function() {
+      it('should request 50 more logs before the earliest message', () => {
         chat.store.socketEvent(logReply)
         chat.store.loadMoreLogs()
         sinon.assert.calledWithExactly(chat.store.socket.send, {
@@ -884,29 +879,29 @@ describe('chat store', function() {
         })
       })
 
-      it('should not make a request if one already in flight', function(done) {
+      it('should not make a request if one already in flight', done => {
         chat.store.socketEvent(logReply)
         chat.store.loadMoreLogs()
         chat.store.loadMoreLogs()
         sinon.assert.calledOnce(chat.store.socket.send)
-        handleSocket(moreLogReply, function() {
+        handleSocket(moreLogReply, () => {
           chat.store.loadMoreLogs()
           sinon.assert.calledTwice(chat.store.socket.send)
           done()
         })
       })
 
-      describe('status indicator', function() {
-        beforeEach(function() {
+      describe('status indicator', () => {
+        beforeEach(() => {
           chat.store.socketEvent(logReply)
         })
 
-        it('should be set when loading more logs', function() {
+        it('should be set when loading more logs', () => {
           chat.store.loadMoreLogs()
           assert.equal(chat.store.state.loadingLogs, true)
         })
 
-        it('should be reset 250ms after no more logs received', function() {
+        it('should be reset 250ms after no more logs received', () => {
           chat.store.loadMoreLogs()
           assert.equal(chat.store.state.loadingLogs, true)
           clock.tick(1000)
@@ -922,21 +917,20 @@ describe('chat store', function() {
   })
 
   function checkUsers(msgBody) {
-    it('users should be assigned to user list', function(done) {
-      handleSocket(msgBody, function(state) {
+    it('users should be assigned to user list', done => {
+      handleSocket(msgBody, state => {
         assert.equal(state.who.size, whoReply.data.listing.length)
-        assert(Immutable.Iterable(whoReply.data.listing).every(function(user) {
-          // jshint camelcase: false
-          var whoEntry = state.who.get(user.session_id)
+        assert(Immutable.Iterable(whoReply.data.listing).every(user => {
+          const whoEntry = state.who.get(user.session_id)
           return !!whoEntry && whoEntry.isSuperset(Immutable.fromJS(user))
         }))
         done()
       })
     })
 
-    it('users should all be assigned hues', function(done) {
-      handleSocket(msgBody, function(state) {
-        assert(state.who.every(function(whoEntry) {
+    it('users should all be assigned hues', done => {
+      handleSocket(msgBody, state => {
+        assert(state.who.every(whoEntry => {
           return !!whoEntry.has('hue')
         }))
         done()
@@ -944,61 +938,60 @@ describe('chat store', function() {
     })
   }
 
-  describe('received users', function() {
+  describe('received users', () => {
     checkUsers(whoReply)
   })
 
-  describe('received snapshots', function() {
+  describe('received snapshots', () => {
     checkLogs(snapshotReply)
     checkMessagesChangedEvent(snapshotReply)
     checkUsers(snapshotReply)
 
-    it('should update server version', function(done) {
-      handleSocket(snapshotReply, function(state) {
+    it('should update server version', done => {
+      handleSocket(snapshotReply, state => {
         assert.equal(state.serverVersion, snapshotReply.data.version)
         done()
       })
     })
 
-    it('should update session id', function(done) {
-      handleSocket(snapshotReply, function(state) {
-        // jshint camelcase: false
+    it('should update session id', done => {
+      handleSocket(snapshotReply, state => {
         assert.equal(state.sessionId, snapshotReply.data.session_id)
         done()
       })
     })
 
-    it('should set canJoin state to true', function(done) {
-      handleSocket(snapshotReply, function(state) {
+    it('should set canJoin state to true', done => {
+      handleSocket(snapshotReply, state => {
         assert.equal(state.canJoin, true)
         done()
       })
     })
 
-    describe('on join', function() {
-      beforeEach(function() {
+    describe('on join', () => {
+      beforeEach(() => {
         chat.store.joinRoom()
       })
 
-      it('should set joined state to the join time', function(done) {
-        handleSocket(snapshotReply, function(state) {
+      it('should set joined state to the join time', done => {
+        handleSocket(snapshotReply, state => {
           assert.equal(state.joined, Date.now())
           done()
         })
       })
 
-      it('should clear auth state', function(done) {
+      it('should clear auth state', done => {
         chat.store.state.authState = 'trying-stored'
-        handleSocket(snapshotReply, function(state) {
+        handleSocket(snapshotReply, state => {
           assert.equal(state.authState, null)
           done()
         })
       })
 
-      it('should trigger sending stored nick', function(done) {
+      it('should trigger sending stored nick', done => {
         chat.store.state.roomName = 'ezzie'
         chat.store.storageChange(mockStorage)
-        handleSocket(snapshotReply, function() {
+        handleSocket(snapshotReply, () => {
           sinon.assert.calledWithExactly(chat.store.socket.send, {
             type: 'nick',
             data: {name: mockStorage.room.ezzie.nick},
@@ -1007,10 +1000,10 @@ describe('chat store', function() {
         })
       })
 
-      it('should not send stored nick if unset', function(done) {
+      it('should not send stored nick if unset', done => {
         chat.store.state.roomName = 'ezzie'
         chat.store.storageChange({room: {}})
-        handleSocket(snapshotReply, function() {
+        handleSocket(snapshotReply, () => {
           sinon.assert.notCalled(chat.store.socket.send)
           done()
         })
@@ -1018,14 +1011,14 @@ describe('chat store', function() {
     })
   })
 
-  describe('received nick changes', function() {
-    var rejectedNickReply = {
+  describe('received nick changes', () => {
+    const rejectedNickReply = {
       'id': '1',
       'type': 'nick-reply',
       'error': 'error',
     }
 
-    var nonexistentNickEvent = {
+    const nonexistentNickEvent = {
       'id': '2',
       'type': 'nick-event',
       'data': {
@@ -1033,57 +1026,54 @@ describe('chat store', function() {
         'id': 'agent:noman',
         'from': 'nonexistence',
         'to': 'absence',
-      }
+      },
     }
 
-    beforeEach(function() {
+    beforeEach(() => {
       chat.store.socketEvent(helloEvent)
       chat.store.socketEvent(snapshotReply)
     })
 
-    it('should update user list name', function(done) {
-      handleSocket(whoReply, function() {
-        handleSocket(nickReply, function(state) {
-          // jshint camelcase: false
+    it('should update user list name', done => {
+      handleSocket(whoReply, () => {
+        handleSocket(nickReply, state => {
           assert.equal(state.who.getIn([nickReply.data.session_id, 'name']), nickReply.data.to)
           done()
         })
       })
     })
 
-    it('should update hue', function(done) {
-      handleSocket(whoReply, function() {
-        handleSocket(nickReply, function(state) {
-          // jshint camelcase: false
+    it('should update hue', done => {
+      handleSocket(whoReply, () => {
+        handleSocket(nickReply, state => {
           assert.equal(state.who.getIn([nickReply.data.session_id, 'hue']), 70)
           done()
         })
       })
     })
 
-    it('should add nonexistent users', function(done) {
-      handleSocket(whoReply, function() {
-        handleSocket(nonexistentNickEvent, function(state) {
-          // jshint camelcase: false
+    it('should add nonexistent users', done => {
+      handleSocket(whoReply, () => {
+        handleSocket(nonexistentNickEvent, state => {
           assert(state.who.has(nonexistentNickEvent.data.session_id))
           done()
         })
       })
     })
 
-    describe('in response to nick set', function() {
-      it('should not update nick if rejected', function(done) {
+    describe('in response to nick set', () => {
+      it('should not update nick if rejected', done => {
         chat.store.state.nick = 'previous'
         chat.store.state.roomName = 'ezzie'
-        handleSocket(rejectedNickReply, function(state) {
+        handleSocket(rejectedNickReply, state => {
           assert.equal(state.nick, 'previous')
           done()
         })
       })
 
-      it('should update stored nick', function(done) {
+      it('should update stored nick', done => {
         chat.store.state.roomName = 'ezzie'
-        handleSocket(nickReply, function(state) {
+        handleSocket(nickReply, state => {
           assert.equal(state.nick, 'tester')
           sinon.assert.calledOnce(storage.setRoom)
           sinon.assert.calledWithExactly(storage.setRoom, 'ezzie', 'nick', 'tester')
@@ -1091,8 +1081,8 @@ describe('chat store', function() {
         })
       })
 
-      it('should update Raven user context', function(done) {
-        handleSocket(nickReply, function() {
+      it('should update Raven user context', done => {
+        handleSocket(nickReply, () => {
           sinon.assert.calledOnce(Raven.setUserContext)
           sinon.assert.calledWithExactly(Raven.setUserContext, {
             'id': 'agent:tester1',
@@ -1105,8 +1095,8 @@ describe('chat store', function() {
     })
   })
 
-  describe('received join events', function() {
-    var joinEvent = {
+  describe('received join events', () => {
+    const joinEvent = {
       'id': '1',
       'type': 'join-event',
       'data': {
@@ -1115,28 +1105,26 @@ describe('chat store', function() {
         'name': '32.64.96.128:12347',
         'server_id': '1a2a3a4a5a6a',
         'server_era': '1b2b3b4b5b6b',
-      }
+      },
     }
 
-    it('should add to user list', function(done) {
-      handleSocket(joinEvent, function(state) {
-        // jshint camelcase: false
+    it('should add to user list', done => {
+      handleSocket(joinEvent, state => {
         assert(state.who.get(joinEvent.data.session_id).isSuperset(Immutable.fromJS(joinEvent.data)))
         done()
       })
     })
 
-    it('should assign a hue', function(done) {
-      handleSocket(joinEvent, function(state) {
-        // jshint camelcase: false
+    it('should assign a hue', done => {
+      handleSocket(joinEvent, state => {
         assert.equal(state.who.getIn([joinEvent.data.session_id, 'hue']), 50)
         done()
       })
     })
   })
 
-  describe('received part events', function() {
-    var partEvent = {
+  describe('received part events', () => {
+    const partEvent = {
       'id': '1',
       'type': 'part-event',
       'data': {
@@ -1146,10 +1134,9 @@ describe('chat store', function() {
       },
     }
 
-    it('should remove from user list', function(done) {
-      handleSocket(whoReply, function() {
-        handleSocket(partEvent, function(state) {
-          // jshint camelcase: false
+    it('should remove from user list', done => {
+      handleSocket(whoReply, () => {
+        handleSocket(partEvent, state => {
           assert(!state.who.has(partEvent.data.session_id))
           done()
         })
@@ -1157,8 +1144,8 @@ describe('chat store', function() {
     })
   })
 
-  describe('setRoomSettings action', function() {
-    it('should merge with roomSettings data', function() {
+  describe('setRoomSettings action', () => {
+    it('should merge with roomSettings data', () => {
       chat.store.setRoomSettings({testing: true, another: {test: false}})
       assert.equal(chat.store.state.roomSettings.get('testing'), true)
       assert.equal(chat.store.state.roomSettings.getIn(['another', 'test']), false)
@@ -1167,9 +1154,9 @@ describe('chat store', function() {
     })
   })
 
-  describe('tryRoomPasscode action', function() {
-    it('should set authData and send an auth attempt', function() {
-      var testPassword = 'hunter2'
+  describe('tryRoomPasscode action', () => {
+    it('should set authData and send an auth attempt', () => {
+      const testPassword = 'hunter2'
       chat.store.tryRoomPasscode(testPassword)
       assert.equal(chat.store.state.authData, testPassword)
       assert.equal(chat.store.state.authState, 'trying')
@@ -1184,34 +1171,34 @@ describe('chat store', function() {
     })
   })
 
-  describe('received bounce events', function() {
-    it('should set passcode auth', function(done) {
-      handleSocket(bounceEvent, function(state) {
+  describe('received bounce events', () => {
+    it('should set passcode auth', done => {
+      handleSocket(bounceEvent, state => {
         assert.equal(state.authType, 'passcode')
         done()
       })
     })
 
-    it('should set canJoin state to false', function(done) {
-      handleSocket(bounceEvent, function(state) {
+    it('should set canJoin state to false', done => {
+      handleSocket(bounceEvent, state => {
         assert.equal(state.canJoin, false)
         done()
       })
     })
 
-    describe('if not trying a stored passcode', function() {
-      it('should set auth state to "needs-passcode"', function(done) {
-        handleSocket(bounceEvent, function(state) {
+    describe('if not trying a stored passcode', () => {
+      it('should set auth state to "needs-passcode"', done => {
+        handleSocket(bounceEvent, state => {
           assert.equal(state.authState, 'needs-passcode')
           done()
         })
       })
     })
 
-    describe('if trying a stored passcode', function() {
-      it('should be ignored', function(done) {
+    describe('if trying a stored passcode', () => {
+      it('should be ignored', done => {
         chat.store.state.authState = 'trying-stored'
-        handleSocket(bounceEvent, function(state) {
+        handleSocket(bounceEvent, state => {
           assert.equal(state.authState, 'trying-stored')
           done()
         })
@@ -1219,8 +1206,8 @@ describe('chat store', function() {
     })
   })
 
-  describe('received auth reply events', function() {
-    var incorrectAuthReplyEvent = {
+  describe('received auth reply events', () => {
+    const incorrectAuthReplyEvent = {
       'id': '1',
       'type': 'auth-reply',
       'data': {
@@ -1229,29 +1216,29 @@ describe('chat store', function() {
       },
     }
 
-    var errorAuthReplyEvent = {
+    const errorAuthReplyEvent = {
       'id': '1',
       'type': 'auth-reply',
       'data': null,
       'error': 'command not implemented',
     }
 
-    var redundantAuthReplyEvent = {
+    const redundantAuthReplyEvent = {
       'id': '1',
       'type': 'auth-reply',
       'data': null,
       'error': 'already joined',
     }
 
-    beforeEach(function() {
+    beforeEach(() => {
       chat.store.state.roomName = 'ezzie'
       chat.store.state.authType = 'passcode'
       chat.store.state.authData = 'hunter2'
     })
 
-    describe('if successful', function() {
-      it('should save auth data in storage', function(done) {
-        handleSocket(successfulAuthReplyEvent, function(state) {
+    describe('if successful', () => {
+      it('should save auth data in storage', done => {
+        handleSocket(successfulAuthReplyEvent, state => {
           sinon.assert.calledOnce(storage.setRoom)
           sinon.assert.calledWithExactly(storage.setRoom, 'ezzie', 'auth', {type: 'passcode', data: 'hunter2'})
           assert.equal(state.authState, null)
@@ -1261,43 +1248,43 @@ describe('chat store', function() {
     })
 
     function testAuthFail(body) {
-      describe('if stored auth unsuccessful', function() {
-        it('should set auth state to "needs-passcode"', function() {
+      describe('if stored auth unsuccessful', () => {
+        it('should set auth state to "needs-passcode"', () => {
           chat.store.state.authState = 'trying-stored'
-          handleSocket(body, function(state) {
+          handleSocket(body, state => {
             assert.equal(state.authState, 'needs-passcode')
           })
         })
       })
 
-      describe('if auth unsuccessful', function() {
-        it('should set auth state to "failed"', function() {
+      describe('if auth unsuccessful', () => {
+        it('should set auth state to "failed"', () => {
           chat.store.state.authState = 'trying'
-          handleSocket(body, function(state) {
+          handleSocket(body, state => {
             assert.equal(state.authState, 'failed')
           })
         })
       })
     }
 
-    describe('in case of error', function() {
+    describe('in case of error', () => {
       testAuthFail(errorAuthReplyEvent)
     })
 
     testAuthFail(incorrectAuthReplyEvent)
 
-    describe('if auth redundant', function() {
-      it('should not change auth state', function() {
+    describe('if auth redundant', () => {
+      it('should not change auth state', () => {
         chat.store.state.authState = null
-        handleSocket(redundantAuthReplyEvent, function(state) {
+        handleSocket(redundantAuthReplyEvent, state => {
           assert.equal(state.authState, null)
         })
       })
     })
   })
 
-  describe('received network partition events', function() {
-    var networkPartitionEvent = {
+  describe('received network partition events', () => {
+    const networkPartitionEvent = {
       'id': '1',
       'type': 'network-event',
       'data': {
@@ -1307,9 +1294,9 @@ describe('chat store', function() {
       },
     }
 
-    it('should remove all associated users from the user list', function(done) {
-      handleSocket(whoReply, function() {
-        handleSocket(networkPartitionEvent, function(state) {
+    it('should remove all associated users from the user list', done => {
+      handleSocket(whoReply, () => {
+        handleSocket(networkPartitionEvent, state => {
           assert.equal(state.who.size, 1)
           assert.equal(state.who.first().get('id'), whoReply.data.listing[2].id)
           done()
@@ -1318,9 +1305,9 @@ describe('chat store', function() {
     })
   })
 
-  describe('received ping events', function() {
-    it('should be ignored', function() {
-      var storeSpy = sinon.spy()
+  describe('received ping events', () => {
+    it('should be ignored', () => {
+      const storeSpy = sinon.spy()
       support.listenOnce(chat.store, storeSpy)
       chat.store.socketEvent({type: 'ping-event'})
       chat.store.socketEvent({type: 'ping-reply'})
@@ -1328,8 +1315,8 @@ describe('chat store', function() {
     })
   })
 
-  describe('received unknown chat events', function() {
-    var unknownEvent = {
+  describe('received unknown chat events', () => {
+    const unknownEvent = {
       'id': '1',
       'type': 'wat-event',
       'data': {
@@ -1337,10 +1324,10 @@ describe('chat store', function() {
       },
     }
 
-    it('should log a warning', function(done) {
-      handleSocket(unknownEvent, function() {
-        sinon.assert.calledOnce(console.warn)
-        sinon.assert.calledWithExactly(console.warn, sinon.match.string, unknownEvent.type)
+    it('should log a warning', done => {
+      handleSocket(unknownEvent, () => {
+        sinon.assert.calledOnce(console.warn)  // eslint-disable-line no-console
+        sinon.assert.calledWithExactly(console.warn, sinon.match.string, unknownEvent.type)  // eslint-disable-line no-console
         done()
       })
     })

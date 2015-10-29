@@ -1,11 +1,12 @@
-var _ = require('lodash')
-var Reflux = require('reflux')
-var Immutable = require('immutable')
+import _ from 'lodash'
+import Reflux from 'reflux'
+import Immutable from 'immutable'
 
-var activity = require('./activity')
+import activity from './activity'
+import ImmutableMixin from './immutable-mixin'
 
 
-var storeActions = Reflux.createActions([
+const storeActions = Reflux.createActions([
   'prepare',
   'setReady',
   'perform',
@@ -20,9 +21,9 @@ module.exports.store = Reflux.createStore({
     {onInactive: activity.becameInactive},
   ],
 
-  mixins: [require('./immutable-mixin')],
+  mixins: [ImmutableMixin],
 
-  init: function() {
+  init() {
     this.state = Immutable.Map({
       ready: false,
       currentVersion: null,
@@ -34,43 +35,43 @@ module.exports.store = Reflux.createStore({
     this._doUpdate = null
   },
 
-  getInitialState: function() {
+  getInitialState() {
     return this.state
   },
 
-  chatChange: function(chatState) {
-    var version = chatState.serverVersion
+  chatChange(chatState) {
+    const version = chatState.serverVersion
     if (!version) {
       return
     }
 
-    var state = this.state.withMutations(state => {
+    const newState = this.state.withMutations(state => {
       if (!state.get('currentVersion')) {
-        state = state.set('currentVersion', version)
+        state.set('currentVersion', version)
       }
 
-      if (state.get('currentVersion') != version && state.get('newVersion') != version) {
-        state = state.set('newVersion', version)
+      if (state.get('currentVersion') !== version && state.get('newVersion') !== version) {
+        state.set('newVersion', version)
         if (this._active) {
           storeActions.prepare(version)
         }
       }
     })
 
-    this.triggerUpdate(state)
+    this.triggerUpdate(newState)
   },
 
-  onActive: function() {
+  onActive() {
     this._active = true
     storeActions.prepare(this.state.get('newVersion'))
   },
 
-  onInactive: function() {
+  onInactive() {
     this._active = false
   },
 
-  prepare: function(version) {
-    if (this._preparedVersion == version) {
+  prepare(version) {
+    if (this._preparedVersion === version) {
       return
     }
 
@@ -78,13 +79,13 @@ module.exports.store = Reflux.createStore({
     Heim.prepareUpdate(version)
   },
 
-  setReady: function(ready, doUpdate) {
-    var state = this.state.set('ready', ready)
+  setReady(ready, doUpdate) {
+    const state = this.state.set('ready', ready)
     this._doUpdate = ready && doUpdate
     this.triggerUpdate(state)
   },
 
-  perform: function() {
+  perform() {
     this._doUpdate()
   },
 })

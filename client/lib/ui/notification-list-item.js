@@ -1,24 +1,31 @@
-var _ = require('lodash')
-var React = require('react')
-var classNames = require('classnames')
-var Reflux = require('reflux')
+import _ from 'lodash'
+import React from 'react'
+import classNames from 'classnames'
+import Reflux from 'reflux'
 
-var FastButton = require('./fast-button')
-var MessageText = require('./message-text')
-var LiveTimeAgo = require('./live-time-ago')
+import FastButton from './fast-button'
+import MessageText from './message-text'
+import LiveTimeAgo from './live-time-ago'
+import TreeNodeMixin from './tree-node-mixin'
 
 
-module.exports = React.createClass({
+export default React.createClass({
   displayName: 'NotificationListItem',
 
+  propTypes: {
+    nodeId: React.PropTypes.string.isRequired,
+    kind: React.PropTypes.string.isRequired,
+    onClick: React.PropTypes.func,
+  },
+
   mixins: [
-    require('./tree-node-mixin')(),
+    TreeNodeMixin(),
     Reflux.connect(require('../stores/clock').minute, 'now'),
   ],
 
-  componentWillEnter: function(callback) {
-    var node = this.getDOMNode()
-    var height = this.getDOMNode().clientHeight
+  componentWillEnter(callback) {
+    const node = this.getDOMNode()
+    const height = this.getDOMNode().clientHeight
     node.style.transition = node.style.webkitTransition = 'none'
     node.style.height = 0
     node.style.opacity = 0
@@ -29,8 +36,8 @@ module.exports = React.createClass({
     callback()
   },
 
-  componentWillLeave: function(callback) {
-    var node = this.getDOMNode()
+  componentWillLeave(callback) {
+    const node = this.getDOMNode()
     node.style.transition = node.style.webkitTransition = 'all .25s ease'
     node.style.height = 0
     setTimeout(() => {
@@ -39,8 +46,8 @@ module.exports = React.createClass({
     }, 250)
   },
 
-  render: function() {
-    var message = this.state.node
+  render() {
+    const message = this.state.node
 
     return (
       <FastButton component="div" className={classNames('notification', this.props.kind, {'seen': message.get('_seen')})} onClick={ev => this.props.onClick(ev, this.props.nodeId)}>

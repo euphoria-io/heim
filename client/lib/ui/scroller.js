@@ -1,29 +1,37 @@
-var _ = require('lodash')
-var React = require('react')
+import _ from 'lodash'
+import React from 'react'
 
-var clamp = require('../clamp')
-require('../math-sign-polyfill')
+import clamp from '../clamp'
 
 
 function dimensions(el, prop) {
-  var rect = el.getBoundingClientRect()
+  const rect = el.getBoundingClientRect()
   if (prop) {
     return Math.round(rect[prop])
-  } else {
-    var dims = {}
-    // would like to use _.mapValues here, but doesn't work in Firefox (not
-    // "own" properties?)
-    _.forIn(rect, function(v, k) {
-      dims[k] = Math.round(v)
-    })
-    return dims
   }
+  const dims = {}
+  // would like to use _.mapValues here, but doesn't work in Firefox (not
+  // "own" properties?)
+  _.forIn(rect, (v, k) => {
+    dims[k] = Math.round(v)
+  })
+  return dims
 }
 
-module.exports = React.createClass({
+export default React.createClass({
   displayName: 'Scroller',
 
-  componentWillMount: function() {
+  propTypes: {
+    onScroll: React.PropTypes.func,
+    onNearTop: React.PropTypes.func,
+    onScrollbarSize: React.PropTypes.func,
+    target: React.PropTypes.string,
+    edgeSpace: React.PropTypes.number,
+    className: React.PropTypes.string,
+    children: React.PropTypes.node,
+  },
+
+  componentWillMount() {
     this._onScroll = _.throttle(this.onScroll, 100)
     this._checkScroll = _.throttle(this.checkScroll, 150)
     this._targetInView = false
@@ -37,17 +45,72 @@ module.exports = React.createClass({
     this._animationFrames = {}
   },
 
-  componentDidMount: function() {
+  componentDidMount() {
     this.scroll({forceTargetInView: true})
     this.checkScrollbar()
   },
 
-  componentWillUnmount: function() {
+  componentWillUnmount() {
     this._onScroll.cancel()
     this._checkScroll.cancel()
   },
 
-  _chromeRAFHack: function(id, callback, immediate) {
+  onScroll() {
+    this._chromeRAFHack('onScroll', () => {
+      this._checkScroll()
+      this.updateAnchorPos()
+      if (this.props.onScroll) {
+        this.props.onScroll(this._isTouching())
+      }
+    })
+  },
+
+  onFocusCapture() {
+    // browser bugs and other difficult to account for shenanigans can cause
+    // unwanted scrolls when inputs get focus. :( FIGHT BACK!
+    // see https://code.google.com/p/chromium/issues/detail?id=437025
+    setImmediate(() => {
+      this.scroll({ignoreScrollDelta: true})
+    })
+  },
+
+  onUpdate() {
+    this.scroll()
+    this.checkScrollbar()
+  },
+
+  onTouchStart() {
+    this._lastTouch = true
+
+    // prevent overscroll from bleeding out in Mobile Safari
+    if (!Heim.isiOS) {
+      return
+    }
+
+    // http://stackoverflow.com/a/14130056
+    const node = this.getDOMNode()
+    if (node.scrollTop === 0) {
+      node.scrollTop = 1
+    } else if (node.scrollHeight === node.scrollTop + node.offsetHeight) {
+      node.scrollTop -= 1
+    }
+  },
+
+  onTouchEnd() {
+    this._lastTouch = new Date()
+  },
+
+  getPosition() {
+    const node = this.getDOMNode()
+    if (!node.scrollHeight) {
+      return false
+    }
+
+    const frac = node.scrollTop / (node.scrollHeight - node.clientHeight)
+    return frac ? Math.round(frac * 100) / 100 : 1
+  },
+
+  _chromeRAFHack(id, callback, immediate) {
     if (!immediate && Heim.isChrome && Heim.isTouch) {
       if (this._animationFrames[id]) {
         return
@@ -62,45 +125,21 @@ module.exports = React.createClass({
     }
   },
 
-  onScroll: function() {
-    this._chromeRAFHack('onScroll', () => {
-      this._checkScroll()
-      this.updateAnchorPos()
-      if (this.props.onScroll) {
-        this.props.onScroll(this._isTouching())
-      }
-    })
-  },
-
-  onFocusCapture: function() {
-    // browser bugs and other difficult to account for shenanigans can cause
-    // unwanted scrolls when inputs get focus. :( FIGHT BACK!
-    // see https://code.google.com/p/chromium/issues/detail?id=437025
-    setImmediate(() => {
-      this.scroll({ignoreScrollDelta: true})
-    })
-  },
-
-  onUpdate: function() {
-    this.scroll()
-    this.checkScrollbar()
-  },
-
-  update: function() {
+  update() {
     this._waitingForUpdate = false
     this.onUpdate()
   },
 
-  updateAnchorPos: function() {
+  updateAnchorPos() {
     // Record the position of our point of reference. Either the target (if
     // it's in view), or the centermost child element.
-    var node = this.getDOMNode()
-    var nodeBox = dimensions(node)
-    var viewTop = nodeBox.top
-    var viewHeight = nodeBox.height
+    const node = this.getDOMNode()
+    const nodeBox = dimensions(node)
+    const viewTop = nodeBox.top
+    const viewHeight = nodeBox.height
 
-    var target = node.querySelector(this.props.target)
-    var targetPos
+    const target = node.querySelector(this.props.target)
+    let targetPos
     if (target) {
       targetPos = dimensions(target, 'bottom')
       this._targetInView = targetPos >= viewTop - 5 + target.offsetHeight && targetPos <= viewTop + viewHeight + 5
@@ -108,17 +147,17 @@ module.exports = React.createClass({
       this._targetInView = false
     }
 
-    var anchor
+    let anchor
     if (this._targetInView) {
       this._anchor = target
       this._anchorPos = targetPos
     } else {
-      var box = dimensions(this.getDOMNode())
-      var bodyBox = dimensions(uidocument.body)
-      var boxRight = Math.min(box.right, bodyBox.right)
+      const box = dimensions(this.getDOMNode())
+      const bodyBox = dimensions(uidocument.body)
+      const boxRight = Math.min(box.right, bodyBox.right)
       anchor = uidocument.elementFromPoint(boxRight - 40, box.top + box.height / 2)
       if (!anchor) {
-        console.warn('scroller: unable to find anchor')  // jshint ignore:line
+        console.warn('scroller: unable to find anchor')  // eslint-disable-line no-console
       }
       this._anchor = anchor
       this._anchorPos = anchor && dimensions(anchor, 'bottom')
@@ -128,24 +167,24 @@ module.exports = React.createClass({
     this._lastViewHeight = viewHeight
   },
 
-  checkScrollbar: function() {
-    var node = this.getDOMNode()
+  checkScrollbar() {
+    const node = this.getDOMNode()
 
     if (this.props.onScrollbarSize) {
-      var scrollbarWidth = node.offsetWidth - node.clientWidth
-      if (scrollbarWidth != this.scrollbarWidth) {
+      const scrollbarWidth = node.offsetWidth - node.clientWidth
+      if (scrollbarWidth !== this.scrollbarWidth) {
         this.scrollbarWidth = scrollbarWidth
         this.props.onScrollbarSize(scrollbarWidth)
       }
     }
   },
 
-  checkScroll: function() {
+  checkScroll() {
     if (this._waitingForUpdate) {
       return
     }
 
-    var node = this.getDOMNode()
+    const node = this.getDOMNode()
 
     if (node.scrollHeight === 0) {
       return
@@ -161,7 +200,7 @@ module.exports = React.createClass({
     }
   },
 
-  scroll: function(options) {
+  scroll(options = {}) {
     // Scroll so our point of interest (target or anchor) is in the right place.
     //
     // Desired behavior:
@@ -183,35 +222,35 @@ module.exports = React.createClass({
     // scrollTop doesn't happen promptly during inertial scrolling. It turns
     // out that setting scrollTop inside a requestAnimationFrame callback
     // circumvents this issue.
-    options = options || {}
     this._chromeRAFHack('scroll', () => {
-      var node = this.getDOMNode()
-      var nodeBox = dimensions(node)
-      var viewTop = nodeBox.top
-      var viewHeight = nodeBox.height
-      var scrollHeight = node.scrollHeight
-      var target = node.querySelector(this.props.target)
-      var canScroll = viewHeight < scrollHeight
-      var edgeSpace = Math.min(this.props.edgeSpace, viewHeight / 2)
+      const node = this.getDOMNode()
+      const nodeBox = dimensions(node)
+      const viewTop = nodeBox.top
+      const viewHeight = nodeBox.height
+      const scrollHeight = node.scrollHeight
+      const target = node.querySelector(this.props.target)
+      const canScroll = viewHeight < scrollHeight
+      const edgeSpace = Math.min(this.props.edgeSpace, viewHeight / 2)
 
-      var posRef, oldPos
+      let posRef
+      let oldPos
       if (target && (options.forceTargetInView || this._targetInView)) {
-        var viewShrunk = viewHeight < this._lastViewHeight
-        var hasGrown = scrollHeight > this._lastScrollHeight
-        var fromBottom = scrollHeight - (node.scrollTop + viewHeight)
-        var canScrollBottom = canScroll && fromBottom <= edgeSpace
+        const viewShrunk = viewHeight < this._lastViewHeight
+        const hasGrown = scrollHeight > this._lastScrollHeight
+        const fromBottom = scrollHeight - (node.scrollTop + viewHeight)
+        const canScrollBottom = canScroll && fromBottom <= edgeSpace
 
-        var targetBox = dimensions(target)
-        var targetPos = targetBox.bottom
-        var clampedPos = clamp(viewTop + edgeSpace - targetBox.height, targetPos, viewTop + viewHeight - edgeSpace)
+        const targetBox = dimensions(target)
+        const targetPos = targetBox.bottom
+        const clampedPos = clamp(viewTop + edgeSpace - targetBox.height, targetPos, viewTop + viewHeight - edgeSpace)
 
-        var movingTowardsEdge = Math.sign(targetPos - this._anchorPos) != Math.sign(clampedPos - targetPos)
-        var pastEdge = clampedPos != targetPos
-        var movingPastEdge = movingTowardsEdge && pastEdge
-        var jumping = Math.abs(targetPos - this._anchorPos) > 3 * target.offsetHeight
+        const movingTowardsEdge = Math.sign(targetPos - this._anchorPos) !== Math.sign(clampedPos - targetPos)
+        const pastEdge = clampedPos !== targetPos
+        const movingPastEdge = movingTowardsEdge && pastEdge
+        const jumping = Math.abs(targetPos - this._anchorPos) > 3 * target.offsetHeight
 
-        var shouldHoldPos = hasGrown || (movingPastEdge && !jumping)
-        var shouldScrollBottom = hasGrown && canScrollBottom || viewShrunk
+        const shouldHoldPos = hasGrown || (movingPastEdge && !jumping)
+        const shouldScrollBottom = hasGrown && canScrollBottom || viewShrunk
 
         posRef = target
         if (this._targetInView && shouldHoldPos && !shouldScrollBottom) {
@@ -229,9 +268,9 @@ module.exports = React.createClass({
       }
 
       if (posRef) {
-        var delta = dimensions(posRef, 'bottom') - oldPos
+        const delta = dimensions(posRef, 'bottom') - oldPos
         if (delta && canScroll) {
-          var scrollDelta = options.ignoreScrollDelta ? 0 : node.scrollTop - this._lastScrollTop
+          const scrollDelta = options.ignoreScrollDelta ? 0 : node.scrollTop - this._lastScrollTop
           this._lastScrollTop = node.scrollTop += delta + scrollDelta
         }
       }
@@ -240,48 +279,16 @@ module.exports = React.createClass({
     }, options.immediate)
   },
 
-  scrollToTarget: function(options) {
-    options = options || {}
+  scrollToTarget(options = {}) {
     options.forceTargetInView = true
     this.scroll(options)
   },
 
-  onTouchStart: function() {
-    this._lastTouch = true
-
-    // prevent overscroll from bleeding out in Mobile Safari
-    if (!Heim.isiOS) {
-      return
-    }
-
-    // http://stackoverflow.com/a/14130056
-    var node = this.getDOMNode()
-    if (node.scrollTop === 0) {
-      node.scrollTop = 1
-    } else if (node.scrollHeight === node.scrollTop + node.offsetHeight) {
-      node.scrollTop -= 1
-    }
-  },
-
-  onTouchEnd: function() {
-    this._lastTouch = new Date()
-  },
-
-  _isTouching: function() {
+  _isTouching() {
     return this._lastTouch === true || new Date() - this._lastTouch < 100
   },
 
-  getPosition: function() {
-    var node = this.getDOMNode()
-    if (!node.scrollHeight) {
-      return false
-    }
-
-    var frac = node.scrollTop / (node.scrollHeight - node.clientHeight)
-    return frac ? Math.round(frac * 100) / 100 : 1
-  },
-
-  render: function() {
+  render() {
     return (
       <div onScroll={this._onScroll} onFocusCapture={this.onFocusCapture} onTouchStart={this.onTouchStart} onTouchEnd={this.onTouchEnd} className={this.props.className}>
         {this.props.children}

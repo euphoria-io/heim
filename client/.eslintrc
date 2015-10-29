@@ -1,0 +1,14 @@
+{
+  "extends": "airbnb",
+  "rules": {
+    "semi": [2, "never"],
+    "id-length": 0,
+    "new-cap": [2, {"capIsNewExceptions": ["List", "Map", "OrderedMap", "Set", "OrderedSet", "Record", "Seq", "Iterable", "TreeNodeMixin", "MessageDataMixin"]}]
+  },
+  "globals": {
+    "Heim",
+    "Raven",
+    "uidocument",
+    "uiwindow"
+  }
+}

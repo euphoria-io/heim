@@ -1,13 +1,14 @@
 require('./support/setup')
-var assert = require('assert')
-var sinon = require('sinon')
+import assert from 'assert'
+import sinon from 'sinon'
+
+import EventListeners from '../lib/event-listeners'
 
 
-describe('EventListeners', function() {
-  var EventListeners = require('../lib/event-listeners')
-  var eventType = 'test'
-  var eventCallback = function() {}
-  var evs
+describe('EventListeners', () => {
+  const eventType = 'test'
+  const eventCallback = () => {}
+  let evs
 
   function fakeTarget() {
     return {
@@ -16,37 +17,37 @@ describe('EventListeners', function() {
     }
   }
 
-  beforeEach(function() {
+  beforeEach(() => {
     evs = new EventListeners()
   })
 
-  it('should initialize with empty listeners array', function() {
+  it('should initialize with empty listeners array', () => {
     assert.deepEqual(evs._listeners, [])
   })
 
-  describe('addEventListener', function() {
-    it('should add an event listener', function() {
-      var target = fakeTarget()
+  describe('addEventListener', () => {
+    it('should add an event listener', () => {
+      const target = fakeTarget()
       evs.addEventListener(target, eventType, eventCallback, false)
       sinon.assert.calledOnce(target.addEventListener)
       sinon.assert.calledWithExactly(target.addEventListener, eventType, eventCallback, false)
     })
   })
 
-  describe('removeEventListener', function() {
-    it('should remove an event listener', function() {
-      var target = fakeTarget()
+  describe('removeEventListener', () => {
+    it('should remove an event listener', () => {
+      const target = fakeTarget()
       evs.removeEventListener(target, eventType, eventCallback, false)
       sinon.assert.calledOnce(target.removeEventListener)
       sinon.assert.calledWithExactly(target.removeEventListener, eventType, eventCallback, false)
     })
   })
 
-  describe('removeAllEventListeners', function() {
-    it('should remove all current event listeners', function() {
-      var target1 = fakeTarget()
-      var target2 = fakeTarget()
-      var target3 = fakeTarget()
+  describe('removeAllEventListeners', () => {
+    it('should remove all current event listeners', () => {
+      const target1 = fakeTarget()
+      const target2 = fakeTarget()
+      const target3 = fakeTarget()
       evs.addEventListener(target1, eventType, eventCallback, false)
       evs.addEventListener(target2, eventType, eventCallback, false)
       evs.addEventListener(target3, eventType, eventCallback, false)

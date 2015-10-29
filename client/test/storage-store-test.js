@@ -1,28 +1,29 @@
-var support = require('./support/setup')
-var assert = require('assert')
-var sinon = require('sinon')
+import support from './support/setup'
+import assert from 'assert'
+import sinon from 'sinon'
+
+import storage from '../lib/stores/storage'
 
 
-describe('storage store', function() {
-  var storage = require('../lib/stores/storage')
-  var clock
-  var getItem = localStorage.getItem
-  var setItem = localStorage.setItem
-  var fakeStorage
+describe('storage store', () => {
+  let clock
+  const getItem = localStorage.getItem
+  const setItem = localStorage.setItem
+  let fakeStorage
 
-  beforeEach(function() {
+  beforeEach(() => {
     clock = support.setupClock()
     fakeStorage = {}
-    sinon.stub(localStorage, 'getItem', function(key) {
+    sinon.stub(localStorage, 'getItem', key => {
       return fakeStorage[key]
     })
-    sinon.stub(localStorage, 'setItem', function(key, value) {
+    sinon.stub(localStorage, 'setItem', (key, value) => {
       fakeStorage[key] = value
     })
     support.resetStore(storage.store)
   })
 
-  afterEach(function() {
+  afterEach(() => {
     clock.restore()
 
     // stub.restore() seems to fail here.
@@ -30,15 +31,15 @@ describe('storage store', function() {
     localStorage.setItem = setItem
   })
 
-  describe('load action', function() {
-    it('should be synchronous', function() {
+  describe('load action', () => {
+    it('should be synchronous', () => {
       assert.equal(storage.load.sync, true)
     })
 
-    it('should load JSON from localStorage upon load with default empty room index', function(done) {
+    it('should load JSON from localStorage upon load with default empty room index', done => {
       fakeStorage.data = JSON.stringify({it: 'works'})
 
-      support.listenOnce(storage.store, function(state) {
+      support.listenOnce(storage.store, state => {
         assert.deepEqual(state, {it: 'works', room: {}})
         done()
       })
@@ -46,23 +47,23 @@ describe('storage store', function() {
       storage.store.load()
     })
 
-    it('should only load once', function() {
+    it('should only load once', () => {
       storage.store.load()
       storage.store.load()
       sinon.assert.calledOnce(localStorage.getItem)
     })
   })
 
-  describe('set action', function() {
-    var testKey = 'testKey'
-    var testValue = {test: true}
+  describe('set action', () => {
+    const testKey = 'testKey'
+    const testValue = {test: true}
 
-    beforeEach(function() {
+    beforeEach(() => {
       fakeStorage.data = JSON.stringify({testKey: {foo: 'bar'}})
       storage.store.load()
     })
 
-    it('should save JSON to localStorage', function() {
+    it('should save JSON to localStorage', () => {
       storage.store.set(testKey, testValue)
       clock.tick(1000)
       sinon.assert.calledWithExactly(localStorage.setItem, 'data', JSON.stringify({
@@ -71,7 +72,7 @@ describe('storage store', function() {
       }))
     })
 
-    it('should not save unchanged values', function() {
+    it('should not save unchanged values', () => {
       storage.store.set(testKey, testValue)
       clock.tick(1000)
       localStorage.setItem.reset()
@@ -80,8 +81,8 @@ describe('storage store', function() {
       sinon.assert.notCalled(localStorage.setItem)
     })
 
-    it('should trigger an update event', function(done) {
-      support.listenOnce(storage.store, function(state) {
+    it('should trigger an update event', done => {
+      support.listenOnce(storage.store, state => {
         assert.equal(state[testKey], testValue)
         done()
       })
@@ -90,12 +91,12 @@ describe('storage store', function() {
     })
   })
 
-  describe('setRoom action', function() {
-    var testRoom = 'ezzie'
-    var testKey = 'testKey'
-    var testValue = {test: true}
+  describe('setRoom action', () => {
+    const testRoom = 'ezzie'
+    const testKey = 'testKey'
+    const testValue = {test: true}
 
-    it('should save JSON to localStorage', function() {
+    it('should save JSON to localStorage', () => {
       fakeStorage.data = JSON.stringify({room: {ezzie: {testKey: {foo: 'bar'}}}})
       storage.store.load()
 
@@ -104,13 +105,13 @@ describe('storage store', function() {
       sinon.assert.calledWithExactly(localStorage.setItem, 'data', JSON.stringify({
         'room': {
           'ezzie': {
-            'testKey': testValue
-          }
-        }
+            'testKey': testValue,
+          },
+        },
       }))
     })
 
-    it('should not save unchanged values', function() {
+    it('should not save unchanged values', () => {
       fakeStorage.data = JSON.stringify({})
       storage.store.load()
 
@@ -122,11 +123,11 @@ describe('storage store', function() {
       sinon.assert.notCalled(localStorage.setItem)
     })
 
-    it('should create room config object and trigger an update event', function(done) {
+    it('should create room config object and trigger an update event', done => {
       fakeStorage.data = JSON.stringify({})
       storage.store.load()
 
-      support.listenOnce(storage.store, function(state) {
+      support.listenOnce(storage.store, state => {
         assert.deepEqual(state.room.ezzie[testKey], testValue)
         done()
       })
@@ -135,8 +136,8 @@ describe('storage store', function() {
     })
   })
 
-  describe('receiving a storage event', function() {
-    it('should be ignored before storage loaded', function() {
+  describe('receiving a storage event', () => {
+    it('should be ignored before storage loaded', () => {
       sinon.stub(storage.store, 'trigger')
       storage.store.storageChange({key: 'data', newValue: 'early'})
       assert.equal(storage.store.state, null)
@@ -145,28 +146,28 @@ describe('storage store', function() {
     })
   })
 
-  describe('receiving a storage event', function() {
-    beforeEach(function() {
+  describe('receiving a storage event', () => {
+    beforeEach(() => {
       fakeStorage.data = JSON.stringify({})
       storage.store.load()
     })
 
-    it('should update state and trigger an update', function(done) {
-      support.listenOnce(storage.store, function(state) {
+    it('should update state and trigger an update', done => {
+      support.listenOnce(storage.store, state => {
         assert.equal(state.hello, 'ezzie')
         done()
       })
       storage.store.storageChange({key: 'data', newValue: JSON.stringify({'hello': 'ezzie'})})
     })
 
-    it('should ignore changes to unknown storage keys', function() {
+    it('should ignore changes to unknown storage keys', () => {
       sinon.stub(storage.store, 'trigger')
       storage.store.storageChange({key: 'ezzie', newValue: 'bark!'})
       sinon.assert.notCalled(storage.store.trigger)
       storage.store.trigger.restore()
     })
 
-    it('should not trigger an update if unchanged', function() {
+    it('should not trigger an update if unchanged', () => {
       storage.store.set('hello', 'ezzie')
       sinon.stub(storage.store, 'trigger')
       storage.store.storageChange({key: 'data', newValue: JSON.stringify({'hello': 'ezzie'})})
@@ -174,19 +175,19 @@ describe('storage store', function() {
       storage.store.trigger.restore()
     })
 
-    it('should not change dirty values pending save', function(done) {
+    it('should not change dirty values pending save', done => {
       storage.store.set('hello', {to: 'ezzie'})
-      support.listenOnce(storage.store, function(state) {
+      support.listenOnce(storage.store, state => {
         assert.deepEqual(state.hello, {to: 'ezzie', from: 'max'})
         done()
       })
       storage.store.storageChange({key: 'data', newValue: JSON.stringify({'hello': {from: 'max'}, 'test': 'abcdef'})})
     })
 
-    it('should change previously dirty values after a save', function(done) {
+    it('should change previously dirty values after a save', done => {
       storage.store.set('hello', 'ezzie')
       clock.tick(1000)
-      support.listenOnce(storage.store, function(state) {
+      support.listenOnce(storage.store, state => {
         assert.equal(state.hello, 'max')
         done()
       })
@@ -194,20 +195,20 @@ describe('storage store', function() {
     })
   })
 
-  describe('when storage unavailable or disabled', function() {
-    beforeEach(function() {
+  describe('when storage unavailable or disabled', () => {
+    beforeEach(() => {
       localStorage.getItem = sinon.stub.throws()
       localStorage.setItem = sinon.stub.throws()
-      sinon.stub(console, 'warn')
+      sinon.stub(console, 'warn')  // eslint-disable-line no-console
     })
 
-    afterEach(function() {
-      console.warn.restore()
+    afterEach(() => {
+      console.warn.restore()  // eslint-disable-line no-console
     })
 
-    describe('load action', function() {
-      it('should initialize with empty store data and room index', function(done) {
-        support.listenOnce(storage.store, function(state) {
+    describe('load action', () => {
+      it('should initialize with empty store data and room index', done => {
+        support.listenOnce(storage.store, state => {
           assert.deepEqual(state, {room: {}})
           done()
         })
@@ -215,22 +216,22 @@ describe('storage store', function() {
         storage.store.load()
       })
 
-      it('should log a warning', function() {
+      it('should log a warning', () => {
         storage.store.load()
-        sinon.assert.calledOnce(console.warn)
+        sinon.assert.calledOnce(console.warn)  // eslint-disable-line no-console
       })
     })
 
-    describe('set action', function() {
-      beforeEach(function() {
+    describe('set action', () => {
+      beforeEach(() => {
         storage.store.load()
-        console.warn.reset()
+        console.warn.reset()  // eslint-disable-line no-console
       })
 
-      it('should log a warning', function() {
+      it('should log a warning', () => {
         storage.store.set('key', 'value')
         clock.tick(1000)
-        sinon.assert.calledOnce(console.warn)
+        sinon.assert.calledOnce(console.warn)  // eslint-disable-line no-console
       })
     })
   })

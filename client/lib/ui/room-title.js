@@ -1,23 +1,29 @@
-var React = require('react/addons')
-var classNames = require('classnames')
+import React from 'react/addons'
+import classNames from 'classnames'
 
-var FastButton = require('./fast-button')
-var ToggleBubble = require('./toggle-bubble')
+import FastButton from './fast-button'
+import ToggleBubble from './toggle-bubble'
 
 
-module.exports = React.createClass({
+export default React.createClass({
   displayName: 'RoomTitle',
+
+  propTypes: {
+    name: React.PropTypes.string.isRequired,
+    connected: React.PropTypes.bool,
+    authType: React.PropTypes.string,
+  },
 
   mixins: [require('react-immutable-render-mixin')],
 
-  showPrivacyInfo: function() {
+  showPrivacyInfo() {
     this.refs.privacyInfo.show()
   },
 
-  render: function() {
-    var className
-    var caption
-    var details
+  render() {
+    let className
+    let caption
+    let details
 
     if (this.props.connected === null) {
       caption = 'connecting...'
@@ -28,14 +34,15 @@ module.exports = React.createClass({
       details = 'hang tight! we\'ll try again every few seconds until we get in.'
     } else {
       switch (this.props.authType) {
-        case 'passcode':
-          className = caption = 'private'
-          details = 'this room requires a passcode for entry'
-          break
-        case 'public':
-          className = caption = 'public'
-          details = 'anyone with a link can join this room'
-          break
+      case 'passcode':
+        className = caption = 'private'
+        details = 'this room requires a passcode for entry'
+        break
+      case 'public':
+        className = caption = 'public'
+        details = 'anyone with a link can join this room'
+        break
+      // no default
       }
     }
 

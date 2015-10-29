@@ -1,8 +1,8 @@
-var plugins = require('../stores/plugins')
+import plugins from '../stores/plugins'
 
 
-module.exports = {
-  templateHook: function(name) {
+export default {
+  templateHook(name) {
     return plugins.hooks.run(name, this)
-  }
+  },
 }

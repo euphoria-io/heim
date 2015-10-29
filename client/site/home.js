@@ -1,23 +1,23 @@
-var React = require('react')
+import React from 'react'
 
-var common = require('./common')
-var heimURL = require('../lib/heim-url')
+import { MainPage, FancyLogo, FauxMessage } from './common'
+import heimURL from '../lib/heim-url'
 
 
 module.exports = (
-  <common.MainPage title="euphoria!" className="welcome">
+  <MainPage title="euphoria!" className="welcome">
     <div className="splash">
-      <common.FancyLogo />
+      <FancyLogo />
       <h1>let's make the internet<br /> feel like home again.</h1>
       <div className="info-box">
         <div className="description">
           <div className="messages">
-            <common.FauxMessage sender="euphoria" message="we're building a platform for cozy real time discussion spaces" />
-            <common.FauxMessage sender="euphoria" message="it's like a mix of chat, forums, and mailing lists">
+            <FauxMessage sender="euphoria" message="we're building a platform for cozy real time discussion spaces" />
+            <FauxMessage sender="euphoria" message="it's like a mix of chat, forums, and mailing lists">
               <div className="replies">
-                <common.FauxMessage sender="euphoria" message="with your friends, organizations, and people around the world." />
+                <FauxMessage sender="euphoria" message="with your friends, organizations, and people around the world." />
               </div>
-            </common.FauxMessage>
+            </FauxMessage>
           </div>
           <a className="start-chatting" href={heimURL('/room/welcome/')} target="_blank">come check it out. say hello!</a>
         </div>
@@ -37,5 +37,5 @@ module.exports = (
         </ul>
       </div>
     </div>
-  </common.MainPage>
+  </MainPage>
 )

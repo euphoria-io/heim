@@ -1,4 +1,4 @@
-var hueHash = require('./hue-hash')
+import { stripSpaces } from './hue-hash'
 
 
 /**
@@ -6,10 +6,10 @@ var hueHash = require('./hue-hash')
  * arrays. Does not do a deep comparison on sub-arrays.
  */
 function compareArrays(a, b) {
-  var len = a.length
-  for (var i = 0; i < len; i++) {
-    var elA = a[i]
-    var elB = b[i]
+  const len = a.length
+  for (let i = 0; i < len; i++) {
+    const elA = a[i]
+    const elB = b[i]
     if (elA < elB) {
       return -1
     } else if (elA > elB) {
@@ -25,15 +25,15 @@ function compareArrays(a, b) {
  * order. If found, yield the index where the subsequence starts, else
  * yield -1.
  */
-module.exports.findSubseq = function(name, part) {
+export function findSubseq(name, part) {
   // Walk the characters in partial name, skipping forward in full
   // name to match until we can't find any more matches or we finish
   // walking.
-  var searchFrom = 0
-  var matchStart = -1
-  for (var partOffset = 0; partOffset < part.length; partOffset++) {
-    var nextChar = part[partOffset]
-    var foundAt = name.indexOf(nextChar, searchFrom)
+  let searchFrom = 0
+  let matchStart = -1
+  for (let partOffset = 0; partOffset < part.length; partOffset++) {
+    const nextChar = part[partOffset]
+    const foundAt = name.indexOf(nextChar, searchFrom)
     if (foundAt === -1) {
       return -1
     }
@@ -50,16 +50,16 @@ module.exports.findSubseq = function(name, part) {
  * array of [contiguousScore, prefixScore, start], or null for no
  * match.
  */
-module.exports.matchPinningCase = function(name, part) {
-  var subseq = module.exports.findSubseq(name, part)
+export function matchPinningCase(name, part) {
+  const subseq = findSubseq(name, part)
   if (subseq === -1) {
     return null
   }
-  var infix = name.indexOf(part)
+  const infix = name.indexOf(part)
 
-  var contiguous = infix !== -1
-  var prefix = infix === 0
-  var start = contiguous ? infix : subseq
+  const contiguous = infix !== -1
+  const prefix = infix === 0
+  const start = contiguous ? infix : subseq
 
   return [
     contiguous ? -1 : 0,
@@ -74,16 +74,16 @@ module.exports.matchPinningCase = function(name, part) {
  * Lower values are better matches. If the result is null, there is
  * no match whatsoever.
  */
-module.exports.scoreMatch = function(name, part) {
+export function scoreMatch(name, part) {
   // FIXME Use proper Unicode-aware case-folding, if not already
-  var partLower = part.toLowerCase()
-  var nameLower = name.toLowerCase()
+  const partLower = part.toLowerCase()
+  const nameLower = name.toLowerCase()
 
-  var caseFoldScore = module.exports.matchPinningCase(nameLower, partLower)
+  const caseFoldScore = matchPinningCase(nameLower, partLower)
   if (!caseFoldScore) {
     return null
   }
-  var caseKeepScore = module.exports.matchPinningCase(name, part)
+  const caseKeepScore = matchPinningCase(name, part)
 
   // Inject case-preservation just before last score element, then
   // choose best of the two options (if we have two options.)
@@ -103,8 +103,8 @@ module.exports.scoreMatch = function(name, part) {
  * partial name.
  */
 function annotateScore(name, partStrip) {
-  var stripped = hueHash.stripSpaces(name)
-  var score = module.exports.scoreMatch(stripped, partStrip)
+  const stripped = stripSpaces(name)
+  const score = scoreMatch(stripped, partStrip)
   if (score) {
     // Add tie-breakers. We first sort by lowercased names and
     // then by the original names so that we don't get orderings
@@ -122,8 +122,8 @@ function annotateScore(name, partStrip) {
  * Mentionable names are suitable for use as mentions (do not contain
  * spaces, but do contain emoji, non-ASCII, etc.)
  */
-module.exports.rankCompletions = function(names, part) {
-  var partStrip = hueHash.stripSpaces(part)
+export function rankCompletions(names, part) {
+  const partStrip = stripSpaces(part)
   return names
     .filter(Boolean)
     .map(name => annotateScore(name, partStrip))
@@ -137,3 +137,5 @@ module.exports.rankCompletions = function(names, part) {
     .sortBy(entry => entry.score, compareArrays)
     .map(entry => entry.completion)
 }
+
+export default { findSubseq, matchPinningCase, scoreMatch, rankCompletions }
