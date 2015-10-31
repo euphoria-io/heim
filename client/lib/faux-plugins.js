@@ -537,6 +537,28 @@ module.exports = function(roomName) {
           ::-webkit-scrollbar-button {
             display: none;
           }
+
+          @keyframes spooky {
+            0% {
+              transform: rotate(0deg) scale(1);
+            }
+
+            50% {
+              transform: rotate(360deg) scale(1.5);
+            }
+
+            100% {
+              transform: rotate(720deg) scale(1);
+            }
+          }
+
+          .message .emoji-1f47b, .message .emoji-1f480, .message .emoji-1f383 {
+            animation-name: spooky;
+            animation-duration: 4s;
+            animation-iteration-count: 3;
+            animation-timing-function: linear;
+            z-index: 1000;
+          }
         `}} />
       )
     })
