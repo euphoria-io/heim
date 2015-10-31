@@ -483,6 +483,10 @@ module.exports = function(roomName) {
             text-shadow: none !important;
           }
 
+          .mention > .line .message {
+            background: darkorange !important;
+          }
+
           .expando:after {
             background: none !important;
           }
