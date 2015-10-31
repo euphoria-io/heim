@@ -468,8 +468,8 @@ module.exports = function(roomName) {
             background: rgba(255, 255, 255, .25) !important;
           }
 
-          .entry .nick input {
-            z-index: 5;
+          .entry input.nick {
+            z-index: 10;
           }
 
           .entry-focus .entry, .expand-rest.focus-target {
