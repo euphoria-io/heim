@@ -487,6 +487,10 @@ module.exports = function(roomName) {
             background: darkorange !important;
           }
 
+          .message a {
+            color: darkorange !important;
+          }
+
           .expando:after {
             background: none !important;
           }
