@@ -359,4 +359,170 @@ module.exports = function(roomName) {
 
     Heim.chat.setRoomSettings({collapse: false})
   }
+
+  if ('today' >= 'spooky' && location.hash.substr(1) != '2spooky4me') {
+    Heim.hook('page-bottom', function() {
+      return (
+        <style key="spooky-style" dangerouslySetInnerHTML={{__html:`
+          #ui {
+            background: #281f3d;
+          }
+
+          .info-pane, .sidebar-pane, .top-bar {
+            background: #2e293c;
+          }
+
+          .info-pane *, .top-bar *, .sidebar-pane * {
+            color: darkorange !important;
+          }
+
+          .nick, .message-emote {
+            color: black !important;
+            -webkit-filter: saturate(2) brightness(.75);
+            filter: saturate(2) brightness(.75);
+          }
+
+          .top-bar button {
+            background: darkorange !important;
+          }
+
+          .main-pane .top-bar .hex {
+            fill: darkorange !important;
+          }
+
+          .top-bar button .inner, .top-bar button .inner * {
+            color: black !important;
+          }
+
+          .info-pane .thread-list-container {
+            border: none !important;
+          }
+
+          .info-pane .thread-list-container:after {
+            box-shadow: none;
+          }
+
+          .info-pane .thread-list-container .info:hover,
+          .info-pane .thread-list-container .info.selected {
+            background: black !important;
+          }
+
+          .info-pane .mode-selector {
+            background: #444 !important;
+          }
+
+          .info-pane .mode-selector button .inner {
+            filter: grayscale(1) invert(1);
+            -webkit-filter: grayscale(1) invert(1);
+          }
+
+          .info-pane .mode-selector button.selected {
+            background: darkorange !important;
+          }
+
+          .info-pane .mode-selector button.selected .inner {
+            filter: grayscale(1) invert(1) brightness(0);
+            -webkit-filter: grayscale(1) invert(1) brightness(0);
+          }
+
+          .info-pane .notification {
+            background: none !important;
+          }
+
+          .messages .timestamp {
+            color: darkorange !important;
+          }
+
+          .messages-content {
+            background: none !important;
+          }
+
+          .messages-container {
+            background: linear-gradient(to bottom, #e9f0ff, #a9afca) !important;
+          }
+
+          .timestamps-visible .messages-container {
+            background:
+              linear-gradient(to right, #262334 72px, transparent 72px),
+              linear-gradient(to bottom, #423553 40px, #443e5d) !important;
+          }
+
+          .replies .entry:before {
+            background-color: transparent !important;
+          }
+
+          .indent-line, .replies .entry:before, .expand-rest .inner:before {
+            filter: invert(1) !important;
+            -webkit-filter: invert(1) !important;
+          }
+
+          .expand-rest {
+            color: darkorange !important;
+          }
+
+          .entry {
+            background: rgba(0, 0, 0, .15) !important;
+          }
+
+          .entry .nick {
+            background: rgba(255, 255, 255, .25) !important;
+          }
+
+          .entry-focus .entry, .expand-rest.focus-target {
+            background: #90561f !important;
+            border-bottom-color: darkorange !important;
+            color: white !important;
+          }
+
+          .entry-focus .entry textarea, .line .message, .message-preview {
+            color: white !important;
+            text-shadow: 0 1px 1px black !important;
+          }
+
+          .message-emote {
+            text-shadow: none !important;
+          }
+
+          .expando:after {
+            background: none !important;
+          }
+
+          .last-visit hr {
+            border-color: darkorange !important;
+          }
+
+          .last-visit .label {
+            color: darkorange !important;
+          }
+
+          .spinner {
+            filter: invert(1) brightness(2);
+            -webkit-filter: invert(1) brightness(2);
+          }
+
+          .new-count {
+            color: #afa !important;
+          }
+
+          ::-webkit-scrollbar {
+            width: 6px;
+            background: none !important;
+          }
+
+          ::-webkit-scrollbar-track, ::-webkit-scrollbar {
+            background: none !important;
+          }
+
+          ::-webkit-scrollbar-thumb {
+            background: darkorange !important;
+            border-radius: 2px;
+          }
+
+          ::-webkit-scrollbar-button {
+            display: none;
+          }
+        `}} />
+      )
+    })
+  }
 }
