@@ -437,8 +437,8 @@ module.exports = function(roomName) {
             background: none !important;
           }
 
-          .messages-container {
-            background: linear-gradient(to bottom, #e9f0ff, #a9afca) !important;
+          .messages-container, .youtube-pane .notice {
+            background: linear-gradient(to bottom, #423553 40px, #443e5d) !important;
           }
 
           .timestamps-visible .messages-container {
@@ -502,6 +502,10 @@ module.exports = function(roomName) {
 
           .new-count {
             color: #afa !important;
+          }
+
+          .youtube-pane .notice {
+            color: white;
           }
 
           ::-webkit-scrollbar {
