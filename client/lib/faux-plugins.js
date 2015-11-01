@@ -360,7 +360,7 @@ module.exports = function(roomName) {
     Heim.chat.setRoomSettings({collapse: false})
   }
 
-  if ('today' >= 'spooky' && location.hash.substr(1) != '2spooky4me') {
+  if (location.hash.substr(1) == 'spooky') {
     Heim.hook('page-bottom', function() {
       return (
         <style key="spooky-style" dangerouslySetInnerHTML={{__html:`
