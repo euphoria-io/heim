@@ -109,10 +109,7 @@ class ChatTree extends Tree {
 
     const scores = {}
     while (queue.length) {
-      // TODO: es6
-      const entry = queue.shift()
-      const id = entry[0]
-      const oldNode = entry[1]
+      const [id, oldNode] = queue.shift()
 
       if (id.substr(0, 2) === '__') {
         continue
