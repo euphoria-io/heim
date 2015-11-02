@@ -103,3 +103,25 @@ func (lm ListenerMap) Broadcast(ctx scope.Context, event *proto.Packet, exclude 
 
 	return nil
 }
+
+func (lm ListenerMap) NotifyUser(ctx scope.Context, userID proto.UserID, event *proto.Packet, exclude ...string) error {
+	excludeSet := map[string]struct{}{}
+	for _, exc := range exclude {
+		excludeSet[exc] = struct{}{}
+	}
+	payload, err := event.Payload()
+	if err != nil {
+		return err
+	}
+	for sessionID, listener := range lm {
+		// check that the listener is not excluded
+		if _, ok := excludeSet[sessionID]; ok {
+			continue
+		}
+
+		if listener.Identity().ID() == userID {
+			listener.Send(ctx, event.Type, payload)
+		}
+	}
+	return nil
+}
