@@ -99,7 +99,11 @@ func (log *memLog) edit(e proto.EditMessageCommand) (*proto.Message, error) {
 func maybeTruncate(msg *proto.Message) *proto.Message {
 	if len(msg.Content) > proto.MaxMessageTransmissionLength {
 		truncated := *msg
-		truncated.Content = truncated.Content[:proto.MaxMessageTransmissionLength]
+		if msg.EncryptionKeyID != "" {
+			truncated.Content = ""
+		} else {
+			truncated.Content = truncated.Content[:proto.MaxMessageTransmissionLength]
+		}
 		truncated.Truncated = true
 		msg = &truncated
 	}

@@ -1982,6 +1982,13 @@ func testBans(s *serverUnderTest) {
 }
 
 func testMessageTruncation(s *serverUnderTest) {
+	bigMessage := strings.Repeat(".", proto.MaxMessageTransmissionLength+1)
+
+	named := func(name string) string {
+		return fmt.Sprintf(
+			`{"session_id":"*","id":"*","name":"%s","server_id":"*","server_era":"*"}`, name)
+	}
+
 	Convey("Long messages are truncated, can be retrieved", func() {
 		c1 := s.Connect("bigmessages")
 		defer c1.Close()
@@ -1997,11 +2004,6 @@ func testMessageTruncation(s *serverUnderTest) {
 		c2 := s.Connect("bigmessages")
 		defer c2.Close()
 
-		named := func(name string) string {
-			return fmt.Sprintf(
-				`{"session_id":"*","id":"*","name":"%s","server_id":"*","server_era":"*"}`, name)
-		}
-
 		c2.expectPing()
 		c2.expectSnapshot(
 			s.backend.Version(),
@@ -2012,9 +2014,8 @@ func testMessageTruncation(s *serverUnderTest) {
 		c2.expect("1", "nick-reply", `{"session_id":"*","id":"*","from":"","to":"c2"}`)
 		c1.expect("", "nick-event", `{"session_id":"*","id":"*","from":"","to":"c2"}`)
 
-		bigMessage := strings.Repeat(".", proto.MaxMessageTransmissionLength+1)
+		// turn off debug output before sending long message
 		c2.debug(false)
-
 		c1.send("3", "send", `{"content":"%s"}`, bigMessage)
 		c1.expect("3", "send-reply",
 			`{"id":"*","time":"*","sender":%s,"content":"*","truncated":true}`, named("c1"))
@@ -2032,6 +2033,39 @@ func testMessageTruncation(s *serverUnderTest) {
 		c1.expect("4", "log-reply",
 			`{"log":[{"id":"%s","time":"*","sender":%s,"content":"%s","truncated":true}]}`,
 			capture["id"], named("c1"), bigMessage[:proto.MaxMessageTransmissionLength])
+	})
+
+	Convey("get-message in private room", func() {
+		ctx := scope.New()
+		kms := s.app.kms
+		owner, ownerKey, err := s.Account(ctx, kms, "email", "getmessage-owner", "passcode")
+		So(err, ShouldBeNil)
+		room, err := s.Room(ctx, kms, true, "getmessage", owner)
+		So(err, ShouldBeNil)
+		rkey, err := room.MessageKey(ctx)
+		So(rkey.GrantToPasscode(ctx, owner, ownerKey, "hunter2"), ShouldBeNil)
+
+		conn := s.Connect("getmessage")
+		defer conn.Close()
+
+		conn.expectPing()
+		conn.expect("", "bounce-event", `{"reason":"authentication required"}`)
+		conn.send("1", "auth", `{"type":"passcode","passcode":"hunter2"}`)
+		conn.expect("1", "auth-reply", `{"success":true}`)
+		conn.expectSnapshot(s.backend.Version(), nil, nil)
+		conn.send("2", "nick", `{"name":"c1"}`)
+		conn.expect("2", "nick-reply", `{"session_id":"*","id":"*","from":"","to":"c1"}`)
+
+		// turn off debug output before sending long message
+		conn.send("3", "send", `{"content":"%s"}`, bigMessage)
+		capture := conn.expect("3", "send-reply",
+			`{"id":"*","time":"*","sender":%s,"content":"","truncated":true,"encryption_key_id":"*"}`, named(""))
+
+		// get message, verify decrypted
+		conn.send("4", "get-message", `{"id":"%s"}`, capture["id"])
+		capture2 := conn.expect("4", "get-message-reply",
+			`{"id":"*","time":"*","sender":%s,"encryption_key_id":"*","content":"*"}`, named("c1"))
+		So(capture2["id"], ShouldEqual, capture["id"])
 	})
 }
 

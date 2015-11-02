@@ -23,6 +23,12 @@ func DecryptPayload(payload interface{}, auth *Authorization) (interface{}, erro
 			return nil, err
 		}
 		return SendReply(dm), nil
+	case GetMessageReply:
+		dm, err := DecryptMessage(Message(msg), messageKeys)
+		if err != nil {
+			return nil, err
+		}
+		return GetMessageReply(dm), nil
 	case *SendEvent:
 		dm, err := DecryptMessage(Message(*msg), messageKeys)
 		if err != nil {
@@ -82,7 +88,7 @@ func EncryptMessage(msg *Message, keyID string, key *security.ManagedKey) error 
 }
 
 func DecryptMessage(msg Message, auths map[string]*security.ManagedKey) (Message, error) {
-	if msg.EncryptionKeyID == "" {
+	if msg.EncryptionKeyID == "" || msg.Truncated {
 		return msg, nil
 	}
 

@@ -55,8 +55,11 @@ func (s *session) joinedState(cmd *proto.Packet) *response {
 		if err != nil {
 			return &response{err: err}
 		}
+		packet, err := proto.DecryptPayload(proto.GetMessageReply(*ret), &s.client.Authorization)
 		return &response{
-			packet: proto.GetMessageReply(*ret),
+			packet: packet,
+			err:    err,
+			cost:   1,
 		}
 	case *proto.LogCommand:
 		msgs, err := s.room.Latest(s.ctx, msg.N, msg.Before)

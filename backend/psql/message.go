@@ -99,7 +99,11 @@ func (m *Message) ToBackend() proto.Message {
 func (m *Message) ToTransmission() proto.Message {
 	msg := m.ToBackend()
 	if len(msg.Content) > proto.MaxMessageTransmissionLength {
-		msg.Content = msg.Content[:proto.MaxMessageTransmissionLength]
+		if msg.EncryptionKeyID != "" {
+			msg.Content = ""
+		} else {
+			msg.Content = msg.Content[:proto.MaxMessageTransmissionLength]
+		}
 		msg.Truncated = true
 	}
 	return msg
