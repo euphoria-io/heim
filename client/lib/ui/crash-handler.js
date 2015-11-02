@@ -6,6 +6,7 @@ export default function displayCrashDialog(ev) {
   // defer loading until we are actually rendering a crash dialog (speeds up initial client.js connection)
   const fs = require('fs')
   const React = require('react')
+  const ReactDOM = require('react-dom')
   const crashedSVG = 'data:image/svg+xml;base64,' + fs.readFileSync(__dirname + '/../../res/crashed.svg', 'base64')
   const crashedCSS = fs.readFileSync(__dirname + '/../../build/heim/crashed.css')
 
@@ -55,7 +56,7 @@ export default function displayCrashDialog(ev) {
       onIgnore={() => container.parentNode.removeChild(container)}
     />
   )
-  React.render(component, container)
+  ReactDOM.render(component, container)
   uidocument.body.appendChild(container)
 
   function onRavenSent(responseEv) {

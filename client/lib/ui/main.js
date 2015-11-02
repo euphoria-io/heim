@@ -1,7 +1,7 @@
 import _ from 'lodash'
-import React from 'react/addons'
+import React from 'react'
+import ReactCSSTransitionGroup from 'react-addons-css-transition-group'
 import classNames from 'classnames'
-const ReactCSSTransitionGroup = React.addons.CSSTransitionGroup
 import Reflux from 'reflux'
 
 import chat from '../stores/chat'

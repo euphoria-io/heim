@@ -16,7 +16,7 @@ export default React.createClass({
   },
 
   mixins: [
-    React.addons.LinkedStateMixin,
+    require('react-addons-linked-state-mixin'),
     EntryMixin,
     Reflux.listenTo(chat.store, '_onChatUpdate'),
   ],

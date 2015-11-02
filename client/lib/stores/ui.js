@@ -1,6 +1,6 @@
 import _ from 'lodash'
 import Reflux from 'reflux'
-import React from 'react/addons'
+import ReactDOM from 'react-dom'
 import Immutable from 'immutable'
 
 import clamp from '../clamp'
@@ -181,7 +181,7 @@ function createPaneStore(paneId, createOptions = {}) {
       }
 
       // batch so that adding/removing focused ui doesn't cause scrolling
-      React.addons.batchedUpdates(() => {
+      ReactDOM.unstable_batchedUpdates(() => {
         if (this.state.focusedMessage) {
           this.setMessageData(this.state.focusedMessage, {focused: false})
         }
@@ -213,7 +213,7 @@ function createPaneStore(paneId, createOptions = {}) {
     },
 
     revealMessage(messageId) {
-      React.addons.batchedUpdates(() => {
+      ReactDOM.unstable_batchedUpdates(() => {
         Immutable.Seq(this.chatState.messages.iterAncestorsOf(messageId))
           .forEach(ancestor => {
             this.setMessageData(ancestor.get('id'), {repliesExpanded: true})
@@ -397,7 +397,7 @@ const store = module.exports.store = Reflux.createStore({
   },
 
   selectThread(id, el) {
-    React.addons.batchedUpdates(() => {
+    ReactDOM.unstable_batchedUpdates(() => {
       const pane = this._touchThreadPane(id)
       if (this.state.selectedThread && this.state.selectedThread !== id) {
         this.threadData.set(this.state.selectedThread, {selected: false})
@@ -421,7 +421,7 @@ const store = module.exports.store = Reflux.createStore({
     if (!this.state.selectedThread) {
       return
     }
-    React.addons.batchedUpdates(() => {
+    ReactDOM.unstable_batchedUpdates(() => {
       this.threadData.set(this.state.selectedThread, {selected: false})
       this.state.lastSelectedThread = this.state.selectedThread
       this.state.selectedThread = null
@@ -440,7 +440,7 @@ const store = module.exports.store = Reflux.createStore({
   },
 
   openThreadPane(threadId) {
-    React.addons.batchedUpdates(() => {
+    ReactDOM.unstable_batchedUpdates(() => {
       const pane = this._touchThreadPane(threadId)
       this.state.visiblePanes = this.state.visiblePanes.add(pane.id)
       this.deselectThread()
@@ -455,7 +455,7 @@ const store = module.exports.store = Reflux.createStore({
   },
 
   closeThreadPane(threadId) {
-    React.addons.batchedUpdates(() => {
+    ReactDOM.unstable_batchedUpdates(() => {
       const paneId = 'thread-' + threadId
       this.focusPane('main')
       this.state.panes = this.state.panes.delete(paneId)
@@ -481,7 +481,7 @@ const store = module.exports.store = Reflux.createStore({
       return
     }
 
-    React.addons.batchedUpdates(() => {
+    ReactDOM.unstable_batchedUpdates(() => {
       const lastFocused = this.state.focusedPane
       this.state.focusedPane = id
       this.trigger(this.state)
@@ -571,7 +571,7 @@ const store = module.exports.store = Reflux.createStore({
 
     const parentPane = this.state.panes.get(parentPaneId || 'main')
 
-    React.addons.batchedUpdates(() => {
+    ReactDOM.unstable_batchedUpdates(() => {
       parentPane.revealMessage(messageId)
       parentPane.focusMessage(messageId)
       parentPane.scrollToEntry()
@@ -580,7 +580,7 @@ const store = module.exports.store = Reflux.createStore({
 
   gotoPopupMessage() {
     const mainPane = this.state.panes.get('main')
-    React.addons.batchedUpdates(() => {
+    ReactDOM.unstable_batchedUpdates(() => {
       mainPane.revealMessage(this.state.selectedThread)
       mainPane.focusMessage(this.state.selectedThread)
       this.deselectThread()

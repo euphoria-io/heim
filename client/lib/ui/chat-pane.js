@@ -1,5 +1,6 @@
 import _ from 'lodash'
 import React from 'react'
+import ReactDOM from 'react-dom'
 import classNames from 'classnames'
 import Reflux from 'reflux'
 
@@ -351,7 +352,7 @@ export default React.createClass({
     // no default
     }
 
-    React.addons.batchedUpdates(() => {
+    ReactDOM.unstable_batchedUpdates(() => {
       this.props.pane.focusMessage(anchor && anchor.dataset.messageId)
       if (!Heim.isTouch) {
         require('react/lib/ReactUpdates').asap(() => {
