@@ -1,10 +1,15 @@
 package backend
 
 import (
+	"crypto/hmac"
+	"crypto/sha1"
+	"encoding/base32"
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -24,6 +29,7 @@ import (
 	"euphoria.io/scope"
 
 	"github.com/gorilla/websocket"
+	"github.com/pquerna/otp"
 
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/smartystreets/goconvey/convey/reporting"
@@ -500,6 +506,7 @@ func IntegrationTest(t *testing.T, factory proto.BackendFactory) {
 	runTest("Bans", testBans)
 	runTest("Message truncation", testMessageTruncation)
 	runTest("Bots and humans", testBotsAndHumans)
+	runTest("Staff OTP", testStaffOTP)
 }
 
 func testLurker(s *serverUnderTest) {
@@ -2619,5 +2626,70 @@ func testEmailsLowLevel(s *serverUnderTest) {
 			FailureReason: "test",
 			Log:           jl.Log,
 		})
+	})
+}
+
+func testStaffOTP(s *serverUnderTest) {
+	makeStaff := func(name, password string) proto.Account {
+		b := s.backend
+		ctx := scope.New()
+		kms := s.app.kms
+		user, _, err := s.Account(ctx, kms, "email", name, password)
+		So(err, ShouldBeNil)
+		So(b.AccountManager().GrantStaff(ctx, user.ID(), s.kms.KMSCredential()), ShouldBeNil)
+		return user
+	}
+
+	getPassword := func(uri string) string {
+		key, err := otp.NewKeyFromURL(uri)
+		So(err, ShouldBeNil)
+
+		// copying this code is unfortunate, but more fortunate than not testing at all
+		secretBytes, err := base32.StdEncoding.DecodeString(key.Secret())
+		So(err, ShouldBeNil)
+		buf := make([]byte, 8)
+		mac := hmac.New(sha1.New, secretBytes)
+		counter := uint64(math.Floor(float64(time.Now().Unix()) / 30))
+		binary.BigEndian.PutUint64(buf, counter)
+		mac.Write(buf)
+		sum := mac.Sum(nil)
+		offset := sum[len(sum)-1] & 0xf
+		value := int64(((int(sum[offset]) & 0x7f) << 24) |
+			((int(sum[offset+1] & 0xff)) << 16) |
+			((int(sum[offset+2] & 0xff)) << 8) |
+			(int(sum[offset+3]) & 0xff))
+
+		return fmt.Sprintf("%06d", value%1000000)
+	}
+
+	Convey("Enroll and validate", func() {
+		nonce := fmt.Sprintf("%s", time.Now())
+		logan := makeStaff("logan"+nonce, "hunter2")
+		c1 := s.Connect("otp1login")
+		c1.expectPing()
+		c1.expectSnapshot(s.backend.Version(), nil, nil)
+		c1.send("1", "login", `{"namespace":"email","id":"logan%s","password":"hunter2"}`, nonce)
+		c1.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, logan.ID())
+		c1.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
+		c1.Close()
+
+		c1.isStaff = true
+		c1 = s.Reconnect(c1, "otp1")
+		defer c1.Close()
+		c1.expectPing()
+		c1.expectSnapshot(s.backend.Version(), nil, nil)
+		c1.send("1", "staff-validate-otp", `{"password":"000000"}`)
+		c1.expectError("1", "staff-validate-otp-reply", proto.ErrOTPNotEnrolled.Error())
+		c1.send("2", "staff-enroll-otp", ``)
+		capture := c1.expect("2", "staff-enroll-otp-reply", `{"uri":"*","qr_uri":"*"}`)
+
+		// validate
+		c1.send("3", "staff-validate-otp", `{"password":"%s"}`, getPassword(capture["uri"].(string)))
+		c1.expect("3", "staff-validate-otp-reply", `{}`)
+
+		// attempt to enroll should fail
+		time.Sleep(100 * time.Millisecond)
+		c1.send("4", "staff-enroll-otp", ``)
+		c1.expectError("4", "staff-enroll-otp-reply", proto.ErrOTPAlreadyEnrolled.Error())
 	})
 }

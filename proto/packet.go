@@ -82,6 +82,12 @@ var (
 	StaffCreateRoomType      = PacketType("staff-create-room")
 	StaffCreateRoomReplyType = StaffCreateRoomType.Reply()
 
+	StaffEnrollOTPType      = PacketType("staff-enroll-otp")
+	StaffEnrollOTPReplyType = StaffEnrollOTPType.Reply()
+
+	StaffValidateOTPType      = PacketType("staff-validate-otp")
+	StaffValidateOTPReplyType = StaffValidateOTPType.Reply()
+
 	StaffGrantManagerType      = PacketType("staff-grant-manager")
 	StaffGrantManagerReplyType = StaffGrantManagerType.Reply()
 
@@ -148,6 +154,12 @@ var (
 
 		StaffCreateRoomType:      reflect.TypeOf(StaffCreateRoomCommand{}),
 		StaffCreateRoomReplyType: reflect.TypeOf(StaffCreateRoomReply{}),
+
+		StaffEnrollOTPType:      reflect.TypeOf(StaffEnrollOTPCommand{}),
+		StaffEnrollOTPReplyType: reflect.TypeOf(StaffEnrollOTPReply{}),
+
+		StaffValidateOTPType:      reflect.TypeOf(StaffValidateOTPCommand{}),
+		StaffValidateOTPReplyType: reflect.TypeOf(StaffValidateOTPReply{}),
 
 		StaffGrantManagerType:      reflect.TypeOf(StaffGrantManagerCommand{}),
 		StaffGrantManagerReplyType: reflect.TypeOf(StaffGrantManagerReply{}),
@@ -574,6 +586,28 @@ type StaffCreateRoomReply struct {
 	Success       bool   `json:"success"`                  // whether the room was created
 	FailureReason string `json:"failure_reason,omitempty"` // if `success` was false, the reason why
 }
+
+// The `staff-enroll-otp` command generates a new OTP key for a staff user. The
+// user must then validate the key by issuing a successful `staff-validate-otp`
+// command. An error will be returned if the user already has a validated OTP key.
+type StaffEnrollOTPCommand struct{}
+
+// `staff-enroll-otp-reply` returns the OTP key in several forms that a user can
+// use to import into their personal authentication app.
+type StaffEnrollOTPReply struct {
+	URI     string `json:"uri"`    // the otpauth URI for the generated key (https://github.com/google/google-authenticator/wiki/Key-Uri-Format)
+	QRImage string `json:"qr_uri"` // the data URI for a QR image encoding the otpauth URI
+}
+
+// The `staff-validate-otp` command validates a one-time password against the
+// latest OTP key generated for the user by the `staff-enroll-otp` command.
+type StaffValidateOTPCommand struct {
+	Password string `json:"password"`
+}
+
+// `staff-validate-otp-reply` indicates successful authentication with the
+// given one-time password.
+type StaffValidateOTPReply struct{}
 
 // The `staff-revoke-access` command is a version of the [revoke-access](#revoke-access)
 // command that is available to staff. The staff account does not need to be a manager

@@ -60,6 +60,7 @@ var schema = []struct {
 
 	// Accounts.
 	{"agent", Agent{}, []string{"ID"}},
+	{"otp", OTP{}, []string{"AccountID"}},
 	{"password_reset_request", PasswordResetRequest{}, []string{"ID"}},
 	{"personal_identity", PersonalIdentity{}, []string{"Namespace", "ID"}},
 	{"account", Account{}, []string{"ID"}},

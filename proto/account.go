@@ -7,9 +7,13 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"image"
 	"io"
 	"strings"
 	"time"
+
+	"github.com/pquerna/otp"
+	"github.com/pquerna/otp/totp"
 
 	"golang.org/x/crypto/poly1305"
 
@@ -23,6 +27,43 @@ const (
 	ClientKeyType                = security.AES128
 	PasswordResetRequestLifetime = time.Hour
 )
+
+func NewOTP() (*OTP, error) {
+	// TODO: support custom issuer, account name
+	opts := totp.GenerateOpts{
+		Issuer:      "euphoria.io",
+		AccountName: "euphoria user",
+	}
+	key, err := totp.Generate(opts)
+	if err != nil {
+		return nil, err
+	}
+	return &OTP{URI: key.String()}, nil
+}
+
+type OTP struct {
+	URI       string
+	Validated bool
+}
+
+func (o *OTP) QRImage(width, height int) (image.Image, error) {
+	key, err := otp.NewKeyFromURL(o.URI)
+	if err != nil {
+		return nil, err
+	}
+	return key.Image(width, height)
+}
+
+func (o *OTP) Validate(password string) error {
+	key, err := otp.NewKeyFromURL(o.URI)
+	if err != nil {
+		return err
+	}
+	if !totp.Validate(password, key.Secret()) {
+		return ErrAccessDenied
+	}
+	return nil
+}
 
 type AccountManager interface {
 	// GetAccount returns the account with the given ID.
@@ -64,6 +105,16 @@ type AccountManager interface {
 
 	// ChangeName changes an account's name.
 	ChangeName(ctx scope.Context, accountID snowflake.Snowflake, name string) error
+
+	// OTP returns the user's enrolled OTP, or nil if one has never been generated.
+	OTP(ctx scope.Context, accountID snowflake.Snowflake) (*OTP, error)
+
+	// GenerateOTP generates a new OTP secret for the user. If one has been generated
+	// before, then it is replaced if it was never validated, or an error is returned.
+	GenerateOTP(ctx scope.Context, accountID snowflake.Snowflake) (*OTP, error)
+
+	// ValidateOTP validates a one-time passcode according to the user's enrolled OTP.
+	ValidateOTP(ctx scope.Context, accountID snowflake.Snowflake, passcode string) error
 }
 
 type PersonalIdentity interface {

@@ -58,6 +58,12 @@ func (awsc *AccountWithStaffCapability) Bind(b *Backend) *AccountBinding {
 	return ab
 }
 
+type OTP struct {
+	AccountID string `db:"account_id"`
+	URI       string `db:"uri"`
+	Validated bool
+}
+
 type PersonalIdentity struct {
 	Namespace string
 	ID        string
@@ -774,5 +780,118 @@ func (b *AccountManagerBinding) ChangeName(ctx scope.Context, accountID snowflak
 	if n < 1 {
 		return proto.ErrAccountNotFound
 	}
+	return nil
+}
+
+func (b *AccountManagerBinding) getOTP(db gorp.SqlExecutor, accountID snowflake.Snowflake) (*proto.OTP, error) {
+	row, err := db.Get(OTP{}, accountID.String())
+	if row == nil || err != nil {
+		if row == nil || err == sql.ErrNoRows {
+			return nil, proto.ErrOTPNotEnrolled
+		}
+		return nil, err
+	}
+
+	fmt.Printf("got otp row %#v\n", row)
+	otp := &proto.OTP{
+		URI:       row.(*OTP).URI,
+		Validated: row.(*OTP).Validated,
+	}
+	fmt.Printf("returning otp %#v\n", otp)
+	return otp, nil
+}
+
+func (b *AccountManagerBinding) OTP(ctx scope.Context, accountID snowflake.Snowflake) (*proto.OTP, error) {
+	return b.getOTP(b.DbMap, accountID)
+}
+
+func (b *AccountManagerBinding) GenerateOTP(ctx scope.Context, accountID snowflake.Snowflake) (*proto.OTP, error) {
+	t, err := b.DbMap.Begin()
+	if err != nil {
+		return nil, err
+	}
+
+	otp, err := b.getOTP(t, accountID)
+	if err != nil && err != proto.ErrOTPNotEnrolled {
+		rollback(ctx, t)
+		return nil, err
+	}
+	if err == nil {
+		if otp.Validated {
+			rollback(ctx, t)
+			return nil, proto.ErrOTPAlreadyEnrolled
+		}
+		row := &OTP{AccountID: accountID.String()}
+		if _, err := t.Delete(row); err != nil {
+			rollback(ctx, t)
+			return nil, err
+		}
+	}
+
+	otp, err = proto.NewOTP()
+	if err != nil {
+		rollback(ctx, t)
+		return nil, err
+	}
+
+	row := &OTP{
+		AccountID: accountID.String(),
+		URI:       otp.URI,
+	}
+	if err := t.Insert(row); err != nil {
+		// TODO: this could fail in the case of a race condition
+		// by the time that matters we should be on postgres 9.5 and using a proper upsert
+		rollback(ctx, t)
+		return nil, err
+	}
+
+	if err := t.Commit(); err != nil {
+		return nil, err
+	}
+
+	return otp, nil
+}
+
+func (b *AccountManagerBinding) ValidateOTP(ctx scope.Context, accountID snowflake.Snowflake, password string) error {
+	t, err := b.DbMap.Begin()
+	if err != nil {
+		return err
+	}
+
+	otp, err := b.getOTP(t, accountID)
+	if err != nil {
+		rollback(ctx, t)
+		return err
+	}
+
+	if err := otp.Validate(password); err != nil {
+		rollback(ctx, t)
+		return err
+	}
+
+	if otp.Validated {
+		rollback(ctx, t)
+		return nil
+	}
+
+	res, err := t.Exec("UPDATE otp SET validated = true WHERE account_id = $1", accountID.String())
+	if err != nil {
+		rollback(ctx, t)
+		return err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		rollback(ctx, t)
+		return err
+	}
+	if n != 1 {
+		rollback(ctx, t)
+		return fmt.Errorf("failed to mark otp enrollment as validated")
+	}
+
+	if err := t.Commit(); err != nil {
+		return err
+	}
+
 	return nil
 }

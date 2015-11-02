@@ -343,3 +343,46 @@ func (m *accountManager) ChangeName(ctx scope.Context, accountID snowflake.Snowf
 	account.(*memAccount).name = name
 	return nil
 }
+
+func (m *accountManager) OTP(ctx scope.Context, accountID snowflake.Snowflake) (*proto.OTP, error) {
+	return m.b.otps[accountID], nil
+}
+
+func (m *accountManager) GenerateOTP(ctx scope.Context, accountID snowflake.Snowflake) (*proto.OTP, error) {
+	m.b.Lock()
+	defer m.b.Unlock()
+
+	if m.b.otps == nil {
+		m.b.otps = map[snowflake.Snowflake]*proto.OTP{}
+	}
+
+	old, ok := m.b.otps[accountID]
+	if ok && old.Validated {
+		return nil, proto.ErrOTPAlreadyEnrolled
+	}
+
+	otp, err := proto.NewOTP()
+	if err != nil {
+		return nil, err
+	}
+
+	m.b.otps[accountID] = otp
+	return otp, nil
+}
+
+func (m *accountManager) ValidateOTP(ctx scope.Context, accountID snowflake.Snowflake, password string) error {
+	m.b.Lock()
+	defer m.b.Unlock()
+
+	otp, ok := m.b.otps[accountID]
+	if !ok {
+		return proto.ErrOTPNotEnrolled
+	}
+
+	if err := otp.Validate(password); err != nil {
+		return err
+	}
+
+	m.b.otps[accountID].Validated = true
+	return nil
+}

@@ -1,8 +1,11 @@
 package backend
 
 import (
+	"bytes"
 	"crypto/rand"
+	"encoding/base64"
 	"fmt"
+	"image/png"
 	"time"
 
 	"euphoria.io/heim/proto"
@@ -157,6 +160,10 @@ func (s *session) handleCoreCommands(payload interface{}) *response {
 		return s.handleStaffRevokeAccessCommand(msg)
 	case *proto.StaffLockRoomCommand:
 		return s.handleStaffLockRoomCommand()
+	case *proto.StaffEnrollOTPCommand:
+		return s.handleStaffEnrollOTPCommand(msg)
+	case *proto.StaffValidateOTPCommand:
+		return s.handleStaffValidateOTPCommand(msg)
 	case *proto.UnlockStaffCapabilityCommand:
 		return s.handleUnlockStaffCapabilityCommand(msg)
 
@@ -613,6 +620,48 @@ func (s *session) handleAuthCommand(msg *proto.AuthCommand) *response {
 		return &response{err: err}
 	}
 	return &response{packet: &proto.AuthReply{Success: true}}
+}
+
+func (s *session) handleStaffEnrollOTPCommand(cmd *proto.StaffEnrollOTPCommand) *response {
+	failure := func(err error) *response { return &response{err: err} }
+
+	if s.client.Account == nil || !s.client.Account.IsStaff() {
+		return failure(proto.ErrAccessDenied)
+	}
+
+	otp, err := s.backend.AccountManager().GenerateOTP(s.ctx, s.client.Account.ID())
+	if err != nil {
+		return failure(err)
+	}
+
+	img, err := otp.QRImage(200, 200)
+	if err != nil {
+		return failure(err)
+	}
+	encodedImg := &bytes.Buffer{}
+	if err := png.Encode(encodedImg, img); err != nil {
+		return failure(err)
+	}
+
+	reply := &proto.StaffEnrollOTPReply{
+		URI:     otp.URI,
+		QRImage: fmt.Sprintf("data:image/png;base64,%s", base64.StdEncoding.EncodeToString(encodedImg.Bytes())),
+	}
+	return &response{packet: reply}
+}
+
+func (s *session) handleStaffValidateOTPCommand(cmd *proto.StaffValidateOTPCommand) *response {
+	failure := func(err error) *response { return &response{err: err} }
+
+	if s.client.Account == nil || !s.client.Account.IsStaff() {
+		return failure(proto.ErrAccessDenied)
+	}
+
+	if err := s.backend.AccountManager().ValidateOTP(s.ctx, s.client.Account.ID(), cmd.Password); err != nil {
+		return failure(err)
+	}
+
+	return &response{packet: &proto.StaffValidateOTPReply{}}
 }
 
 func (s *session) handleUnlockStaffCapabilityCommand(cmd *proto.UnlockStaffCapabilityCommand) *response {

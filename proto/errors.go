@@ -18,6 +18,8 @@ var (
 	ErrInvalidParent            = fmt.Errorf("invalid parent ID")
 	ErrInvalidVerificationToken = fmt.Errorf("invalid verification token")
 	ErrLoggedIn                 = fmt.Errorf("logged in")
+	ErrOTPAlreadyEnrolled       = fmt.Errorf("otp already enrolled")
+	ErrOTPNotEnrolled           = fmt.Errorf("otp not enrolled")
 	ErrManagerNotFound          = fmt.Errorf("manager not found")
 	ErrMessageNotFound          = fmt.Errorf("message not found")
 	ErrMessageTooLong           = fmt.Errorf("message too long")

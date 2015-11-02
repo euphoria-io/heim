@@ -22,6 +22,7 @@ type TestBackend struct {
 	et             EmailTracker
 	ipBans         map[string]time.Time
 	js             JobService
+	otps           map[snowflake.Snowflake]*proto.OTP
 	resetReqs      map[snowflake.Snowflake]*proto.PasswordResetRequest
 	rooms          map[string]proto.Room
 	version        string
