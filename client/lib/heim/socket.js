@@ -54,9 +54,8 @@ export default class Socket {
   }
 
   endBuffering() {
-    _.each(this._buffer, ev =>
-      // TODO: es6 destructuring
-      this.events.emit(ev[0], ev[1])
+    _.each(this._buffer, ([name, data]) =>
+      this.events.emit(name, data)
     )
     this._buffer = null
   }

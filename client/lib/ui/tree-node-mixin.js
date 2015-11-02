@@ -9,10 +9,9 @@ export default function(prefix) {
 
   const mixin = {
     getInitialState() {
-      // TODO: es6
-      const state = {}
-      state[nodeField] = this.props[treeField].get(this.props[nodeIdField])
-      return state
+      return {
+        [nodeField]: this.props[treeField].get(this.props[nodeIdField]),
+      }
     },
 
     componentWillReceiveProps(nextProps) {
@@ -38,10 +37,9 @@ export default function(prefix) {
   }
 
   mixin[onNodeUpdateField] = function handleNodeUpdateField(newValue) {
-    // TODO: es6
-    const update = {}
-    update[nodeField] = newValue
-    this.setState(update)
+    this.setState({
+      [nodeField]: newValue,
+    })
   }
 
   return mixin

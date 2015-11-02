@@ -99,13 +99,14 @@ describe('activity store', () => {
         assert.equal(state.lastVisit[roomName], 1234)
         done()
       })
-      // TODO: es6
-      const mockStorage = {room: {}}
-      mockStorage.room[roomName] = {
-        lastActive: 4321,
-        lastVisit: 1234,
-      }
-      activity.store.storageChange(mockStorage)
+      activity.store.storageChange({
+        room: {
+          [roomName]: {
+            lastActive: 4321,
+            lastVisit: 1234,
+          },
+        },
+      })
     })
 
     it('should be written within ' + activity.store.flushTime + 'ms of activity', () => {
@@ -120,13 +121,14 @@ describe('activity store', () => {
 
     it('should update last visit if ' + activity.store.absenceTime + 'ms of absence since last interaction', () => {
       const firstActive = Date.now()
-      // TODO: es6
-      const mockStorage = {room: {}}
-      mockStorage.room[roomName] = {
-        lastActive: firstActive,
-        lastVisit: null,
-      }
-      activity.store.storageChange(mockStorage)
+      activity.store.storageChange({
+        room: {
+          [roomName]: {
+            lastActive: firstActive,
+            lastVisit: null,
+          },
+        },
+      })
       clock.tick(activity.store.absenceTime)
       const lastTouchTime = Date.now()
       storage.setRoom.reset()

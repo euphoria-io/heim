@@ -1,10 +1,9 @@
 export default function(getter, fieldName) {
   const mixin = {
     getInitialState() {
-      // TODO: es6
-      const state = {}
-      state[fieldName] = getter(this.props).get(this.props.nodeId)
-      return state
+      return {
+        [fieldName]: getter(this.props).get(this.props.nodeId),
+      }
     },
 
     componentWillMount() {
@@ -16,10 +15,9 @@ export default function(getter, fieldName) {
     },
 
     onDataUpdate(newValue) {
-      // TODO: es6
-      const update = {}
-      update[fieldName] = newValue
-      this.setState(update)
+      this.setState({
+        [fieldName]: newValue,
+      })
     },
   }
 
