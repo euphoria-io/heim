@@ -265,7 +265,7 @@ func (rb *RoomBinding) EditMessage(
 	if edit.Announce {
 		event := &proto.EditMessageEvent{
 			EditID:  editID,
-			Message: msg.ToBackend(),
+			Message: msg.ToTransmission(),
 		}
 		err = rb.broadcast(ctx, t, proto.EditMessageEventType, event, session)
 		if err != nil {
@@ -279,7 +279,7 @@ func (rb *RoomBinding) EditMessage(
 	}
 
 	reply.EditID = editID
-	reply.Message = msg.ToBackend()
+	reply.Message = msg.ToTransmission()
 	return reply, nil
 }
 

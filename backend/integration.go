@@ -1993,6 +1993,7 @@ func testMessageTruncation(s *serverUnderTest) {
 		c1 := s.Connect("bigmessages")
 		defer c1.Close()
 
+		// turn off debug output before sending long message
 		c1.debug(false)
 		c1.expectPing()
 		c1.expectSnapshot(s.backend.Version(), nil, nil)
@@ -2066,6 +2067,57 @@ func testMessageTruncation(s *serverUnderTest) {
 		capture2 := conn.expect("4", "get-message-reply",
 			`{"id":"*","time":"*","sender":%s,"encryption_key_id":"*","content":"*"}`, named("c1"))
 		So(capture2["id"], ShouldEqual, capture["id"])
+	})
+
+	Convey("Large message can be deleted", func() {
+		ctx := scope.New()
+		kms := s.app.kms
+		owner, _, err := s.Account(ctx, kms, "email", "bigspam-owner", "passcode")
+		So(err, ShouldBeNil)
+		_, err = s.Room(ctx, kms, false, "bigspam", owner)
+		So(err, ShouldBeNil)
+
+		c1 := s.Connect("bigspamlogin")
+		c1.expectPing()
+		c1.expectSnapshot(s.backend.Version(), nil, nil)
+		c1.send("1", "login",
+			`{"namespace":"email","id":"bigspam-owner","password":"passcode"}`)
+		c1.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, owner.ID())
+		c1.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
+		c1.Close()
+
+		c1.isManager = true
+		c1 = s.Reconnect(c1, "bigspam")
+		defer c1.Close()
+		c1.expectPing()
+		c1.expectSnapshot(s.backend.Version(), nil, nil)
+
+		c2 := s.Connect("bigspam")
+		defer c2.Close()
+		c2.expectPing()
+		c2.expectSnapshot(s.backend.Version(), nil, nil)
+		c2.send("1", "nick", `{"name":"c2"}`)
+		c2.expect("1", "nick-reply", `{"session_id":"*","id":"*","from":"","to":"c2"}`)
+
+		// turn off debug output before sending long message
+		c2.send("2", "send", `{"content":"%s"}`, bigMessage)
+		capture := c2.expect("2", "send-reply",
+			`{"id":"*","time":"*","sender":%s,"content":"*","truncated":true}`, named("c2"))
+
+		// let host receive spam, then delete it
+		c1.expect("", "join-event",
+			`{"session_id":"%s","id":"*","name":"","server_id":"*","server_era":"*"}`, c2.sessionID)
+		c1.expect("", "nick-event", `{"session_id":"*","id":"*","from":"","to":"c2"}`)
+		c1.expect("", "send-event",
+			`{"id":"%s","time":"*","sender":%s,"content":"*","truncated":true}`, capture["id"], named("c2"))
+		c1.send("2", "edit-message", `{"id":"%s","delete":true,"announce":true}`, capture["id"])
+		c1.expect("2", "edit-message-reply",
+			`{"edit_id":"*","id":"*","time":"*","sender":%s,"content":"*","edited":"*","deleted":"*","truncated":true}`,
+			named("c2"))
+
+		c2.expect("", "edit-message-event",
+			`{"edit_id":"*","id":"*","time":"*","sender":%s,"content":"*","edited":"*","deleted":"*","truncated":true}`,
+			named("c2"))
 	})
 }
 
