@@ -1,5 +1,6 @@
 import _ from 'lodash'
-import React from 'react/addons'
+import React from 'react'
+import ReactDOMServer from 'react-dom/server'
 
 import findParent from '../find-parent'
 import domWalkForward from '../dom-walk-forward'
@@ -84,6 +85,6 @@ export default function handleCopy(ev) {
   })
 
   ev.clipboardData.setData('text/plain', formatEmoji(textParts.join('')).trim())
-  ev.clipboardData.setData('text/html', React.renderToStaticMarkup(<div className="heim-messages">{htmlLines}</div>))
+  ev.clipboardData.setData('text/html', ReactDOMServer.renderToStaticMarkup(<div className="heim-messages">{htmlLines}</div>))
   ev.preventDefault()
 }

@@ -1,7 +1,7 @@
-import React from 'react'
+import ReactDOMServer from 'react-dom/server'
 
 
 export function render(pageComponent) {
   const doctype = '<!doctype html>'
-  return doctype + React.renderToStaticMarkup(pageComponent)
+  return doctype + ReactDOMServer.renderToStaticMarkup(pageComponent)
 }

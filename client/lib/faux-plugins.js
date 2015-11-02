@@ -1,6 +1,6 @@
 /* eslint-disable react/no-multi-comp */
 
-import React from 'react/addons'
+import React from 'react'
 import Reflux from 'reflux'
 import Immutable from 'immutable'
 
@@ -173,7 +173,7 @@ export default function initPlugins(roomName) {
 
       mixins: [
         Reflux.connect(TVStore, 'tv'),
-        React.addons.PureRenderMixin,
+        require('react-addons-pure-render-mixin'),
       ],
 
       render() {
@@ -193,7 +193,7 @@ export default function initPlugins(roomName) {
 
       mixins: [
         Reflux.connect(TVStore, 'tv'),
-        React.addons.PureRenderMixin,
+        require('react-addons-pure-render-mixin'),
       ],
 
       render() {

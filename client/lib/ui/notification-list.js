@@ -1,5 +1,5 @@
 import React from 'react'
-const ReactTransitionGroup = React.addons.TransitionGroup
+import ReactTransitionGroup from 'react-addons-transition-group'
 import Immutable from 'immutable'
 
 import NotificationListItem from './notification-list-item'

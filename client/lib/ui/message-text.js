@@ -1,5 +1,6 @@
 import _ from 'lodash'
 import React from 'react'
+import ReactDOMServer from 'react-dom/server'
 import Autolinker from 'autolinker'
 import twemoji from 'twemoji'
 import emoji from '../emoji'
@@ -63,17 +64,17 @@ export default React.createClass({
 
     if (!this.props.onlyEmoji) {
       html = html.replace(/\B&amp;(\w+)(?=$|[^\w;])/g, (match, name) =>
-        React.renderToStaticMarkup(<a href={heimURL('/room/' + name + '/')} target="_blank">&amp;{name}</a>)
+        ReactDOMServer.renderToStaticMarkup(<a href={heimURL('/room/' + name + '/')} target="_blank">&amp;{name}</a>)
       )
 
       html = html.replace(chat.mentionRe, (match, name) => {
         const color = 'hsl(' + hueHash.hue(name) + ', 50%, 42%)'
-        return React.renderToStaticMarkup(<span style={{color: color}} className="mention-nick">@{name}</span>)
+        return ReactDOMServer.renderToStaticMarkup(<span style={{color: color}} className="mention-nick">@{name}</span>)
       })
     }
 
     html = html.replace(emoji.namesRe, (match, name) =>
-      React.renderToStaticMarkup(<div className={'emoji emoji-' + emoji.index[name]} title={match}>{match}</div>)
+      ReactDOMServer.renderToStaticMarkup(<div className={'emoji emoji-' + emoji.index[name]} title={match}>{match}</div>)
     )
 
     html = twemoji.replace(html, (match, icon, variant) => {
@@ -85,7 +86,7 @@ export default React.createClass({
         return match
       }
       const emojiName = emoji.names[codePoint] && ':' + emoji.names[codePoint] + ':'
-      return React.renderToStaticMarkup(<div className={'emoji emoji-' + codePoint} title={emojiName}>{icon}</div>)
+      return ReactDOMServer.renderToStaticMarkup(<div className={'emoji emoji-' + codePoint} title={emojiName}>{icon}</div>)
     })
 
     if (!this.props.onlyEmoji) {

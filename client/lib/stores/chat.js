@@ -1,5 +1,5 @@
 import _ from 'lodash'
-import React from 'react/addons'
+import ReactDOM from 'react-dom'
 import Reflux from 'reflux'
 import Immutable from 'immutable'
 
@@ -252,7 +252,7 @@ module.exports.store = Reflux.createStore({
       return
     }
     this.state.earliestLog = data.log[0].id
-    React.addons.batchedUpdates(() => {
+    ReactDOM.unstable_batchedUpdates(() => {
       const log = this._handleMessagesData(data.log)
 
       if (!data.before) {

@@ -1,6 +1,6 @@
-import React from 'react/addons'
+import React from 'react'
+import ReactCSSTransitionGroup from 'react-addons-css-transition-group'
 import classNames from 'classnames'
-const ReactCSSTransitionGroup = React.addons.CSSTransitionGroup
 
 
 export default React.createClass({

@@ -14,7 +14,7 @@ export default React.createClass({
   },
 
   mixins: [
-    React.addons.LinkedStateMixin,
+    require('react-addons-linked-state-mixin'),
     EntryMixin,
     Reflux.ListenerMixin,
     Reflux.connect(require('../stores/chat').store, 'chat'),

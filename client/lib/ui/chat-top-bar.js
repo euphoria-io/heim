@@ -1,7 +1,7 @@
 const fs = require('fs')  // needs to be a require to work with brfs for now: https://github.com/babel/babelify/issues/81
-import React from 'react/addons'
+import React from 'react'
+import ReactCSSTransitionGroup from 'react-addons-css-transition-group'
 import classNames from 'classnames'
-const ReactCSSTransitionGroup = React.addons.CSSTransitionGroup
 import Immutable from 'immutable'
 
 import update from '../stores/update'

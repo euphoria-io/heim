@@ -138,11 +138,8 @@ if (!window.frameElement) {
   Heim.hook = Heim.plugins.hook
 
   if (_.has(hashFlags, 'perf')) {
-    const React = require('react/addons')
-    if (React.addons && React.addons.Perf) {
-      uiwindow.ReactPerf = React.addons.Perf
-      uiwindow.ReactPerf.start()
-    }
+    uiwindow.ReactPerf = require('react-addons-perf')
+    uiwindow.ReactPerf.start()
   }
 
   Heim.loadCSS = function loadCSS(id) {
@@ -173,7 +170,8 @@ if (!window.frameElement) {
     // IE9+ requires this bind: https://msdn.microsoft.com/en-us/library/ie/gg622930(v=vs.85).aspx
     Reflux.nextTick(setImmediate.bind(window))
 
-    const React = require('react/addons')
+    const React = require('react')
+    const ReactDOM = require('react-dom')
     const SyntheticKeyboardEvent = require('react/lib/SyntheticKeyboardEvent')
     const Main = require('./ui/main').default
 
@@ -251,7 +249,6 @@ if (!window.frameElement) {
     Heim.addEventListener(uiwindow, 'mousemove', ev => Heim.ui.globalMouseMove(ev), false)
 
     if (Heim.isTouch) {
-      React.initializeTouchEvents()
       uidocument.body.classList.add('touch')
 
       Heim.addEventListener(uidocument.body, 'touchstart', ev => {
@@ -278,7 +275,7 @@ if (!window.frameElement) {
       delete Heim._titleMsg
     }
 
-    Heim.mainComponent = React.render(
+    Heim.mainComponent = ReactDOM.render(
       <Main />,
       uidocument.getElementById('container')
     )

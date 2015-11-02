@@ -1,4 +1,4 @@
-import React from 'react/addons'
+import React from 'react'
 
 import Message from './message'
 import Tree from '../tree'

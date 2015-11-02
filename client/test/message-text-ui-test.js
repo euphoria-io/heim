@@ -1,7 +1,7 @@
 import support from './support/setup'
 import assert from 'assert'
-import React from 'react/addons'
-const TestUtils = React.addons.TestUtils
+import React from 'react'
+import TestUtils from 'react-addons-test-utils'
 
 import MessageText from '../lib/ui/message-text'
 
