@@ -1,35 +1,34 @@
 // string.js (a dep) clashes with core-js string polyfill, so require first
-require('markdown-it-anchor')
+import 'markdown-it-anchor'
+import 'babel-core/register'
 
-require('babel-core/register')
+import _ from 'lodash'
+import merge from 'merge-stream'
+import gulp from 'gulp'
+import gutil from 'gulp-util'
+import gfile from 'gulp-file'
+import gzip from 'gulp-gzip'
+import gtemplate from 'gulp-template'
+import less from 'gulp-less'
+import autoprefixer from 'gulp-autoprefixer'
+import uglify from 'gulp-uglify'
+import sourcemaps from 'gulp-sourcemaps'
+import source from 'vinyl-source-stream'
+import buffer from 'vinyl-buffer'
+import watchify from 'watchify'
+import browserify from 'browserify'
+import envify from 'envify/custom'
+import serve from 'gulp-serve'
+import fs from 'fs'
+import path from 'path'
+import { exec } from 'child_process'
 
-var _ = require('lodash')
-var merge = require('merge-stream')
-var gulp = require('gulp')
-var gutil = require('gulp-util')
-var gfile = require('gulp-file')
-var gzip = require('gulp-gzip')
-var gtemplate = require('gulp-template')
-var less = require('gulp-less')
-var autoprefixer = require('gulp-autoprefixer')
-var uglify = require('gulp-uglify')
-var sourcemaps = require('gulp-sourcemaps')
-var source = require('vinyl-source-stream')
-var buffer = require('vinyl-buffer')
-var watchify = require('watchify')
-var browserify = require('browserify')
-var envify = require('envify/custom')
-var serve = require('gulp-serve')
-var fs = require('fs')
-var path = require('path')
-var exec = require('child_process').exec
+let watching = false
+const heimDest = './build/heim'
+const embedDest = './build/embed'
+const emailDest = './build/email'
 
-var watching = false
-var heimDest = './build/heim'
-var embedDest = './build/embed'
-var emailDest = './build/email'
-
-var heimOptions = {
+const heimOptions = {
   HEIM_ORIGIN: process.env.HEIM_ORIGIN,
   HEIM_PREFIX: process.env.HEIM_PREFIX || '',
   EMBED_ORIGIN: process.env.EMBED_ORIGIN,
@@ -38,7 +37,7 @@ var heimOptions = {
 
 // via https://github.com/tblobaum/git-rev
 function shell(cmd, cb) {
-  exec(cmd, { cwd: __dirname }, function(err, stdout) {
+  exec(cmd, { cwd: __dirname }, function onExecResult(err, stdout) {
     if (err) {
       throw err
     }
@@ -53,7 +52,7 @@ function reload(moduleName) {
 }
 
 function handleError(title) {
-  return function(err) {
+  return function handler(err) {
     gutil.log(gutil.colors.red(title + ':'), err.message)
     if (watching) {
       this.emit('end')
@@ -75,14 +74,14 @@ function embedBundler(args) {
     }))
 }
 
-gulp.task('heim-git-commit', function(done) {
-  shell('git rev-parse HEAD', function(gitRev) {
+gulp.task('heim-git-commit', done => {
+  shell('git rev-parse HEAD', gitRev => {
     process.env.HEIM_GIT_COMMIT = heimOptions.HEIM_GIT_COMMIT = gitRev
     done()
   })
 })
 
-gulp.task('heim-js', ['heim-git-commit', 'heim-less'], function() {
+gulp.task('heim-js', ['heim-git-commit', 'heim-less'], () => {
   return heimBundler({debug: true})
     // share some libraries with the global namespace
     // doing this here because these exposes trip up watchify atm
@@ -96,7 +95,7 @@ gulp.task('heim-js', ['heim-git-commit', 'heim-less'], function() {
     .pipe(source('main.js'))
     .pipe(buffer())
     .pipe(sourcemaps.init({loadMaps: true}))
-      .pipe(process.env.NODE_ENV == 'production' ? uglify() : gutil.noop())
+      .pipe(process.env.NODE_ENV === 'production' ? uglify() : gutil.noop())
     .pipe(sourcemaps.write('./', {includeContent: true}))
     .on('error', handleError('heim browserify error'))
     .pipe(gulp.dest(heimDest))
@@ -104,13 +103,13 @@ gulp.task('heim-js', ['heim-git-commit', 'heim-less'], function() {
     .pipe(gulp.dest(heimDest))
 })
 
-gulp.task('embed-js', function() {
+gulp.task('embed-js', () => {
   return embedBundler({debug: true})
     .bundle()
     .pipe(source('embed.js'))
     .pipe(buffer())
     .pipe(sourcemaps.init({loadMaps: true}))
-      .pipe(process.env.NODE_ENV == 'production' ? uglify() : gutil.noop())
+      .pipe(process.env.NODE_ENV === 'production' ? uglify() : gutil.noop())
     .pipe(sourcemaps.write('./', {includeContent: true}))
     .on('error', handleError('embed browserify error'))
     .pipe(gulp.dest(embedDest))
@@ -118,8 +117,8 @@ gulp.task('embed-js', function() {
     .pipe(gulp.dest(embedDest))
 })
 
-gulp.task('raven-js', ['heim-git-commit', 'heim-js'], function() {
-  shell('md5sum build/main.js | cut -d " " -f 1', function(releaseHash) {
+gulp.task('raven-js', ['heim-git-commit', 'heim-js'], () => {
+  shell('md5sum build/main.js | cut -d " " -f 1', releaseHash => {
     return browserify('./lib/raven.js')
       .transform(envify(_.extend({
         SENTRY_ENDPOINT: process.env.SENTRY_ENDPOINT,
@@ -128,7 +127,7 @@ gulp.task('raven-js', ['heim-git-commit', 'heim-js'], function() {
       .bundle()
       .pipe(source('raven.js'))
       .pipe(buffer())
-      .pipe(process.env.NODE_ENV == 'production' ? uglify() : gutil.noop())
+      .pipe(process.env.NODE_ENV === 'production' ? uglify() : gutil.noop())
       .on('error', handleError('raven browserify error'))
       .pipe(gulp.dest(heimDest))
       .pipe(gzip())
@@ -136,7 +135,7 @@ gulp.task('raven-js', ['heim-git-commit', 'heim-js'], function() {
   })
 })
 
-gulp.task('heim-less', function() {
+gulp.task('heim-less', () => {
   return gulp.src(['./lib/main.less', './lib/crashed.less', './lib/od.less', './site/*.less'])
     .pipe(less({compress: true}))
     .on('error', handleError('LESS error'))
@@ -147,58 +146,58 @@ gulp.task('heim-less', function() {
     .pipe(gulp.dest(heimDest))
 })
 
-gulp.task('emoji-static', function() {
-  var emoji = require('./lib/emoji').default
-  var twemojiPath = path.dirname(require.resolve('twemoji')) + '/svg/'
-  var leadingZeroes = /^0*/
-  var lessSource = _.map(emoji.codes, function(code) {
+gulp.task('emoji-static', () => {
+  const emoji = require('./lib/emoji').default
+  const twemojiPath = path.dirname(require.resolve('twemoji')) + '/svg/'
+  const leadingZeroes = /^0*/
+  const lessSource = _.map(emoji.codes, code => {
     if (!code) {
-      return
+      return ''
     }
-    var twemojiName = code.replace(leadingZeroes, '')
-    var emojiPath = './res/emoji/' + twemojiName + '.svg'
+    const twemojiName = code.replace(leadingZeroes, '')
+    let emojiPath = './res/emoji/' + twemojiName + '.svg'
     if (!fs.existsSync(emojiPath)) {
       emojiPath = twemojiPath + twemojiName + '.svg'
     }
     return '.emoji-' + code + ' { background-image: data-uri("' + emojiPath + '") }'
   }).join('\n')
 
-  var lessFile = gfile('emoji.less', lessSource, {src: true})
+  const lessFile = gfile('emoji.less', lessSource, {src: true})
     .pipe(less({compress: true}))
     .pipe(gulp.dest(heimDest))
     .pipe(gzip())
     .pipe(gulp.dest(heimDest))
 
-  var indexFile = gfile('emoji.json', JSON.stringify(emoji.index), {src: true})
+  const indexFile = gfile('emoji.json', JSON.stringify(emoji.index), {src: true})
     .pipe(gulp.dest(heimDest))
 
   return merge([lessFile, indexFile])
 })
 
-gulp.task('heim-static', function() {
+gulp.task('heim-static', () => {
   return gulp.src('./static/**/*')
     .pipe(gulp.dest(heimDest))
 })
 
-gulp.task('embed-static', function() {
+gulp.task('embed-static', () => {
   return gulp.src('./static/robots.txt')
     .pipe(gulp.dest(embedDest))
 })
 
-gulp.task('heim-html', ['heim-git-commit'], function() {
+gulp.task('heim-html', ['heim-git-commit'], () => {
   return gulp.src(['./lib/room.html'])
     .pipe(gtemplate(heimOptions))
     .pipe(gulp.dest(heimDest))
 })
 
-gulp.task('embed-html', function() {
+gulp.task('embed-html', () => {
   return gulp.src(['./lib/embed.html'])
     .pipe(gulp.dest(embedDest))
 })
 
-gulp.task('site-templates', ['heim-git-commit'], function() {
-  var page = reload('./site/page.js')
-  var pages = [
+gulp.task('site-templates', ['heim-git-commit'], () => {
+  const page = reload('./site/page.js')
+  const pages = [
     'home',
     'about',
     'about/values',
@@ -209,25 +208,25 @@ gulp.task('site-templates', ['heim-git-commit'], function() {
     'about/dmca',
   ]
 
-  return merge(_.map(pages, function(name) {
-    var html = page.render(reload('./site/' + name))
+  return merge(_.map(pages, name => {
+    const html = page.render(reload('./site/' + name))
     return gfile(name + '.html', html, {src: true})
   }))
     .pipe(gulp.dest(heimDest))
 })
 
-gulp.task('email-templates', function() {
+gulp.task('email-templates', () => {
   require('./emails/email/injectReactAttributes').default()
-  var renderEmail = require('./emails/email/renderEmail').default
-  var emails = ['welcome', 'room-invitation', 'room-invitation-welcome', 'password-changed', 'password-reset']
+  const renderEmail = require('./emails/email/renderEmail').default
+  const emails = ['welcome', 'room-invitation', 'room-invitation-welcome', 'password-changed', 'password-reset']
 
-  var htmls = merge(_.map(emails, function(name) {
-    var html = renderEmail(reload('./emails/' + name))
+  const htmls = merge(_.map(emails, name => {
+    const html = renderEmail(reload('./emails/' + name))
     return gfile(name + '.html', html, {src: true})
   }))
 
-  var txtCommon = reload('./emails/common-txt.js').default
-  var txts = merge(_.map(emails, function(name) {
+  const txtCommon = reload('./emails/common-txt.js').default
+  const txts = merge(_.map(emails, name => {
     return gulp.src('./emails/' + name + '.txt')
       .pipe(gtemplate(txtCommon))
   }))
@@ -236,23 +235,21 @@ gulp.task('email-templates', function() {
     .pipe(gulp.dest(emailDest))
 })
 
-gulp.task('email-hdrs', function() {
+gulp.task('email-hdrs', () => {
   return gulp.src('./emails/*.hdr').pipe(gulp.dest(emailDest))
 })
 
-gulp.task('email-static', function() {
-  return gulp.src('./emails/static/*.png').pipe(gulp.dest(emailDest+'/static'))
+gulp.task('email-static', () => {
+  return gulp.src('./emails/static/*.png').pipe(gulp.dest(emailDest + '/static'))
 })
 
 function watchifyTask(name, bundler, outFile, dest) {
-  gulp.task(name, ['build-statics'], function() {
+  gulp.task(name, ['build-statics'], () => {
     // via https://github.com/gulpjs/gulp/blob/master/docs/recipes/fast-browserify-builds-with-watchify.md
-    bundler = watchify(bundler(watchify.args))
-    bundler.on('log', gutil.log.bind(gutil, gutil.colors.green('JS (' + name + ')')))
-    bundler.on('update', rebundle)
+    const watchBundler = watchify(bundler(watchify.args))
 
     function rebundle() {
-      return bundler.bundle()
+      return watchBundler.bundle()
         .on('error', handleError('JS (' + name + ') error'))
         .pipe(source(outFile))
         .pipe(gulp.dest(dest))
@@ -260,6 +257,8 @@ function watchifyTask(name, bundler, outFile, dest) {
         .pipe(gulp.dest(dest))
     }
 
+    watchBundler.on('log', gutil.log.bind(gutil, gutil.colors.green('JS (' + name + ')')))
+    watchBundler.on('update', rebundle)
     return rebundle()
   })
 }
@@ -271,7 +270,7 @@ gulp.task('build-emails', ['email-templates', 'email-hdrs', 'email-static'])
 gulp.task('build-statics', ['raven-js', 'heim-less', 'emoji-static', 'heim-static', 'embed-static', 'heim-html', 'embed-html', 'site-templates'])
 gulp.task('build-browserify', ['heim-js', 'embed-js'])
 
-gulp.task('watch', function() {
+gulp.task('watch', () => {
   watching = true
   gulp.watch('./lib/**/*.less', ['heim-less'])
   gulp.watch('./res/**/*', ['heim-less', 'emoji-static'])
@@ -289,9 +288,9 @@ gulp.task('default', ['build-statics', 'build-emails', 'watch', 'heim-watchify',
 gulp.task('serve-heim', serve({
   port: 8080,
   root: heimDest,
-  middleware: function(req, res, next) {
+  middleware: function serveHeim(req, res, next) {
     req.url = req.url.replace(/^\/static\/?|^\/room\/\w+\/?/, '/')
-    if (req.url == '/') {
+    if (req.url === '/') {
       req.url = '/room.html'
     }
     next()
@@ -301,7 +300,7 @@ gulp.task('serve-heim', serve({
 gulp.task('serve-embed', serve({
   port: 8081,
   root: embedDest,
-  middleware: function(req, res, next) {
+  middleware: function serveEmbed(req, res, next) {
     req.url = req.url.replace(/^\/\?\S+/, '/embed.html')
     next()
   },
