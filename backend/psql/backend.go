@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -783,4 +784,32 @@ type BroadcastMessage struct {
 	Room    string
 	Exclude []string
 	Event   *proto.Packet
+	UserID  proto.UserID
+}
+
+func (b *Backend) NotifyUser(ctx scope.Context, userID proto.UserID, packetType proto.PacketType, payload interface{}, excluding ...proto.Session) error {
+	encodedPayload, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+	packet := &proto.Packet{Type: packetType, Data: json.RawMessage(encodedPayload)}
+	broadcastMsg := BroadcastMessage{
+		Event:   packet,
+		Exclude: make([]string, 0, len(excluding)),
+		UserID:  userID,
+	}
+	for _, s := range excluding {
+		if s != nil {
+			broadcastMsg.Exclude = append(broadcastMsg.Exclude, s.ID())
+		}
+	}
+
+	encoded, err := json.Marshal(broadcastMsg)
+	if err != nil {
+		return err
+	}
+
+	escaped := strings.Replace(string(encoded), "'", "''", -1)
+	_, err = b.DB.Exec(fmt.Sprintf("NOTIFY broadcast, '%s'", escaped))
+	return err
 }
