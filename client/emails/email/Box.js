@@ -4,7 +4,9 @@ import React from 'react'
 export default function Box({children, ...props}) {
   return (
     <table {...props}>
-      {children}
+      <tbody>
+        {children}
+      </tbody>
     </table>
   )
 }
