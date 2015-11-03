@@ -1,10 +1,13 @@
+import ReactDOM from 'react-dom'
+
+
 export default {
   focus(withChar) {
     let node
-    if (this.getDOMNode().contains(uidocument.activeElement)) {
+    if (ReactDOM.findDOMNode(this).contains(uidocument.activeElement)) {
       node = uidocument.activeElement
     } else {
-      node = this.refs.input.getDOMNode()
+      node = this.refs.input
     }
     if (withChar) {
       node.value += withChar
@@ -16,11 +19,11 @@ export default {
   },
 
   blur() {
-    this.refs.input.getDOMNode().blur()
+    this.refs.input.blur()
   },
 
   proxyKeyDown(ev) {
-    const node = this.refs.input.getDOMNode()
+    const node = this.refs.input
     if (ev.key === 'Backspace' && ev.target !== node) {
       node.value = node.value.substr(0, node.value.length - 1)
       node.focus()

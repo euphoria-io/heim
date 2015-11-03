@@ -49,7 +49,7 @@ export default React.createClass({
   },
 
   tryPasscode(ev) {
-    this.refs.input.getDOMNode().focus()
+    this.refs.input.focus()
     ev.preventDefault()
 
     if (this.state.authState === 'trying') {

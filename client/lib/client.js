@@ -232,7 +232,7 @@ if (!window.frameElement) {
         Heim.tabPressed = true
       }
 
-      if (Heim.mainComponent && !Heim.mainComponent.getDOMNode().contains(ev.target)) {
+      if (Heim.mainComponent && !ReactDOM.findDOMNode(Heim.mainComponent).contains(ev.target)) {
         Heim.mainComponent.onKeyDown(ev)
       }
     }, false)

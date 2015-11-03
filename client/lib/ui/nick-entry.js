@@ -31,7 +31,7 @@ export default React.createClass({
   },
 
   setNick(ev) {
-    this.refs.input.getDOMNode().focus()
+    this.refs.input.focus()
     ev.preventDefault()
 
     actions.setNick(this.state.value)

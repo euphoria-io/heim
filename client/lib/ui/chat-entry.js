@@ -42,7 +42,7 @@ export default React.createClass({
     this.listenTo(this.props.pane.store, state => this.setState({'pane': state}))
     this.listenTo(this.props.pane.focusEntry, 'focus')
     this.listenTo(this.props.pane.blurEntry, 'blur')
-    const input = this.refs.input.getDOMNode()
+    const input = this.refs.input
     input.value = this.state.pane.entryText
     // in Chrome, it appears that setting the selection range can focus the
     // input without changing document.activeElement (!)
@@ -61,7 +61,7 @@ export default React.createClass({
   },
 
   onNickKeyDown(ev) {
-    const input = this.refs.input.getDOMNode()
+    const input = this.refs.input
     if (ev.key === 'Enter') {
       // Delay focus event to avoid double key insertion in Chrome.
       setImmediate(() => input.focus())
@@ -92,13 +92,13 @@ export default React.createClass({
   },
 
   saveEntryState() {
-    const input = this.refs.input.getDOMNode()
+    const input = this.refs.input
     this.props.pane.setEntryText(input.value, input.selectionStart, input.selectionEnd)
     this.setState({empty: !input.value.length})
   },
 
   chatSend(ev) {
-    const input = this.refs.input.getDOMNode()
+    const input = this.refs.input
 
     ev.preventDefault()
 
@@ -125,15 +125,15 @@ export default React.createClass({
   },
 
   isEmpty() {
-    return this.refs.input.getDOMNode().value.length === 0
+    return this.refs.input.value.length === 0
   },
 
   isMultiline() {
-    return /\n/.test(this.refs.input.getDOMNode().value)
+    return /\n/.test(this.refs.input.value)
   },
 
   complete() {
-    const input = this.refs.input.getDOMNode()
+    const input = this.refs.input
     const text = input.value
     const charRe = /\S/
 
@@ -178,8 +178,8 @@ export default React.createClass({
   },
 
   autoSize(force) {
-    const input = this.refs.input.getDOMNode()
-    const measure = this.refs.measure.getDOMNode()
+    const input = this.refs.input
+    const measure = this.refs.measure
     if (force || input.value !== this.state.chat.entryText) {
       measure.style.width = input.offsetWidth + 'px'
       measure.value = input.value

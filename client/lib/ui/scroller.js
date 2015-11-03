@@ -1,5 +1,6 @@
 import _ from 'lodash'
 import React from 'react'
+import ReactDOM from 'react-dom'
 
 import clamp from '../clamp'
 
@@ -88,7 +89,7 @@ export default React.createClass({
     }
 
     // http://stackoverflow.com/a/14130056
-    const node = this.getDOMNode()
+    const node = ReactDOM.findDOMNode(this)
     if (node.scrollTop === 0) {
       node.scrollTop = 1
     } else if (node.scrollHeight === node.scrollTop + node.offsetHeight) {
@@ -101,7 +102,7 @@ export default React.createClass({
   },
 
   getPosition() {
-    const node = this.getDOMNode()
+    const node = ReactDOM.findDOMNode(this)
     if (!node.scrollHeight) {
       return false
     }
@@ -133,7 +134,7 @@ export default React.createClass({
   updateAnchorPos() {
     // Record the position of our point of reference. Either the target (if
     // it's in view), or the centermost child element.
-    const node = this.getDOMNode()
+    const node = ReactDOM.findDOMNode(this)
     const nodeBox = dimensions(node)
     const viewTop = nodeBox.top
     const viewHeight = nodeBox.height
@@ -152,7 +153,7 @@ export default React.createClass({
       this._anchor = target
       this._anchorPos = targetPos
     } else {
-      const box = dimensions(this.getDOMNode())
+      const box = dimensions(node)
       const bodyBox = dimensions(uidocument.body)
       const boxRight = Math.min(box.right, bodyBox.right)
       anchor = uidocument.elementFromPoint(boxRight - 40, box.top + box.height / 2)
@@ -168,7 +169,7 @@ export default React.createClass({
   },
 
   checkScrollbar() {
-    const node = this.getDOMNode()
+    const node = ReactDOM.findDOMNode(this)
 
     if (this.props.onScrollbarSize) {
       const scrollbarWidth = node.offsetWidth - node.clientWidth
@@ -184,7 +185,7 @@ export default React.createClass({
       return
     }
 
-    const node = this.getDOMNode()
+    const node = ReactDOM.findDOMNode(this)
 
     if (node.scrollHeight === 0) {
       return
@@ -223,7 +224,7 @@ export default React.createClass({
     // out that setting scrollTop inside a requestAnimationFrame callback
     // circumvents this issue.
     this._chromeRAFHack('scroll', () => {
-      const node = this.getDOMNode()
+      const node = ReactDOM.findDOMNode(this)
       const nodeBox = dimensions(node)
       const viewTop = nodeBox.top
       const viewHeight = nodeBox.height

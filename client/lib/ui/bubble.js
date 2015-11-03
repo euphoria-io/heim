@@ -1,4 +1,5 @@
 import React from 'react'
+import ReactDOM from 'react-dom'
 import ReactCSSTransitionGroup from 'react-addons-css-transition-group'
 import classNames from 'classnames'
 
@@ -41,7 +42,7 @@ export default React.createClass({
   },
 
   onOutsideClick(ev) {
-    if (this.props.visible && !this.getDOMNode().contains(ev.target) && this.props.onDismiss) {
+    if (this.props.visible && !ReactDOM.findDOMNode(this).contains(ev.target) && this.props.onDismiss) {
       this.props.onDismiss(ev)
     }
   },
@@ -51,7 +52,7 @@ export default React.createClass({
     // orientations when necessary.
     if (this.props.visible && this.props.anchorEl) {
       const box = this.props.anchorEl.getBoundingClientRect()
-      const node = this.refs.bubble.getDOMNode()
+      const node = this.refs.bubble
 
       let top = box.top
       top -= Math.max(0, top + node.clientHeight + this.props.edgeSpacing - uiwindow.innerHeight)
@@ -71,7 +72,7 @@ export default React.createClass({
 
   render() {
     return (
-      <ReactCSSTransitionGroup transitionName="bubble">
+      <ReactCSSTransitionGroup transitionName="bubble" transitionEnterTimeout={150} transitionLeaveTimeout={150}>
         {this.props.visible &&
           <div ref="bubble" key="bubble" className={classNames('bubble', this.props.className)}>
             {this.props.children}
