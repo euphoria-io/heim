@@ -54,9 +54,16 @@ func (s *Server) handleStatic(w http.ResponseWriter, r *http.Request) {
 	s.serveGzippedFile(w, r, path.Clean(r.URL.Path), true)
 }
 
+type RoomTemplateParams struct {
+	RoomName string
+}
+
 func (s *Server) handleRoomStatic(w http.ResponseWriter, r *http.Request) {
+	ctx := s.rootCtx.Fork()
+
+	roomName := mux.Vars(r)["room"]
+
 	if !s.allowRoomCreation {
-		roomName := mux.Vars(r)["room"]
 		_, err := s.b.GetRoom(scope.New(), roomName)
 		if err != nil {
 			if err == proto.ErrRoomNotFound {
@@ -65,7 +72,11 @@ func (s *Server) handleRoomStatic(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	s.serveGzippedFile(w, r, "room.html", false)
+
+	if err := s.roomTemplate.Execute(w, &RoomTemplateParams{RoomName: roomName}); err != nil {
+		logging.Logger(ctx).Printf("error rendering room template: %s", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }
 
 func (s *Server) handleHomeStatic(w http.ResponseWriter, r *http.Request) {
