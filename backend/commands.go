@@ -34,6 +34,8 @@ func (s *session) unauthedState(cmd *proto.Packet) *response {
 	switch msg := payload.(type) {
 	case *proto.AuthCommand:
 		return s.handleAuthCommand(msg)
+	case *proto.StaffInvadeCommand:
+		return s.handleStaffInvadeCommand(msg)
 	default:
 		if resp := s.handleCoreCommands(payload); resp != nil {
 			return resp
@@ -164,6 +166,8 @@ func (s *session) handleCoreCommands(payload interface{}) *response {
 		return s.handleStaffEnrollOTPCommand(msg)
 	case *proto.StaffValidateOTPCommand:
 		return s.handleStaffValidateOTPCommand(msg)
+	case *proto.StaffInvadeCommand:
+		return s.handleStaffInvadeCommand(msg)
 	case *proto.UnlockStaffCapabilityCommand:
 		return s.handleUnlockStaffCapabilityCommand(msg)
 
@@ -662,6 +666,51 @@ func (s *session) handleStaffValidateOTPCommand(cmd *proto.StaffValidateOTPComma
 	}
 
 	return &response{packet: &proto.StaffValidateOTPReply{}}
+}
+
+func (s *session) handleStaffInvadeCommand(cmd *proto.StaffInvadeCommand) *response {
+	failure := func(err error) *response { return &response{err: err} }
+
+	if s.client.Account == nil || !s.client.Account.IsStaff() {
+		return failure(proto.ErrAccessDenied)
+	}
+
+	if err := s.backend.AccountManager().ValidateOTP(s.ctx, s.client.Account.ID(), cmd.Password); err != nil {
+		return failure(err)
+	}
+
+	// Everything checks out. Acquire the host key.
+	managerKey, err := s.room.ManagerKey(s.ctx)
+	if err != nil {
+		return failure(err)
+	}
+	managerKeyPair, err := managerKey.StaffUnlock(s.kms)
+	if err != nil {
+		return failure(err)
+	}
+	s.client.Authorization.ManagerKeyPair = managerKeyPair
+
+	// Now acquire the message key and join the room, if necessary.
+	mkey, err := s.room.MessageKey(s.ctx)
+	if err != nil {
+		return failure(err)
+	}
+	if mkey != nil && !s.joined {
+		k := mkey.ManagedKey()
+		if err := s.kms.DecryptKey(&k); err != nil {
+			return failure(err)
+		}
+		s.client.Authorization.AddMessageKey(mkey.KeyID(), &k)
+		s.keyID = s.client.Authorization.CurrentMessageKeyID
+		s.state = s.joinedState
+		if err := s.join(); err != nil {
+			s.keyID = ""
+			s.state = s.unauthedState
+			return &response{err: err}
+		}
+	}
+
+	return &response{packet: &proto.StaffInvadeReply{}}
 }
 
 func (s *session) handleUnlockStaffCapabilityCommand(cmd *proto.UnlockStaffCapabilityCommand) *response {

@@ -91,6 +91,9 @@ var (
 	StaffGrantManagerType      = PacketType("staff-grant-manager")
 	StaffGrantManagerReplyType = StaffGrantManagerType.Reply()
 
+	StaffInvadeType      = PacketType("staff-invade")
+	StaffInvadeReplyType = StaffInvadeType.Reply()
+
 	StaffLockRoomType      = PacketType("staff-lock-room")
 	StaffLockRoomReplyType = StaffLockRoomType.Reply()
 
@@ -160,6 +163,9 @@ var (
 
 		StaffValidateOTPType:      reflect.TypeOf(StaffValidateOTPCommand{}),
 		StaffValidateOTPReplyType: reflect.TypeOf(StaffValidateOTPReply{}),
+
+		StaffInvadeType:      reflect.TypeOf(StaffInvadeCommand{}),
+		StaffInvadeReplyType: reflect.TypeOf(StaffInvadeReply{}),
 
 		StaffGrantManagerType:      reflect.TypeOf(StaffGrantManagerCommand{}),
 		StaffGrantManagerReplyType: reflect.TypeOf(StaffGrantManagerReply{}),
@@ -334,6 +340,16 @@ type StaffGrantManagerCommand GrantManagerCommand
 
 // `staff-grant-manager-reply` confirms that requested manager change was granted.
 type StaffGrantManagerReply GrantManagerReply
+
+// The `staff-invade` command can be used by staff to acquire temporary host and/or access
+// capabilities in the current room.
+type StaffInvadeCommand struct {
+	Password string `json:"password"` // the staff member's current one-time password
+}
+
+// `staff-invade-reply` indicates that the current session now holds host and access capabilities
+// in the room.
+type StaffInvadeReply struct{}
 
 // A `presence-event` describes a session joining into or parting from a room.
 type PresenceEvent SessionView

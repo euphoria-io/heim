@@ -131,6 +131,9 @@ type RoomManagerKey interface {
 	// KeyPair returns the current encrypted ManagedKeyPair for the room.
 	KeyPair() security.ManagedKeyPair
 
+	// StaffUnlock uses the KMS to decrypt the room's ManagedKeyPair and returns it.
+	StaffUnlock(kms security.KMS) (*security.ManagedKeyPair, error)
+
 	// Unlock decrypts the room's ManagedKeyPair with the given key and returns it.
 	Unlock(managerKey *security.ManagedKey) (*security.ManagedKeyPair, error)
 

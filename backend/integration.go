@@ -507,6 +507,7 @@ func IntegrationTest(t *testing.T, factory proto.BackendFactory) {
 	runTest("Message truncation", testMessageTruncation)
 	runTest("Bots and humans", testBotsAndHumans)
 	runTest("Staff OTP", testStaffOTP)
+	runTest("Staff invasion", testStaffInvasion)
 }
 
 func testLurker(s *serverUnderTest) {
@@ -2629,6 +2630,28 @@ func testEmailsLowLevel(s *serverUnderTest) {
 	})
 }
 
+func oneTimePassword(uri string) string {
+	key, err := otp.NewKeyFromURL(uri)
+	So(err, ShouldBeNil)
+
+	// copying this code is unfortunate, but more fortunate than not testing at all
+	secretBytes, err := base32.StdEncoding.DecodeString(key.Secret())
+	So(err, ShouldBeNil)
+	buf := make([]byte, 8)
+	mac := hmac.New(sha1.New, secretBytes)
+	counter := uint64(math.Floor(float64(time.Now().Unix()) / 30))
+	binary.BigEndian.PutUint64(buf, counter)
+	mac.Write(buf)
+	sum := mac.Sum(nil)
+	offset := sum[len(sum)-1] & 0xf
+	value := int64(((int(sum[offset]) & 0x7f) << 24) |
+		((int(sum[offset+1] & 0xff)) << 16) |
+		((int(sum[offset+2] & 0xff)) << 8) |
+		(int(sum[offset+3]) & 0xff))
+
+	return fmt.Sprintf("%06d", value%1000000)
+}
+
 func testStaffOTP(s *serverUnderTest) {
 	makeStaff := func(name, password string) proto.Account {
 		b := s.backend
@@ -2638,28 +2661,6 @@ func testStaffOTP(s *serverUnderTest) {
 		So(err, ShouldBeNil)
 		So(b.AccountManager().GrantStaff(ctx, user.ID(), s.kms.KMSCredential()), ShouldBeNil)
 		return user
-	}
-
-	getPassword := func(uri string) string {
-		key, err := otp.NewKeyFromURL(uri)
-		So(err, ShouldBeNil)
-
-		// copying this code is unfortunate, but more fortunate than not testing at all
-		secretBytes, err := base32.StdEncoding.DecodeString(key.Secret())
-		So(err, ShouldBeNil)
-		buf := make([]byte, 8)
-		mac := hmac.New(sha1.New, secretBytes)
-		counter := uint64(math.Floor(float64(time.Now().Unix()) / 30))
-		binary.BigEndian.PutUint64(buf, counter)
-		mac.Write(buf)
-		sum := mac.Sum(nil)
-		offset := sum[len(sum)-1] & 0xf
-		value := int64(((int(sum[offset]) & 0x7f) << 24) |
-			((int(sum[offset+1] & 0xff)) << 16) |
-			((int(sum[offset+2] & 0xff)) << 8) |
-			(int(sum[offset+3]) & 0xff))
-
-		return fmt.Sprintf("%06d", value%1000000)
 	}
 
 	Convey("Enroll and validate", func() {
@@ -2684,12 +2685,73 @@ func testStaffOTP(s *serverUnderTest) {
 		capture := c1.expect("2", "staff-enroll-otp-reply", `{"uri":"*","qr_uri":"*"}`)
 
 		// validate
-		c1.send("3", "staff-validate-otp", `{"password":"%s"}`, getPassword(capture["uri"].(string)))
+		c1.send("3", "staff-validate-otp", `{"password":"%s"}`, oneTimePassword(capture["uri"].(string)))
 		c1.expect("3", "staff-validate-otp-reply", `{}`)
 
 		// attempt to enroll should fail
 		time.Sleep(100 * time.Millisecond)
 		c1.send("4", "staff-enroll-otp", ``)
 		c1.expectError("4", "staff-enroll-otp-reply", proto.ErrOTPAlreadyEnrolled.Error())
+	})
+}
+
+func testStaffInvasion(s *serverUnderTest) {
+	Convey("Staff can use OTP to invade room", func() {
+		b := s.backend
+		ctx := scope.New()
+		kms := s.app.kms
+		nonce := fmt.Sprintf("%s", time.Now())
+
+		// Create host account and log into it.
+		host, _, err := s.Account(ctx, kms, "email", "host"+nonce, "password")
+		So(err, ShouldBeNil)
+		c1 := s.Connect("staffinvasionlogin1")
+		c1.expectPing()
+		c1.expectSnapshot(s.backend.Version(), nil, nil)
+		c1.send("1", "login", `{"namespace":"email","id":"host%s","password":"password"}`, nonce)
+		c1.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, host.ID())
+		c1.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
+		c1.Close()
+
+		// Create private room, join, and say something.
+		_, err = b.CreateRoom(ctx, kms, true, "staffinvasion", host)
+		So(err, ShouldBeNil)
+		c1.accountHasAccess = true
+		c1.isManager = true
+		c1 = s.Reconnect(c1, "staffinvasion")
+		c1.expectPing()
+		c1.expectSnapshot(s.backend.Version(), nil, nil)
+		c1.send("1", "nick", `{"name":"host"}`)
+		c1.expect("1", "nick-reply", `{"session_id":"*","id":"*","from":"","to":"host"}`)
+		c1.send("2", "send", `{"content":"hi"}`)
+		id := `{"session_id":"*","id":"*","name":"host","server_id":"*","server_era":"*","is_manager":true}`
+		capture := c1.expect("2", "send-reply", `{"id":"*","time":"*","sender":%s,"content":"*","encryption_key_id":"*"}`, id)
+		msg := fmt.Sprintf(`{"id":"%s","time":%f,"sender":%s,"content":"hi","encryption_key_id":"%s"}`,
+			capture["id"], capture["time"], id, capture["encryption_key_id"])
+
+		// Create staff account and log into it.
+		logan, _, err := s.Account(ctx, kms, "email", "logan"+nonce, "hunter2")
+		So(err, ShouldBeNil)
+		So(b.AccountManager().GrantStaff(ctx, logan.ID(), s.kms.KMSCredential()), ShouldBeNil)
+		c2 := s.Connect("staffinvasionlogin2")
+		c2.expectPing()
+		c2.expectSnapshot(s.backend.Version(), nil, nil)
+		c2.send("1", "login", `{"namespace":"email","id":"logan%s","password":"hunter2"}`, nonce)
+		c2.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, logan.ID())
+		c2.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
+		c2.Close()
+
+		// Bust into private room and read history.
+		c2.isStaff = true
+		c2 = s.Reconnect(c2, "staffinvasion")
+		c2.expectPing()
+		c2.expect("", "bounce-event", `{"reason":"authentication required"}`)
+		c2.send("2", "staff-enroll-otp", ``)
+		capture = c2.expect("2", "staff-enroll-otp-reply", `{"uri":"*","qr_uri":"*"}`)
+		c2.send("3", "staff-invade", `{"password":"%s"}`, oneTimePassword(capture["uri"].(string)))
+		c2.expect("3", "staff-invade-reply", `{}`)
+		c2.expectSnapshot(s.backend.Version(), []string{id}, []string{msg})
+		c1.expect("", "join-event",
+			`{"session_id":"%s","id":"*","name":"","server_id":"*","server_era":"*","is_staff":true,"is_manager":true}`, c2.sessionID)
 	})
 }

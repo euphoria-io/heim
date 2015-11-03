@@ -517,4 +517,17 @@ type roomManagerKey struct {
 }
 
 func (r *roomManagerKey) Nonce() []byte                    { return r.RoomSecurity.Nonce }
-func (r *roomManagerKey) KeyPair() security.ManagedKeyPair { return r.RoomSecurity.KeyPair }
+func (r *roomManagerKey) KeyPair() security.ManagedKeyPair { return r.RoomSecurity.KeyPair.Clone() }
+
+func (r *roomManagerKey) StaffUnlock(kms security.KMS) (*security.ManagedKeyPair, error) {
+	kek := r.RoomSecurity.KeyEncryptingKey.Clone()
+	if err := kms.DecryptKey(&kek); err != nil {
+		return nil, err
+	}
+
+	kp := r.KeyPair()
+	if err := kp.Decrypt(&kek); err != nil {
+		return nil, err
+	}
+	return &kp, nil
+}
