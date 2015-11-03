@@ -3,33 +3,29 @@ import React from 'react'
 import { Box, Item, Link, Image } from '../email'
 
 
-export default React.createClass({
-  propTypes: {
-    logo: React.PropTypes.string.isRequired,
-    padding: React.PropTypes.number,
-    children: React.PropTypes.node,
-  },
+export default function TopBubbleBox(props) {
+  return (
+    <Item align="center">
+      <Link href="{{.SiteURL}}">
+        <Image src={'{{.File `' + props.logo + '`}}'} width={67} height={90} />
+      </Link>
+      <Box width="600" cellPadding={2} bgcolor="white" style={{
+        borderBottom: '3px solid #ccc',
+        borderRadius: '10px',
+        padding: props.padding,
+      }}>
+        {props.children}
+      </Box>
+    </Item>
+  )
+}
 
-  getDefaultProps() {
-    return {
-      padding: 7,
-    }
-  },
+TopBubbleBox.propTypes = {
+  logo: React.PropTypes.string.isRequired,
+  padding: React.PropTypes.number,
+  children: React.PropTypes.node,
+}
 
-  render() {
-    return (
-      <Item align="center">
-        <Link href="{{.SiteURL}}">
-          <Image src={'{{.File `' + this.props.logo + '`}}'} width={67} height={90} />
-        </Link>
-        <Box width="600" cellPadding={2} bgcolor="white" style={{
-          borderBottom: '3px solid #ccc',
-          borderRadius: '10px',
-          padding: this.props.padding,
-        }}>
-          {this.props.children}
-        </Box>
-      </Item>
-    )
-  },
-})
+TopBubbleBox.defaultProps = {
+  padding: 7,
+}
