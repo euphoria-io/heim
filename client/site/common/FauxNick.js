@@ -4,13 +4,10 @@ import MessageText from '../../lib/ui/message-text'
 import hueHash from '../../lib/hue-hash'
 
 
-export default React.createClass({
-  propTypes: {
-    nick: React.PropTypes.string,
-  },
+export default function FauxNick(props) {
+  return <MessageText className="nick" onlyEmoji style={{background: 'hsl(' + hueHash.hue(props.nick) + ', 65%, 85%)'}} content={props.nick} />
+}
 
-  render() {
-    return <MessageText className="nick" onlyEmoji style={{background: 'hsl(' + hueHash.hue(this.props.nick) + ', 65%, 85%)'}} content={this.props.nick} />
-  },
-})
-
+FauxNick.propTypes = {
+  nick: React.PropTypes.string,
+}

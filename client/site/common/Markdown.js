@@ -23,16 +23,13 @@ const md = new MarkdownIt()
     },
   })
 
-export default React.createClass({
-  propTypes: {
-    className: React.PropTypes.string,
-    content: React.PropTypes.string,
-  },
+export default function Markdown(props) {
+  return (
+    <div className={props.className} dangerouslySetInnerHTML={{__html: md.render(props.content)}} />
+  )
+}
 
-  render() {
-    return (
-      <div className={this.props.className} dangerouslySetInnerHTML={{__html: md.render(this.props.content)}} />
-    )
-  },
-})
-
+Markdown.propTypes = {
+  className: React.PropTypes.string,
+  content: React.PropTypes.string,
+}

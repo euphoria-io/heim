@@ -3,16 +3,14 @@ import React from 'react'
 import { Item } from '../email'
 
 
-export default React.createClass({
-  propTypes: {
-    children: React.PropTypes.node,
-  },
+export default function Footer(props) {
+  return (
+    <Item style={{paddingLeft: '20px'}}>
+      {props.children}
+    </Item>
+  )
+}
 
-  render() {
-    return (
-      <Item style={{paddingLeft: '20px'}}>
-        {this.props.children}
-      </Item>
-    )
-  },
-})
+Footer.propTypes = {
+  children: React.PropTypes.node,
+}
