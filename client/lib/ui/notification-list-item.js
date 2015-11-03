@@ -1,5 +1,6 @@
 import _ from 'lodash'
 import React from 'react'
+import ReactDOM from 'react-dom'
 import classNames from 'classnames'
 import Reflux from 'reflux'
 
@@ -24,8 +25,8 @@ export default React.createClass({
   ],
 
   componentWillEnter(callback) {
-    const node = this.getDOMNode()
-    const height = this.getDOMNode().clientHeight
+    const node = ReactDOM.findDOMNode(this)
+    const height = node.clientHeight
     node.style.transition = node.style.webkitTransition = 'none'
     node.style.height = 0
     node.style.opacity = 0
@@ -37,7 +38,7 @@ export default React.createClass({
   },
 
   componentWillLeave(callback) {
-    const node = this.getDOMNode()
+    const node = ReactDOM.findDOMNode(this)
     node.style.transition = node.style.webkitTransition = 'all .25s ease'
     node.style.height = 0
     setTimeout(() => {

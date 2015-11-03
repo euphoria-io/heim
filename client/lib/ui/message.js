@@ -1,5 +1,6 @@
 import _ from 'lodash'
 import React from 'react'
+import ReactDOM from 'react-dom'
 import classNames from 'classnames'
 import Immutable from 'immutable'
 import moment from 'moment'
@@ -60,7 +61,7 @@ const Message = React.createClass({
   },
 
   componentDidMount() {
-    const node = this.getDOMNode()
+    const node = ReactDOM.findDOMNode(this)
 
     if (node.classList.contains('new') && this._sinceNew < Message.newFadeDuration) {
       const lineEl = node.querySelector('.line')
@@ -85,7 +86,7 @@ const Message = React.createClass({
 
   componentDidUpdate(prevProps, prevState) {
     if (this.state.node.get('_seen') && !prevState.node.get('_seen') && !this._hideSeen) {
-      const node = this.getDOMNode()
+      const node = ReactDOM.findDOMNode(this)
 
       const lineEl = node.querySelector('.line')
       Heim.transition.add({
@@ -152,7 +153,7 @@ const Message = React.createClass({
 
   afterRender() {
     if (this.refs.message && this.props.roomSettings.get('collapse') !== false) {
-      const msgNode = this.refs.message.getDOMNode()
+      const msgNode = ReactDOM.findDOMNode(this.refs.message)
       if (msgNode.getBoundingClientRect().height > 200) {
         this.setState({contentTall: true})
       }

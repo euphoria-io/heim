@@ -1,5 +1,6 @@
 import _ from 'lodash'
 import React from 'react'
+import ReactDOM from 'react-dom'
 
 import clamp from '../clamp'
 
@@ -45,7 +46,7 @@ export default React.createClass({
     this._snapPoints.sort()
 
     if (!_.isEqual(this.props.snapPoints, nextProps.snapPoints)) {
-      const node = this.getDOMNode()
+      const node = ReactDOM.findDOMNode(this)
       node.style.transition = node.style.webkitTransition = 'none'
       node.style.transform = node.style.webkitTransform = 'translateX(' + this._clamp(this._getCurrentX()) + 'px)'
     }
@@ -67,7 +68,7 @@ export default React.createClass({
         lastTime: now,
         active: true,
       }
-      this.getDOMNode().style.willChange = 'transform'
+      ReactDOM.findDOMNode(this).style.willChange = 'transform'
     }
   },
 
@@ -98,7 +99,7 @@ export default React.createClass({
     } else if (deltaX < this.props.threshold / 2 || deltaX > this.props.threshold || deltaY > this.props.threshold) {
       // cancel drag if vertically panning or outside threshold
       this._drag = null
-      this.getDOMNode().style.willChange = ''
+      ReactDOM.findDOMNode(this).style.willChange = ''
     }
   },
 
@@ -144,7 +145,7 @@ export default React.createClass({
   },
 
   _getCurrentX() {
-    const node = this.getDOMNode()
+    const node = ReactDOM.findDOMNode(this)
     return node.getBoundingClientRect().left - node.offsetLeft
   },
 
@@ -158,7 +159,7 @@ export default React.createClass({
       point = this.props.snapPoints[point]
     }
 
-    const node = this.getDOMNode()
+    const node = ReactDOM.findDOMNode(this)
     const x = this._getCurrentX()
 
     let vx = flingVx || 0
@@ -185,7 +186,7 @@ export default React.createClass({
     const now = Date.now()
 
     if (this._drag) {
-      const node = this.getDOMNode()
+      const node = ReactDOM.findDOMNode(this)
 
       if (this._x === null) {
         this._x = node.getBoundingClientRect().left - node.offsetLeft
@@ -229,7 +230,7 @@ export default React.createClass({
     if (this._drag) {
       this._animationFrame = uiwindow.requestAnimationFrame(() => this._updateFrame())
     } else {
-      this.getDOMNode().style.willChange = ''
+      ReactDOM.findDOMNode(this).style.willChange = ''
       this._animationFrame = null
       this._x = null
     }

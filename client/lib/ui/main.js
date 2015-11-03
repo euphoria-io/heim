@@ -1,5 +1,6 @@
 import _ from 'lodash'
 import React from 'react'
+import ReactDOM from 'react-dom'
 import ReactCSSTransitionGroup from 'react-addons-css-transition-group'
 import classNames from 'classnames'
 import Reflux from 'reflux'
@@ -124,7 +125,7 @@ export default React.createClass({
 
         ev.preventDefault()
 
-        const threadListEl = this.refs.threadList.getDOMNode()
+        const threadListEl = ReactDOM.findDOMNode(this.refs.threadList)
         const threadEls = threadListEl.querySelectorAll('[data-thread-id]')
         let idx = _.indexOf(threadEls, threadListEl.querySelector('[data-thread-id="' + this.state.ui.selectedThread + '"]'))
         if (idx === -1) {
@@ -188,7 +189,7 @@ export default React.createClass({
 
   selectThread(id, itemEl) {
     // poor man's scrollIntoViewIfNeeded
-    const parentEl = this.refs.threadList.getDOMNode()
+    const parentEl = ReactDOM.findDOMNode(this.refs.threadList)
     const itemBox = itemEl.getBoundingClientRect()
     const parentBox = parentEl.getBoundingClientRect()
     if (itemBox.top < parentBox.top) {
@@ -203,13 +204,13 @@ export default React.createClass({
   },
 
   dismissThreadPopup(ev) {
-    if (!this.refs.threadList.getDOMNode().contains(ev.target)) {
+    if (!ReactDOM.findDOMNode(this.refs.threadList).contains(ev.target)) {
       ui.deselectThread()
     }
   },
 
   selectThreadInList(id) {
-    const threadListEl = this.refs.threadList.getDOMNode()
+    const threadListEl = ReactDOM.findDOMNode(this.refs.threadList)
     let el = threadListEl.querySelector('[data-thread-id="' + id + '"]')
     let targetId = id
     if (!el) {
@@ -224,7 +225,7 @@ export default React.createClass({
   },
 
   openManagerToolbox() {
-    ui.openManagerToolbox(this.refs.toolboxButton.getDOMNode())
+    ui.openManagerToolbox(ReactDOM.findDOMNode(this.refs.toolboxButton))
   },
 
   globalMouseUp() {
@@ -282,7 +283,7 @@ export default React.createClass({
           {this.templateHook('main-pane-top')}
           <div className="main-pane-stack">
             <ChatPane pane={this.state.ui.panes.get('main')} showTimeStamps={this.state.ui.showTimestamps} onScrollbarSize={this.onScrollbarSize} disabled={!!mainPaneThreadId} />
-            <ReactCSSTransitionGroup transitionName="slide" transitionLeave={!mainPaneThreadId} transitionEnter={false}>
+            <ReactCSSTransitionGroup transitionName="slide" transitionLeave={!mainPaneThreadId} transitionLeaveTimeout={200} transitionEnter={false}>
               {mainPaneThreadId && <div key={mainPaneThreadId} className="main-pane-cover main-pane-thread">
                 <div className="top-bar">
                   <MessageText className="title" content={this.state.chat.messages.get(selectedThread).get('content')} />
@@ -315,7 +316,7 @@ export default React.createClass({
             )
           })}
         </div>}
-        {!thin && <Bubble ref="threadPopup" className="thread-popup bubble-from-left" anchorEl={this.state.ui.threadPopupAnchorEl} visible={!!this.state.ui.threadPopupAnchorEl} onDismiss={this.dismissThreadPopup} offset={() => ({ left: this.getDOMNode().getBoundingClientRect().left + 5, top: 26 })}>
+        {!thin && <Bubble ref="threadPopup" className="thread-popup bubble-from-left" anchorEl={this.state.ui.threadPopupAnchorEl} visible={!!this.state.ui.threadPopupAnchorEl} onDismiss={this.dismissThreadPopup} offset={() => ({ left: ReactDOM.findDOMNode(this).getBoundingClientRect().left + 5, top: 26 })}>
           <div className="top-line">
             <FastButton className="to-pane" onClick={ui.popupToThreadPane}>new pane</FastButton>
             <FastButton className="scroll-to" onClick={ui.gotoPopupMessage}>go to</FastButton>

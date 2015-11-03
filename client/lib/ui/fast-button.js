@@ -1,5 +1,6 @@
 import _ from 'lodash'
 import React from 'react'
+import ReactDOM from 'react-dom'
 
 
 // A button that triggers on touch start on mobile to increase responsiveness.
@@ -45,12 +46,12 @@ export default React.createClass({
   },
 
   onTouchStart(ev) {
-    this.getDOMNode().classList.add('touching')
+    ReactDOM.findDOMNode(this).classList.add('touching')
     this.onClick(ev)
   },
 
   onTouchEnd() {
-    this.getDOMNode().classList.remove('touching')
+    ReactDOM.findDOMNode(this).classList.remove('touching')
   },
 
   onKeyDown(ev) {

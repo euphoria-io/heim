@@ -46,7 +46,7 @@ export default React.createClass({
   },
 
   _sendMessage(data) {
-    this.refs.iframe.getDOMNode().contentWindow.postMessage(data, process.env.EMBED_ORIGIN)
+    this.refs.iframe.contentWindow.postMessage(data, process.env.EMBED_ORIGIN)
   },
 
   freeze() {

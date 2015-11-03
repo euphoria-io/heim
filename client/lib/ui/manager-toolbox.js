@@ -45,7 +45,7 @@ export default React.createClass({
           w: 7 * 24 * 60 * 60,
           m: 30 * 24 * 60 * 60,
           f: null,
-        }[this.refs.banDuration.getDOMNode().value],
+        }[this.refs.banDuration.value],
       }
     }
     toolbox.apply(commandParams)

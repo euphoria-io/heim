@@ -124,7 +124,7 @@ export default React.createClass({
     }
 
     const activeEl = uidocument.activeElement
-    if (this.getDOMNode().contains(activeEl) && isTextInput(activeEl)) {
+    if (ReactDOM.findDOMNode(this).contains(activeEl) && isTextInput(activeEl)) {
       activeEl.blur()
     }
   },
@@ -238,7 +238,7 @@ export default React.createClass({
 
     // it's important to use .line here instead of the parent (which contains
     // the replies), so that the nodes are non-overlapping and in visible order
-    const messages = this.getDOMNode().querySelectorAll('.message-node > .line')
+    const messages = ReactDOM.findDOMNode(this).querySelectorAll('.message-node > .line')
     if (!messages.length) {
       return
     }
@@ -251,7 +251,7 @@ export default React.createClass({
 
     const guessIdx = Math.min(messages.length - 1, Math.floor(scrollPos * messages.length))
 
-    const scrollerBox = this.refs.scroller.getDOMNode().getBoundingClientRect()
+    const scrollerBox = ReactDOM.findDOMNode(this.refs.scroller).getBoundingClientRect()
     const midPoint = (scrollerBox.bottom - scrollerBox.top) / 2
     const checkPos = el => {
       const box = el.getBoundingClientRect()
@@ -308,7 +308,7 @@ export default React.createClass({
     }
 
     // if the entry has disappeared, reset message focus
-    if (!this.getDOMNode().querySelector('.focus-target')) {
+    if (!ReactDOM.findDOMNode(this).querySelector('.focus-target')) {
       this.props.pane.focusMessage()
     }
   },
@@ -316,7 +316,7 @@ export default React.createClass({
   moveMessageFocus(dir) {
     // FIXME: quick'n'dirty hack. a real tree traversal in the store
     // would be more efficient and testable.
-    const node = this.getDOMNode()
+    const node = ReactDOM.findDOMNode(this)
     const anchors = node.querySelectorAll('.focus-anchor, .focus-target')
     let idx = _.indexOf(anchors, node.querySelector('.focus-target'))
     if (idx === -1) {
@@ -378,10 +378,10 @@ export default React.createClass({
   },
 
   focusMessageFromPos(yPos) {
-    const node = this.getDOMNode()
+    const node = ReactDOM.findDOMNode(this)
     const anchorNodes = node.querySelectorAll('.focus-anchor, .focus-target')
 
-    const messagesEl = this.refs.messages.getDOMNode()
+    const messagesEl = ReactDOM.findDOMNode(this.refs.messages)
     const endPos = messagesEl.getBoundingClientRect().bottom
     const anchors = _.toArray(anchorNodes)
     anchors.push(endPos)
