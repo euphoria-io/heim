@@ -66,7 +66,8 @@ export default function displayCrashDialog(ev) {
     if (responseEv.type === 'ravenSuccess') {
       ravenEventId = responseEv.data.event_id
     }
-    crashDialog.setProps({ravenEventId: ravenEventId})
+    const updatedComponent = React.cloneElement(component, {ravenEventId: ravenEventId})
+    ReactDOM.render(updatedComponent, container)
   }
 
   ev.srcElement.addEventListener('ravenSuccess', onRavenSent, false)
