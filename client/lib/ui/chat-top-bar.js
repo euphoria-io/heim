@@ -1,11 +1,11 @@
 const fs = require('fs')  // needs to be a require to work with brfs for now: https://github.com/babel/babelify/issues/81
 import React from 'react'
-import ReactCSSTransitionGroup from 'react-addons-css-transition-group'
 import classNames from 'classnames'
 import Immutable from 'immutable'
 
 import FastButton from './fast-button'
 import RoomTitle from './room-title'
+import Spinner from './spinner'
 
 
 const hexLeftSVG = fs.readFileSync(__dirname + '/../../res/hex-left-side.svg')
@@ -44,7 +44,7 @@ export default React.createClass({
         <RoomTitle name={this.props.roomName} authType={this.props.authType} connected={this.props.connected} joined={this.props.joined} />
         {this.props.isManager && <FastButton className={classNames('manager-toggle', {'on': this.props.managerMode})} onClick={this.props.toggleManagerMode}><div className="hex left" dangerouslySetInnerHTML={{__html: hexLeftSVG}} />{this.props.managerMode ? 'host mode' : 'host'}<div className="hex right" dangerouslySetInnerHTML={{__html: hexRightSVG}} /></FastButton>}
         <div className="right">
-          <ReactCSSTransitionGroup transitionName="spinner" transitionEnterTimeout={100} transitionLeaveTimeout={100}>{this.props.working && <div key="spinner" className="spinner" />}</ReactCSSTransitionGroup>
+          <Spinner visible={this.props.working} />
           {this.props.joined && <FastButton fastTouch className="user-count" onClick={this.props.toggleUserList}>{userCount}</FastButton>}
         </div>
       </div>
