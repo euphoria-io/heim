@@ -233,8 +233,8 @@ if (!window.frameElement) {
         Heim.tabPressed = true
       }
 
-      if (Heim.mainComponent && !ReactDOM.findDOMNode(Heim.mainComponent).contains(ev.target)) {
-        Heim.mainComponent.onKeyDown(ev)
+      if (Heim.mainComponent) {
+        Heim.ui.keydownOnPage(ev)
       }
     }, false)
 
