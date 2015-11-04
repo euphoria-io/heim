@@ -633,7 +633,8 @@ func (s *session) handleStaffEnrollOTPCommand(cmd *proto.StaffEnrollOTPCommand) 
 		return failure(proto.ErrAccessDenied)
 	}
 
-	otp, err := s.backend.AccountManager().GenerateOTP(s.ctx, s.client.Account.ID())
+	// TODO: use staff's kms
+	otp, err := s.backend.AccountManager().GenerateOTP(s.ctx, s.kms, s.client.Account.ID())
 	if err != nil {
 		return failure(err)
 	}
@@ -661,7 +662,8 @@ func (s *session) handleStaffValidateOTPCommand(cmd *proto.StaffValidateOTPComma
 		return failure(proto.ErrAccessDenied)
 	}
 
-	if err := s.backend.AccountManager().ValidateOTP(s.ctx, s.client.Account.ID(), cmd.Password); err != nil {
+	// TODO: use staff's kms
+	if err := s.backend.AccountManager().ValidateOTP(s.ctx, s.kms, s.client.Account.ID(), cmd.Password); err != nil {
 		return failure(err)
 	}
 
@@ -675,7 +677,8 @@ func (s *session) handleStaffInvadeCommand(cmd *proto.StaffInvadeCommand) *respo
 		return failure(proto.ErrAccessDenied)
 	}
 
-	if err := s.backend.AccountManager().ValidateOTP(s.ctx, s.client.Account.ID(), cmd.Password); err != nil {
+	// TODO: use staff's kms
+	if err := s.backend.AccountManager().ValidateOTP(s.ctx, s.kms, s.client.Account.ID(), cmd.Password); err != nil {
 		return failure(err)
 	}
 

@@ -106,15 +106,16 @@ type AccountManager interface {
 	// ChangeName changes an account's name.
 	ChangeName(ctx scope.Context, accountID snowflake.Snowflake, name string) error
 
-	// OTP returns the user's enrolled OTP, or nil if one has never been generated.
-	OTP(ctx scope.Context, accountID snowflake.Snowflake) (*OTP, error)
+	// OTP unlocks and returns the user's enrolled OTP, or nil if one has never
+	// been generated.
+	OTP(ctx scope.Context, kms security.KMS, accountID snowflake.Snowflake) (*OTP, error)
 
 	// GenerateOTP generates a new OTP secret for the user. If one has been generated
 	// before, then it is replaced if it was never validated, or an error is returned.
-	GenerateOTP(ctx scope.Context, accountID snowflake.Snowflake) (*OTP, error)
+	GenerateOTP(ctx scope.Context, kms security.KMS, accountID snowflake.Snowflake) (*OTP, error)
 
 	// ValidateOTP validates a one-time passcode according to the user's enrolled OTP.
-	ValidateOTP(ctx scope.Context, accountID snowflake.Snowflake, passcode string) error
+	ValidateOTP(ctx scope.Context, kms security.KMS, accountID snowflake.Snowflake, passcode string) error
 }
 
 type PersonalIdentity interface {

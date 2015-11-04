@@ -17,6 +17,8 @@ import (
 	"gopkg.in/gorp.v1"
 )
 
+const OTPKeyType = security.AES128
+
 type Account struct {
 	ID                  string
 	Name                string
@@ -59,9 +61,12 @@ func (awsc *AccountWithStaffCapability) Bind(b *Backend) *AccountBinding {
 }
 
 type OTP struct {
-	AccountID string `db:"account_id"`
-	URI       string `db:"uri"`
-	Validated bool
+	AccountID    string `db:"account_id"`
+	IV           []byte
+	EncryptedKey []byte `db:"encrypted_key"`
+	Digest       []byte
+	EncryptedURI []byte `db:"encrypted_uri"`
+	Validated    bool
 }
 
 type PersonalIdentity struct {
@@ -783,7 +788,7 @@ func (b *AccountManagerBinding) ChangeName(ctx scope.Context, accountID snowflak
 	return nil
 }
 
-func (b *AccountManagerBinding) getOTP(db gorp.SqlExecutor, accountID snowflake.Snowflake) (*proto.OTP, error) {
+func (b *AccountManagerBinding) getRawOTP(db gorp.SqlExecutor, accountID snowflake.Snowflake) (*OTP, error) {
 	row, err := db.Get(OTP{}, accountID.String())
 	if row == nil || err != nil {
 		if row == nil || err == sql.ErrNoRows {
@@ -791,33 +796,70 @@ func (b *AccountManagerBinding) getOTP(db gorp.SqlExecutor, accountID snowflake.
 		}
 		return nil, err
 	}
+	return row.(*OTP), nil
+}
 
-	fmt.Printf("got otp row %#v\n", row)
-	otp := &proto.OTP{
-		URI:       row.(*OTP).URI,
-		Validated: row.(*OTP).Validated,
+func (b *AccountManagerBinding) getOTP(db gorp.SqlExecutor, kms security.KMS, accountID snowflake.Snowflake) (*proto.OTP, error) {
+	encryptedOTP, err := b.getRawOTP(db, accountID)
+	if err != nil {
+		return nil, err
 	}
-	fmt.Printf("returning otp %#v\n", otp)
+
+	key := security.ManagedKey{
+		KeyType:      OTPKeyType,
+		IV:           encryptedOTP.IV,
+		Ciphertext:   encryptedOTP.EncryptedKey,
+		ContextKey:   "account",
+		ContextValue: accountID.String(),
+	}
+	if err := kms.DecryptKey(&key); err != nil {
+		return nil, err
+	}
+
+	uriBytes, err := security.DecryptGCM(&key, encryptedOTP.IV, encryptedOTP.Digest, encryptedOTP.EncryptedURI, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	otp := &proto.OTP{
+		URI:       string(uriBytes),
+		Validated: encryptedOTP.Validated,
+	}
 	return otp, nil
 }
 
-func (b *AccountManagerBinding) OTP(ctx scope.Context, accountID snowflake.Snowflake) (*proto.OTP, error) {
-	return b.getOTP(b.DbMap, accountID)
+func (b *AccountManagerBinding) OTP(ctx scope.Context, kms security.KMS, accountID snowflake.Snowflake) (*proto.OTP, error) {
+	return b.getOTP(b.DbMap, kms, accountID)
 }
 
-func (b *AccountManagerBinding) GenerateOTP(ctx scope.Context, accountID snowflake.Snowflake) (*proto.OTP, error) {
+func (b *AccountManagerBinding) GenerateOTP(ctx scope.Context, kms security.KMS, accountID snowflake.Snowflake) (*proto.OTP, error) {
+	encryptedKey, err := kms.GenerateEncryptedKey(OTPKeyType, "account", accountID.String())
+	if err != nil {
+		return nil, err
+	}
+
+	key := encryptedKey.Clone()
+	if err := kms.DecryptKey(&key); err != nil {
+		return nil, err
+	}
+
+	iv, err := kms.GenerateNonce(OTPKeyType.BlockSize())
+	if err != nil {
+		return nil, err
+	}
+
 	t, err := b.DbMap.Begin()
 	if err != nil {
 		return nil, err
 	}
 
-	otp, err := b.getOTP(t, accountID)
+	rawOTP, err := b.getRawOTP(t, accountID)
 	if err != nil && err != proto.ErrOTPNotEnrolled {
 		rollback(ctx, t)
 		return nil, err
 	}
 	if err == nil {
-		if otp.Validated {
+		if rawOTP.Validated {
 			rollback(ctx, t)
 			return nil, proto.ErrOTPAlreadyEnrolled
 		}
@@ -828,15 +870,24 @@ func (b *AccountManagerBinding) GenerateOTP(ctx scope.Context, accountID snowfla
 		}
 	}
 
-	otp, err = proto.NewOTP()
+	otp, err := proto.NewOTP()
+	if err != nil {
+		rollback(ctx, t)
+		return nil, err
+	}
+
+	digest, encryptedURI, err := security.EncryptGCM(&key, iv, []byte(otp.URI), nil)
 	if err != nil {
 		rollback(ctx, t)
 		return nil, err
 	}
 
 	row := &OTP{
-		AccountID: accountID.String(),
-		URI:       otp.URI,
+		AccountID:    accountID.String(),
+		IV:           iv,
+		EncryptedKey: encryptedKey.Ciphertext,
+		Digest:       digest,
+		EncryptedURI: encryptedURI,
 	}
 	if err := t.Insert(row); err != nil {
 		// TODO: this could fail in the case of a race condition
@@ -852,13 +903,13 @@ func (b *AccountManagerBinding) GenerateOTP(ctx scope.Context, accountID snowfla
 	return otp, nil
 }
 
-func (b *AccountManagerBinding) ValidateOTP(ctx scope.Context, accountID snowflake.Snowflake, password string) error {
+func (b *AccountManagerBinding) ValidateOTP(ctx scope.Context, kms security.KMS, accountID snowflake.Snowflake, password string) error {
 	t, err := b.DbMap.Begin()
 	if err != nil {
 		return err
 	}
 
-	otp, err := b.getOTP(t, accountID)
+	otp, err := b.getOTP(t, kms, accountID)
 	if err != nil {
 		rollback(ctx, t)
 		return err
