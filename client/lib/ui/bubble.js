@@ -3,6 +3,8 @@ import ReactDOM from 'react-dom'
 import ReactCSSTransitionGroup from 'react-addons-css-transition-group'
 import classNames from 'classnames'
 
+import Popup from './popup'
+
 
 export default React.createClass({
   displayName: 'Bubble',
@@ -25,10 +27,6 @@ export default React.createClass({
     }
   },
 
-  componentWillMount() {
-    Heim.addEventListener(uidocument.body, Heim.isTouch ? 'touchstart' : 'click', this.onOutsideClick, false)
-  },
-
   componentDidMount() {
     this.reposition()
   },
@@ -37,12 +35,8 @@ export default React.createClass({
     this.reposition()
   },
 
-  componentWillUnmount() {
-    Heim.removeEventListener(uidocument.body, Heim.isTouch ? 'touchstart' : 'click', this.onOutsideClick, false)
-  },
-
-  onOutsideClick(ev) {
-    if (this.props.visible && !ReactDOM.findDOMNode(this).contains(ev.target) && this.props.onDismiss) {
+  onDismiss(ev) {
+    if (this.props.visible && this.props.onDismiss) {
       this.props.onDismiss(ev)
     }
   },
@@ -52,7 +46,7 @@ export default React.createClass({
     // orientations when necessary.
     if (this.props.visible && this.props.anchorEl) {
       const box = this.props.anchorEl.getBoundingClientRect()
-      const node = this.refs.bubble
+      const node = ReactDOM.findDOMNode(this.refs.bubble)
 
       let top = box.top
       top -= Math.max(0, top + node.clientHeight + this.props.edgeSpacing - uiwindow.innerHeight)
@@ -74,9 +68,9 @@ export default React.createClass({
     return (
       <ReactCSSTransitionGroup transitionName="slide-down" transitionEnterTimeout={150} transitionLeaveTimeout={150}>
         {this.props.visible &&
-          <div ref="bubble" key="bubble" className={classNames('bubble', this.props.className)}>
+          <Popup ref="bubble" key="bubble" className={classNames('bubble', this.props.className)} onDismiss={this.onDismiss}>
             {this.props.children}
-          </div>
+          </Popup>
         }
       </ReactCSSTransitionGroup>
     )
