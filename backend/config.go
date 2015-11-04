@@ -98,11 +98,7 @@ type ServerConfig struct {
 	RoomEntryMinAgentAge  time.Duration `yaml:"room_entry_min_agent_age"`
 	SetInsecureCookies    bool          `yaml:"set_insecure_cookies"`
 
-	StaticPath    string `yaml:"static_path"`
-	SiteName      string `yaml:"site_name"`
-	SiteURL       string `yaml:"site_url"`
-	HelpAddress   string `yaml:"help_address"`
-	SenderAddress string `yaml:"sender_address"`
+	StaticPath string `yaml:"static_path"`
 
 	Cluster ClusterConfig  `yaml:"cluster,omitempty"`
 	Console ConsoleConfig  `yaml:"console,omitempty"`
