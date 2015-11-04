@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/kms"
 )
 
@@ -20,12 +21,10 @@ func init() {
 }
 
 func New(region, keyID string) (*KMS, error) {
-	config := &aws.Config{
-		Credentials: credentials.NewEnvCredentials(),
-		Region:      &region,
-	}
+	config := aws.NewConfig().WithCredentials(credentials.NewEnvCredentials()).WithRegion(region)
+	session := session.New(config)
 	kms := &KMS{
-		kms:   kms.New(config),
+		kms:   kms.New(session),
 		keyID: keyID,
 	}
 	return kms, nil
@@ -111,12 +110,10 @@ type KMSCredential struct {
 }
 
 func (c *KMSCredential) KMS() security.KMS {
-	config := &aws.Config{
-		Credentials: credentials.NewCredentials(c),
-		Region:      &c.Region,
-	}
+	config := aws.NewConfig().WithCredentials(credentials.NewCredentials(c)).WithRegion(c.Region)
+	session := session.New(config)
 	return &KMS{
-		kms:   kms.New(config),
+		kms:   kms.New(session),
 		keyID: c.KeyID,
 	}
 }
