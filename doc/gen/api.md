@@ -30,9 +30,12 @@
   * [Staff Commands](#staff-commands)
     * [staff-create-room](#staff-create-room)
     * [staff-grant-manager](#staff-grant-manager)
+    * [staff-enroll-otp](#staff-enroll-otp)
+    * [staff-invade](#staff-invade)
     * [staff-lock-room](#staff-lock-room)
     * [staff-revoke-access](#staff-revoke-access)
     * [staff-revoke-manager](#staff-revoke-manager)
+    * [staff-validate-otp](#staff-validate-otp)
     * [unlock-staff-capability](#unlock-staff-capability)
 * [Asynchronous Events](#asynchronous-events)
   * [bounce-event](#bounce-event)
@@ -367,9 +370,17 @@ most client implementations.
 
 {{template "command.md" "staff-create-room"}}
 
+### staff-enroll-otp
+
+{{template "command.md" "staff-enroll-otp"}}
+
 ### staff-grant-manager
 
 {{template "command.md" "staff-grant-manager"}}
+
+### staff-invade
+
+{{template "command.md" "staff-invade"}}
 
 ### staff-lock-room
 
@@ -382,6 +393,10 @@ most client implementations.
 ### staff-revoke-manager
 
 {{template "command.md" "staff-revoke-manager"}}
+
+### staff-validate-otp
+
+{{template "command.md" "staff-validate-otp"}}
 
 ### unlock-staff-capability
 

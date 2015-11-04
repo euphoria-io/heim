@@ -30,9 +30,12 @@
   * [Staff Commands](#staff-commands)
     * [staff-create-room](#staff-create-room)
     * [staff-grant-manager](#staff-grant-manager)
+    * [staff-enroll-otp](#staff-enroll-otp)
+    * [staff-invade](#staff-invade)
     * [staff-lock-room](#staff-lock-room)
     * [staff-revoke-access](#staff-revoke-access)
     * [staff-revoke-manager](#staff-revoke-manager)
+    * [staff-validate-otp](#staff-validate-otp)
     * [unlock-staff-capability](#unlock-staff-capability)
 * [Asynchronous Events](#asynchronous-events)
   * [bounce-event](#bounce-event)
@@ -969,6 +972,33 @@ The `staff-create-room` command creates a new room.
 
 
 
+### staff-enroll-otp
+
+The `staff-enroll-otp` command generates a new OTP key for a staff user. The
+user must then validate the key by issuing a successful `staff-validate-otp`
+command. An error will be returned if the user already has a validated OTP key.
+
+
+This packet has no fields.
+
+
+
+
+`staff-enroll-otp-reply` returns the OTP key in several forms that a user can
+use to import into their personal authentication app.
+
+
+| Field | Type | Required? | Description |
+| :-- | :-- | :-- | :--------- |
+| `uri` | [string](#string) | required |  the otpauth URI for the generated key (https://github.com/google/google-authenticator/wiki/Key-Uri-Format) |
+| `qr_uri` | [string](#string) | required |  the data URI for a QR image encoding the otpauth URI |
+
+
+
+
+
+
+
 ### staff-grant-manager
 
 The `staff-grant-manager` command is a version of the [grant-manager](#grant-manager)
@@ -985,6 +1015,31 @@ of the room to use this command.
 
 
 `staff-grant-manager-reply` confirms that requested manager change was granted.
+
+
+This packet has no fields.
+
+
+
+
+
+
+### staff-invade
+
+The `staff-invade` command can be used by staff to acquire temporary host and/or access
+capabilities in the current room.
+
+
+| Field | Type | Required? | Description |
+| :-- | :-- | :-- | :--------- |
+| `password` | [string](#string) | required |  the staff member's current one-time password |
+
+
+
+
+
+`staff-invade-reply` indicates that the current session now holds host and access capabilities
+in the room.
 
 
 This packet has no fields.
@@ -1057,6 +1112,31 @@ of the room to use this command.
 
 
 `staff-revoke-manager-reply` confirms that requested manager capability was revoked.
+
+
+This packet has no fields.
+
+
+
+
+
+
+### staff-validate-otp
+
+The `staff-validate-otp` command validates a one-time password against the
+latest OTP key generated for the user by the `staff-enroll-otp` command.
+
+
+| Field | Type | Required? | Description |
+| :-- | :-- | :-- | :--------- |
+| `password` | [string](#string) | required |  |
+
+
+
+
+
+`staff-validate-otp-reply` indicates successful authentication with the
+given one-time password.
 
 
 This packet has no fields.
