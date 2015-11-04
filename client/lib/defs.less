@@ -33,15 +33,21 @@
   }
 }
 
-.larger-touch-target(@width, @height) {
+.larger-target(@width, @height) {
   // note: requires element to be positioned.
-  body.touch &:after {
+  &:after {
     content: '';
     position: absolute;
     left: -@width;
     right: -@width;
     top: -@height;
     bottom: -@height;
+  }
+}
+
+.larger-touch-target(@width, @height) {
+  body.touch & {
+    .larger-target(@width, @height);
   }
 }
 
