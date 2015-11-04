@@ -509,6 +509,8 @@ func IntegrationTest(t *testing.T, factory proto.BackendFactory) {
 	runTest("Bots and humans", testBotsAndHumans)
 	runTest("Staff OTP", testStaffOTP)
 	runTest("Staff invasion", testStaffInvasion)
+	runTest("NotifyUser", testNotifyUser)
+
 }
 
 func testLurker(s *serverUnderTest) {
@@ -1539,7 +1541,6 @@ func testRoomCreation(s *serverUnderTest) {
 		conn.send("1", "login",
 			`{"namespace":"email","id":"logan%s","password":"loganpass"}`, nonce)
 		conn.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, logan.ID())
-		// conn.expect("", "login-event", `{"account_id":"%s"}`, logan.ID())
 		conn.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
 		conn.isStaff = true
 		conn.Close()
@@ -2761,6 +2762,8 @@ func testStaffInvasion(s *serverUnderTest) {
 		c2.expectSnapshot(s.backend.Version(), []string{id}, []string{msg})
 		c1.expect("", "join-event",
 			`{"session_id":"%s","id":"*","name":"","server_id":"*","server_era":"*","is_staff":true,"is_manager":true}`, c2.sessionID)
+	})
+}
 
 func testNotifyUser(s *serverUnderTest) {
 	Convey("Successful login disconnects all sessions associated with user", func() {

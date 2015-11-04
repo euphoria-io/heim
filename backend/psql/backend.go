@@ -250,6 +250,16 @@ func (b *Backend) background(wg *sync.WaitGroup) {
 				continue
 			}
 
+			// Check for UserID- if so, notify user instead of room
+			if msg.UserID != "" {
+				for _, lm := range b.listeners {
+					if err := lm.NotifyUser(ctx, msg.UserID, msg.Event, msg.Exclude...); err != nil {
+						logger.Printf("error: pq listen: notify user error on userID %s: %s", msg.Room, err)
+					}
+				}
+				continue
+			}
+
 			// Check for global ban, which is a special-case broadcast.
 			if msg.Room == "" && msg.Event.Type == proto.BounceEventType {
 				for _, lm := range b.listeners {
