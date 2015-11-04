@@ -222,7 +222,7 @@ if (!window.frameElement) {
       Heim.activity.touch(roomName)
 
       // dig into React a little so it normalizes the event (namely ev.key).
-      const ev = new SyntheticKeyboardEvent(null, null, originalEv)
+      const ev = new SyntheticKeyboardEvent(null, null, originalEv, originalEv.target)
 
       // prevent backspace from navigating the page
       if (ev.key === 'Backspace' && ev.target === uidocument.body) {
