@@ -234,7 +234,7 @@ if (!window.frameElement) {
       }
 
       if (Heim.mainComponent && !ReactDOM.findDOMNode(Heim.mainComponent).contains(ev.target)) {
-        Heim.mainComponent.onKeyDown(ev)
+        Heim.ui.keydownOnPage(ev)
       }
     }, false)
 

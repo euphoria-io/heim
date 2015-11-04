@@ -37,6 +37,7 @@ export default React.createClass({
     Reflux.connect(require('../stores/storage').store, 'storage'),
     Reflux.listenTo(ui.selectThreadInList, 'selectThreadInList'),
     Reflux.listenTo(ui.panViewTo, 'panViewTo'),
+    Reflux.listenTo(ui.tabKeyCombo, 'onTabKeyCombo'),
   ],
 
   componentWillMount() {
@@ -112,55 +113,51 @@ export default React.createClass({
     }
   },
 
-  onKeyDown(ev) {
-    if (Heim.tabPressed) {
-      if (ev.key === 'ArrowLeft') {
-        ui.focusLeftPane()
+  onTabKeyCombo(ev) {
+    if (ev.key === 'ArrowLeft') {
+      ui.focusLeftPane()
+      return
+    } else if (ev.key === 'ArrowRight') {
+      ui.focusRightPane()
+      return
+    } else if (ev.key === 'ArrowUp' || ev.key === 'ArrowDown') {
+      if (!this.state.ui.threadPopupAnchorEl) {
         return
-      } else if (ev.key === 'ArrowRight') {
-        ui.focusRightPane()
-        return
-      } else if (ev.key === 'ArrowUp' || ev.key === 'ArrowDown') {
-        if (!this.state.ui.threadPopupAnchorEl) {
+      }
+
+      ev.preventDefault()
+
+      const threadListEl = ReactDOM.findDOMNode(this.refs.threadList)
+      const threadEls = threadListEl.querySelectorAll('[data-thread-id]')
+      let idx = _.indexOf(threadEls, threadListEl.querySelector('[data-thread-id="' + this.state.ui.selectedThread + '"]'))
+      if (idx === -1) {
+        throw new Error('could not locate current thread in list')
+      }
+
+      if (ev.key === 'ArrowUp') {
+        if (idx === 0) {
           return
         }
-
-        ev.preventDefault()
-
-        const threadListEl = ReactDOM.findDOMNode(this.refs.threadList)
-        const threadEls = threadListEl.querySelectorAll('[data-thread-id]')
-        let idx = _.indexOf(threadEls, threadListEl.querySelector('[data-thread-id="' + this.state.ui.selectedThread + '"]'))
-        if (idx === -1) {
-          throw new Error('could not locate current thread in list')
-        }
-
-        if (ev.key === 'ArrowUp') {
-          if (idx === 0) {
-            return
-          }
-          idx--
-        } else {
-          if (idx >= threadEls.length - 1) {
-            return
-          }
-          idx++
-        }
-        this.selectThread(threadEls[idx].dataset.threadId, threadEls[idx])
-        return
-      } else if (ev.key === 'Enter' && this.state.ui.focusedPane === this.state.ui.popupPane) {
-        ui.popupToThreadPane()
-        return
-      } else if (ev.key === 'Backspace') {
-        if (/^thread-/.test(this.state.ui.focusedPane)) {
-          ui.closeFocusedThreadPane()
+        idx--
+      } else {
+        if (idx >= threadEls.length - 1) {
           return
         }
+        idx++
+      }
+      this.selectThread(threadEls[idx].dataset.threadId, threadEls[idx])
+      return
+    } else if (ev.key === 'Enter' && this.state.ui.focusedPane === this.state.ui.popupPane) {
+      ui.popupToThreadPane()
+      return
+    } else if (ev.key === 'Backspace') {
+      if (/^thread-/.test(this.state.ui.focusedPane)) {
+        ui.closeFocusedThreadPane()
+        return
       }
     } else if (uiwindow.getSelection().isCollapsed) {
       ui.focusEntry()
     }
-
-    ui.keydownOnPage(ev)
   },
 
   onThreadSelect(ev, id) {
@@ -271,7 +268,7 @@ export default React.createClass({
     const ManagerToolbox = this.state.ui.managerMode && require('./manager-toolbox').default
 
     return (
-      <Panner ref="panner" id="ui" snapPoints={snapPoints} onMove={ui.onViewPan} className={classNames({'disconnected': this.state.chat.connected === false, 'info-pane-hidden': infoPaneHidden, 'sidebar-pane-hidden': sidebarPaneHidden, 'info-pane-focused': this.state.ui.focusedPane === this.state.ui.popupPane, 'manager-mode': this.state.ui.managerMode})} onMouseDownCapture={this.onMouseDown} onClickCapture={this.onClick} onTouchMove={this.onTouchMove} onKeyDown={this.onKeyDown}>
+      <Panner ref="panner" id="ui" snapPoints={snapPoints} onMove={ui.onViewPan} className={classNames({'disconnected': this.state.chat.connected === false, 'info-pane-hidden': infoPaneHidden, 'sidebar-pane-hidden': sidebarPaneHidden, 'info-pane-focused': this.state.ui.focusedPane === this.state.ui.popupPane, 'manager-mode': this.state.ui.managerMode})} onMouseDownCapture={this.onMouseDown} onClickCapture={this.onClick} onTouchMove={this.onTouchMove} onKeyDown={ui.keydownOnPage}>
         {this.state.storage && this.state.storage.useOpenDyslexic && <link rel="stylesheet" type="text/css" id="css" href="/static/od.css" />}
         <div className="info-pane" onMouseEnter={ui.freezeInfo} onMouseLeave={ui.thawInfo}>
           {this.state.ui.managerMode && <FastButton ref="toolboxButton" className={classNames('toolbox-button', {'empty': !this.state.chat.selectedMessages.size, 'selected': !!this.state.ui.managerToolboxAnchorEl})} onClick={this.state.ui.managerToolboxAnchorEl ? ui.closeManagerToolbox : this.openManagerToolbox}>toolbox {selectedMessageCount > -1 && <span className="count">{selectedMessageCount} selected</span>}</FastButton>}
