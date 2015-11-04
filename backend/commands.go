@@ -634,7 +634,7 @@ func (s *session) handleStaffEnrollOTPCommand(cmd *proto.StaffEnrollOTPCommand) 
 	}
 
 	// TODO: use staff's kms
-	otp, err := s.backend.AccountManager().GenerateOTP(s.ctx, s.kms, s.client.Account.ID())
+	otp, err := s.backend.AccountManager().GenerateOTP(s.ctx, s.heim, s.kms, s.client.Account)
 	if err != nil {
 		return failure(err)
 	}

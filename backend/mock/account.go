@@ -348,7 +348,7 @@ func (m *accountManager) OTP(ctx scope.Context, kms security.KMS, accountID snow
 	return m.b.otps[accountID], nil
 }
 
-func (m *accountManager) GenerateOTP(ctx scope.Context, kms security.KMS, accountID snowflake.Snowflake) (*proto.OTP, error) {
+func (m *accountManager) GenerateOTP(ctx scope.Context, heim *proto.Heim, kms security.KMS, account proto.Account) (*proto.OTP, error) {
 	m.b.Lock()
 	defer m.b.Unlock()
 
@@ -356,17 +356,17 @@ func (m *accountManager) GenerateOTP(ctx scope.Context, kms security.KMS, accoun
 		m.b.otps = map[snowflake.Snowflake]*proto.OTP{}
 	}
 
-	old, ok := m.b.otps[accountID]
+	old, ok := m.b.otps[account.ID()]
 	if ok && old.Validated {
 		return nil, proto.ErrOTPAlreadyEnrolled
 	}
 
-	otp, err := proto.NewOTP()
+	otp, err := heim.NewOTP(account)
 	if err != nil {
 		return nil, err
 	}
 
-	m.b.otps[accountID] = otp
+	m.b.otps[account.ID()] = otp
 	return otp, nil
 }
 

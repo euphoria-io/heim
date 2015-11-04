@@ -5,6 +5,8 @@ import (
 	"crypto/sha1"
 	"fmt"
 
+	"github.com/pquerna/otp/totp"
+
 	"encoding/hex"
 
 	"euphoria.io/heim/cluster"
@@ -20,6 +22,7 @@ type Heim struct {
 	PeerDesc   *cluster.PeerDesc
 	Context    scope.Context
 	KMS        security.KMS
+	SiteName   string
 	StaticPath string
 
 	EmailTemplater *templates.Templater
@@ -104,6 +107,23 @@ func (heim *Heim) OnAccountRegistration(
 	}
 
 	return nil
+}
+
+func (heim *Heim) NewOTP(account Account) (*OTP, error) {
+	name := ""
+	for _, ident := range account.PersonalIdentities() {
+		name = ident.ID()
+		break
+	}
+	opts := totp.GenerateOpts{
+		Issuer:      heim.SiteName,
+		AccountName: name,
+	}
+	key, err := totp.Generate(opts)
+	if err != nil {
+		return nil, err
+	}
+	return &OTP{URI: key.String()}, nil
 }
 
 func emailVerificationToken(key *security.ManagedKey, email string) ([]byte, error) {

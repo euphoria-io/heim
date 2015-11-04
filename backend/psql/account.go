@@ -832,8 +832,8 @@ func (b *AccountManagerBinding) OTP(ctx scope.Context, kms security.KMS, account
 	return b.getOTP(b.DbMap, kms, accountID)
 }
 
-func (b *AccountManagerBinding) GenerateOTP(ctx scope.Context, kms security.KMS, accountID snowflake.Snowflake) (*proto.OTP, error) {
-	encryptedKey, err := kms.GenerateEncryptedKey(OTPKeyType, "account", accountID.String())
+func (b *AccountManagerBinding) GenerateOTP(ctx scope.Context, heim *proto.Heim, kms security.KMS, account proto.Account) (*proto.OTP, error) {
+	encryptedKey, err := kms.GenerateEncryptedKey(OTPKeyType, "account", account.ID().String())
 	if err != nil {
 		return nil, err
 	}
@@ -853,7 +853,7 @@ func (b *AccountManagerBinding) GenerateOTP(ctx scope.Context, kms security.KMS,
 		return nil, err
 	}
 
-	rawOTP, err := b.getRawOTP(t, accountID)
+	rawOTP, err := b.getRawOTP(t, account.ID())
 	if err != nil && err != proto.ErrOTPNotEnrolled {
 		rollback(ctx, t)
 		return nil, err
@@ -863,14 +863,14 @@ func (b *AccountManagerBinding) GenerateOTP(ctx scope.Context, kms security.KMS,
 			rollback(ctx, t)
 			return nil, proto.ErrOTPAlreadyEnrolled
 		}
-		row := &OTP{AccountID: accountID.String()}
+		row := &OTP{AccountID: account.ID().String()}
 		if _, err := t.Delete(row); err != nil {
 			rollback(ctx, t)
 			return nil, err
 		}
 	}
 
-	otp, err := proto.NewOTP()
+	otp, err := heim.NewOTP(account)
 	if err != nil {
 		rollback(ctx, t)
 		return nil, err
@@ -883,7 +883,7 @@ func (b *AccountManagerBinding) GenerateOTP(ctx scope.Context, kms security.KMS,
 	}
 
 	row := &OTP{
-		AccountID:    accountID.String(),
+		AccountID:    account.ID().String(),
 		IV:           iv,
 		EncryptedKey: encryptedKey.Ciphertext,
 		Digest:       digest,

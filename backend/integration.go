@@ -445,6 +445,7 @@ func IntegrationTest(t *testing.T, factory proto.BackendFactory) {
 			Context:        scope.New(),
 			KMS:            security.LocalKMS(),
 			EmailDeliverer: &emails.TestDeliverer{},
+			SiteName:       "test",
 		}
 		heim.KMS.(security.MockKMS).SetMasterKey(make([]byte, security.AES256.KeySize()))
 

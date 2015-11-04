@@ -28,19 +28,6 @@ const (
 	PasswordResetRequestLifetime = time.Hour
 )
 
-func NewOTP() (*OTP, error) {
-	// TODO: support custom issuer, account name
-	opts := totp.GenerateOpts{
-		Issuer:      "euphoria.io",
-		AccountName: "euphoria user",
-	}
-	key, err := totp.Generate(opts)
-	if err != nil {
-		return nil, err
-	}
-	return &OTP{URI: key.String()}, nil
-}
-
 type OTP struct {
 	URI       string
 	Validated bool
@@ -112,7 +99,7 @@ type AccountManager interface {
 
 	// GenerateOTP generates a new OTP secret for the user. If one has been generated
 	// before, then it is replaced if it was never validated, or an error is returned.
-	GenerateOTP(ctx scope.Context, kms security.KMS, accountID snowflake.Snowflake) (*OTP, error)
+	GenerateOTP(ctx scope.Context, heim *Heim, kms security.KMS, account Account) (*OTP, error)
 
 	// ValidateOTP validates a one-time passcode according to the user's enrolled OTP.
 	ValidateOTP(ctx scope.Context, kms security.KMS, accountID snowflake.Snowflake, passcode string) error

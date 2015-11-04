@@ -175,6 +175,7 @@ func (cfg *ServerConfig) Heim(ctx scope.Context) (*proto.Heim, error) {
 		KMS:            kms,
 		EmailTemplater: emailTemplater,
 		EmailDeliverer: emailDeliverer,
+		SiteName:       cfg.SiteName,
 		StaticPath:     cfg.StaticPath,
 	}
 
