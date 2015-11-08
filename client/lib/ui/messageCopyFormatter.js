@@ -9,6 +9,10 @@ import emoji from '../emoji'
 
 export default function handleCopy(ev) {
   const selection = uiwindow.getSelection()
+  if (selection.rangeCount === 0) {
+    return
+  }
+
   const range = selection.getRangeAt(0)
 
   // first, if the selection start and end are within the same message
