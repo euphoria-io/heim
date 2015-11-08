@@ -8,6 +8,9 @@ var emoji = require('../emoji')
 
 module.exports = function handleCopy(ev) {
   var selection = uiwindow.getSelection()
+  if (selection.rangeCount === 0) {
+    return
+  }
   var range = selection.getRangeAt(0)
 
   // first, if the selection start and end are within the same message
