@@ -2767,19 +2767,12 @@ func testStaffInvasion(s *serverUnderTest) {
 
 func testNotifyUser(s *serverUnderTest) {
 	Convey("Successful login disconnects all sessions associated with user", func() {
-		b := s.backend
 		ctx := scope.New()
 		kms := s.app.kms
 
 		// Create manager account and room.
 		nonce := fmt.Sprintf("notify-%s", time.Now())
 		cammie, _, err := s.Account(ctx, kms, "email", "cammie"+nonce, "cammiepass")
-		So(err, ShouldBeNil)
-
-		_, err = b.CreateRoom(ctx, kms, false, "notify1", cammie)
-		So(err, ShouldBeNil)
-
-		_, err = b.CreateRoom(ctx, kms, false, "notify2", cammie)
 		So(err, ShouldBeNil)
 
 		// Create an initial connection
