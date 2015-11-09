@@ -296,7 +296,7 @@ func (s *session) handleRevokeAccessCommand(cmd *proto.RevokeAccessCommand) *res
 
 func (s *session) handleGrantManagerCommand(cmd *proto.GrantManagerCommand) *response {
 	mkp := s.client.Authorization.ManagerKeyPair
-	if s.client.Account == nil || mkp == nil {
+	if s.managedRoom == nil || s.client.Account == nil || mkp == nil {
 		return &response{err: proto.ErrAccessDenied}
 	}
 
@@ -305,7 +305,7 @@ func (s *session) handleGrantManagerCommand(cmd *proto.GrantManagerCommand) *res
 		return &response{err: err}
 	}
 
-	err = s.room.AddManager(s.ctx, s.kms, s.client.Account, s.client.Authorization.ClientKey, account)
+	err = s.managedRoom.AddManager(s.ctx, s.kms, s.client.Account, s.client.Authorization.ClientKey, account)
 	if err != nil {
 		return &response{err: err}
 	}
@@ -314,7 +314,7 @@ func (s *session) handleGrantManagerCommand(cmd *proto.GrantManagerCommand) *res
 }
 
 func (s *session) handleRevokeManagerCommand(cmd *proto.RevokeManagerCommand) *response {
-	if s.client.Account == nil || s.client.Authorization.ManagerKeyPair == nil {
+	if s.managedRoom == nil || s.client.Account == nil || s.client.Authorization.ManagerKeyPair == nil {
 		return &response{err: proto.ErrAccessDenied}
 	}
 
@@ -323,7 +323,7 @@ func (s *session) handleRevokeManagerCommand(cmd *proto.RevokeManagerCommand) *r
 		return &response{err: err}
 	}
 
-	err = s.room.RemoveManager(s.ctx, s.client.Account, s.client.Authorization.ClientKey, account)
+	err = s.managedRoom.RemoveManager(s.ctx, s.client.Account, s.client.Authorization.ClientKey, account)
 	if err != nil {
 		return &response{err: err}
 	}
@@ -336,12 +336,16 @@ func (s *session) handleStaffGrantManagerCommand(cmd *proto.StaffGrantManagerCom
 		return &response{err: fmt.Errorf("must unlock staff capability first")}
 	}
 
+	if s.managedRoom == nil {
+		return &response{err: proto.ErrAccessDenied}
+	}
+
 	account, err := s.backend.AccountManager().Get(s.ctx, cmd.AccountID)
 	if err != nil {
 		return &response{err: err}
 	}
 
-	mkey, err := s.room.ManagerKey(s.ctx)
+	mkey, err := s.managedRoom.ManagerKey(s.ctx)
 	if err != nil {
 		return &response{err: err}
 	}
@@ -369,12 +373,16 @@ func (s *session) handleStaffRevokeManagerCommand(cmd *proto.StaffRevokeManagerC
 		return &response{err: fmt.Errorf("must unlock staff capability first")}
 	}
 
+	if s.managedRoom == nil {
+		return &response{err: proto.ErrAccessDenied}
+	}
+
 	account, err := s.backend.AccountManager().Get(s.ctx, cmd.AccountID)
 	if err != nil {
 		return &response{err: err}
 	}
 
-	mkey, err := s.room.ManagerKey(s.ctx)
+	mkey, err := s.managedRoom.ManagerKey(s.ctx)
 	if err != nil {
 		return &response{err: err}
 	}
@@ -391,7 +399,11 @@ func (s *session) handleStaffRevokeAccessCommand(cmd *proto.StaffRevokeAccessCom
 		return &response{err: fmt.Errorf("must unlock staff capability first")}
 	}
 
-	mkey, err := s.room.MessageKey(s.ctx)
+	if s.managedRoom == nil {
+		return &response{err: proto.ErrAccessDenied}
+	}
+
+	mkey, err := s.managedRoom.MessageKey(s.ctx)
 	if err != nil {
 		return &response{err: err}
 	}
@@ -419,7 +431,11 @@ func (s *session) handleStaffLockRoomCommand() *response {
 		return &response{err: fmt.Errorf("must unlock staff capability first")}
 	}
 
-	if _, err := s.room.GenerateMessageKey(s.ctx, s.staffKMS); err != nil {
+	if s.managedRoom == nil {
+		return &response{err: proto.ErrAccessDenied}
+	}
+
+	if _, err := s.managedRoom.GenerateMessageKey(s.ctx, s.staffKMS); err != nil {
 		return &response{err: err}
 	}
 
@@ -678,7 +694,7 @@ func (s *session) handleStaffValidateOTPCommand(cmd *proto.StaffValidateOTPComma
 func (s *session) handleStaffInvadeCommand(cmd *proto.StaffInvadeCommand) *response {
 	failure := func(err error) *response { return &response{err: err} }
 
-	if s.client.Account == nil || !s.client.Account.IsStaff() {
+	if s.managedRoom == nil || s.client.Account == nil || !s.client.Account.IsStaff() {
 		return failure(proto.ErrAccessDenied)
 	}
 
@@ -688,7 +704,7 @@ func (s *session) handleStaffInvadeCommand(cmd *proto.StaffInvadeCommand) *respo
 	}
 
 	// Everything checks out. Acquire the host key.
-	managerKey, err := s.room.ManagerKey(s.ctx)
+	managerKey, err := s.managedRoom.ManagerKey(s.ctx)
 	if err != nil {
 		return failure(err)
 	}
@@ -699,7 +715,7 @@ func (s *session) handleStaffInvadeCommand(cmd *proto.StaffInvadeCommand) *respo
 	s.client.Authorization.ManagerKeyPair = managerKeyPair
 
 	// Now acquire the message key and join the room, if necessary.
-	mkey, err := s.room.MessageKey(s.ctx)
+	mkey, err := s.managedRoom.MessageKey(s.ctx)
 	if err != nil {
 		return failure(err)
 	}
@@ -798,7 +814,7 @@ func (s *session) handleEditMessageCommand(msg *proto.EditMessageCommand) *respo
 }
 
 func (s *session) handleBanCommand(msg *proto.BanCommand) *response {
-	if s.client.Account == nil || s.client.Authorization.ManagerKeyPair == nil {
+	if s.managedRoom == nil || s.client.Account == nil || s.client.Authorization.ManagerKeyPair == nil {
 		return &response{err: proto.ErrAccessDenied}
 	}
 	if msg.Ban.IP != "" {
@@ -808,7 +824,7 @@ func (s *session) handleBanCommand(msg *proto.BanCommand) *response {
 	if msg.Seconds != 0 {
 		until = time.Now().Add(time.Duration(msg.Seconds) * time.Second)
 	}
-	if err := s.room.Ban(s.ctx, msg.Ban, until); err != nil {
+	if err := s.managedRoom.Ban(s.ctx, msg.Ban, until); err != nil {
 		return &response{err: err}
 	}
 	return &response{
@@ -820,10 +836,10 @@ func (s *session) handleBanCommand(msg *proto.BanCommand) *response {
 }
 
 func (s *session) handleUnbanCommand(msg *proto.UnbanCommand) *response {
-	if s.client.Account == nil || s.client.Authorization.ManagerKeyPair == nil {
+	if s.managedRoom == nil || s.client.Account == nil || s.client.Authorization.ManagerKeyPair == nil {
 		return &response{err: proto.ErrAccessDenied}
 	}
-	if err := s.room.Unban(s.ctx, msg.Ban); err != nil {
+	if err := s.managedRoom.Unban(s.ctx, msg.Ban); err != nil {
 		return &response{err: err}
 	}
 	return &response{

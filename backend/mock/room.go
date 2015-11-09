@@ -33,7 +33,7 @@ type memRoom struct {
 
 func NewRoom(
 	ctx scope.Context, kms security.KMS, private bool, name, version string, managers ...proto.Account) (
-	proto.Room, error) {
+	proto.ManagedRoom, error) {
 
 	sec, err := proto.NewRoomSecurity(kms, name)
 	if err != nil {

@@ -293,7 +293,7 @@ func (b *Backend) background(wg *sync.WaitGroup) {
 	}
 }
 
-func (b *Backend) GetRoom(ctx scope.Context, name string) (proto.Room, error) {
+func (b *Backend) GetRoom(ctx scope.Context, name string) (proto.ManagedRoom, error) {
 	obj, err := b.DbMap.Get(Room{}, name)
 	if err != nil {
 		return nil, err
@@ -306,7 +306,7 @@ func (b *Backend) GetRoom(ctx scope.Context, name string) (proto.Room, error) {
 
 func (b *Backend) CreateRoom(
 	ctx scope.Context, kms security.KMS, private bool, name string, managers ...proto.Account) (
-	proto.Room, error) {
+	proto.ManagedRoom, error) {
 
 	sec, err := proto.NewRoomSecurity(kms, name)
 	if err != nil {

@@ -89,18 +89,19 @@ type response struct {
 type cmdState func(*proto.Packet) *response
 
 type session struct {
-	id        string
-	ctx       scope.Context
-	server    *Server
-	conn      *websocket.Conn
-	identity  *memIdentity
-	serverID  string
-	serverEra string
-	roomName  string
-	room      proto.Room
-	backend   proto.Backend
-	kms       security.KMS
-	heim      *proto.Heim
+	id          string
+	ctx         scope.Context
+	server      *Server
+	conn        *websocket.Conn
+	identity    *memIdentity
+	serverID    string
+	serverEra   string
+	roomName    string
+	room        proto.Room
+	managedRoom proto.ManagedRoom
+	backend     proto.Backend
+	kms         security.KMS
+	heim        *proto.Heim
 
 	state    cmdState
 	client   *proto.Client
@@ -152,6 +153,10 @@ func newSession(
 		incoming:     make(chan *proto.Packet),
 		outgoing:     make(chan *proto.Packet, 100),
 		floodLimiter: ratelimit.NewBucketWithQuantum(time.Second, 50, 10),
+	}
+
+	if managedRoom, ok := room.(proto.ManagedRoom); ok {
+		session.managedRoom = managedRoom
 	}
 
 	return session
@@ -239,7 +244,11 @@ func (s *session) serve() error {
 	// Verify agent age against site and room settings.
 	allowed := true
 	agentAge := time.Now().Sub(s.client.Agent.Created)
-	if s.client.Account == nil && !s.client.Agent.Blessed && (agentAge < s.server.roomEntryMinAgentAge || agentAge < s.room.MinAgentAge()) {
+	var minAgentAge time.Duration
+	if s.managedRoom != nil {
+		minAgentAge = s.managedRoom.MinAgentAge()
+	}
+	if s.client.Account == nil && !s.client.Agent.Blessed && (agentAge < s.server.roomEntryMinAgentAge || agentAge < minAgentAge) {
 		allowed = false
 		s.sendBounce("room not open")
 		s.state = s.ignoreState
