@@ -68,6 +68,10 @@ var (
 	PingEventType = PingType.Event()
 	PingReplyType = PingType.Reply()
 
+	PMInitiateType      = PacketType("pm-initiate")
+	PMInitiateEventType = PacketType("pm-initiate-event")
+	PMInitiateReplyType = PacketType("pm-initiate-reply")
+
 	RegisterAccountType      = PacketType("register-account")
 	RegisterAccountReplyType = RegisterAccountType.Reply()
 
@@ -200,6 +204,10 @@ var (
 
 		LogoutType:      reflect.TypeOf(LogoutCommand{}),
 		LogoutReplyType: reflect.TypeOf(LogoutReply{}),
+
+		PMInitiateType:      reflect.TypeOf(PMInitiateCommand{}),
+		PMInitiateEventType: reflect.TypeOf(PMInitiateEvent{}),
+		PMInitiateReplyType: reflect.TypeOf(PMInitiateReply{}),
 
 		RegisterAccountType:      reflect.TypeOf(RegisterAccountCommand{}),
 		RegisterAccountReplyType: reflect.TypeOf(RegisterAccountReply{}),
@@ -545,6 +553,19 @@ type LogoutCommand struct{}
 
 // The `logout-reply` packet confirms a logout.
 type LogoutReply struct{}
+
+type PMInitiateCommand struct {
+	UserID UserID `json:"user_id"`
+}
+
+type PMInitiateReply struct {
+	PMID snowflake.Snowflake `json:"pm_id"`
+}
+
+type PMInitiateEvent struct {
+	From UserID              `json:"from"`
+	PMID snowflake.Snowflake `json:"pm_id"`
+}
 
 // The `register-account` command creates a new account and logs into it.
 // It will return an error if the session is already logged in.
