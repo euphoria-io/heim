@@ -2784,15 +2784,25 @@ func testNotifyUser(s *serverUnderTest) {
 		// Create a second connection with the same cookie
 		conn2 := conn1
 		s.Reconnect(conn2, "notify1")
-		conn2.Close()
+		defer conn2.Close()
 		conn2.expectPing()
 		conn2.expectSnapshot(s.backend.Version(), nil, nil)
+
+		// Consume join-events
+		conn1.expect("", "join-event",
+			`{"session_id":"%s","id":"*","name":"","server_id":"*","server_era":"*","is_staff":false,"is_manager":false}`, conn2.sessionID)
 
 		// Create a third connection with a different cookie
 		conn3 := s.Connect("notify1")
 		defer conn3.Close()
 		conn3.expectPing()
 		conn3.expectSnapshot(s.backend.Version(), nil, nil)
+
+		// Consume join-events
+		conn1.expect("", "join-event",
+			`{"session_id":"%s","id":"*","name":"","server_id":"*","server_era":"*","is_staff":false,"is_manager":false}`, conn3.sessionID)
+		conn2.expect("", "join-event",
+			`{"session_id":"%s","id":"*","name":"","server_id":"*","server_era":"*","is_staff":false,"is_manager":false}`, conn3.sessionID)
 
 		// Create a connection to a different room, same cookie
 		conn4 := conn1
@@ -2806,6 +2816,10 @@ func testNotifyUser(s *serverUnderTest) {
 		defer conn5.Close()
 		conn5.expectPing()
 		conn5.expectSnapshot(s.backend.Version(), nil, nil)
+
+		// Consume join-events
+		conn4.expect("", "join-event",
+			`{"session_id":"%s","id":"*","name":"","server_id":"*","server_era":"*","is_staff":false,"is_manager":false}`, conn5.sessionID)
 
 		// Log in on first connection, expect a login-reply and disconnect-event
 		conn1.send("1", "login", `{"namespace":"email","id":"cammie%s","password":"cammiepass"}`, nonce)
