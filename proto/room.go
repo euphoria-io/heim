@@ -47,7 +47,8 @@ func (l Listing) Less(i, j int) bool {
 // A Room is a nexus of communication. Users connect to a Room via
 // Session and interact.
 type Room interface {
-	Log
+	GetMessage(scope.Context, snowflake.Snowflake) (*Message, error)
+	Latest(scope.Context, int, snowflake.Snowflake) ([]Message, error)
 
 	// Ban adds an entry to the room's ban list. A zero value for until
 	// indicates a permanent ban.
