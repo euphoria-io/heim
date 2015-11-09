@@ -1,6 +1,8 @@
 import React from 'react'
 import classNames from 'classnames'
 
+import FieldLabelContainer from './FieldLabelContainer'
+
 
 export default React.createClass({
   displayName: 'TextField',
@@ -46,9 +48,12 @@ export default React.createClass({
 
   render() {
     return (
-      <label className={classNames('text-field', this.props.error && 'error', this.props.className)}>
-        {this.props.label}
-        {this.props.message && <div className="message">{this.props.message}</div>}
+      <FieldLabelContainer
+        className={classNames('text-field', this.props.className)}
+        label={this.props.label}
+        error={this.props.error}
+        message={this.props.message}
+      >
         <input
           ref="input"
           name={this.props.name}
@@ -62,7 +67,7 @@ export default React.createClass({
           onFocus={this.onFocus}
           onBlur={this.onBlur}
         />
-      </label>
+      </FieldLabelContainer>
     )
   },
 })

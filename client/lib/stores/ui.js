@@ -7,6 +7,8 @@ import clamp from '../clamp'
 import actions from '../actions'
 import storage from './storage'
 import chat from './chat'
+import accountAuthFlow from './account-auth-flow'
+import accountSettingsFlow from './account-settings-flow'
 import notification from './notification'
 import MessageData from '../message-data'
 
@@ -42,6 +44,10 @@ const storeActions = Reflux.createActions([
   'finishMessageSelectionDrag',
   'openManagerToolbox',
   'closeManagerToolbox',
+  'openAccountAuthDialog',
+  'closeAccountAuthDialog',
+  'openAccountSettingsDialog',
+  'closeAccountSettingsDialog',
 ])
 _.extend(module.exports, storeActions)
 
@@ -303,6 +309,7 @@ const store = module.exports.store = Reflux.createStore({
       managerToolboxAnchorEl: null,
       draggingMessageSelection: false,
       draggingMessageSelectionToggle: null,
+      modalDialog: null,
     }
 
     this.threadData = new MessageData({selected: false})
@@ -325,6 +332,10 @@ const store = module.exports.store = Reflux.createStore({
 
   chatChange(state) {
     this.chatState = state
+
+    if (!state.account && this.state.modalDialog === 'account-settings') {
+      this.closeAccountSettingsDialog()
+    }
   },
 
   notificationChange(state) {
@@ -495,7 +506,7 @@ const store = module.exports.store = Reflux.createStore({
           lastFocusedPane.blurEntry()
         }
         if (!Heim.isTouch) {
-          this.state.panes.get(id).focusEntry()
+          this.focusEntry()
         }
       })
     })
@@ -538,7 +549,9 @@ const store = module.exports.store = Reflux.createStore({
   },
 
   focusEntry(character) {
-    this._focusedPane().focusEntry(character)
+    if (!this.state.modalDialog) {
+      this._focusedPane().focusEntry(character)
+    }
   },
 
   onViewPan(target) {
@@ -563,9 +576,14 @@ const store = module.exports.store = Reflux.createStore({
   },
 
   keydownOnPage(ev) {
+    if (this.state.modalDialog) {
+      return
+    }
+
     if (Heim.tabPressed) {
       storeActions.tabKeyCombo(ev)
     } else {
+      this.focusEntry()
       this._focusedPane().keydownOnPane(ev)
       // FIXME: this is a hack to detect whether a KeyboardActionHandler hasn't
       // triggered, and default to focusing the entry if no text is currently
@@ -637,6 +655,28 @@ const store = module.exports.store = Reflux.createStore({
 
   finishMessageSelectionDrag() {
     this.state.draggingMessageSelection = false
+    this.trigger(this.state)
+  },
+
+  openAccountAuthDialog() {
+    this.state.modalDialog = 'account-auth'
+    this.trigger(this.state)
+  },
+
+  closeAccountAuthDialog() {
+    this.state.modalDialog = null
+    accountAuthFlow.reset()
+    this.trigger(this.state)
+  },
+
+  openAccountSettingsDialog() {
+    this.state.modalDialog = 'account-settings'
+    this.trigger(this.state)
+  },
+
+  closeAccountSettingsDialog() {
+    this.state.modalDialog = null
+    accountSettingsFlow.reset()
     this.trigger(this.state)
   },
 })

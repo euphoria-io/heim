@@ -25,6 +25,14 @@ const storeActions = module.exports.actions = Reflux.createActions([
   'editMessage',
   'banUser',
 ])
+storeActions.login = Reflux.createAction({asyncResult: true})
+storeActions.logout = Reflux.createAction({asyncResult: true})
+storeActions.registerAccount = Reflux.createAction({asyncResult: true})
+storeActions.resetPassword = Reflux.createAction({asyncResult: true})
+storeActions.changeName = Reflux.createAction({asyncResult: true})
+storeActions.changeEmail = Reflux.createAction({asyncResult: true})
+storeActions.changePassword = Reflux.createAction({asyncResult: true})
+
 storeActions.setRoomSettings.sync = true
 storeActions.messagesChanged.sync = true
 _.extend(module.exports, storeActions)
@@ -56,6 +64,7 @@ module.exports.store = Reflux.createStore({
       authType: null,
       authState: null,
       authData: null,
+      account: null,
       isManager: null,
       isStaff: null,
       messages: new ChatTree(),
@@ -103,6 +112,14 @@ module.exports.store = Reflux.createStore({
   },
 
   socketEvent(ev) {
+    const changeActionMap = {
+      'logout-reply': 'logout',
+      'reset-password-reply': 'resetPassword',
+      'change-name-reply': 'changeName',
+      'change-email-reply': 'changeEmail',
+      'change-password-reply': 'changePassword',
+    }
+
     if (ev.type === 'send-event') {
       this._handleMessageUpdate(ev.data, true)
     } else if (ev.type === 'send-reply') {
@@ -124,6 +141,13 @@ module.exports.store = Reflux.createStore({
       this.state.isManager = ev.data.session.is_manager
       this.state.isStaff = ev.data.session.is_staff
       this.state.authType = ev.data.room_is_private ? 'passcode' : 'public'
+      this.state.account = Immutable.fromJS(ev.data.account)
+      if (this.state.account) {
+        // FIXME placholder until we have account name information
+        this.state.account = this.state.account
+          .set('name', this.state.tentativeNick || this.state.nick)
+          .set('email', '???')
+      }
       if (ev.data.account_has_access) {
         // note: if there was a stored passcode, we could have an outgoing
         // auth event and authState === 'trying-stored'
@@ -180,6 +204,31 @@ module.exports.store = Reflux.createStore({
         this.state.bannedIds = this.state.bannedIds.add(ev.data.id)
       } else {
         console.warn('error banning:', ev.error)  // eslint-disable-line no-console
+      }
+    } else if (ev.type === 'login-reply' || ev.type === 'register-account-reply') {
+      const kind = ev.type === 'login-reply' ? 'login' : 'registerAccount'
+      if (ev.data.success) {
+        storeActions[kind].completed()
+      } else {
+        storeActions[kind].failed(ev.data)
+      }
+    } else if (_.has(changeActionMap, ev.type)) {
+      const kind = changeActionMap[ev.type]
+      if (ev.error) {
+        storeActions[kind].failed(ev)
+      } else {
+        if (kind === 'changeName') {
+          this.state.account = this.state.account.set('name', 'FIXME')
+        } else if (kind === 'changeEmail') {
+          this.state.account = this.state.account.set('email', 'FIXME')
+        }
+        storeActions[kind].completed()
+      }
+    } else if (ev.type === 'login-event') {
+      this.socket.reconnect()
+    } else if (ev.type === 'disconnect-event') {
+      if (ev.data.reason === 'authentication changed') {
+        this.socket.reconnect()
       }
     } else if (ev.type === 'ping-event' || ev.type === 'ping-reply') {
       // ignore
@@ -491,6 +540,73 @@ module.exports.store = Reflux.createStore({
       data: {
         content: content,
         parent: parent || null,
+      },
+    })
+  },
+
+  logout() {
+    this.socket.send({
+      type: 'logout',
+    })
+  },
+
+  login(email, password) {
+    this.socket.send({
+      type: 'login',
+      data: {
+        namespace: 'email',
+        id: email,
+        password: password,
+      },
+    })
+  },
+
+  registerAccount(email, password) {
+    this.socket.send({
+      type: 'register-account',
+      data: {
+        namespace: 'email',
+        id: email,
+        password: password,
+      },
+    })
+  },
+
+  resetPassword(email) {
+    this.socket.send({
+      type: 'reset-password',
+      data: {
+        namespace: 'email',
+        id: email,
+      },
+    })
+  },
+
+  changeName(name) {
+    this.socket.send({
+      type: 'change-name',
+      data: {
+        name: name,
+      },
+    })
+  },
+
+  changeEmail(email, password) {
+    this.socket.send({
+      type: 'change-email',
+      data: {
+        email: email,
+        password: password,
+      },
+    })
+  },
+
+  changePassword(oldPassword, newPassword) {
+    this.socket.send({
+      type: 'change-password',
+      data: {
+        old_password: oldPassword,
+        new_password: newPassword,
       },
     })
   },

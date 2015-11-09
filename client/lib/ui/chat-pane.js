@@ -429,7 +429,8 @@ export default React.createClass({
   },
 
   render() {
-    const entryFocus = this.state.activity.windowFocused && this.state.chat.connected !== false && this.state.ui.focusedPane === this.props.pane.id
+    // FIXME: encapuslate within ui / pane stores
+    const entryFocus = this.state.activity.windowFocused && this.state.chat.connected !== false && !this.state.ui.modalDialog && this.state.ui.focusedPane === this.props.pane.id
 
     // TODO: move this logic out of here
     let entry
