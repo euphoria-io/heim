@@ -88,37 +88,40 @@ func (c *Client) AuthenticateWithAgent(
 		return fmt.Errorf("client key error: %s", err)
 	}
 
-	managerKey, err := room.ManagerKey(ctx)
-	if err != nil {
-		return fmt.Errorf("manager key error: %s", err)
-	}
-
-	managerCap, err := room.ManagerCapability(ctx, account)
-	if err != nil && err != ErrManagerNotFound {
-		return err
-	}
-	if err == nil {
-		subjectKey := managerKey.KeyPair()
-		pc := &security.PublicKeyCapability{Capability: managerCap}
-		secretJSON, err := pc.DecryptPayload(&subjectKey, holderKey)
+	var managerKey RoomManagerKey
+	if managedRoom, ok := room.(ManagedRoom); ok {
+		managerKey, err = managedRoom.ManagerKey(ctx)
 		if err != nil {
-			return fmt.Errorf("manager capability decrypt error: %s", err)
+			return fmt.Errorf("manager key error: %s", err)
 		}
 
-		c.Authorization.ManagerKeyEncryptingKey = &security.ManagedKey{
-			KeyType: RoomManagerKeyType,
+		managerCap, err := managedRoom.ManagerCapability(ctx, account)
+		if err != nil && err != ErrManagerNotFound {
+			return err
 		}
-		err = json.Unmarshal(secretJSON, &c.Authorization.ManagerKeyEncryptingKey.Plaintext)
-		if err != nil {
-			return fmt.Errorf("manager key unmarshal error: %s", err)
-		}
+		if err == nil {
+			subjectKey := managerKey.KeyPair()
+			pc := &security.PublicKeyCapability{Capability: managerCap}
+			secretJSON, err := pc.DecryptPayload(&subjectKey, holderKey)
+			if err != nil {
+				return fmt.Errorf("manager capability decrypt error: %s", err)
+			}
 
-		managerKeyPair, err := managerKey.Unlock(c.Authorization.ManagerKeyEncryptingKey)
-		if err != nil {
-			return fmt.Errorf("manager key unlock error: %s", err)
-		}
+			c.Authorization.ManagerKeyEncryptingKey = &security.ManagedKey{
+				KeyType: RoomManagerKeyType,
+			}
+			err = json.Unmarshal(secretJSON, &c.Authorization.ManagerKeyEncryptingKey.Plaintext)
+			if err != nil {
+				return fmt.Errorf("manager key unmarshal error: %s", err)
+			}
 
-		c.Authorization.ManagerKeyPair = managerKeyPair
+			managerKeyPair, err := managerKey.Unlock(c.Authorization.ManagerKeyEncryptingKey)
+			if err != nil {
+				return fmt.Errorf("manager key unlock error: %s", err)
+			}
+
+			c.Authorization.ManagerKeyPair = managerKeyPair
+		}
 	}
 
 	// Look for message key grants to this account.

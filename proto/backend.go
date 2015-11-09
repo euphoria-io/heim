@@ -27,10 +27,10 @@ type Backend interface {
 
 	// Create creates a new room.
 	CreateRoom(
-		ctx scope.Context, kms security.KMS, private bool, name string, managers ...Account) (Room, error)
+		ctx scope.Context, kms security.KMS, private bool, name string, managers ...Account) (ManagedRoom, error)
 
 	// Gets an existing Room by name.
-	GetRoom(ctx scope.Context, name string) (Room, error)
+	GetRoom(ctx scope.Context, name string) (ManagedRoom, error)
 
 	// Peers returns a snapshot of known peers in this backend's cluster.
 	Peers() []cluster.PeerDesc

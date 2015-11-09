@@ -50,13 +50,6 @@ type Room interface {
 	GetMessage(scope.Context, snowflake.Snowflake) (*Message, error)
 	Latest(scope.Context, int, snowflake.Snowflake) ([]Message, error)
 
-	// Ban adds an entry to the room's ban list. A zero value for until
-	// indicates a permanent ban.
-	Ban(ctx scope.Context, ban Ban, until time.Time) error
-
-	// UnbanAgent removes an agent ban from the room.
-	Unban(ctx scope.Context, ban Ban) error
-
 	// Join inserts a Session into the Room's global presence.
 	Join(scope.Context, Session) (virtualClientAddr string, err error)
 
@@ -82,14 +75,29 @@ type Room interface {
 	// Version returns the version of the server hosting this Room.
 	Version() string
 
+	// MessageKey returns the room's current message key, or nil if the room is
+	// unencrypted.
+	MessageKey(ctx scope.Context) (RoomMessageKey, error)
+
+	WaitForPart(sessionID string) error
+
+	ResolveClientAddress(ctx scope.Context, addr string) (net.IP, error)
+}
+
+type ManagedRoom interface {
+	Room
+
+	// Ban adds an entry to the room's ban list. A zero value for until
+	// indicates a permanent ban.
+	Ban(ctx scope.Context, ban Ban, until time.Time) error
+
+	// UnbanAgent removes an agent ban from the room.
+	Unban(ctx scope.Context, ban Ban) error
+
 	// GenerateMessageKey generates and stores a new key and nonce
 	// for encrypting messages in the room. This invalidates all grants made with
 	// the previous key.
 	GenerateMessageKey(ctx scope.Context, kms security.KMS) (RoomMessageKey, error)
-
-	// MessageKey returns the room's current message key, or nil if the room is
-	// unencrypted.
-	MessageKey(ctx scope.Context) (RoomMessageKey, error)
 
 	// ManagerKey returns a handle to the room's manager key.
 	ManagerKey(ctx scope.Context) (RoomManagerKey, error)
@@ -114,10 +122,6 @@ type Room interface {
 	ManagerCapability(ctx scope.Context, manager Account) (security.Capability, error)
 
 	MinAgentAge() time.Duration
-
-	WaitForPart(sessionID string) error
-
-	ResolveClientAddress(ctx scope.Context, addr string) (net.IP, error)
 }
 
 type RoomMessageKey interface {

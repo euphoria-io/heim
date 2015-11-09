@@ -24,7 +24,7 @@ type TestBackend struct {
 	js             JobService
 	otps           map[snowflake.Snowflake]*proto.OTP
 	resetReqs      map[snowflake.Snowflake]*proto.PasswordResetRequest
-	rooms          map[string]proto.Room
+	rooms          map[string]proto.ManagedRoom
 	version        string
 }
 
@@ -37,7 +37,7 @@ func (b *TestBackend) Close() {}
 
 func (b *TestBackend) Version() string { return b.version }
 
-func (b *TestBackend) GetRoom(ctx scope.Context, name string) (proto.Room, error) {
+func (b *TestBackend) GetRoom(ctx scope.Context, name string) (proto.ManagedRoom, error) {
 	b.Lock()
 	defer b.Unlock()
 
@@ -50,13 +50,13 @@ func (b *TestBackend) GetRoom(ctx scope.Context, name string) (proto.Room, error
 
 func (b *TestBackend) CreateRoom(
 	ctx scope.Context, kms security.KMS, private bool, name string, managers ...proto.Account) (
-	proto.Room, error) {
+	proto.ManagedRoom, error) {
 
 	b.Lock()
 	defer b.Unlock()
 
 	if b.rooms == nil {
-		b.rooms = map[string]proto.Room{}
+		b.rooms = map[string]proto.ManagedRoom{}
 	}
 
 	room, err := NewRoom(ctx, kms, private, name, b.version, managers...)
