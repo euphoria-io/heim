@@ -7,6 +7,8 @@ import clamp from '../clamp'
 import actions from '../actions'
 import storage from './storage'
 import chat from './chat'
+import accountAuthFlow from './account-auth-flow'
+import accountSettingsFlow from './account-settings-flow'
 import notification from './notification'
 import MessageData from '../message-data'
 
@@ -44,6 +46,10 @@ const storeActions = Reflux.createActions([
   'closeManagerToolbox',
   'notificationsNoticeChoice',
   'dismissNotice',
+  'openAccountAuthDialog',
+  'closeAccountAuthDialog',
+  'openAccountSettingsDialog',
+  'closeAccountSettingsDialog',
 ])
 _.extend(module.exports, storeActions)
 
@@ -307,6 +313,7 @@ const store = module.exports.store = Reflux.createStore({
       draggingMessageSelectionToggle: null,
       notices: Immutable.OrderedSet(),
       notificationsNoticeDismissed: false,
+      modalDialog: null,
     }
 
     this.threadData = new MessageData({selected: false})
@@ -333,6 +340,10 @@ const store = module.exports.store = Reflux.createStore({
     this.chatState = state
     this._updateNotices()
     this.trigger(this.state)
+
+    if (!state.account && this.state.modalDialog === 'account-settings') {
+      this.closeAccountSettingsDialog()
+    }
   },
 
   notificationChange(state) {
@@ -512,7 +523,7 @@ const store = module.exports.store = Reflux.createStore({
           lastFocusedPane.blurEntry()
         }
         if (!Heim.isTouch) {
-          this.state.panes.get(id).focusEntry()
+          this.focusEntry()
         }
       })
     })
@@ -555,7 +566,9 @@ const store = module.exports.store = Reflux.createStore({
   },
 
   focusEntry(character) {
-    this._focusedPane().focusEntry(character)
+    if (!this.state.modalDialog) {
+      this._focusedPane().focusEntry(character)
+    }
   },
 
   onViewPan(target) {
@@ -580,6 +593,10 @@ const store = module.exports.store = Reflux.createStore({
   },
 
   keydownOnPage(ev) {
+    if (this.state.modalDialog) {
+      return
+    }
+
     if (Heim.tabPressed) {
       storeActions.tabKeyCombo(ev)
     } else {
@@ -667,6 +684,28 @@ const store = module.exports.store = Reflux.createStore({
     if (name === 'notifications') {
       storage.setRoom(this.chatState.roomName, 'notificationsNoticeDismissed', true)
     }
+  },
+
+  openAccountAuthDialog() {
+    this.state.modalDialog = 'account-auth'
+    this.trigger(this.state)
+  },
+
+  closeAccountAuthDialog() {
+    this.state.modalDialog = null
+    accountAuthFlow.reset()
+    this.trigger(this.state)
+  },
+
+  openAccountSettingsDialog() {
+    this.state.modalDialog = 'account-settings'
+    this.trigger(this.state)
+  },
+
+  closeAccountSettingsDialog() {
+    this.state.modalDialog = null
+    accountSettingsFlow.reset()
+    this.trigger(this.state)
   },
 })
 

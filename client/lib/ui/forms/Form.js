@@ -19,6 +19,8 @@ export default React.createClass({
   getDefaultProps() {
     return {
       errors: {},
+      context: {},
+      validators: {},
     }
   },
 
@@ -71,6 +73,10 @@ export default React.createClass({
   _validateFields(validators, values, context, filter) {
     const errors = {}
     _.each(validators, (validator, fieldSpec) => {
+      if (!validator) {
+        return
+      }
+
       const fields = fieldSpec.split(' ')
       if (!filter || filter(fields)) {
         _.assign(errors, validator(_.pick(values, fields), this._strict, context))
@@ -98,7 +104,12 @@ export default React.createClass({
       const name = child.props.name
       const error = name && errors[name]
       return React.cloneElement(child, {
-        onModify: value => this.onFieldModify(name, value),
+        onModify: value => {
+          this.onFieldModify(name, value)
+          if (child.props.onModify) {
+            child.props.onModify(value)
+          }
+        },
         onValidate: () => this.onFieldValidate(name),
         value: this.state.values[name],
         error: !!error,

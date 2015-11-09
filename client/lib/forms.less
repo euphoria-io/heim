@@ -39,6 +39,9 @@
   padding: 10px 26px;
   border-radius: 3px;
 
+  // prevent other properties from transitioning (such as when form switches into forgot password mode)
+  transition: background .25s ease, opacity .25s ease;
+
   &:focus {
     background: darken(@bgcolor, 10%);
   }
@@ -49,31 +52,36 @@
   }
 }
 
+button.minor-action {
+  .line-button(@account-color);
+}
+
+button.minor-secondary-action {
+  .line-button(fade(black, 65%));
+  opacity: .65;
+
+  &.highlight {
+    opacity: 1;
+  }
+}
+
+button.major-action {
+  .fill-button(@account-color);
+}
+
+button.major-secondary-action {
+  .fill-button(#666);
+}
+
 .fields {
-  .text-field {
+  .field-label-container {
     position: relative;
     display: block;
-    font-size: .85rem;
     margin: 15px 0;
 
-    input {
-      display: block;
-      width: 100%;
-      border: 0;
-      padding: 10px;
-      margin-top: 5px;
-      font-size: 1.15rem;
-      box-sizing: border-box;
-      border-radius: 3px;
-      box-shadow: 0 0 5px fade(black, 35%);
-
-      &:focus {
-        box-shadow: 0 0 8px fade(saturate(@account-color, 95%), 55%);
-      }
-
-      &:disabled {
-        background: white;
-      }
+    .label {
+      font-size: .85rem;
+      margin-bottom: 5px;
     }
 
     &, .message, &:before {
@@ -96,13 +104,73 @@
     }
 
     &.error {
+      .message, &:before {
+        opacity: 1;
+      }
+    }
+  }
+
+  .field-action-box {
+    display: flex;
+    align-items: center;
+    background: fade(black, 4%);
+    padding: 5px;
+
+    button {
+      box-shadow: none;
+      padding: 7px 15px;
+    }
+
+    .inner {
+      font-size: 1.15rem;
+      margin: 5px;
+    }
+  }
+
+  .field-action-box, .text-field input {
+    border-radius: 3px;
+    box-shadow: 0 0 5px fade(black, 35%);
+  }
+
+  .text-field {
+    input {
+      display: block;
+      width: 100%;
+      border: 0;
+      padding: 10px;
+      font-size: 1.15rem;
+      box-sizing: border-box;
+
+      &:focus {
+        box-shadow: 0 0 8px fade(saturate(@account-color, 95%), 55%);
+      }
+
+      &:disabled {
+        background: white;
+      }
+    }
+
+    &.error {
       input {
         box-shadow: 0 0 8px fade(@error-color, 70%);
         padding-right: 44px;
       }
+    }
 
-      .message, &:before {
+    &.password-field {
+      .message {
         opacity: 1;
+      }
+
+      &:not(.error) {
+        &.strong .message {
+          color: green;
+          font-weight: bold;
+        }
+
+        &.weak .message {
+          color: #8e7f52;
+        }
       }
     }
   }
