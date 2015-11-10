@@ -923,9 +923,10 @@ iframe.js {
   // extended drag handle touch area can extend below bottom
   overflow: hidden;
 
+  @message-spacing: 1px;
   @seen-fade: cubic-bezier(0, 1, .4, .2);
   .message-node {
-    padding: 1px 0;
+    padding: @message-spacing 0;
 
     & > .line {
       @width: 3px;
@@ -1073,12 +1074,12 @@ iframe.js {
 
   .replies.inline, .replies.expanded {
     display: flex;
-    margin-top: 1px;
+    margin-top: @message-spacing;
 
     & > .indent-line {
       flex-shrink: 0;
       width: @thread-indent;
-      margin-top: 1px;
+      margin-top: @message-spacing;
       background-image: @line-bg;
       cursor: default;
     }
@@ -1097,7 +1098,7 @@ iframe.js {
     & > .indent-line {
       position: relative;
       cursor: pointer;
-      margin-top: 1px;
+      margin-top: @message-spacing;
       background-image: @line-bg, data-uri('../res/expand.svg');
       background-position: left 12px, left top;
       background-repeat: no-repeat;
@@ -1145,7 +1146,7 @@ iframe.js {
 
   .replies.empty.focused {
     .entry {
-      margin-top: 4px;
+      margin-top: 5px - @message-spacing;
     }
   }
 
@@ -1175,6 +1176,11 @@ iframe.js {
     display: flex;
     align-items: flex-start;
     word-wrap: break-word;
+
+    * {
+      // mitigates extra spacing around lines due to alignment inconsistency
+      vertical-align: top;
+    }
 
     &.marker {
       padding: .5em 0;
@@ -1223,6 +1229,8 @@ iframe.js {
 
       .ago {
         transition: opacity 1s ease;
+        vertical-align: baseline;
+        line-height: 0;
       }
 
       .ago.now {
@@ -1323,6 +1331,10 @@ iframe.js {
         // iframes with canvases seem to result in really long webkit
         // paints without this
         -webkit-transform: translate3d(0, 0, 0);
+      }
+
+      .ago {
+        vertical-align: bottom;
       }
     }
 
