@@ -924,7 +924,13 @@ iframe.js {
   overflow: hidden;
 
   @message-spacing: 1px;
+  @thread-spacing: 8px;
   @seen-fade: cubic-bezier(0, 1, .4, .2);
+
+  .message-list > .message-node {
+    padding-bottom: @thread-spacing;
+  }
+
   .message-node {
     padding: @message-spacing 0;
 
