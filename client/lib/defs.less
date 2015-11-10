@@ -107,15 +107,20 @@
   box-shadow: 0 2*@depth 2*@depth fade(black, 12.5%);
   transition: all .15s ease-out;
 
-  &:hover {
-    background: darken(@color, 10%);
-  }
-
-  &:active {
+  .touchable-custom({
     background: desaturate(darken(@color, 15%), 5%);
     box-shadow: 0 0 2*@depth fade(black, 35%);
     transform: translateY((3/2) * @depth);
     transition-duration: .035s;
+  });
+
+  &:hover {
+    background: darken(@color, 10%);
+  }
+
+  &:disabled {
+    opacity: .5;
+    pointer-events: none;
   }
 }
 

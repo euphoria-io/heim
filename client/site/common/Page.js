@@ -1,6 +1,7 @@
 import React from 'react'
 
 import heimURL from '../../lib/heim-url'
+import FastTouchScript from './FastTouchScript'
 
 
 export default function Page(props) {
@@ -16,6 +17,7 @@ export default function Page(props) {
     </head>
     <body className={props.className}>
       {props.children}
+      <FastTouchScript />
     </body>
     </html>
   )

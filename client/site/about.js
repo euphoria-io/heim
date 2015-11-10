@@ -16,7 +16,7 @@ module.exports = (
         <div className="end">
           <p className="contact">
             <span className="label">Got a question, or want to learn more?</span>
-            <a className="chat-with-us" href={heimURL('/room/welcome/')}>chat with us &raquo;</a>
+            <a className="chat-with-us green-button" href={heimURL('/room/welcome/')}>chat with us &raquo;</a>
           </p>
           <p className="signature">
             &mdash; <FauxNick nick="intortus" />, <FauxNick nick="chromakode" />, and <FauxNick nick="greenie" />

@@ -59,7 +59,6 @@ body.page {
       line-height: 22px;
       opacity: .6;
       transition: opacity .15s ease;
-      .raised-filled-button(transparent);
       padding-top: 0;
       padding-bottom: 0;
       font-weight: normal;
@@ -75,7 +74,6 @@ body.page {
     .start-chatting {
       display: inline-block;
       float: right;
-      .raised-filled-button(@brand-color);
       line-height: 24px;
       padding-top: 0;
       padding-bottom: 0;
@@ -496,7 +494,6 @@ body.welcome {
       display: inline-block;
       margin-top: 20px;
       margin-bottom: 10px;
-      .raised-filled-button(@brand-color, 4px, 2px);
       font-size: 1.1em;
       padding: 11px 48px;
     }
@@ -744,7 +741,6 @@ body.about {
       float: left;
 
       .chat-with-us {
-        .raised-filled-button(@brand-color);
         margin-left: .75em;
       }
 
@@ -1037,4 +1033,16 @@ body.about {
       }
     }
   }
+}
+
+.green-button {
+  .raised-filled-button(@brand-color);
+}
+
+.big-green-button {
+  .raised-filled-button(@brand-color, 4px, 2px);
+}
+
+.outline-button {
+  .raised-filled-button(transparent);
 }

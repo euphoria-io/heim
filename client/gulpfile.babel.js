@@ -103,6 +103,13 @@ gulp.task('heim-js', ['heim-git-commit', 'heim-less'], () => {
     .pipe(gulp.dest(heimDest))
 })
 
+gulp.task('fast-touch-js', () => {
+  return gulp.src('./site/lib/fast-touch.js')
+    .pipe(process.env.NODE_ENV === 'production' ? uglify() : gutil.noop())
+    .on('error', handleError('fastTouch browserify error'))
+    .pipe(gulp.dest(heimDest))
+})
+
 gulp.task('embed-js', () => {
   return embedBundler({debug: true})
     .bundle()
@@ -195,7 +202,7 @@ gulp.task('embed-html', () => {
     .pipe(gulp.dest(embedDest))
 })
 
-gulp.task('site-templates', ['heim-git-commit'], () => {
+gulp.task('site-templates', ['heim-git-commit', 'fast-touch-js'], () => {
   const page = reload('./site/page.js')
   const pages = [
     'home',
