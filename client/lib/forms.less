@@ -30,17 +30,16 @@
 
 .fill-button(@color) {
   @bgcolor: mix(lighten(@color, 5%), white, 30%);
+  .raised-filled-button(@bgcolor);
   color: @color;
-  font-weight: bold;
-  background: @bgcolor;
-  .touchable-custom({
-    background: fade(@color, 50%)
-  });
   padding: 10px 26px;
-  border-radius: 3px;
 
   // prevent other properties from transitioning (such as when form switches into forgot password mode)
-  transition: background .25s ease, opacity .25s ease;
+  transition:
+    background .15s ease,
+    box-shadow .15s ease,
+    transform .15s ease,
+    opacity .15s ease;
 
   &:focus {
     background: darken(@bgcolor, 10%);
