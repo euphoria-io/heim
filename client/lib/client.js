@@ -291,9 +291,10 @@ if (!window.frameElement) {
   }
 
   Heim.detachUI = function detachUI() {
+    const ReactDOM = require('react-dom')
     uidocument.body.classList.remove('ready', 'visible')
     evs.removeAllEventListeners()
-    Heim.mainComponent.unmountComponent()
+    ReactDOM.unmountComponentAtNode(uidocument.getElementById('container'))
   }
 
   Heim.prepareUpdate = function prepareUpdate(hash) {
