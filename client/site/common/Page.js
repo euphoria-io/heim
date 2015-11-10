@@ -1,7 +1,6 @@
 import React from 'react'
 
 import heimURL from '../../lib/heim-url'
-import FastTouchScript from './FastTouchScript'
 
 
 export default function Page(props) {
@@ -14,10 +13,10 @@ export default function Page(props) {
       <link rel="icon" href={heimURL('/static/favicon-192.png')} sizes="192x192" />
       <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
       <link rel="stylesheet" type="text/css" id="css" href={heimURL('/static/site.css')} />
+      <script async src={heimURL('/static/fast-touch.js')} />
     </head>
     <body className={props.className}>
       {props.children}
-      <FastTouchScript />
     </body>
     </html>
   )

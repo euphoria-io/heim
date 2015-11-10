@@ -202,7 +202,7 @@ gulp.task('embed-html', () => {
     .pipe(gulp.dest(embedDest))
 })
 
-gulp.task('site-templates', ['heim-git-commit', 'fast-touch-js'], () => {
+gulp.task('site-templates', ['heim-git-commit'], () => {
   const page = reload('./site/page.js')
   const pages = [
     'home',
@@ -274,7 +274,7 @@ watchifyTask('heim-watchify', heimBundler, 'main.js', heimDest)
 watchifyTask('embed-watchify', embedBundler, 'embed.js', embedDest)
 
 gulp.task('build-emails', ['email-templates', 'email-hdrs', 'email-static'])
-gulp.task('build-statics', ['raven-js', 'heim-less', 'emoji-static', 'heim-static', 'embed-static', 'heim-html', 'embed-html', 'site-templates'])
+gulp.task('build-statics', ['raven-js', 'fast-touch-js', 'heim-less', 'emoji-static', 'heim-static', 'embed-static', 'heim-html', 'embed-html', 'site-templates'])
 gulp.task('build-browserify', ['heim-js', 'embed-js'])
 
 gulp.task('watch', () => {
