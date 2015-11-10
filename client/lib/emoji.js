@@ -4,7 +4,7 @@ import unicodeIndex from 'emoji-annotation-to-unicode'
 import twemoji from 'twemoji'
 
 
-const index = {
+const index = _.extend({}, unicodeIndex, {
   '+1': 'plusone',
   'bronze': 'bronze',
   'bronze!?': 'bronze2',
@@ -21,8 +21,7 @@ const index = {
   'bot': 'bot',
   'greenduck': 'greenduck',
   'mobile': unicodeIndex.iphone,
-  ...unicodeIndex,
-}
+})
 
 delete index.iphone
 
