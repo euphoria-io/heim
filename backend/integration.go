@@ -2067,6 +2067,7 @@ func testMessageTruncation(s *serverUnderTest) {
 		conn.expect("2", "nick-reply", `{"session_id":"*","id":"*","from":"","to":"c1"}`)
 
 		// turn off debug output before sending long message
+		conn.debug(false)
 		conn.send("3", "send", `{"content":"%s"}`, bigMessage)
 		capture := conn.expect("3", "send-reply",
 			`{"id":"*","time":"*","sender":%s,"content":"","truncated":true,"encryption_key_id":"*"}`, named(""))
@@ -2109,6 +2110,7 @@ func testMessageTruncation(s *serverUnderTest) {
 		c2.expect("1", "nick-reply", `{"session_id":"*","id":"*","from":"","to":"c2"}`)
 
 		// turn off debug output before sending long message
+		c2.debug(false)
 		c2.send("2", "send", `{"content":"%s"}`, bigMessage)
 		capture := c2.expect("2", "send-reply",
 			`{"id":"*","time":"*","sender":%s,"content":"*","truncated":true}`, named("c2"))
@@ -2120,10 +2122,12 @@ func testMessageTruncation(s *serverUnderTest) {
 		c1.expect("", "send-event",
 			`{"id":"%s","time":"*","sender":%s,"content":"*","truncated":true}`, capture["id"], named("c2"))
 		c1.send("2", "edit-message", `{"id":"%s","delete":true,"announce":true}`, capture["id"])
+		c1.debug(false)
 		c1.expect("2", "edit-message-reply",
 			`{"edit_id":"*","id":"*","time":"*","sender":%s,"content":"*","edited":"*","deleted":"*","truncated":true}`,
 			named("c2"))
 
+		c2.debug(false)
 		c2.expect("", "edit-message-event",
 			`{"edit_id":"*","id":"*","time":"*","sender":%s,"content":"*","edited":"*","deleted":"*","truncated":true}`,
 			named("c2"))
