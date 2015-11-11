@@ -658,23 +658,50 @@ func (rb *RoomBinding) WaitForPart(sessionID string) error {
 	rb.Backend.Lock()
 	defer rb.Backend.Unlock()
 
-	var count int
-	err := rb.Backend.SelectOne(&count, "SELECT COUNT(*) FROM presence WHERE session_id = $1", sessionID)
+	stillPresent := func() (bool, error) {
+		var count int
+		err := rb.Backend.SelectOne(&count, "SELECT COUNT(*) FROM presence WHERE session_id = $1", sessionID)
+		if err != nil {
+			return false, err
+		}
+		if count == 0 {
+			return false, nil
+		}
+		return true, nil
+	}
+
+	p, err := stillPresent()
 	if err != nil {
 		return err
 	}
-	if count == 0 {
+	if !p {
 		return nil
 	}
 
 	if rb.Backend.partWaiters == nil {
 		rb.Backend.partWaiters = map[string]chan struct{}{}
 	}
-	c := make(chan struct{})
+	c := make(chan struct{}, 1)
 	rb.Backend.partWaiters[sessionID] = c
 	rb.Backend.Unlock()
-	<-c
-	rb.Backend.Lock()
-	delete(rb.Backend.partWaiters, sessionID)
-	return nil
+
+	defer func() {
+		rb.Backend.Lock()
+		delete(rb.Backend.partWaiters, sessionID)
+	}()
+
+	for {
+		select {
+		case <-c:
+			return nil
+		case <-time.After(10 * time.Millisecond):
+			p, err := stillPresent()
+			if err != nil {
+				return err
+			}
+			if !p {
+				return nil
+			}
+		}
+	}
 }
