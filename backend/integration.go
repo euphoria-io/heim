@@ -623,6 +623,9 @@ func testBroadcast(s *serverUnderTest) {
 			`{"id":"*","time":"*","sender":{"session_id":"%s","id":"%s","name":"%s",%s},"content":"hi"}`,
 			ids[1].SessionID, ids[1].ID, ids[1].Name, server)
 
+		conns[2].expect("", "send-event",
+			`{"id":"*","time":"*","sender":{"session_id":"%s","id":"%s","name":"%s",%s},"content":"hi"}`,
+			ids[1].SessionID, ids[1].ID, ids[1].Name, server)
 		conns[2].send("2", "send", `{"content":"bye"}`)
 		conns[0].expect("", "send-event",
 			`{"id":"*","time":"*","sender":{"session_id":"%s","id":"%s","name":"%s",%s},"content":"bye"}`,
@@ -635,9 +638,6 @@ func testBroadcast(s *serverUnderTest) {
 			`{"id":"*","time":"*","sender":{"session_id":"%s","id":"%s","name":"%s",%s},"content":"bye"}`,
 			ids[2].SessionID, ids[2].ID, ids[2].Name, server)
 
-		conns[2].expect("", "send-event",
-			`{"id":"*","time":"*","sender":{"session_id":"%s","id":"%s","name":"%s",%s},"content":"hi"}`,
-			ids[1].SessionID, ids[1].ID, ids[1].Name, server)
 		conns[2].expect("2", "send-reply",
 			`{"id":"*","time":"*","sender":{"session_id":"%s","id":"%s","name":"%s",%s},"content":"bye"}`,
 			ids[2].SessionID, ids[2].ID, ids[2].Name, server)
