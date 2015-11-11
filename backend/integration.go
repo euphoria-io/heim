@@ -1846,7 +1846,9 @@ func testKeepAlive(s *serverUnderTest) {
 			conn.expectPing()
 		}
 		_, _, err := conn.Conn.ReadMessage()
-		So(err, ShouldNotBeNil)
+		if err == nil {
+			conn.expect("", "disconnect-event", `{"reason": "timed out"}`)
+		}
 	})
 }
 
