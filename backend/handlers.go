@@ -9,6 +9,7 @@ import (
 
 	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/logging"
+	"euphoria.io/heim/proto/security"
 	"euphoria.io/heim/proto/snowflake"
 	"euphoria.io/scope"
 	"github.com/gorilla/mux"
@@ -30,7 +31,7 @@ func (s *Server) route() {
 	s.r.PathPrefix("/about").Handler(
 		prometheus.InstrumentHandler("about", http.HandlerFunc(s.handleAboutStatic)))
 
-	s.r.HandleFunc("/room/{room:[a-z0-9]+}/ws", instrumentSocketHandlerFunc("ws", s.handleRoom))
+	s.r.HandleFunc("/room/{prefix:(pm:)?}{room:[a-z0-9]+}/ws", instrumentSocketHandlerFunc("ws", s.handleRoom))
 	s.r.Handle(
 		"/room/{room:[a-z0-9]+}/", prometheus.InstrumentHandlerFunc("room_static", s.handleRoomStatic))
 
@@ -87,23 +88,6 @@ func (s *Server) handleRobotsTxt(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
 	ctx := s.rootCtx.Fork()
 
-	// Resolve the room.
-	// TODO: support room creation?
-	roomName := mux.Vars(r)["room"]
-	room, err := s.b.GetRoom(ctx, roomName)
-	if s.allowRoomCreation && err == proto.ErrRoomNotFound {
-		room, err = s.b.CreateRoom(ctx, s.kms, false, roomName)
-	}
-	if err != nil {
-		if err == proto.ErrRoomNotFound {
-			http.Error(w, "404 page not found", http.StatusNotFound)
-			return
-		}
-		logging.Logger(ctx).Printf("room error: %s", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
 	// Tag the agent. We use an authenticated but un-encrypted cookie.
 	agent, cookie, agentKey, err := getAgent(ctx, s, r)
 	if err != nil {
@@ -118,7 +102,7 @@ func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
 	// Look up account associated with agent.
 	var accountID snowflake.Snowflake
 	if err := accountID.FromString(agent.AccountID); agent.AccountID != "" && err == nil {
-		if err := client.AuthenticateWithAgent(ctx, s.b, room, agent, agentKey); err != nil {
+		if err := client.AuthenticateWithAgent(ctx, s.b, agent, agentKey); err != nil {
 			fmt.Printf("agent auth failed: %s\n", err)
 			switch err {
 			case proto.ErrAccessDenied:
@@ -130,6 +114,64 @@ func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
+
+	// Resolve the room.
+	// TODO: support room creation?
+	prefix := mux.Vars(r)["prefix"]
+	roomName := mux.Vars(r)["room"]
+
+	var room proto.Room
+	switch prefix {
+	case "pm:":
+		var (
+			sf      snowflake.Snowflake
+			roomKey *security.ManagedKey
+		)
+		if err := sf.FromString(roomName); err != nil {
+			http.Error(w, "404 page not found", http.StatusNotFound)
+			return
+		}
+		room, roomKey, err = s.b.PMTracker().Room(ctx, s.kms, sf, client)
+		switch err {
+		case nil:
+			client.Authorization.AddMessageKey("pm:"+roomName, roomKey)
+			s.serveRoomWebsocket(ctx, roomName, room, cookie, client, agentKey, w, r)
+		case proto.ErrPMNotFound:
+			http.Error(w, "404 page not found", http.StatusNotFound)
+			return
+		default:
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	case "":
+		room, err = s.b.GetRoom(ctx, roomName)
+		if s.allowRoomCreation && err == proto.ErrRoomNotFound {
+			room, err = s.b.CreateRoom(ctx, s.kms, false, roomName)
+		}
+		if err != nil {
+			if err == proto.ErrRoomNotFound {
+				http.Error(w, "404 page not found", http.StatusNotFound)
+				return
+			}
+			logging.Logger(ctx).Printf("room error: %s", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if err := client.RoomAuthorize(ctx, room); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		s.serveRoomWebsocket(ctx, roomName, room, cookie, client, agentKey, w, r)
+	default:
+		http.Error(w, "404 page not found", http.StatusNotFound)
+		return
+	}
+}
+
+func (s *Server) serveRoomWebsocket(
+	ctx scope.Context, roomName string, room proto.Room,
+	cookie *http.Cookie, client *proto.Client, agentKey *security.ManagedKey,
+	w http.ResponseWriter, r *http.Request) {
 
 	// Upgrade to a websocket and set cookie.
 	headers := http.Header{}

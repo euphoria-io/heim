@@ -55,9 +55,7 @@ func (c *Client) UserID() string {
 	}
 }
 
-func (c *Client) AuthenticateWithAgent(
-	ctx scope.Context, backend Backend, room Room, agent *Agent, agentKey *security.ManagedKey) error {
-
+func (c *Client) AuthenticateWithAgent(ctx scope.Context, backend Backend, agent *Agent, agentKey *security.ManagedKey) error {
 	if agent.AccountID == "" {
 		return nil
 	}
@@ -82,8 +80,15 @@ func (c *Client) AuthenticateWithAgent(
 
 	c.Account = account
 	c.Authorization.ClientKey = clientKey
+	return nil
+}
 
-	holderKey, err := account.Unlock(clientKey)
+func (c *Client) RoomAuthorize(ctx scope.Context, room Room) error {
+	if c.Account == nil {
+		return nil
+	}
+
+	holderKey, err := c.Account.Unlock(c.Authorization.ClientKey)
 	if err != nil {
 		if err == ErrAccessDenied {
 			return err
@@ -98,7 +103,7 @@ func (c *Client) AuthenticateWithAgent(
 			return fmt.Errorf("manager key error: %s", err)
 		}
 
-		managerCap, err := managedRoom.ManagerCapability(ctx, account)
+		managerCap, err := managedRoom.ManagerCapability(ctx, c.Account)
 		if err != nil && err != ErrManagerNotFound {
 			return err
 		}
@@ -133,7 +138,7 @@ func (c *Client) AuthenticateWithAgent(
 		return err
 	}
 	if messageKey != nil {
-		capability, err := messageKey.AccountCapability(ctx, account)
+		capability, err := messageKey.AccountCapability(ctx, c.Account)
 		if err != nil {
 			return fmt.Errorf("access capability error: %s", err)
 		}

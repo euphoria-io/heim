@@ -15,6 +15,7 @@ type Backend interface {
 	AgentTracker() AgentTracker
 	EmailTracker() EmailTracker
 	Jobs() jobs.JobService
+	PMTracker() PMTracker
 
 	// BanIP globally bans an IP. A zero value for until indicates a
 	// permanent ban.

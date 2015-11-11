@@ -171,6 +171,10 @@ func (s *session) handleCoreCommands(payload interface{}) *response {
 	case *proto.UnlockStaffCapabilityCommand:
 		return s.handleUnlockStaffCapabilityCommand(msg)
 
+	// other commands
+	case *proto.PMInitiateCommand:
+		return s.handlePMInitiateCommand(msg)
+
 	// fallthrough
 	default:
 		return nil
@@ -845,6 +849,22 @@ func (s *session) handleUnbanCommand(msg *proto.UnbanCommand) *response {
 	return &response{
 		packet: &proto.UnbanReply{
 			Ban: msg.Ban,
+		},
+	}
+}
+
+func (s *session) handlePMInitiateCommand(msg *proto.PMInitiateCommand) *response {
+	if s.client.Account == nil {
+		return &response{err: proto.ErrAccessDenied}
+	}
+	pmID, err := s.backend.PMTracker().Initiate(s.ctx, s.kms, s.client, msg.UserID)
+	if err != nil {
+		return &response{err: err}
+	}
+	// TODO: NotifyUser
+	return &response{
+		packet: &proto.PMInitiateReply{
+			PMID: pmID,
 		},
 	}
 }

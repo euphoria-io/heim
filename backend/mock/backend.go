@@ -23,6 +23,7 @@ type TestBackend struct {
 	ipBans         map[string]time.Time
 	js             JobService
 	otps           map[snowflake.Snowflake]*proto.OTP
+	pms            PMTracker
 	resetReqs      map[snowflake.Snowflake]*proto.PasswordResetRequest
 	rooms          map[string]proto.ManagedRoom
 	version        string
@@ -32,6 +33,11 @@ func (b *TestBackend) AccountManager() proto.AccountManager { return &accountMan
 func (b *TestBackend) AgentTracker() proto.AgentTracker     { return &agentTracker{b} }
 func (b *TestBackend) EmailTracker() proto.EmailTracker     { return &b.et }
 func (b *TestBackend) Jobs() jobs.JobService                { return &b.js }
+
+func (b *TestBackend) PMTracker() proto.PMTracker {
+	b.pms.b = b
+	return &b.pms
+}
 
 func (b *TestBackend) Close() {}
 
