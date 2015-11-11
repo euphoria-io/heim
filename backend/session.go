@@ -200,6 +200,7 @@ func (s *session) Send(ctx scope.Context, cmdType proto.PacketType, payload inte
 	select {
 	case s.outgoing <- cmd:
 	default:
+		logging.Logger(s.ctx).Printf("outgoing channel full, ordering cannot be guaranteed")
 		go func() { s.outgoing <- cmd }()
 	}
 
