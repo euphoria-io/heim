@@ -72,13 +72,6 @@ func (s *serverUnderTest) Close() {
 }
 
 func (s *serverUnderTest) openWebsocket(roomName string, cookies []*http.Cookie, params url.Values) (proto.Room, *websocket.Conn, *http.Response) {
-	/*
-		room, err := s.backend.GetRoom(scope.New(), roomName)
-		if err == proto.ErrRoomNotFound {
-			room, err = s.backend.CreateRoom(scope.New(), s.app.kms, false, roomName)
-			So(err, ShouldBeNil)
-		}
-	*/
 	headers := http.Header{}
 	for _, cookie := range cookies {
 		headers.Add("Cookie", cookie.String())
