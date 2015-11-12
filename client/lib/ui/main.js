@@ -264,7 +264,7 @@ export default React.createClass({
 
     const selectedMessageCount = this.state.chat.selectedMessages.size
     // lazy load manager toolbox ui (and store)
-    const ManagerToolbox = this.state.ui.managerMode && require('./manager-toolbox')
+    const ManagerToolbox = this.state.ui.managerMode && require('./manager-toolbox').default
 
     return (
       <Panner ref="panner" id="ui" snapPoints={snapPoints} onMove={ui.onViewPan} className={classNames({'disconnected': this.state.chat.connected === false, 'info-pane-hidden': infoPaneHidden, 'sidebar-pane-hidden': sidebarPaneHidden, 'info-pane-focused': this.state.ui.focusedPane === this.state.ui.popupPane, 'manager-mode': this.state.ui.managerMode})} onMouseDownCapture={this.onMouseDown} onClickCapture={this.onClick} onTouchMove={this.onTouchMove} onKeyDown={this.onKeyDown}>
