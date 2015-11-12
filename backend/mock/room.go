@@ -28,6 +28,7 @@ type RoomBase struct {
 	messageKey  *roomMessageKey
 }
 
+func (r *RoomBase) ID() string      { return r.name }
 func (r *RoomBase) Version() string { return r.version }
 
 func (r *RoomBase) GetMessage(ctx scope.Context, id snowflake.Snowflake) (*proto.Message, error) {
@@ -117,7 +118,8 @@ func (r *RoomBase) Send(ctx scope.Context, session proto.Session, message proto.
 	}
 	r.log.post(msg)
 	msg = maybeTruncate(msg)
-	return *msg, r.broadcast(ctx, proto.SendType, msg, session)
+	event := (*proto.SendEvent)(msg)
+	return *msg, r.broadcast(ctx, proto.SendType, event, session)
 }
 
 func (r *RoomBase) EditMessage(

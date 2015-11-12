@@ -859,7 +859,7 @@ func (s *session) handlePMInitiateCommand(msg *proto.PMInitiateCommand) *respons
 	}
 	pmID, err := s.backend.PMTracker().Initiate(s.ctx, s.kms, s.client, msg.UserID)
 	if err != nil {
-		return &response{err: err}
+		return &response{err: fmt.Errorf("pm initiate: %s", err)}
 	}
 	// TODO: NotifyUser
 	return &response{

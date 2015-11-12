@@ -97,6 +97,8 @@ type RoomBinding struct {
 	*Room
 }
 
+func (rb *RoomBinding) ID() string { return rb.Name }
+
 func (rb *RoomBinding) GetMessage(ctx scope.Context, id snowflake.Snowflake) (*proto.Message, error) {
 	var msg Message
 

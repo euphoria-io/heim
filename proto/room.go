@@ -38,6 +38,7 @@ func (l Listing) Less(i, j int) bool {
 // A Room is a nexus of communication. Users connect to a Room via
 // Session and interact.
 type Room interface {
+	ID() string
 	GetMessage(scope.Context, snowflake.Snowflake) (*Message, error)
 	Latest(scope.Context, int, snowflake.Snowflake) ([]Message, error)
 

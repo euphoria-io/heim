@@ -85,6 +85,40 @@ func (s *Server) handleRobotsTxt(w http.ResponseWriter, r *http.Request) {
 	s.serveGzippedFile(w, r, "robots.txt", false)
 }
 
+func (s *Server) resolveRoom(ctx scope.Context, prefix, roomName string, client *proto.Client) (room proto.Room, err error) {
+	// TODO: support room creation?
+	switch prefix {
+	case "pm:":
+		var (
+			sf      snowflake.Snowflake
+			roomKey *security.ManagedKey
+		)
+		if err := sf.FromString(roomName); err != nil {
+			return nil, proto.ErrRoomNotFound
+		}
+		room, roomKey, err = s.b.PMTracker().Room(ctx, s.kms, sf, client)
+		if err != nil {
+			return nil, err
+		}
+		client.Authorization.AddMessageKey("pm:"+roomName, roomKey)
+		return room, nil
+	case "":
+		room, err = s.b.GetRoom(ctx, roomName)
+		if s.allowRoomCreation && err == proto.ErrRoomNotFound {
+			room, err = s.b.CreateRoom(ctx, s.kms, false, roomName)
+		}
+		if err != nil {
+			return nil, err
+		}
+		if err := client.RoomAuthorize(ctx, room); err != nil {
+			return nil, err
+		}
+		return room, nil
+	default:
+		return nil, proto.ErrRoomNotFound
+	}
+}
+
 func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
 	ctx := s.rootCtx.Fork()
 
@@ -96,7 +130,12 @@ func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client := &proto.Client{Agent: agent}
+	client := &proto.Client{
+		Agent: agent,
+		Authorization: proto.Authorization{
+			ClientKey: agentKey,
+		},
+	}
 	client.FromRequest(ctx, r)
 
 	// Look up account associated with agent.
@@ -116,60 +155,29 @@ func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Resolve the room.
-	// TODO: support room creation?
 	prefix := mux.Vars(r)["prefix"]
 	roomName := mux.Vars(r)["room"]
-
-	var room proto.Room
-	switch prefix {
-	case "pm:":
-		var (
-			sf      snowflake.Snowflake
-			roomKey *security.ManagedKey
-		)
-		if err := sf.FromString(roomName); err != nil {
-			http.Error(w, "404 page not found", http.StatusNotFound)
-			return
-		}
-		room, roomKey, err = s.b.PMTracker().Room(ctx, s.kms, sf, client)
+	room, err := s.resolveRoom(ctx, prefix, roomName, client)
+	if err != nil {
 		switch err {
-		case nil:
-			client.Authorization.AddMessageKey("pm:"+roomName, roomKey)
-			s.serveRoomWebsocket(ctx, roomName, room, cookie, client, agentKey, w, r)
-		case proto.ErrPMNotFound:
+		case proto.ErrAccessDenied:
+			http.Error(w, "401 unauthorized", http.StatusUnauthorized)
+			return
+		case proto.ErrRoomNotFound:
 			http.Error(w, "404 page not found", http.StatusNotFound)
 			return
 		default:
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-	case "":
-		room, err = s.b.GetRoom(ctx, roomName)
-		if s.allowRoomCreation && err == proto.ErrRoomNotFound {
-			room, err = s.b.CreateRoom(ctx, s.kms, false, roomName)
-		}
-		if err != nil {
-			if err == proto.ErrRoomNotFound {
-				http.Error(w, "404 page not found", http.StatusNotFound)
-				return
-			}
-			logging.Logger(ctx).Printf("room error: %s", err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		if err := client.RoomAuthorize(ctx, room); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		s.serveRoomWebsocket(ctx, roomName, room, cookie, client, agentKey, w, r)
-	default:
-		http.Error(w, "404 page not found", http.StatusNotFound)
-		return
 	}
+
+	// Serve the room websocket.
+	s.serveRoomWebsocket(ctx, room, cookie, client, agentKey, w, r)
 }
 
 func (s *Server) serveRoomWebsocket(
-	ctx scope.Context, roomName string, room proto.Room,
+	ctx scope.Context, room proto.Room,
 	cookie *http.Cookie, client *proto.Client, agentKey *security.ManagedKey,
 	w http.ResponseWriter, r *http.Request) {
 
@@ -187,7 +195,7 @@ func (s *Server) serveRoomWebsocket(
 	defer conn.Close()
 
 	// Serve the session.
-	session := newSession(ctx, s, conn, roomName, room, client, agentKey)
+	session := newSession(ctx, s, conn, room, client, agentKey)
 	if err = session.serve(); err != nil {
 		// TODO: error handling
 		logging.Logger(ctx).Printf("session serve error: %s", err)

@@ -127,10 +127,10 @@ type session struct {
 
 func newSession(
 	ctx scope.Context, server *Server, conn *websocket.Conn,
-	roomName string, room proto.Room, client *proto.Client, agentKey *security.ManagedKey) *session {
+	room proto.Room, client *proto.Client, agentKey *security.ManagedKey) *session {
 
 	nextID := atomic.AddUint64(&sessionIDCounter, 1)
-	sessionCount.WithLabelValues(roomName).Set(float64(nextID))
+	sessionCount.WithLabelValues(room.ID()).Set(float64(nextID))
 	sessionID := fmt.Sprintf("%x-%08x", client.Agent.IDString(), nextID)
 	ctx = logging.LoggingContext(ctx, os.Stdout, fmt.Sprintf("[%s] ", sessionID))
 
@@ -144,7 +144,7 @@ func newSession(
 		agentKey:  agentKey,
 		serverID:  server.ID,
 		serverEra: server.Era,
-		roomName:  roomName,
+		roomName:  room.ID(),
 		room:      room,
 		backend:   server.b,
 		kms:       server.kms,

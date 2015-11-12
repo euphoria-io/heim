@@ -1,6 +1,7 @@
 package backend
 
 import (
+	"bytes"
 	"crypto/hmac"
 	"crypto/sha1"
 	"encoding/base32"
@@ -71,11 +72,13 @@ func (s *serverUnderTest) Close() {
 }
 
 func (s *serverUnderTest) openWebsocket(roomName string, cookies []*http.Cookie, params url.Values) (proto.Room, *websocket.Conn, *http.Response) {
-	room, err := s.backend.GetRoom(scope.New(), roomName)
-	if err == proto.ErrRoomNotFound {
-		room, err = s.backend.CreateRoom(scope.New(), s.app.kms, false, roomName)
-		So(err, ShouldBeNil)
-	}
+	/*
+		room, err := s.backend.GetRoom(scope.New(), roomName)
+		if err == proto.ErrRoomNotFound {
+			room, err = s.backend.CreateRoom(scope.New(), s.app.kms, false, roomName)
+			So(err, ShouldBeNil)
+		}
+	*/
 	headers := http.Header{}
 	for _, cookie := range cookies {
 		headers.Add("Cookie", cookie.String())
@@ -90,6 +93,32 @@ func (s *serverUnderTest) openWebsocket(roomName string, cookies []*http.Cookie,
 			body, _ := ioutil.ReadAll(resp.Body)
 			So(string(body), ShouldEqual, "")
 		}
+	}
+	So(err, ShouldBeNil)
+
+	// Mimic the ws request handler so we can resolve the room.
+	headersBuf := &bytes.Buffer{}
+	So(headers.Write(headersBuf), ShouldBeNil)
+	r, err := http.NewRequest("GET", url, headersBuf)
+	So(err, ShouldBeNil)
+	ctx := scope.New()
+	agent, _, agentKey, err := getAgent(ctx, s.app, r)
+	So(err, ShouldBeNil)
+	client := &proto.Client{
+		Agent: agent,
+		Authorization: proto.Authorization{
+			ClientKey: agentKey,
+		},
+	}
+	client.FromRequest(ctx, r)
+	var prefix string
+	if strings.HasPrefix(roomName, "pm:") {
+		prefix = "pm:"
+		roomName = roomName[3:]
+	}
+	room, err := s.app.resolveRoom(scope.New(), prefix, roomName, client)
+	if err == proto.ErrRoomNotFound {
+		err = fmt.Errorf("roomName: %s:%s", prefix, roomName)
 	}
 	So(err, ShouldBeNil)
 	return room, conn, resp
@@ -487,36 +516,34 @@ func IntegrationTest(t *testing.T, factory proto.BackendFactory) {
 	_ = runTestWithFactory
 
 	// Internal API tests
-	/*
-		runTest("Accounts low-level API", testAccountsLowLevel)
-		runTest("Managers low-level API", testManagersLowLevel)
-		runTest("Staff low-level API", testStaffLowLevel)
-		runTest("Jobs API", testJobsLowLevel)
-		runTest("Emails API", testEmailsLowLevel)
+	runTest("Accounts low-level API", testAccountsLowLevel)
+	runTest("Managers low-level API", testManagersLowLevel)
+	runTest("Staff low-level API", testStaffLowLevel)
+	runTest("Jobs API", testJobsLowLevel)
+	runTest("Emails API", testEmailsLowLevel)
 
-		// Websocket tests
-		runTest("Lurker", testLurker)
-		runTest("Broadcast", testBroadcast)
-		runTest("Threading", testThreading)
-		runTest("Authentication", testAuthentication)
-		runTestWithFactory("Presence", testPresence)
-		runTest("Deletion", testDeletion)
-		runTest("Account login", testAccountLogin)
-		runTest("Account registration", testAccountRegistration)
-		runTest("Account change password", testAccountChangePassword)
-		runTest("Account reset password", testAccountResetPassword)
-		runTest("Account change name", testAccountChangeName)
-		runTest("Room creation", testRoomCreation)
-		runTest("Room grants", testRoomGrants)
-		runTest("Room not found", testRoomNotFound)
-		runTest("KeepAlive", testKeepAlive)
-		runTest("Bans", testBans)
-		runTest("Message truncation", testMessageTruncation)
-		runTest("Bots and humans", testBotsAndHumans)
-		runTest("Staff OTP", testStaffOTP)
-		runTest("Staff invasion", testStaffInvasion)
-		runTest("NotifyUser", testNotifyUser)
-	*/
+	// Websocket tests
+	runTest("Lurker", testLurker)
+	runTest("Broadcast", testBroadcast)
+	runTest("Threading", testThreading)
+	runTest("Authentication", testAuthentication)
+	runTestWithFactory("Presence", testPresence)
+	runTest("Deletion", testDeletion)
+	runTest("Account login", testAccountLogin)
+	runTest("Account registration", testAccountRegistration)
+	runTest("Account change password", testAccountChangePassword)
+	runTest("Account reset password", testAccountResetPassword)
+	runTest("Account change name", testAccountChangeName)
+	runTest("Room creation", testRoomCreation)
+	runTest("Room grants", testRoomGrants)
+	runTest("Room not found", testRoomNotFound)
+	runTest("KeepAlive", testKeepAlive)
+	runTest("Bans", testBans)
+	runTest("Message truncation", testMessageTruncation)
+	runTest("Bots and humans", testBotsAndHumans)
+	runTest("Staff OTP", testStaffOTP)
+	runTest("Staff invasion", testStaffInvasion)
+	runTest("NotifyUser", testNotifyUser)
 	runTest("PMs", testPMs)
 }
 
@@ -2821,7 +2848,12 @@ func testNotifyUser(s *serverUnderTest) {
 }
 
 func testPMs(s *serverUnderTest) {
-	Convey("Initiate and interact", func() {
+	Convey("Initiate with agent and interact", func() {
+		// TODO: remove when psql implementation is ready
+		if s.backend.PMTracker() == nil {
+			return
+		}
+
 		// Create initiator
 		ctx := scope.New()
 		kms := s.app.kms
@@ -2845,7 +2877,6 @@ func testPMs(s *serverUnderTest) {
 		// Log in and invite recipient to PM
 		c.send("2", "login", `{"namespace":"email","id":"logan%s","password":"hunter2"}`, nonce)
 		c.expect("2", "login-reply", `{"success":true,"account_id":"%s"}`, logan.ID())
-		c.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
 		c.Close()
 		c = s.Reconnect(c, "pminvite2")
 		c.expectPing()
@@ -2856,24 +2887,31 @@ func testPMs(s *serverUnderTest) {
 
 		// Reconnect to PM room
 		roomName := fmt.Sprintf("pm:%s", capture["pm_id"])
+		r.accountHasAccess = true
 		r = s.Reconnect(r, roomName)
 		defer r.Close()
 		r.expectPing()
 		r.expectSnapshot(s.backend.Version(), nil, nil)
-		r.send("1", "send", `{"content":"hi"}`)
-		id := `{"session_id":"*","id":"*","name":"host","server_id":"*","server_era":"*"}`
-		capture = r.expect("1", "send-reply", `{"id":"*","time":"*","sender":%s,"content":"*","encryption_key_id":"*"}`, id)
+		r.send("1", "nick", `{"name":"r"}`)
+		r.expect("1", "nick-reply", `{"session_id":"*","id":"*","from":"","to":"r"}`)
+		r.send("2", "send", `{"content":"hi"}`)
+		id := `{"session_id":"*","id":"*","name":"r","server_id":"*","server_era":"*"}`
+		capture = r.expect("2", "send-reply", `{"id":"*","time":"*","sender":%s,"content":"*","encryption_key_id":"*"}`, id)
 		msg := fmt.Sprintf(`{"id":"%s","time":%f,"sender":%s,"content":"hi","encryption_key_id":"%s"}`,
 			capture["id"], capture["time"], id, capture["encryption_key_id"])
-		So(capture["encryption_key_id"], ShouldEqual, roomName)
+		So(capture["encryption_key_id"], ShouldEqual, "v1/"+roomName)
 
+		c.accountHasAccess = true
 		c = s.Reconnect(c, roomName)
 		defer c.Close()
 		c.expectPing()
 		c.expectSnapshot(s.backend.Version(), []string{id}, []string{msg})
-		c.send("1", "send", `{"content":"hello"}`)
-		c.expect("1", "send-reply", `{"id":"*","time":"*","sender":"*","content":"*","encryption_key_id":"%s"}`, capture["encryption_key_id"])
-		r.expect("", "join-event", `{}`)
-		r.expect("", "send-event", `{}`)
+		c.send("1", "nick", `{"name":"c"}`)
+		c.expect("1", "nick-reply", `{"session_id":"*","id":"*","from":"","to":"c"}`)
+		c.send("2", "send", `{"content":"hello"}`)
+		c.expect("2", "send-reply", `{"id":"*","time":"*","sender":"*","content":"*","encryption_key_id":"%s"}`, capture["encryption_key_id"])
+		r.expect("", "join-event", `{"session_id":"*","id":"*","name":"","server_id":"*","server_era":"*"}`)
+		r.expect("", "nick-event", `{"session_id":"*","id":"*","from":"","to":"c"}`)
+		r.expect("", "send-event", `{"id":"*","time":"*","sender":"*","content":"hello","encryption_key_id":"*"}`)
 	})
 }

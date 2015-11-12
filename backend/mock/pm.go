@@ -3,6 +3,7 @@ package mock
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/security"
@@ -22,6 +23,11 @@ func (t *PMTracker) Initiate(ctx scope.Context, kms security.KMS, client *proto.
 		return 0, err
 	}
 
+	pmKey, _, err := pm.Access(ctx, t.b, kms, client)
+	if err != nil {
+		return 0, err
+	}
+
 	t.m.Lock()
 	defer t.m.Unlock()
 
@@ -30,9 +36,14 @@ func (t *PMTracker) Initiate(ctx scope.Context, kms security.KMS, client *proto.
 	}
 	t.pms[pm.ID] = &PM{
 		RoomBase: RoomBase{
-			name:    pm.ID.String(), // TODO: figure out PM room naming
+			name:    pm.ID.String(),
 			version: t.b.version,
 			log:     newMemLog(),
+			messageKey: &roomMessageKey{
+				id:        fmt.Sprintf("pm:%s", pm.ID),
+				timestamp: time.Now(),
+				key:       *pmKey,
+			},
 		},
 		pm: pm,
 	}
@@ -45,8 +56,12 @@ func (t *PMTracker) Room(ctx scope.Context, kms security.KMS, pmID snowflake.Sno
 		return nil, nil, proto.ErrPMNotFound
 	}
 
-	_ = pm
-	return nil, nil, fmt.Errorf("not implemented")
+	pmKey, _, err := pm.pm.Access(ctx, t.b, kms, client)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return pm, pmKey, nil
 }
 
 type PM struct {

@@ -101,7 +101,8 @@ func DecryptMessage(msg Message, auths map[string]*security.ManagedKey) (Message
 
 	auth, ok := auths[keyID]
 	if !ok {
-		return msg, nil
+		//return msg, nil
+		return Message{}, ErrAccessDenied
 	}
 
 	if auth.Encrypted() {
@@ -110,7 +111,6 @@ func DecryptMessage(msg Message, auths map[string]*security.ManagedKey) (Message
 
 	parts := strings.Split(msg.Content, "/")
 	if len(parts) != 2 {
-		fmt.Printf("bad content: %s\n", msg.Content)
 		return msg, fmt.Errorf("message corrupted")
 	}
 

@@ -779,6 +779,7 @@ func (b *Backend) AccountManager() proto.AccountManager { return &AccountManager
 func (b *Backend) AgentTracker() proto.AgentTracker     { return &AgentTrackerBinding{b} }
 func (b *Backend) EmailTracker() proto.EmailTracker     { return &EmailTracker{b} }
 func (b *Backend) Jobs() jobs.JobService                { return &JobService{b} }
+func (b *Backend) PMTracker() proto.PMTracker           { return nil }
 
 func (b *Backend) jobQueueListener() *jobQueueListener {
 	b.Lock()
