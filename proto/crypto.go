@@ -66,7 +66,7 @@ func EncryptMessage(msg *Message, keyID string, key *security.ManagedKey) error 
 		return err
 	}
 
-	// TODO: verify msg.ID makes sense as nonce
+	// TODO: incorporate last edit ID into nonce
 	nonce := []byte(msg.ID.String())
 	data := []byte(msg.Sender.ID)
 
