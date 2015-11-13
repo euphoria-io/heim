@@ -2831,8 +2831,9 @@ func testNotifyUser(s *serverUnderTest) {
 		conn1.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, cammie.ID())
 		conn1.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
 
-		// Same cookie, same room should be disconnected
+		// Same cookie, same room should receive a part-event and be disconnected
 		conn2.expect("", "login-event", `{"account_id": "%s"}`, cammie.ID())
+		conn2.expect("", "part-event", `{"session_id":"%s", "id":"%s", "server_id":"*", "server_era":"*"}`, conn1.id(), conn1.sessionID)
 		conn2.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
 
 		// Same cookie, different room should be disconnected
