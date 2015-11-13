@@ -387,7 +387,7 @@ body.page {
 
 body.welcome {
   // thanks to http://subtlepatterns.com/symphony/
-  background: data-uri('./symphony.png');
+  background: data-uri('./res/symphony.png');
 
   @keyframes raise {
     0% {
@@ -518,11 +518,11 @@ body.welcome {
       }
 
       .chat {
-        .icon('./feature-chat.svg', 42px, 13px, .85);
+        .icon('./res/feature-chat.svg', 42px, 13px, .85);
       }
 
       .instant {
-        .icon('./feature-instant.svg', 38px, 13px, .85);
+        .icon('./res/feature-instant.svg', 38px, 13px, .85);
       }
 
       .inner {
@@ -643,7 +643,7 @@ body.about {
       right: -100%;
       top: -55px;
       bottom: 0;
-      background: linear-gradient(to bottom, transparent, fade(#ebf2eb, 50%)), data-uri('./symphony.png');
+      background: linear-gradient(to bottom, transparent, fade(#ebf2eb, 50%)), data-uri('./res/symphony.png');
       border-bottom: 1px solid fade(black, 25%);
       z-index: -1;
     }
@@ -796,15 +796,15 @@ body.about {
       }
 
       &.welcoming:before {
-        background: data-uri('./city-sunrise.svg') no-repeat center center;
+        background: data-uri('./res/city-sunrise.svg') no-repeat center center;
       }
 
       &.diverse:before {
-        background: data-uri('./rainbow.svg') no-repeat center center;
+        background: data-uri('./res/rainbow.svg') no-repeat center center;
       }
 
       &.meaningful:before {
-        background: data-uri('./milky-way.svg') no-repeat center center;
+        background: data-uri('./res/milky-way.svg') no-repeat center center;
       }
 
       @media (max-width: @mobile-breakpoint) {
@@ -873,7 +873,7 @@ body.about {
   }
 
   .logo {
-    background: data-uri('./home-outline.svg') no-repeat center center;
+    background: data-uri('./res/home-outline.svg') no-repeat center center;
     background-size: contain;
     text-indent: -9999px;
     z-index: 5;
