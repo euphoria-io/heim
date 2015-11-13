@@ -48,8 +48,7 @@ export default React.createClass({
       strength = 'weak'
       message = 'too simple — add more!'
     } else {
-      strength = 'strong'
-      message = 'strong password'
+      strength = 'ok'
     }
     this.setState({strength, message})
     this.props.onModify({

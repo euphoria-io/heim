@@ -24,10 +24,10 @@ export function validateNewPassword(values, strict) {
     if (strict) {
       error = 'please enter a password'
     }
-  } else if (values.newPassword.strength !== 'strong') {
+  } else if (values.newPassword.strength !== 'ok') {
     error = 'please choose a stronger password'
   }
   return {newPassword: error}
 }
 
-export const minPasswordEntropy = 55
+export const minPasswordEntropy = 42
