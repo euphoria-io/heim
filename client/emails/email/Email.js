@@ -23,7 +23,7 @@ export default function Email(props) {
       }}>
         <Box width="100%" height="100%" bgcolor={props.bgcolor}>
           <Item align="center" valign="top">
-            <Box width="600" align="center" cellPadding={props.cellPadding} cellSpacing={props.cellSpacing}>
+            <Box width="600" align="center" cellPadding={props.cellPadding} cellSpacing={props.cellSpacing} style={props.style}>
               {props.children}
             </Box>
           </Item>
@@ -38,5 +38,6 @@ Email.propTypes = {
   bgcolor: React.PropTypes.string,
   cellPadding: React.PropTypes.number,
   cellSpacing: React.PropTypes.number,
+  style: React.PropTypes.object,
   children: React.PropTypes.node,
 }
