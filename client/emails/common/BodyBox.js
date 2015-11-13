@@ -5,7 +5,7 @@ import { Item, Box } from '../email'
 
 export default function BodyBox({children}) {
   return (
-    <Item style={{paddingTop: '20px'}}>
+    <Item style={{paddingTop: '12px'}}>
       <Box cellSpacing={20} width="100%" bgcolor="white" style={{borderBottom: '3px solid #ccc'}}>
         {children}
       </Box>
