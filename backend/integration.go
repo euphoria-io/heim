@@ -2795,7 +2795,7 @@ func testNotifyUser(s *serverUnderTest) {
 
 		// Consume join-events
 		conn1.expect("", "join-event",
-			`{"session_id":"%s","id":"*","name":"","server_id":"*","server_era":"*","is_staff":false,"is_manager":false}`, conn2.sessionID)
+			`{"session_id":"%s","id":"*","name":"","server_id":"*","server_era":"*"}`, conn2.sessionID)
 
 		// Create a third connection with a different cookie
 		conn3 := s.Connect("notify1")
@@ -2805,9 +2805,9 @@ func testNotifyUser(s *serverUnderTest) {
 
 		// Consume join-events
 		conn1.expect("", "join-event",
-			`{"session_id":"%s","id":"*","name":"","server_id":"*","server_era":"*","is_staff":false,"is_manager":false}`, conn3.sessionID)
+			`{"session_id":"%s","id":"*","name":"","server_id":"*","server_era":"*"}`, conn3.sessionID)
 		conn2.expect("", "join-event",
-			`{"session_id":"%s","id":"*","name":"","server_id":"*","server_era":"*","is_staff":false,"is_manager":false}`, conn3.sessionID)
+			`{"session_id":"%s","id":"*","name":"","server_id":"*","server_era":"*"}`, conn3.sessionID)
 
 		// Create a connection to a different room, same cookie
 		conn4 := conn1.clone()
@@ -2824,7 +2824,7 @@ func testNotifyUser(s *serverUnderTest) {
 
 		// Consume join-events
 		conn4.expect("", "join-event",
-			`{"session_id":"%s","id":"*","name":"","server_id":"*","server_era":"*","is_staff":false,"is_manager":false}`, conn5.sessionID)
+			`{"session_id":"%s","id":"*","name":"","server_id":"*","server_era":"*"}`, conn5.sessionID)
 
 		// Log in on first connection, expect a login-reply and disconnect-event
 		conn1.send("1", "login", `{"namespace":"email","id":"cammie%s","password":"cammiepass"}`, nonce)
