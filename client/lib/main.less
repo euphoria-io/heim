@@ -1829,16 +1829,14 @@ iframe.js {
 }
 
 .dialog {
+  display: flex;
+  flex-direction: column;
   width: 415px;
   padding: @dialog-padding;
+  margin: 5px;
   .dialog-shape();
   background: white;
   overflow: hidden;
-}
-
-.account-auth-dialog, .account-settings-dialog {
-  display: flex;
-  flex-direction: column;
   user-select: none;
 
   .spacer {
@@ -1917,14 +1915,16 @@ iframe.js {
         }
       }
     }
+  }
+}
 
-    .email-icon {
-      background: data-uri('../res/email.svg') no-repeat center center;
-      background-size: contain;
-      width: 300px;
-      height: 200px;
-      margin: 20px auto 30px;
-    }
+.account-auth-dialog, .account-settings-dialog {
+  .email-icon {
+    background: data-uri('../res/email.svg') no-repeat center center;
+    background-size: contain;
+    width: 300px;
+    height: 200px;
+    margin: 20px auto 30px;
   }
 }
 

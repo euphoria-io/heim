@@ -3,9 +3,7 @@ import classNames from 'classnames'
 import Reflux from 'reflux'
 
 import accountAuthFlow from '../stores/account-auth-flow'
-import Popup from './popup'
-import FastButton from './fast-button'
-import Spinner from './spinner'
+import Dialog from './dialog'
 import { Form, CheckField, TextField, PasswordStrengthField, ErrorMessage } from './forms'
 import { validateEmail, validatePassword, validateNewPassword, minPasswordEntropy } from './form-validators'
 import heimURL from '../heim-url'
@@ -175,19 +173,9 @@ export default React.createClass({
     }
 
     return (
-      <Popup className="dialog account-auth-dialog">
-        <div className="top-line">
-          <div className="logo">
-            <div className="emoji emoji-euphoria" />
-            euphoria
-          </div>
-          <div className="title">{title}</div>
-          <Spinner visible={flow.working} />
-          <div className="spacer" />
-          <FastButton className="close" onClick={this.props.onClose} />
-        </div>
+      <Dialog className="account-auth-dialog" title={title} working={flow.working} onClose={this.props.onClose}>
         {dialogContent}
-      </Popup>
+      </Dialog>
     )
   },
 })

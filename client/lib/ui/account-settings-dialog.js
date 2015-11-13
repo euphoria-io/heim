@@ -3,9 +3,7 @@ import Reflux from 'reflux'
 
 import accountSettingsFlow from '../stores/account-settings-flow'
 import chat from '../stores/chat'
-import Popup from './popup'
-import FastButton from './fast-button'
-import Spinner from './spinner'
+import Dialog from './dialog'
 import { Form, TextField, FieldLabelContainer, PasswordStrengthField } from './forms'
 import { validateEmail, validatePassword, validateNewPassword, minPasswordEntropy } from './form-validators'
 import hueHash from '../hue-hash'
@@ -214,19 +212,9 @@ export default React.createClass({
     }
 
     return (
-      <Popup className="dialog account-settings-dialog">
-        <div className="top-line">
-          <div className="logo">
-            <div className="emoji emoji-euphoria" />
-            euphoria
-          </div>
-          <div className="title">{title}</div>
-          <Spinner visible={flow.working} />
-          <div className="spacer" />
-          <FastButton className="close" onClick={this.props.onClose} />
-        </div>
+      <Dialog className="account-settings-dialog" title={title} working={flow.working} onClose={this.props.onClose}>
         {dialogContent}
-      </Popup>
+      </Dialog>
     )
   },
 })

@@ -330,12 +330,8 @@ export default React.createClass({
           </Bubble>}
           {this.templateHook('page-bottom')}
         </Panner>
-        {this.state.ui.modalDialog === 'account-auth' && <div className="dim-shade dialog-cover fill">
-          <AccountAuthDialog onClose={ui.closeAccountAuthDialog} />
-        </div>}
-        {this.state.ui.modalDialog === 'account-settings' && <div className="dim-shade dialog-cover fill">
-          <AccountSettingsDialog onClose={ui.closeAccountSettingsDialog} />
-        </div>}
+        {this.state.ui.modalDialog === 'account-auth' && <AccountAuthDialog onClose={ui.closeAccountAuthDialog} />}
+        {this.state.ui.modalDialog === 'account-settings' && <AccountSettingsDialog onClose={ui.closeAccountSettingsDialog} />}
       </div>
     )
   },
