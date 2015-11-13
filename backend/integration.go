@@ -208,6 +208,11 @@ type testConn struct {
 	debugOn          bool
 }
 
+func (tc *testConn) clone() *testConn {
+	tc2 := *tc
+	return &tc2
+}
+
 func (tc *testConn) debug(on bool) { tc.debugOn = on }
 func (tc *testConn) id() string    { return tc.userID }
 
@@ -2782,7 +2787,7 @@ func testNotifyUser(s *serverUnderTest) {
 		conn1.expectSnapshot(s.backend.Version(), nil, nil)
 
 		// Create a second connection with the same cookie
-		conn2 := conn1
+		conn2 := conn1.clone()
 		s.Reconnect(conn2, "notify1")
 		defer conn2.Close()
 		conn2.expectPing()
@@ -2805,7 +2810,7 @@ func testNotifyUser(s *serverUnderTest) {
 			`{"session_id":"%s","id":"*","name":"","server_id":"*","server_era":"*","is_staff":false,"is_manager":false}`, conn3.sessionID)
 
 		// Create a connection to a different room, same cookie
-		conn4 := conn1
+		conn4 := conn1.clone()
 		s.Reconnect(conn4, "notify2")
 		defer conn4.Close()
 		conn4.expectPing()
