@@ -2829,14 +2829,14 @@ func testNotifyUser(s *serverUnderTest) {
 		// Log in on first connection, expect a login-reply and disconnect-event
 		conn1.send("1", "login", `{"namespace":"email","id":"cammie%s","password":"cammiepass"}`, nonce)
 		conn1.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, cammie.ID())
-		conn1.expect("", "disconnect-event", `{"reason":"successful login"}`)
+		conn1.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
 
 		// Same cookie, same room should be disconnected
 		conn2.expect("", "login-event", `{"account_id": "%s"}`, cammie.ID())
-		conn2.expect("", "disconnect-event", `{"reason":"successful login"}`)
+		conn2.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
 
 		// Same cookie, different room should be disconnected
 		conn4.expect("", "login-event", `{"account_id": "%s"}`, cammie.ID())
-		conn4.expect("", "disconnect-event", `{"reason":"successful login"}`)
+		conn4.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
 	})
 }
