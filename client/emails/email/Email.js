@@ -23,7 +23,7 @@ export default function Email(props) {
       }}>
         <Box width="100%" height="100%" bgcolor={props.bgcolor}>
           <Item align="center" valign="top">
-            <Box width="600" cellPadding={props.cellPadding} cellSpacing={props.cellSpacing}>
+            <Box width="600" align="center" cellPadding={props.cellPadding} cellSpacing={props.cellSpacing}>
               {props.children}
             </Box>
           </Item>
