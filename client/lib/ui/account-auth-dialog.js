@@ -92,7 +92,7 @@ export default React.createClass({
               <div className="spacer" />
               <ErrorMessage name="agreements" />
               <ErrorMessage name="tryAgain" />
-              {flow.showSignInButton && <button type="button" tabIndex="4" className="open-sign-in minor-action" onClick={accountAuthFlow.openSignIn}>back to sign in</button>}
+              {flow.showSignInButton && <button type="button" tabIndex="4" className="open-sign-in minor-action" onClick={accountAuthFlow.openSignIn}>back<span className="long"> to sign in</span></button>}
               <button type="submit" tabIndex="3" className="register major-action">register</button>
             </div>
           </div>
@@ -103,8 +103,8 @@ export default React.createClass({
           <div className="bottom">
             <div className="action-line">
               <div className="spacer" />
-              <button type="button" tabIndex="4" className="open-sign-in minor-secondary-action" onClick={accountAuthFlow.openSignIn}>back to sign in</button>
-              <button type="submit" tabIndex="3" className="send-reminder major-secondary-action">{flow.passwordResetError || 'send a password reset email'}</button>
+              <button type="button" tabIndex="4" className="open-sign-in minor-secondary-action" onClick={accountAuthFlow.openSignIn}>back<span className="long"> to sign in</span></button>
+              <button type="submit" tabIndex="3" className="send-reminder major-secondary-action">{flow.passwordResetError || <span>send a <span className="long">password </span>reset email</span>}</button>
             </div>
           </div>
         )
@@ -113,7 +113,7 @@ export default React.createClass({
         bottom = (
           <div className="bottom">
             <div className="action-line">
-              <button type="button" tabIndex="4" className={classNames('forgot', 'minor-secondary-action', flow.highlightForgot && 'highlight')} disabled={flow.working} onClick={this.onForgotClick}>forgot password?</button>
+              <button type="button" tabIndex="4" className={classNames('forgot', 'minor-secondary-action', flow.highlightForgot && 'highlight')} disabled={flow.working} onClick={this.onForgotClick}>forgot<span className="long"> password</span>?</button>
               <div className="spacer" />
               <button key="register" type="button" tabIndex="4" className="open-register minor-action" onClick={this.onRegisterClick}>register</button>
               <button key="sign-in" type="submit" tabIndex="3" className="sign-in major-action">sign in</button>

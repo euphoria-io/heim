@@ -99,8 +99,8 @@ export default React.createClass({
           <div className="bottom">
             <div className="action-line">
               <div className="spacer" />
-              <button type="button" tabIndex="3" className="minor-secondary-action" onClick={accountSettingsFlow.openSettings}>back to settings</button>
-              <button type="submit" tabIndex="2" className="register major-action">change account name</button>
+              <button type="button" tabIndex="3" className="minor-secondary-action" onClick={accountSettingsFlow.openSettings}>back<span className="long"> to settings</span></button>
+              <button type="submit" tabIndex="2" className="register major-action">change <span className="long">account </span>name</button>
             </div>
           </div>
         </Form>
@@ -131,8 +131,8 @@ export default React.createClass({
           <div className="bottom">
             <div className="action-line">
               <div className="spacer" />
-              <button type="button" tabIndex="4" className="minor-secondary-action" onClick={accountSettingsFlow.openSettings}>back to settings</button>
-              <button type="submit" tabIndex="3" className="register major-action">change email address</button>
+              <button type="button" tabIndex="4" className="minor-secondary-action" onClick={accountSettingsFlow.openSettings}>back<span className="long"> to settings</span></button>
+              <button type="submit" tabIndex="3" className="register major-action">change email<span className="long"> address</span></button>
             </div>
           </div>
         </Form>
@@ -176,8 +176,8 @@ export default React.createClass({
           <div className="bottom">
             <div className="action-line">
               <div className="spacer" />
-              <button type="button" tabIndex="4" className="minor-secondary-action" onClick={accountSettingsFlow.openSettings}>back to settings</button>
-              <button type="submit" tabIndex="3" className="register major-action">change account password</button>
+              <button type="button" tabIndex="4" className="minor-secondary-action" onClick={accountSettingsFlow.openSettings}>back<span className="long"> to settings</span></button>
+              <button type="submit" tabIndex="3" className="register major-action">change <span className="long">account </span>password</button>
             </div>
           </div>
         </Form>
@@ -193,18 +193,18 @@ export default React.createClass({
                 <div className="big-nick" style={{background: 'hsl(' + hueHash.hue(account.get('name')) + ', 65%, 85%)'}}>{account.get('name')}</div>
               </div>
               <div className="spacer" />
-              <button type="button" tabIndex="1" className="major-secondary-action" onClick={this.openChangeName}>change name</button>
+              <button type="button" tabIndex="1" className="major-secondary-action" onClick={this.openChangeName}>change<span className="long"> name</span></button>
             </div>
           </FieldLabelContainer>
           <FieldLabelContainer label="email address">
             <div className="field-action-box">
               <div className="inner">{account.get('email')}</div>
               <div className="spacer" />
-              <button type="button" tabIndex="2" className="major-secondary-action" onClick={accountSettingsFlow.openChangeEmail}>change email</button>
+              <button type="button" tabIndex="2" className="major-secondary-action" onClick={accountSettingsFlow.openChangeEmail}>change<span className="long"> email</span></button>
             </div>
           </FieldLabelContainer>
           <FieldLabelContainer label="password">
-            <button type="button" tabIndex="3" className="major-secondary-action" onClick={accountSettingsFlow.openChangePassword}>change account password</button>
+            <button type="button" tabIndex="3" className="major-secondary-action" onClick={accountSettingsFlow.openChangePassword}>change <span className="long">account </span>password</button>
             {flow.passwordChanged && <span className="password-changed">saved</span>}
           </FieldLabelContainer>
         </Form>
