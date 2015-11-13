@@ -12,7 +12,7 @@ module.exports = (
       </Item>
       <Item align="center">
         <Link href="{{.RoomURL}}">
-          <Text {...textDefaults} fontSize={32} color={null}>&{'{{.RoomName}}'}</Text>
+          <Text {...textDefaults} fontSize={28} color={null}>&{'{{.RoomName}}'}</Text>
         </Link>
       </Item>
     </TopBubbleBox>
