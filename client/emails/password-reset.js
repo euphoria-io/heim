@@ -8,7 +8,7 @@ module.exports = (
   <StandardEmail>
     <TopBubbleBox logo="logo-warning.png" padding={15}>
       <Item align="center">
-        <Text {...textDefaults} fontSize={24}>would you like to reset your password?</Text>
+        <Text {...textDefaults} fontSize={20}>would you like to reset your password?</Text>
       </Item>
     </TopBubbleBox>
     <BodyBox>
