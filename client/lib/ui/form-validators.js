@@ -1,33 +1,29 @@
 export function validateEmail(values, strict) {
+  const name = Object.keys(values)[0]
+  const value = values[name]
   let error
-  if (!values.email) {
+  if (!value) {
     if (strict) {
       error = 'please enter an email'
     }
-  } else if (!/.+@.+/.test(values.email)) {
+  } else if (!/.+@.+/.test(value)) {
     error = 'is that an email address?'
   }
-  return {email: error}
+  return {[name]: error}
 }
 
 export function validatePassword(values, strict) {
+  const name = Object.keys(values)[0]
+  const value = values[name]
   let error
-  if (strict && !values.password) {
-    error = 'please enter a password'
-  }
-  return {password: error}
-}
-
-export function validateNewPassword(values, strict) {
-  let error
-  if (!values.newPassword) {
-    if (strict) {
+  if (strict) {
+    if (!value || !value.text) {
       error = 'please enter a password'
+    } else if (value.strength === 'weak') {
+      error = 'please choose a stronger password'
     }
-  } else if (values.newPassword.strength !== 'ok') {
-    error = 'please choose a stronger password'
   }
-  return {newPassword: error}
+  return {[name]: error}
 }
 
 export const minPasswordEntropy = 42
