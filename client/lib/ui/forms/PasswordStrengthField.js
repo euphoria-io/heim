@@ -13,7 +13,8 @@ export default React.createClass({
   propTypes: {
     name: React.PropTypes.string.isRequired,
     label: React.PropTypes.string.isRequired,
-    minEntropy: React.PropTypes.number.isRequired,
+    minEntropy: React.PropTypes.number,
+    showFeedback: React.PropTypes.bool,
     value: React.PropTypes.object,
     onModify: React.PropTypes.func,
     onValidate: React.PropTypes.func,
@@ -41,18 +42,20 @@ export default React.createClass({
   },
 
   onModify(value) {
-    const entropy = entropizer.evaluate(value)
-    let strength
-    let message
-    if (entropy < this.props.minEntropy) {
-      strength = 'weak'
-      message = 'too simple — add more!'
-    } else {
-      strength = 'ok'
+    let strength = 'unknown'
+    if (this.props.minEntropy) {
+      const entropy = entropizer.evaluate(value)
+      let message
+      if (entropy < this.props.minEntropy) {
+        strength = 'weak'
+        message = 'too simple — add more!'
+      } else {
+        strength = 'ok'
+      }
+      this.setState({strength, message})
     }
-    this.setState({strength, message})
     this.props.onModify({
-      value: value,
+      text: value,
       strength: strength,
     })
   },
@@ -62,14 +65,16 @@ export default React.createClass({
   },
 
   render() {
+    const strengthClass = this.props.showFeedback ? this.state.strength : null
+    const strengthMessage = this.props.showFeedback ? this.state.message : null
     return (
       <TextField
         ref="field"
         inputType="password"
         {...this.props}
-        value={this.props.value && this.props.value.value}
-        className={classNames('password-field', this.state.strength)}
-        message={(this.props.message && !this.state.focused) ? this.props.message : this.state.message}
+        value={this.props.value && this.props.value.text}
+        className={classNames('password-field', strengthClass)}
+        message={(this.props.message && !this.state.focused) ? this.props.message : strengthMessage}
         onModify={this.onModify}
         onFocus={this.onFocus}
         onBlur={this.onBlur}

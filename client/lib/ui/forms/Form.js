@@ -70,23 +70,26 @@ export default React.createClass({
     }
   },
 
-  _validateFields(validators, values, context, filter) {
+  _validateFields(validators, formValues, context, filter) {
     const errors = {}
     _.each(validators, (validator, fieldSpec) => {
       if (!validator) {
         return
       }
 
-      const fields = fieldSpec.split(' ')
-      if (!filter || filter(fields)) {
-        _.assign(errors, validator(_.pick(values, fields), this._strict, context))
+      const validatorValues = {}
+      fieldSpec.split(' ').forEach(field => {
+        validatorValues[field] = formValues[field]
+      })
+      if (!filter || filter(validatorValues)) {
+        _.assign(errors, validator(validatorValues, this._strict, context))
       }
     })
     return errors
   },
 
-  _validateField(name, values) {
-    return this._validateFields(this.props.validators, values, this.props.context, fields => _.contains(fields, name))
+  _validateField(name, formValues) {
+    return this._validateFields(this.props.validators, formValues, this.props.context, values => values.hasOwnProperty(name))
   },
 
   _clearError(origError, newError) {

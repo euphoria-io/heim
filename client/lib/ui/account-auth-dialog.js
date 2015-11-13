@@ -5,7 +5,7 @@ import Reflux from 'reflux'
 import accountAuthFlow from '../stores/account-auth-flow'
 import Dialog from './dialog'
 import { Form, CheckField, TextField, PasswordStrengthField, ErrorMessage } from './forms'
-import { validateEmail, validatePassword, validateNewPassword, minPasswordEntropy } from './form-validators'
+import { validateEmail, validatePassword, minPasswordEntropy } from './form-validators'
 import heimURL from '../heim-url'
 
 
@@ -33,9 +33,9 @@ export default React.createClass({
   onSubmit(values) {
     const step = this.state.flow.step
     if (step === 'signin') {
-      accountAuthFlow.signIn(values.email, values.password)
+      accountAuthFlow.signIn(values.email, values.password.text)
     } else if (step === 'register') {
-      accountAuthFlow.register(values.email, values.newPassword.value)
+      accountAuthFlow.register(values.email, values.password.text)
     } else if (step === 'forgot') {
       accountAuthFlow.resetPassword(values.email)
     }
@@ -123,24 +123,18 @@ export default React.createClass({
       }
 
       let passwordField
-      if (flow.step === 'signin') {
-        passwordField = (
-          <TextField
-            name="password"
-            label="password"
-            inputType="password"
-            tabIndex={2}
-          />
-        )
-      } else if (flow.step === 'register') {
+      let passwordValidator
+      if (flow.step === 'signin' || flow.step === 'register') {
         passwordField = (
           <PasswordStrengthField
-            name="newPassword"
+            name="password"
             label="password"
-            minEntropy={minPasswordEntropy}
+            minEntropy={flow.step === 'register' ? minPasswordEntropy : null}
+            showFeedback={flow.step === 'register'}
             tabIndex={2}
           />
         )
+        passwordValidator = validatePassword
       }
 
       dialogContent = (
@@ -152,8 +146,7 @@ export default React.createClass({
           errors={flow.errors.toJS()}
           validators={{
             'email': validateEmail,
-            'password': flow.step === 'signin' ? validatePassword : null,
-            'newPassword': flow.step === 'register' ? validateNewPassword : null,
+            'password': passwordValidator,
             'acceptLegal acceptCommunity': flow.step === 'register' ? this.validateAgreements : null,
           }}
         >

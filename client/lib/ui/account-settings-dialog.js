@@ -5,7 +5,7 @@ import accountSettingsFlow from '../stores/account-settings-flow'
 import chat from '../stores/chat'
 import Dialog from './dialog'
 import { Form, TextField, FieldLabelContainer, PasswordStrengthField } from './forms'
-import { validateEmail, validatePassword, validateNewPassword, minPasswordEntropy } from './form-validators'
+import { validateEmail, validatePassword, minPasswordEntropy } from './form-validators'
 import hueHash from '../hue-hash'
 
 
@@ -30,9 +30,9 @@ export default React.createClass({
     if (step === 'change-name') {
       accountSettingsFlow.changeName(values.name)
     } else if (step === 'change-email') {
-      accountSettingsFlow.changeEmail(values.password, values.email)
+      accountSettingsFlow.changeEmail(values.password.text, values.email)
     } else if (step === 'change-password') {
-      accountSettingsFlow.changePassword(values.password, values.newPassword.value)
+      accountSettingsFlow.changePassword(values.password.text, values.newPassword.text)
     }
   },
 
@@ -156,14 +156,13 @@ export default React.createClass({
         <Form
           validators={{
             'password': validatePassword,
-            'newPassword': validateNewPassword,
+            'newPassword': validatePassword,
           }}
           {...formParams}
         >
-          <TextField
+          <PasswordStrengthField
             name="password"
             label="old password"
-            inputType="password"
             tabIndex={1}
             autoFocus
           />
@@ -171,6 +170,7 @@ export default React.createClass({
             name="newPassword"
             label="new password"
             minEntropy={minPasswordEntropy}
+            showFeedback
             tabIndex={2}
           />
           <div className="bottom">
