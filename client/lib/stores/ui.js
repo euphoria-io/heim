@@ -317,7 +317,7 @@ const store = module.exports.store = Reflux.createStore({
       return
     }
     this.state.infoPaneExpanded = _.get(data, ['room', this.chatState.roomName, 'infoPaneExpanded'], false)
-    this.state.sidebarPaneExpanded = _.get(data, ['room', this.chatState.roomName, 'sidebarPaneExpanded'], false)
+    this.state.sidebarPaneExpanded = _.get(data, ['room', this.chatState.roomName, 'sidebarPaneExpanded'], true)
     this.trigger(this.state)
   },
 
