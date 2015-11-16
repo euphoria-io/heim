@@ -17,7 +17,7 @@ import (
 )
 
 var notImpl = fmt.Errorf("not implemented")
-var global *Room
+var global *RoomBinding
 
 type Room struct {
 	Name                   string
@@ -32,10 +32,13 @@ type Room struct {
 	MinAgentAge            int64  `db:"min_agent_age"`
 }
 
-func (r *Room) Bind(b *Backend) *RoomBinding {
-	return &RoomBinding{
-		Backend: b,
-		Room:    r,
+func (r *Room) Bind(b *Backend) *ManagedRoomBinding {
+	return &ManagedRoomBinding{
+		RoomBinding: RoomBinding{
+			RoomName: r.Name,
+			Backend:  b,
+		},
+		Room: r,
 	}
 }
 
@@ -60,7 +63,13 @@ func (r *Room) generateMessageKey(b *Backend, kms security.KMS) (*RoomMessageKey
 	return NewRoomMessageKeyBinding(r.Bind(b), keyID, mkey, nonce), nil
 }
 
-func (room *Room) broadcast(
+type RoomBinding struct {
+	*Backend
+	RoomName     string
+	messageKeyID sql.NullString
+}
+
+func (rb *RoomBinding) broadcast(
 	ctx scope.Context, db gorp.SqlExecutor, packetType proto.PacketType, payload interface{}, exclude ...proto.Session) error {
 
 	encodedPayload, err := json.Marshal(payload)
@@ -73,8 +82,8 @@ func (room *Room) broadcast(
 		Event:   packet,
 		Exclude: make([]string, 0, len(exclude)),
 	}
-	if room != nil {
-		broadcastMsg.Room = room.Name
+	if rb != nil {
+		broadcastMsg.Room = rb.RoomName
 	}
 	for _, s := range exclude {
 		if s != nil {
@@ -92,17 +101,12 @@ func (room *Room) broadcast(
 	return err
 }
 
-type RoomBinding struct {
-	*Backend
-	*Room
-}
-
-func (rb *RoomBinding) ID() string { return rb.Name }
+func (rb *RoomBinding) ID() string { return rb.RoomName }
 
 func (rb *RoomBinding) GetMessage(ctx scope.Context, id snowflake.Snowflake) (*proto.Message, error) {
 	var msg Message
 
-	nDays, err := rb.DbMap.SelectInt("SELECT retention_days FROM room WHERE name = $1", rb.Name)
+	nDays, err := rb.DbMap.SelectInt("SELECT retention_days FROM room WHERE name = $1", rb.RoomName)
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +115,7 @@ func (rb *RoomBinding) GetMessage(ctx scope.Context, id snowflake.Snowflake) (*p
 	if err != nil {
 		return nil, err
 	}
-	err = rb.DbMap.SelectOne(&msg, fmt.Sprintf("SELECT %s FROM message WHERE room = $1 AND id = $2", cols), rb.Name, id.String())
+	err = rb.DbMap.SelectOne(&msg, fmt.Sprintf("SELECT %s FROM message WHERE room = $1 AND id = $2", cols), rb.RoomName, id.String())
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, proto.ErrMessageNotFound
@@ -128,26 +132,29 @@ func (rb *RoomBinding) GetMessage(ctx scope.Context, id snowflake.Snowflake) (*p
 	return &m, nil
 }
 
-func (rb *RoomBinding) IsValidParent(id snowflake.Snowflake) (bool, error) {
-	if id.String() == "" || rb.RetentionDays == 0 {
-		return true, nil
-	}
+func (rb *RoomBinding) getParentPostTime(id snowflake.Snowflake) (time.Time, error) {
 	var row struct {
 		Posted time.Time
 	}
 	err := rb.DbMap.SelectOne(&row,
 		"SELECT posted FROM message WHERE room = $1 AND id = $2",
-		rb.Name, id.String())
+		rb.RoomName, id.String())
 	if err != nil {
+		return time.Time{}, err
+	}
+	return row.Posted, nil
+}
+
+func (rb *RoomBinding) IsValidParent(id snowflake.Snowflake) (bool, error) {
+	if id.String() == "" {
+		return true, nil
+	}
+	if _, err := rb.getParentPostTime(id); err != nil {
 		// check for nonexistant parent
 		if err == sql.ErrNoRows {
 			return false, nil
 		}
 		return false, err
-	}
-	threshold := time.Now().Add(time.Duration(-rb.RetentionDays) * 24 * time.Hour)
-	if row.Posted.Before(threshold) {
-		return false, nil
 	}
 	return true, nil
 }
@@ -155,21 +162,21 @@ func (rb *RoomBinding) IsValidParent(id snowflake.Snowflake) (bool, error) {
 func (rb *RoomBinding) Latest(ctx scope.Context, n int, before snowflake.Snowflake) (
 	[]proto.Message, error) {
 
-	return rb.Backend.latest(ctx, rb.Room, n, before)
+	return rb.Backend.latest(ctx, rb, n, before)
 }
 
 func (rb *RoomBinding) Join(ctx scope.Context, session proto.Session) error {
-	return rb.Backend.join(ctx, rb.Room, session)
+	return rb.Backend.join(ctx, rb, session)
 }
 
 func (rb *RoomBinding) Part(ctx scope.Context, session proto.Session) error {
-	return rb.Backend.part(ctx, rb.Room, session)
+	return rb.Backend.part(ctx, rb, session)
 }
 
 func (rb *RoomBinding) Send(ctx scope.Context, session proto.Session, msg proto.Message) (
 	proto.Message, error) {
 
-	return rb.Backend.sendMessageToRoom(ctx, rb.Room, msg, session)
+	return rb.Backend.sendMessageToRoom(ctx, rb, msg, session)
 }
 
 func (rb *RoomBinding) EditMessage(
@@ -200,7 +207,7 @@ func (rb *RoomBinding) EditMessage(
 	}
 
 	var msg Message
-	err = t.SelectOne(&msg, fmt.Sprintf("SELECT %s FROM message WHERE room = $1 AND id = $2", cols), rb.Name, edit.ID.String())
+	err = t.SelectOne(&msg, fmt.Sprintf("SELECT %s FROM message WHERE room = $1 AND id = $2", cols), rb.RoomName, edit.ID.String())
 	if err != nil {
 		rollback()
 		return reply, err
@@ -213,7 +220,7 @@ func (rb *RoomBinding) EditMessage(
 
 	entry := &MessageEditLog{
 		EditID:          editID.String(),
-		Room:            rb.Name,
+		Room:            rb.RoomName,
 		MessageID:       edit.ID.String(),
 		PreviousEditID:  msg.PreviousEditID,
 		PreviousContent: msg.Content,
@@ -236,7 +243,7 @@ func (rb *RoomBinding) EditMessage(
 
 	now := time.Time(proto.Now())
 	sets := []string{"edited = $3", "previous_edit_id = $4"}
-	args := []interface{}{rb.Name, edit.ID.String(), now, editID.String()}
+	args := []interface{}{rb.RoomName, edit.ID.String(), now, editID.String()}
 	msg.Edited = gorp.NullTime{Valid: true, Time: now}
 	if edit.Content != "" {
 		args = append(args, edit.Content)
@@ -286,14 +293,14 @@ func (rb *RoomBinding) EditMessage(
 }
 
 func (rb *RoomBinding) Listing(ctx scope.Context) (proto.Listing, error) {
-	return rb.Backend.listing(ctx, rb.Room)
+	return rb.Backend.listing(ctx, rb)
 }
 
 func (rb *RoomBinding) RenameUser(ctx scope.Context, session proto.Session, formerName string) (
 	*proto.NickEvent, error) {
 
 	presence := &Presence{
-		Room:      rb.Name,
+		Room:      rb.RoomName,
 		ServerID:  rb.desc.ID,
 		ServerEra: rb.desc.Era,
 		SessionID: session.ID(),
@@ -335,7 +342,9 @@ func (rb *RoomBinding) RenameUser(ctx scope.Context, session proto.Session, form
 	return event, nil
 }
 
-func (rb *RoomBinding) GenerateMessageKey(ctx scope.Context, kms security.KMS) (
+func (rb *RoomBinding) MessageKeyID(ctx scope.Context) (string, bool, error) { return "", false, nil }
+
+func (rb *ManagedRoomBinding) GenerateMessageKey(ctx scope.Context, kms security.KMS) (
 	proto.RoomMessageKey, error) {
 
 	rmkb, err := rb.Room.generateMessageKey(rb.Backend, kms)
@@ -370,7 +379,24 @@ func (rb *RoomBinding) GenerateMessageKey(ctx scope.Context, kms security.KMS) (
 	return rmkb, nil
 }
 
-func (rb *RoomBinding) MessageKey(ctx scope.Context) (proto.RoomMessageKey, error) {
+func (rb *ManagedRoomBinding) MessageKeyID(ctx scope.Context) (string, bool, error) {
+	var row struct {
+		KeyID string `db:"key_id"`
+	}
+	err := rb.DbMap.SelectOne(
+		&row,
+		"SELECT key_id FROM room_master_key WHERE room = $1 AND expired < activated ORDER BY activated DESC LIMIT 1",
+		rb.RoomName)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return "", false, nil
+		}
+		return "", false, err
+	}
+	return row.KeyID, true, nil
+}
+
+func (rb *ManagedRoomBinding) MessageKey(ctx scope.Context) (proto.RoomMessageKey, error) {
 	var row struct {
 		MessageKey
 		RoomMessageKey
@@ -391,7 +417,7 @@ func (rb *RoomBinding) MessageKey(ctx scope.Context) (proto.RoomMessageKey, erro
 			" WHERE r.room = $1 AND mk.id = r.key_id AND r.expired < r.activated"+
 			" ORDER BY r.activated DESC LIMIT 1",
 			mkCols, rCols),
-		rb.Name)
+		rb.RoomName)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -404,256 +430,13 @@ func (rb *RoomBinding) MessageKey(ctx scope.Context) (proto.RoomMessageKey, erro
 		IV:           row.MessageKey.IV,
 		Ciphertext:   row.MessageKey.EncryptedKey,
 		ContextKey:   "room",
-		ContextValue: rb.Room.Name,
+		ContextValue: rb.RoomName,
 	}
 	var keyID snowflake.Snowflake
 	if err := keyID.FromString(row.KeyID); err != nil {
 		return nil, err
 	}
 	return NewRoomMessageKeyBinding(rb, keyID, msgKey, row.Nonce), nil
-}
-
-func (rb *RoomBinding) ManagerKey(ctx scope.Context) (proto.RoomManagerKey, error) {
-	return NewRoomManagerKeyBinding(rb), nil
-}
-
-func (rb *RoomBinding) Ban(ctx scope.Context, ban proto.Ban, until time.Time) error {
-	switch {
-	case ban.ID != "":
-		return rb.banAgent(ctx, ban.ID, until)
-	case ban.IP != "":
-		return rb.banIP(ctx, ban.IP, until)
-	default:
-		return fmt.Errorf("id or ip must be given")
-	}
-}
-
-func (rb *RoomBinding) Unban(ctx scope.Context, ban proto.Ban) error {
-	switch {
-	case ban.ID != "":
-		return rb.unbanAgent(ctx, ban.ID)
-	case ban.IP != "":
-		return rb.unbanIP(ctx, ban.IP)
-	default:
-		return fmt.Errorf("id or ip must be given")
-	}
-}
-
-func (rb *RoomBinding) banAgent(ctx scope.Context, agentID proto.UserID, until time.Time) error {
-	ban := &BannedAgent{
-		AgentID: agentID.String(),
-		Room: sql.NullString{
-			String: rb.Name,
-			Valid:  true,
-		},
-		Created: time.Now(),
-		Expires: gorp.NullTime{
-			Time:  until,
-			Valid: !until.IsZero(),
-		},
-	}
-
-	// Loop within transaction in read committed mode to simulate UPSERT.
-	t, err := rb.DbMap.Begin()
-	if err != nil {
-		return err
-	}
-	for {
-		// Try to insert; if this fails due to duplicate key value, try to update.
-		if err := rb.DbMap.Insert(ban); err != nil {
-			if !strings.HasPrefix(err.Error(), "pq: duplicate key value") {
-				rollback(ctx, t)
-				return err
-			}
-		} else {
-			break
-		}
-		n, err := rb.DbMap.Update(ban)
-		if err != nil {
-			rollback(ctx, t)
-			return err
-		}
-		if n > 0 {
-			break
-		}
-	}
-
-	bounceEvent := &proto.BounceEvent{Reason: "banned", AgentID: agentID.String()}
-	if err := rb.broadcast(ctx, t, proto.BounceEventType, bounceEvent); err != nil {
-		rollback(ctx, t)
-		return err
-	}
-
-	if err := t.Commit(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (rb *RoomBinding) unbanAgent(ctx scope.Context, agentID proto.UserID) error {
-	_, err := rb.DbMap.Exec(
-		"DELETE FROM banned_agent WHERE agent_id = $1 AND room = $2", agentID.String(), rb.Name)
-	return err
-}
-
-func (rb *RoomBinding) banIP(ctx scope.Context, ip string, until time.Time) error {
-	ban := &BannedIP{
-		IP: ip,
-		Room: sql.NullString{
-			String: rb.Name,
-			Valid:  true,
-		},
-		Created: time.Now(),
-		Expires: gorp.NullTime{
-			Time:  until,
-			Valid: !until.IsZero(),
-		},
-	}
-
-	t, err := rb.DbMap.Begin()
-	if err != nil {
-		return err
-	}
-
-	if err := t.Insert(ban); err != nil {
-		rollback(ctx, t)
-		return err
-	}
-
-	bounceEvent := &proto.BounceEvent{Reason: "banned", IP: ip}
-	if err := rb.broadcast(ctx, t, proto.BounceEventType, bounceEvent); err != nil {
-		rollback(ctx, t)
-		return err
-	}
-
-	if err := t.Commit(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (rb *RoomBinding) unbanIP(ctx scope.Context, ip string) error {
-	_, err := rb.DbMap.Exec(
-		"DELETE FROM banned_ip WHERE ip = $1 AND room = $2", ip, rb.Name)
-	return err
-}
-
-func (rb *RoomBinding) Managers(ctx scope.Context) ([]proto.Account, error) {
-	type RoomManagerAccount struct {
-		Account
-	}
-
-	cols, err := allColumns(rb.DbMap, Account{}, "a")
-	if err != nil {
-		return nil, err
-	}
-
-	rows, err := rb.Select(
-		Account{},
-		fmt.Sprintf(
-			"SELECT %s FROM account a, room_manager_capability m WHERE m.room = $1 AND m.account_id = a.id AND revoked < granted",
-			cols),
-		rb.Name)
-	if err != nil {
-		return nil, err
-	}
-
-	accounts := make([]proto.Account, 0, len(rows))
-	for _, row := range rows {
-		account, ok := row.(*Account)
-		if !ok {
-			return nil, fmt.Errorf("expected row of type *Account, got %T", row)
-		}
-		accounts = append(accounts, account.Bind(rb.Backend))
-	}
-	return accounts, nil
-}
-
-func (rb *RoomBinding) ManagerCapability(ctx scope.Context, manager proto.Account) (
-	security.Capability, error) {
-
-	var c Capability
-	cols, err := allColumns(rb.DbMap, c, "c")
-	if err != nil {
-		return nil, err
-	}
-	err = rb.SelectOne(
-		&c,
-		fmt.Sprintf("SELECT %s FROM capability c, room_manager_capability rm"+
-			" WHERE rm.room = $1 AND c.id = rm.capability_id AND c.account_id = $2"+
-			" AND rm.revoked < rm.granted",
-			cols),
-		rb.Name, manager.ID().String())
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, proto.ErrManagerNotFound
-		}
-	}
-	return &c, nil
-}
-
-func (rb *RoomBinding) AddManager(
-	ctx scope.Context, kms security.KMS, actor proto.Account, actorKey *security.ManagedKey,
-	newManager proto.Account) error {
-
-	rmkb := NewRoomManagerKeyBinding(rb)
-	if err := rmkb.GrantToAccount(ctx, kms, actor, actorKey, newManager); err != nil {
-		if err == proto.ErrCapabilityNotFound {
-			return proto.ErrAccessDenied
-		}
-		if err.Error() == `pq: duplicate key value violates unique constraint "capability_pkey"` {
-			return nil
-		}
-		return err
-	}
-	return nil
-}
-
-func (rb *RoomBinding) RemoveManager(
-	ctx scope.Context, actor proto.Account, actorKey *security.ManagedKey,
-	formerManager proto.Account) error {
-
-	t, err := rb.Backend.DbMap.Begin()
-	if err != nil {
-		return err
-	}
-
-	rollback := func() {
-		if err := t.Rollback(); err != nil {
-			logging.Logger(ctx).Printf("rollback error: %s", err)
-		}
-	}
-
-	rmkb := NewRoomManagerKeyBinding(rb)
-	rmkb.SetExecutor(t)
-
-	if _, _, _, err := rmkb.Authority(ctx, actor, actorKey); err != nil {
-		rollback()
-		if err == proto.ErrCapabilityNotFound {
-			return proto.ErrAccessDenied
-		}
-		return err
-	}
-
-	if err := rmkb.RevokeFromAccount(ctx, formerManager); err != nil {
-		rollback()
-		if err == proto.ErrCapabilityNotFound || err == proto.ErrAccessDenied {
-			return proto.ErrManagerNotFound
-		}
-		return err
-	}
-
-	if err := t.Commit(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (rb *RoomBinding) MinAgentAge() time.Duration {
-	return time.Duration(time.Duration(rb.Room.MinAgentAge) * time.Second)
 }
 
 func (rb *RoomBinding) WaitForPart(sessionID string) error {
@@ -706,4 +489,271 @@ func (rb *RoomBinding) WaitForPart(sessionID string) error {
 			}
 		}
 	}
+}
+
+type ManagedRoomBinding struct {
+	RoomBinding
+	*Room
+}
+
+func (rb *ManagedRoomBinding) ManagerKey(ctx scope.Context) (proto.RoomManagerKey, error) {
+	return NewRoomManagerKeyBinding(rb), nil
+}
+
+func (rb *ManagedRoomBinding) Ban(ctx scope.Context, ban proto.Ban, until time.Time) error {
+	switch {
+	case ban.ID != "":
+		return rb.banAgent(ctx, ban.ID, until)
+	case ban.IP != "":
+		return rb.banIP(ctx, ban.IP, until)
+	default:
+		return fmt.Errorf("id or ip must be given")
+	}
+}
+
+func (rb *ManagedRoomBinding) Unban(ctx scope.Context, ban proto.Ban) error {
+	switch {
+	case ban.ID != "":
+		return rb.unbanAgent(ctx, ban.ID)
+	case ban.IP != "":
+		return rb.unbanIP(ctx, ban.IP)
+	default:
+		return fmt.Errorf("id or ip must be given")
+	}
+}
+
+func (rb *ManagedRoomBinding) banAgent(ctx scope.Context, agentID proto.UserID, until time.Time) error {
+	ban := &BannedAgent{
+		AgentID: agentID.String(),
+		Room: sql.NullString{
+			String: rb.Name,
+			Valid:  true,
+		},
+		Created: time.Now(),
+		Expires: gorp.NullTime{
+			Time:  until,
+			Valid: !until.IsZero(),
+		},
+	}
+
+	// Loop within transaction in read committed mode to simulate UPSERT.
+	t, err := rb.DbMap.Begin()
+	if err != nil {
+		return err
+	}
+	for {
+		// Try to insert; if this fails due to duplicate key value, try to update.
+		if err := rb.DbMap.Insert(ban); err != nil {
+			if !strings.HasPrefix(err.Error(), "pq: duplicate key value") {
+				rollback(ctx, t)
+				return err
+			}
+		} else {
+			break
+		}
+		n, err := rb.DbMap.Update(ban)
+		if err != nil {
+			rollback(ctx, t)
+			return err
+		}
+		if n > 0 {
+			break
+		}
+	}
+
+	bounceEvent := &proto.BounceEvent{Reason: "banned", AgentID: agentID.String()}
+	if err := rb.broadcast(ctx, t, proto.BounceEventType, bounceEvent); err != nil {
+		rollback(ctx, t)
+		return err
+	}
+
+	if err := t.Commit(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (rb *ManagedRoomBinding) unbanAgent(ctx scope.Context, agentID proto.UserID) error {
+	_, err := rb.DbMap.Exec(
+		"DELETE FROM banned_agent WHERE agent_id = $1 AND room = $2", agentID.String(), rb.Name)
+	return err
+}
+
+func (rb *ManagedRoomBinding) banIP(ctx scope.Context, ip string, until time.Time) error {
+	ban := &BannedIP{
+		IP: ip,
+		Room: sql.NullString{
+			String: rb.Name,
+			Valid:  true,
+		},
+		Created: time.Now(),
+		Expires: gorp.NullTime{
+			Time:  until,
+			Valid: !until.IsZero(),
+		},
+	}
+
+	t, err := rb.DbMap.Begin()
+	if err != nil {
+		return err
+	}
+
+	if err := t.Insert(ban); err != nil {
+		rollback(ctx, t)
+		return err
+	}
+
+	bounceEvent := &proto.BounceEvent{Reason: "banned", IP: ip}
+	if err := rb.broadcast(ctx, t, proto.BounceEventType, bounceEvent); err != nil {
+		rollback(ctx, t)
+		return err
+	}
+
+	if err := t.Commit(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (rb *ManagedRoomBinding) unbanIP(ctx scope.Context, ip string) error {
+	_, err := rb.DbMap.Exec(
+		"DELETE FROM banned_ip WHERE ip = $1 AND room = $2", ip, rb.Name)
+	return err
+}
+
+func (rb *ManagedRoomBinding) Managers(ctx scope.Context) ([]proto.Account, error) {
+	type RoomManagerAccount struct {
+		Account
+	}
+
+	cols, err := allColumns(rb.DbMap, Account{}, "a")
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := rb.Select(
+		Account{},
+		fmt.Sprintf(
+			"SELECT %s FROM account a, room_manager_capability m WHERE m.room = $1 AND m.account_id = a.id AND revoked < granted",
+			cols),
+		rb.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	accounts := make([]proto.Account, 0, len(rows))
+	for _, row := range rows {
+		account, ok := row.(*Account)
+		if !ok {
+			return nil, fmt.Errorf("expected row of type *Account, got %T", row)
+		}
+		accounts = append(accounts, account.Bind(rb.Backend))
+	}
+	return accounts, nil
+}
+
+func (rb *ManagedRoomBinding) ManagerCapability(ctx scope.Context, manager proto.Account) (
+	security.Capability, error) {
+
+	var c Capability
+	cols, err := allColumns(rb.DbMap, c, "c")
+	if err != nil {
+		return nil, err
+	}
+	err = rb.SelectOne(
+		&c,
+		fmt.Sprintf("SELECT %s FROM capability c, room_manager_capability rm"+
+			" WHERE rm.room = $1 AND c.id = rm.capability_id AND c.account_id = $2"+
+			" AND rm.revoked < rm.granted",
+			cols),
+		rb.Name, manager.ID().String())
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, proto.ErrManagerNotFound
+		}
+	}
+	return &c, nil
+}
+
+func (rb *ManagedRoomBinding) AddManager(
+	ctx scope.Context, kms security.KMS, actor proto.Account, actorKey *security.ManagedKey,
+	newManager proto.Account) error {
+
+	rmkb := NewRoomManagerKeyBinding(rb)
+	if err := rmkb.GrantToAccount(ctx, kms, actor, actorKey, newManager); err != nil {
+		if err == proto.ErrCapabilityNotFound {
+			return proto.ErrAccessDenied
+		}
+		if err.Error() == `pq: duplicate key value violates unique constraint "capability_pkey"` {
+			return nil
+		}
+		return err
+	}
+	return nil
+}
+
+func (rb *ManagedRoomBinding) RemoveManager(
+	ctx scope.Context, actor proto.Account, actorKey *security.ManagedKey,
+	formerManager proto.Account) error {
+
+	t, err := rb.Backend.DbMap.Begin()
+	if err != nil {
+		return err
+	}
+
+	rollback := func() {
+		if err := t.Rollback(); err != nil {
+			logging.Logger(ctx).Printf("rollback error: %s", err)
+		}
+	}
+
+	rmkb := NewRoomManagerKeyBinding(rb)
+	rmkb.SetExecutor(t)
+
+	if _, _, _, err := rmkb.Authority(ctx, actor, actorKey); err != nil {
+		rollback()
+		if err == proto.ErrCapabilityNotFound {
+			return proto.ErrAccessDenied
+		}
+		return err
+	}
+
+	if err := rmkb.RevokeFromAccount(ctx, formerManager); err != nil {
+		rollback()
+		if err == proto.ErrCapabilityNotFound || err == proto.ErrAccessDenied {
+			return proto.ErrManagerNotFound
+		}
+		return err
+	}
+
+	if err := t.Commit(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (rb *ManagedRoomBinding) MinAgentAge() time.Duration {
+	return time.Duration(time.Duration(rb.Room.MinAgentAge) * time.Second)
+}
+
+func (rb *ManagedRoomBinding) IsValidParent(id snowflake.Snowflake) (bool, error) {
+	if id.String() == "" || rb.RetentionDays == 0 {
+		return true, nil
+	}
+	posted, err := rb.getParentPostTime(id)
+	if err != nil {
+		// check for nonexistant parent
+		if err == sql.ErrNoRows {
+			return false, nil
+		}
+		return false, err
+	}
+	threshold := time.Now().Add(time.Duration(-rb.RetentionDays) * 24 * time.Hour)
+	if posted.Before(threshold) {
+		return false, nil
+	}
+	return true, nil
 }

@@ -218,7 +218,14 @@ func (r *RoomBase) RenameUser(
 	return payload, r.broadcast(ctx, proto.NickType, payload, session)
 }
 
-func (r *RoomBase) MessageKey(ctx scope.Context) (proto.RoomMessageKey, error) {
+func (r *RoomBase) MessageKeyID(ctx scope.Context) (string, bool, error) {
+	if r.messageKey == nil {
+		return "", false, nil
+	}
+	return r.messageKey.id, true, nil
+}
+
+func (r *memRoom) MessageKey(ctx scope.Context) (proto.RoomMessageKey, error) {
 	if r.messageKey == nil {
 		return nil, nil
 	}

@@ -130,39 +130,39 @@ func (c *Client) RoomAuthorize(ctx scope.Context, room Room) error {
 
 			c.Authorization.ManagerKeyPair = managerKeyPair
 		}
-	}
 
-	// Look for message key grants to this account.
-	messageKey, err := room.MessageKey(ctx)
-	if err != nil {
-		return err
-	}
-	if messageKey != nil {
-		capability, err := messageKey.AccountCapability(ctx, c.Account)
+		// Look for message key grants to this account.
+		messageKey, err := managedRoom.MessageKey(ctx)
 		if err != nil {
-			return fmt.Errorf("access capability error: %s", err)
+			return err
 		}
-		if capability != nil {
-			subjectKey := managerKey.KeyPair()
-			roomKeyJSON, err := capability.DecryptPayload(&subjectKey, holderKey)
+		if messageKey != nil {
+			capability, err := messageKey.AccountCapability(ctx, c.Account)
 			if err != nil {
-				return fmt.Errorf("access capability decrypt error: %s", err)
+				return fmt.Errorf("access capability error: %s", err)
 			}
-			roomKey := &security.ManagedKey{
-				KeyType: security.AES128,
+			if capability != nil {
+				subjectKey := managerKey.KeyPair()
+				roomKeyJSON, err := capability.DecryptPayload(&subjectKey, holderKey)
+				if err != nil {
+					return fmt.Errorf("access capability decrypt error: %s", err)
+				}
+				roomKey := &security.ManagedKey{
+					KeyType: security.AES128,
+				}
+				if err := json.Unmarshal(roomKeyJSON, &roomKey.Plaintext); err != nil {
+					return fmt.Errorf("access capability unmarshal error: %s", err)
+				}
+				c.Authorization.AddMessageKey(messageKey.KeyID(), roomKey)
+				c.Authorization.CurrentMessageKeyID = messageKey.KeyID()
 			}
-			if err := json.Unmarshal(roomKeyJSON, &roomKey.Plaintext); err != nil {
-				return fmt.Errorf("access capability unmarshal error: %s", err)
-			}
-			c.Authorization.AddMessageKey(messageKey.KeyID(), roomKey)
-			c.Authorization.CurrentMessageKeyID = messageKey.KeyID()
 		}
 	}
 
 	return nil
 }
 
-func (c *Client) AuthenticateWithPasscode(ctx scope.Context, room Room, passcode string) (string, error) {
+func (c *Client) AuthenticateWithPasscode(ctx scope.Context, room ManagedRoom, passcode string) (string, error) {
 	mkey, err := room.MessageKey(ctx)
 	if err != nil {
 		return "", err

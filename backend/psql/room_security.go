@@ -179,7 +179,7 @@ type RoomMessageKeyBinding struct {
 }
 
 func NewRoomMessageKeyBinding(
-	rb *RoomBinding, keyID snowflake.Snowflake, msgKey *security.ManagedKey,
+	rb *ManagedRoomBinding, keyID snowflake.Snowflake, msgKey *security.ManagedKey,
 	nonce []byte) *RoomMessageKeyBinding {
 
 	rmkb := &RoomMessageKeyBinding{
@@ -245,7 +245,7 @@ type RoomManagerKeyBinding struct {
 	*proto.GrantManager
 }
 
-func NewRoomManagerKeyBinding(rb *RoomBinding) *RoomManagerKeyBinding {
+func NewRoomManagerKeyBinding(rb *ManagedRoomBinding) *RoomManagerKeyBinding {
 	rmkb := &RoomManagerKeyBinding{
 		Room: rb.Room,
 		RoomManagerCapabilities: &RoomManagerCapabilities{

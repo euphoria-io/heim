@@ -67,11 +67,9 @@ type Room interface {
 	// Version returns the version of the server hosting this Room.
 	Version() string
 
-	// MessageKey returns the room's current message key, or nil if the room is
-	// unencrypted.
-	MessageKey(ctx scope.Context) (RoomMessageKey, error)
-
 	WaitForPart(sessionID string) error
+
+	MessageKeyID(scope.Context) (string, bool, error)
 }
 
 type ManagedRoom interface {
@@ -88,6 +86,10 @@ type ManagedRoom interface {
 	// for encrypting messages in the room. This invalidates all grants made with
 	// the previous key.
 	GenerateMessageKey(ctx scope.Context, kms security.KMS) (RoomMessageKey, error)
+
+	// MessageKey returns the room's current message key, or nil if the room is
+	// unencrypted.
+	MessageKey(ctx scope.Context) (RoomMessageKey, error)
 
 	// ManagerKey returns a handle to the room's manager key.
 	ManagerKey(ctx scope.Context) (RoomManagerKey, error)

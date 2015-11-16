@@ -30,11 +30,11 @@ type Message struct {
 }
 
 func NewMessage(
-	room *Room, sessionView *proto.SessionView, id, parent snowflake.Snowflake, keyID, content string) (
+	roomName string, sessionView *proto.SessionView, id, parent snowflake.Snowflake, keyID, content string) (
 	*Message, error) {
 
 	msg := &Message{
-		Room:    room.Name,
+		Room:    roomName,
 		ID:      id.String(),
 		Parent:  parent.String(),
 		Posted:  id.Time(),

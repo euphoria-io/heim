@@ -50,7 +50,7 @@ func newServerUnderTest(
 		kms:         kms,
 		accounts:    map[string]proto.Account{},
 		accountKeys: map[string]*security.ManagedKey{},
-		rooms:       map[string]proto.Room{},
+		rooms:       map[string]proto.ManagedRoom{},
 	}
 }
 
@@ -62,7 +62,7 @@ type serverUnderTest struct {
 	once        sync.Once
 	accounts    map[string]proto.Account
 	accountKeys map[string]*security.ManagedKey
-	rooms       map[string]proto.Room
+	rooms       map[string]proto.ManagedRoom
 }
 
 func (s *serverUnderTest) Close() {
@@ -183,7 +183,7 @@ func (s *serverUnderTest) Account(
 
 func (s *serverUnderTest) Room(
 	ctx scope.Context, kms security.KMS, private bool, name string, managers ...proto.Account) (
-	proto.Room, error) {
+	proto.ManagedRoom, error) {
 
 	if room, ok := s.rooms[name]; ok {
 		return room, nil
@@ -421,9 +421,9 @@ func (tc *testConn) expectHello() {
 		}
 		account += "},"
 	}
-	key, err := tc.room.MessageKey(scope.New())
+	_, ok, err := tc.room.MessageKeyID(scope.New())
 	So(err, ShouldBeNil)
-	if key != nil {
+	if ok {
 		isParts += `,"room_is_private":true`
 		if tc.accountHasAccess {
 			isParts += `,"account_has_access":true`
@@ -2842,11 +2842,6 @@ func testNotifyUser(s *serverUnderTest) {
 
 func testPMs(s *serverUnderTest) {
 	Convey("Initiate with agent and interact", func() {
-		// TODO: remove when psql implementation is ready
-		if s.backend.PMTracker() == nil {
-			return
-		}
-
 		// Create initiator
 		ctx := scope.New()
 		kms := s.app.kms
