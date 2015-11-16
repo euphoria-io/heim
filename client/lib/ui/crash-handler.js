@@ -11,7 +11,7 @@ export default function displayCrashDialog(ev) {
   const React = require('react')
   const ReactDOM = require('react-dom')
   const crashedSVG = 'data:image/svg+xml;base64,' + fs.readFileSync(__dirname + '/../../res/crashed.svg', 'base64')
-  const crashedCSS = fs.readFileSync(__dirname + '/../../build/heim/crashed.css')
+  const crashedCSS = fs.readFileSync(__dirname + '/../../build/heim/static/crashed.css')
 
   function CrashDialog(props) {
     let ravenStatus

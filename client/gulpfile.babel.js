@@ -25,6 +25,8 @@ import { exec } from 'child_process'
 
 let watching = false
 const heimDest = './build/heim'
+const heimStaticDest = './build/heim/static'
+const heimPagesDest = './build/heim/pages'
 const embedDest = './build/embed'
 const emailDest = './build/email'
 
@@ -98,16 +100,16 @@ gulp.task('heim-js', ['heim-git-commit', 'heim-less'], () => {
       .pipe(process.env.NODE_ENV === 'production' ? uglify() : gutil.noop())
     .pipe(sourcemaps.write('./', {includeContent: true}))
     .on('error', handleError('heim browserify error'))
-    .pipe(gulp.dest(heimDest))
+    .pipe(gulp.dest(heimStaticDest))
     .pipe(gzip())
-    .pipe(gulp.dest(heimDest))
+    .pipe(gulp.dest(heimStaticDest))
 })
 
 gulp.task('fast-touch-js', () => {
   return gulp.src('./site/lib/fast-touch.js')
     .pipe(process.env.NODE_ENV === 'production' ? uglify() : gutil.noop())
     .on('error', handleError('fastTouch browserify error'))
-    .pipe(gulp.dest(heimDest))
+    .pipe(gulp.dest(heimStaticDest))
 })
 
 gulp.task('embed-js', () => {
@@ -136,9 +138,9 @@ gulp.task('raven-js', ['heim-git-commit', 'heim-js'], () => {
       .pipe(buffer())
       .pipe(process.env.NODE_ENV === 'production' ? uglify() : gutil.noop())
       .on('error', handleError('raven browserify error'))
-      .pipe(gulp.dest(heimDest))
+      .pipe(gulp.dest(heimStaticDest))
       .pipe(gzip())
-      .pipe(gulp.dest(heimDest))
+      .pipe(gulp.dest(heimStaticDest))
   })
 })
 
@@ -148,9 +150,9 @@ gulp.task('heim-less', () => {
     .on('error', handleError('LESS error'))
     .pipe(autoprefixer({cascade: false}))
     .on('error', handleError('autoprefixer error'))
-    .pipe(gulp.dest(heimDest))
+    .pipe(gulp.dest(heimStaticDest))
     .pipe(gzip())
-    .pipe(gulp.dest(heimDest))
+    .pipe(gulp.dest(heimStaticDest))
 })
 
 gulp.task('emoji-static', () => {
@@ -171,9 +173,9 @@ gulp.task('emoji-static', () => {
 
   const lessFile = gfile('emoji.less', lessSource, {src: true})
     .pipe(less({compress: true}))
-    .pipe(gulp.dest(heimDest))
+    .pipe(gulp.dest(heimStaticDest))
     .pipe(gzip())
-    .pipe(gulp.dest(heimDest))
+    .pipe(gulp.dest(heimStaticDest))
 
   const indexFile = gfile('emoji.json', JSON.stringify(emoji.index), {src: true})
     .pipe(gulp.dest(heimDest))
@@ -182,8 +184,8 @@ gulp.task('emoji-static', () => {
 })
 
 gulp.task('heim-static', () => {
-  return gulp.src('./static/**/*')
-    .pipe(gulp.dest(heimDest))
+  return gulp.src(['./static/**/*', './site/static/**'])
+    .pipe(gulp.dest(heimStaticDest))
 })
 
 gulp.task('embed-static', () => {
@@ -194,7 +196,7 @@ gulp.task('embed-static', () => {
 gulp.task('heim-html', ['heim-git-commit'], () => {
   return gulp.src(['./lib/room.html'])
     .pipe(gtemplate(heimOptions))
-    .pipe(gulp.dest(heimDest))
+    .pipe(gulp.dest(heimPagesDest))
 })
 
 gulp.task('embed-html', () => {
@@ -219,7 +221,7 @@ gulp.task('site-templates', ['heim-git-commit'], () => {
     const html = page.render(reload('./site/' + name))
     return gfile(name + '.html', html, {src: true})
   }))
-    .pipe(gulp.dest(heimDest))
+    .pipe(gulp.dest(heimPagesDest))
 })
 
 gulp.task('email-templates', () => {
@@ -270,7 +272,7 @@ function watchifyTask(name, bundler, outFile, dest) {
   })
 }
 
-watchifyTask('heim-watchify', heimBundler, 'main.js', heimDest)
+watchifyTask('heim-watchify', heimBundler, 'main.js', heimStaticDest)
 watchifyTask('embed-watchify', embedBundler, 'embed.js', embedDest)
 
 gulp.task('build-emails', ['email-templates', 'email-hdrs', 'email-static'])
@@ -296,9 +298,9 @@ gulp.task('serve-heim', serve({
   port: 8080,
   root: heimDest,
   middleware: function serveHeim(req, res, next) {
-    req.url = req.url.replace(/^\/static\/?|^\/room\/\w+\/?/, '/')
+    req.url = req.url.replace(/^\/room\/\w+\/?/, '/')
     if (req.url === '/') {
-      req.url = '/room.html'
+      req.url = '/pages/room.html'
     }
     next()
   },
