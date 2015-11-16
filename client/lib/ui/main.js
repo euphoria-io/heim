@@ -305,10 +305,11 @@ export default React.createClass({
           {extraPanes}
           {threadPanes.entrySeq().map(([paneId, pane], idx) => {
             const threadId = paneId.substr('thread-'.length)
+            const title = this.state.chat.messages.get(threadId).get('content')
             return (
               <div key={paneId} className="chat-pane-container" style={{zIndex: threadPanes.size - idx}} onClickCapture={_.partial(this.onPaneClick, paneId)}>
                 <div className="top-bar">
-                  <MessageText className="title" content={this.state.chat.messages.get(threadId).get('content')} />
+                  <MessageText className="title" content={title} title={title} />
                   <FastButton className="close" onClick={_.partial(ui.closeThreadPane, threadId)} />
                 </div>
                 <ChatPane pane={pane} showParent showAllReplies />
