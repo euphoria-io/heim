@@ -23,7 +23,7 @@ func (s *Server) route() {
 		prometheus.InstrumentHandler("metrics", prometheus.UninstrumentedHandler()))
 
 	s.r.PathPrefix("/static/").Handler(
-		prometheus.InstrumentHandler("static", http.StripPrefix("/static", http.HandlerFunc(s.handleStatic))))
+		prometheus.InstrumentHandler("static", http.HandlerFunc(s.handleStatic)))
 
 	s.r.Handle("/", prometheus.InstrumentHandlerFunc("home", s.handleHomeStatic))
 
@@ -65,23 +65,23 @@ func (s *Server) handleRoomStatic(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	s.serveGzippedFile(w, r, "room.html", false)
+	s.serveGzippedFile(w, r, "/pages/room.html", false)
 }
 
 func (s *Server) handleHomeStatic(w http.ResponseWriter, r *http.Request) {
-	s.serveGzippedFile(w, r, "home.html", false)
+	s.serveGzippedFile(w, r, "/pages/home.html", false)
 }
 
 func (s *Server) handleAboutStatic(w http.ResponseWriter, r *http.Request) {
 	if s.staticPath == "" || r.URL.Path == "" {
-		s.serveGzippedFile(w, r, "about.html", false)
+		s.serveGzippedFile(w, r, "/pages/about.html", false)
 		return
 	}
-	s.serveGzippedFile(w, r, path.Clean(r.URL.Path)+".html", false)
+	s.serveGzippedFile(w, r, "/pages"+path.Clean(r.URL.Path)+".html", false)
 }
 
 func (s *Server) handleRobotsTxt(w http.ResponseWriter, r *http.Request) {
-	s.serveGzippedFile(w, r, "robots.txt", false)
+	s.serveGzippedFile(w, r, "/static/robots.txt", false)
 }
 
 func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
