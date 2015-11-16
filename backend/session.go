@@ -358,10 +358,6 @@ func (s *session) serve() error {
 
 			// Some responses trigger bounces.
 			switch msg := reply.packet.(type) {
-			case *proto.LoginReply:
-				if msg.Success {
-					s.sendDisconnect("authentication changed")
-				}
 			case *proto.LogoutReply:
 				s.sendDisconnect("authentication changed")
 			case *proto.RegisterAccountReply:
@@ -379,11 +375,6 @@ func (s *session) serve() error {
 			if err := s.conn.WriteMessage(websocket.TextMessage, data); err != nil {
 				logger.Printf("error: write message: %s", err)
 				return err
-			}
-			if cmd.Type == proto.LoginEventType {
-				if err := s.sendDisconnect("authentication changed"); err != nil {
-					return err
-				}
 			}
 
 			if cmd.Type == proto.DisconnectEventType {

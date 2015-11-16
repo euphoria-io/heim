@@ -891,7 +891,6 @@ func testAuthentication(s *serverUnderTest) {
 		conn.send("1", "login",
 			`{"namespace":"email","id":"logan-private","password":"loganpass"}`)
 		conn.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, logan.ID())
-		conn.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
 		conn.Close()
 
 		// Reconnect with authentication.
@@ -947,7 +946,6 @@ func testDeletion(s *serverUnderTest) {
 		conn.send("1", "login",
 			`{"namespace":"email","id":"logan%s","password":"loganpass"}`, nonce)
 		conn.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, logan.ID())
-		conn.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
 		conn.Close()
 
 		// Connect to deletion room as manager.
@@ -1221,7 +1219,6 @@ func testAccountChangePassword(s *serverUnderTest) {
 		conn.send("2", "login",
 			`{"namespace":"email","id":"logan%s","password":"oldpass"}`, nonce)
 		conn.expect("2", "login-reply", `{"success":true,"account_id":"%s"}`, logan.ID())
-		conn.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
 		conn.Close()
 
 		s.Reconnect(conn, "changepass1b")
@@ -1239,7 +1236,6 @@ func testAccountChangePassword(s *serverUnderTest) {
 		conn.send("2", "login",
 			`{"namespace":"email","id":"logan%s","password":"newpass"}`, nonce)
 		conn.expect("2", "login-reply", `{"success":true,"account_id":"%s"}`, logan.ID())
-		conn.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
 		conn.Close()
 
 		// Password change email should have been sent.
@@ -1298,7 +1294,6 @@ func testAccountResetPassword(s *serverUnderTest) {
 		conn.send("1", "login",
 			`{"namespace":"email","id":"logan%s","password":"newpass"}`, nonce)
 		conn.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, logan.ID())
-		conn.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
 		conn.Close()
 
 		// Attempt to use other confirmation code should fail.
@@ -1326,7 +1321,6 @@ func testAccountChangeName(s *serverUnderTest) {
 		conn.expectError("1", "change-name-reply", "not logged in")
 		conn.send("2", "login", `{"namespace":"email","id":"logan%s","password":"loganpass"}`, nonce)
 		conn.expect("2", "login-reply", `{"success":true,"account_id":"%s"}`, logan.ID())
-		conn.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
 		conn.Close()
 
 		s.Reconnect(conn)
@@ -1379,7 +1373,6 @@ func testAccountLogin(s *serverUnderTest) {
 		conn.send("1", "login",
 			`{"namespace":"email","id":"logan%s","password":"loganpass"}`, nonce)
 		conn.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, logan.ID())
-		conn.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
 		conn.Close()
 
 		// Wait for part.
@@ -1546,7 +1539,6 @@ func testRoomCreation(s *serverUnderTest) {
 		conn.send("1", "login",
 			`{"namespace":"email","id":"logan%s","password":"loganpass"}`, nonce)
 		conn.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, logan.ID())
-		conn.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
 		conn.isStaff = true
 		conn.Close()
 
@@ -1599,7 +1591,6 @@ func testRoomGrants(s *serverUnderTest) {
 		loganConn.expectSnapshot(s.backend.Version(), nil, nil)
 		loganConn.send("1", "login", `{"namespace":"email","id":"logan%s","password":"loganpass"}`, nonce)
 		loganConn.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, logan.ID())
-		loganConn.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
 		loganConn.Close()
 
 		// Reconnect manager to private room and grant access to passcode.
@@ -1658,7 +1649,6 @@ func testRoomGrants(s *serverUnderTest) {
 		loganConn.expectSnapshot(s.backend.Version(), nil, nil)
 		loganConn.send("1", "login", `{"namespace":"email","id":"logan%s","password":"loganpass"}`, nonce)
 		loganConn.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, logan.ID())
-		loganConn.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
 		loganConn.Close()
 
 		// Reconnect manager to private room.
@@ -1674,7 +1664,6 @@ func testRoomGrants(s *serverUnderTest) {
 		maxConn.expect("", "bounce-event", `{"reason":"authentication required"}`)
 		maxConn.send("1", "login", `{"namespace":"email","id":"max%s","password":"maxpass"}`, nonce)
 		maxConn.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, max.ID())
-		maxConn.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
 		maxConn.Close()
 		s.Reconnect(maxConn)
 		maxConn.expectPing()
@@ -1738,7 +1727,6 @@ func testRoomGrants(s *serverUnderTest) {
 		loganConn.expectSnapshot(s.backend.Version(), nil, nil)
 		loganConn.send("1", "login", `{"namespace":"email","id":"logan%s","password":"loganpass"}`, nonce)
 		loganConn.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, logan.ID())
-		loganConn.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
 		loganConn.Close()
 
 		loganConn.isStaff = true
@@ -1805,7 +1793,6 @@ func testRoomGrants(s *serverUnderTest) {
 		loganConn.expectSnapshot(s.backend.Version(), nil, nil)
 		loganConn.send("1", "login", `{"namespace":"email","id":"logan%s","password":"loganpass"}`, nonce)
 		loganConn.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, logan.ID())
-		loganConn.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
 		loganConn.Close()
 
 		// Reconnect manager to private room.
@@ -1874,7 +1861,6 @@ func testBans(s *serverUnderTest) {
 		mconn.expectSnapshot(s.backend.Version(), nil, nil)
 		mconn.send("1", "login", `{"namespace":"email","id":"%s","password":"password"}`, nonce)
 		mconn.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, manager.ID())
-		mconn.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
 		mconn.Close()
 
 		// Connect manager to managed room and wait for victim.
@@ -1939,7 +1925,6 @@ func testBans(s *serverUnderTest) {
 		mconn.expectSnapshot(s.backend.Version(), nil, nil)
 		mconn.send("1", "login", `{"namespace":"email","id":"%s","password":"password"}`, nonce)
 		mconn.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, manager.ID())
-		mconn.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
 		mconn.Close()
 
 		// Connect manager to managed room and wait for victim.
@@ -1957,7 +1942,6 @@ func testBans(s *serverUnderTest) {
 		vconn.expectSnapshot(s.backend.Version(), nil, nil)
 		vconn.send("1", "login", `{"namespace":"email","id":"victim%s","password":"password"}`, nonce)
 		vconn.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, victim.ID())
-		vconn.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
 		vconn.Close()
 
 		// Connect victim.
@@ -2102,7 +2086,6 @@ func testMessageTruncation(s *serverUnderTest) {
 		c1.send("1", "login",
 			`{"namespace":"email","id":"bigspam-owner","password":"passcode"}`)
 		c1.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, owner.ID())
-		c1.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
 		c1.Close()
 
 		c1.isManager = true
@@ -2685,7 +2668,6 @@ func testStaffOTP(s *serverUnderTest) {
 		c1.expectSnapshot(s.backend.Version(), nil, nil)
 		c1.send("1", "login", `{"namespace":"email","id":"logan%s","password":"hunter2"}`, nonce)
 		c1.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, logan.ID())
-		c1.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
 		c1.Close()
 
 		c1.isStaff = true
@@ -2724,7 +2706,6 @@ func testStaffInvasion(s *serverUnderTest) {
 		c1.expectSnapshot(s.backend.Version(), nil, nil)
 		c1.send("1", "login", `{"namespace":"email","id":"host%s","password":"password"}`, nonce)
 		c1.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, host.ID())
-		c1.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
 		c1.Close()
 
 		// Create private room, join, and say something.
@@ -2752,7 +2733,6 @@ func testStaffInvasion(s *serverUnderTest) {
 		c2.expectSnapshot(s.backend.Version(), nil, nil)
 		c2.send("1", "login", `{"namespace":"email","id":"logan%s","password":"hunter2"}`, nonce)
 		c2.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, logan.ID())
-		c2.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
 		c2.Close()
 
 		// Bust into private room and read history.
@@ -2826,18 +2806,14 @@ func testNotifyUser(s *serverUnderTest) {
 		conn4.expect("", "join-event",
 			`{"session_id":"%s","id":"*","name":"","server_id":"*","server_era":"*"}`, conn5.sessionID)
 
-		// Log in on first connection, expect a login-reply and disconnect-event
+		// Log in on first connection, expect a login-reply
 		conn1.send("1", "login", `{"namespace":"email","id":"cammie%s","password":"cammiepass"}`, nonce)
 		conn1.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, cammie.ID())
-		conn1.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
 
-		// Same cookie, same room should receive a part-event and be disconnected
+		// Same cookie, same room should receive a login-event
 		conn2.expect("", "login-event", `{"account_id": "%s"}`, cammie.ID())
-		conn2.expect("", "part-event", `{"session_id":"%s", "id":"%s", "server_id":"*", "server_era":"*"}`, conn1.id(), conn1.sessionID)
-		conn2.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
 
-		// Same cookie, different room should be disconnected
+		// Same cookie, different room should receive a login-event
 		conn4.expect("", "login-event", `{"account_id": "%s"}`, cammie.ID())
-		conn4.expect("", "disconnect-event", `{"reason":"authentication changed"}`)
 	})
 }
