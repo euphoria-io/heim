@@ -10,6 +10,7 @@
     * [get-message](#get-message)
     * [log](#log)
     * [nick](#nick)
+    * [pm-initiate](#pm-initiate)
     * [send](#send)
     * [who](#who)
   * [Account Management](#account-management)
@@ -47,6 +48,7 @@
   * [nick-event](#nick-event)
   * [part-event](#part-event)
   * [ping-event](#ping-event)
+  * [pm-initiate-event](#pm-initiate-event)
   * [send-event](#send-event)
   * [snapshot-event](#snapshot-event)
 
@@ -287,6 +289,10 @@ These commands are available to the client once a session successfully joins a r
 
 {{template "command.md" "nick"}}
 
+### pm-initiate
+
+{{template "command.md" "pm-initiate"}}
+
 ### send
 
 {{template "command.md" "send"}}
@@ -452,6 +458,11 @@ A `part-event` indicates a session just disconnected from the room.
 
 {{(packet "ping-event").Doc}}
 {{template "fields.md" (packet "ping-event")}}
+
+## pm-initiate-event
+
+{{(packet "pm-initiate-event").Doc}}
+{{template "fields.md" (packet "pm-initiate-event")}}
 
 ## send-event
 
