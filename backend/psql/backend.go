@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -246,6 +247,16 @@ func (b *Backend) background(wg *sync.WaitGroup) {
 			if err := json.Unmarshal([]byte(notice.Extra), &msg); err != nil {
 				logger.Printf("error: pq listen: invalid broadcast: %s", err)
 				logger.Printf("         payload: %#v", notice.Extra)
+				continue
+			}
+
+			// Check for UserID- if so, notify user instead of room
+			if msg.UserID != "" {
+				for _, lm := range b.listeners {
+					if err := lm.NotifyUser(ctx, msg.UserID, msg.Event, msg.Exclude...); err != nil {
+						logger.Printf("error: pq listen: notify user error on userID %s: %s", msg.Room, err)
+					}
+				}
 				continue
 			}
 
@@ -783,4 +794,32 @@ type BroadcastMessage struct {
 	Room    string
 	Exclude []string
 	Event   *proto.Packet
+	UserID  proto.UserID
+}
+
+func (b *Backend) NotifyUser(ctx scope.Context, userID proto.UserID, packetType proto.PacketType, payload interface{}, excluding ...proto.Session) error {
+	encodedPayload, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+	packet := &proto.Packet{Type: packetType, Data: json.RawMessage(encodedPayload)}
+	broadcastMsg := BroadcastMessage{
+		Event:   packet,
+		Exclude: make([]string, 0, len(excluding)),
+		UserID:  userID,
+	}
+	for _, s := range excluding {
+		if s != nil {
+			broadcastMsg.Exclude = append(broadcastMsg.Exclude, s.ID())
+		}
+	}
+
+	encoded, err := json.Marshal(broadcastMsg)
+	if err != nil {
+		return err
+	}
+
+	escaped := strings.Replace(string(encoded), "'", "''", -1)
+	_, err = b.DB.Exec(fmt.Sprintf("NOTIFY broadcast, '%s'", escaped))
+	return err
 }

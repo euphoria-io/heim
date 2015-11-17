@@ -54,6 +54,7 @@ var (
 	LogReplyType = LogType.Reply()
 
 	LoginType      = PacketType("login")
+	LoginEventType = LoginType.Event()
 	LoginReplyType = LoginType.Reply()
 
 	LogoutType      = PacketType("logout")
@@ -194,6 +195,7 @@ var (
 		SnapshotEventType:   reflect.TypeOf(SnapshotEvent{}),
 
 		LoginType:      reflect.TypeOf(LoginCommand{}),
+		LoginEventType: reflect.TypeOf(LoginEvent{}),
 		LoginReplyType: reflect.TypeOf(LoginReply{}),
 
 		LogoutType:      reflect.TypeOf(LogoutCommand{}),
@@ -527,6 +529,10 @@ type LoginReply struct {
 	Success   bool                `json:"success"`              // true if the session is now logged in
 	Reason    string              `json:"reason,omitempty"`     // if `success` was false, the reason why
 	AccountID snowflake.Snowflake `json:"account_id,omitempty"` // if `success` was true, the id of the account the session logged into.
+}
+
+type LoginEvent struct {
+	AccountID snowflake.Snowflake `json:"account_id"`
 }
 
 // The `logout` command logs a session out of an account. It will return an error
