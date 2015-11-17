@@ -26,7 +26,8 @@
     "twemoji": "~1.4.1",
     "emoji-annotation-to-unicode": "~0.2.2",
     "string.fromcodepoint": "~0.2.1",
-    "entropizer": "~0.1.3"
+    "entropizer": "~0.1.3",
+    "whatwg-fetch": "~0.10.1"
   },
   "devDependencies": {
     "browserify": "~8.1.1",

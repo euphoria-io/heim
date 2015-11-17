@@ -156,10 +156,6 @@ body.page {
     margin: 55px auto;
     flex: 1;
 
-    h1:first-child {
-      margin-top: 0;
-    }
-
     @media (max-width: @thin-breakpoint) {
       margin: 30px auto;
     }
@@ -228,6 +224,10 @@ body.page {
     font-size: 1.65em;
     font-weight: normal;
     margin-bottom: 1.25em;
+
+    &:first-child {
+      margin-top: 0;
+    }
 
     em {
       margin-left: .5em;
@@ -488,8 +488,6 @@ body.welcome {
       display: inline-block;
       margin-top: 20px;
       margin-bottom: 10px;
-      font-size: 1.1em;
-      padding: 11px 48px;
     }
 
     .features {
@@ -628,6 +626,10 @@ body.about {
   .primary {
     position: relative;
     padding-bottom: 55px;
+
+    h1:first-child {
+      margin-top: 0;
+    }
 
     &:before {
       display: block;
@@ -848,6 +850,79 @@ body.about {
   }
 }
 
+body.form-page {
+  .container.main {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    text-align: center;
+  }
+
+  form {
+    text-align: center;
+    max-width: 500px;
+    margin: 0 auto;
+
+    h1 {
+      margin-bottom: 35px;
+    }
+
+    h2 {
+      font-weight: normal;
+    }
+
+    h2, .field-label-container {
+      text-align: left;
+      margin-bottom: 25px;
+    }
+
+    .major-action {
+      font-size: 1.5em;
+      margin-top: 10px;
+      color: white;
+      background: @brand-color;
+      border: 2px solid transparent;
+
+      &.done {
+        &:disabled {
+          opacity: 1;
+        }
+
+        background: white;
+        color: darken(@brand-color, 25%);
+        border: 2px solid @brand-color;
+        box-shadow: none;
+      }
+    }
+  }
+
+  form.verify-email {
+    h1 {
+      width: 300px;
+      height: 300px;
+      background: fade(@brand-color, 25%) data-uri('../res/email.svg') no-repeat center center;
+      background-size: 215px 215px;
+      border-radius: 100%;
+      font-size: 0;
+      margin: 0 auto;
+      margin-bottom: 25px;
+      text-indent: -9999px;
+    }
+
+    h2 {
+      text-align: center;
+    }
+
+    @media (max-width: @mobile-breakpoint) {
+      h1 {
+        width: 200px;
+        height: 200px;
+        background-size: 143px 143px;
+      }
+    }
+  }
+}
+
 .fancy-logo {
   @size: 200px;
   position: relative;
@@ -1035,6 +1110,8 @@ body.about {
 
 .big-green-button {
   .raised-filled-button(@brand-color, 4px, 2px);
+  font-size: 1.1em;
+  padding: 11px 48px;
 }
 
 .outline-button {
