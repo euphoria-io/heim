@@ -27,18 +27,20 @@ func TestDeleteMessage(t *testing.T) {
 			Content: "test",
 		}
 
-		key, err := room.MessageKey(ctx)
-		if err != nil {
-			return proto.Message{}, err
-		}
-
-		if key != nil {
-			mkey := key.ManagedKey()
-			if err := kms.DecryptKey(&mkey); err != nil {
+		if managedRoom, ok := room.(proto.ManagedRoom); ok {
+			key, err := managedRoom.MessageKey(ctx)
+			if err != nil {
 				return proto.Message{}, err
 			}
-			if err := proto.EncryptMessage(&msg, key.KeyID(), &mkey); err != nil {
-				return proto.Message{}, err
+
+			if key != nil {
+				mkey := key.ManagedKey()
+				if err := kms.DecryptKey(&mkey); err != nil {
+					return proto.Message{}, err
+				}
+				if err := proto.EncryptMessage(&msg, key.KeyID(), &mkey); err != nil {
+					return proto.Message{}, err
+				}
 			}
 		}
 

@@ -569,8 +569,10 @@ type PMInitiateReply struct {
 // The `pm-initiate-event` informs the client that another user wants to chat
 // with them privately.
 type PMInitiateEvent struct {
-	From UserID              `json:"from"`  // the id of the user inviting the client to chat privately
-	PMID snowflake.Snowflake `json:"pm_id"` // the private chat can be accessed at /room/pm:*PMID*
+	From     UserID              `json:"from"`      // the id of the user inviting the client to chat privately
+	FromNick string              `json:"from_nick"` // the nick of the inviting user
+	FromRoom string              `json:"from_room"` // the room where the invitation was sent from
+	PMID     snowflake.Snowflake `json:"pm_id"`     // the private chat can be accessed at /room/pm:*PMID*
 }
 
 // The `register-account` command creates a new account and logs into it.
