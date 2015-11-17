@@ -40,7 +40,7 @@ if (!window.frameElement) {
   }
 
   // read url hash flags pertaining to socket connection
-  const roomName = location.pathname.match(/(\w+)\/$/)[1]
+  const roomName = location.pathname.match(/((pm:)?\w+)\/$/)[1]
   const hashFlags = queryString.parse(location.hash.substr(1))
   let connectEndpoint = process.env.HEIM_ORIGIN + process.env.HEIM_PREFIX
   if (process.env.NODE_ENV !== 'production' && hashFlags.connect) {
