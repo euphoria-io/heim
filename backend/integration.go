@@ -2755,7 +2755,7 @@ func testNotifyUser(s *serverUnderTest) {
 		ctx := scope.New()
 		kms := s.app.kms
 
-		// Create manager account and room.
+		// Create account
 		nonce := fmt.Sprintf("notify-%s", time.Now())
 		cammie, _, err := s.Account(ctx, kms, "email", "cammie"+nonce, "cammiepass")
 		So(err, ShouldBeNil)
