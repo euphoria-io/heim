@@ -96,7 +96,8 @@ export default React.createClass({
     return !newError ? null : origError
   },
 
-  _walkChildren(children, errors) {
+  _walkChildren(children, serverErrors, validatorErrors) {
+    const errors = _.assign({}, serverErrors, validatorErrors)
     return React.Children.map(children, child => {
       if (!React.isValidElement(child)) {
         return child
@@ -117,16 +118,15 @@ export default React.createClass({
         value: this.state.values[name],
         error: !!error,
         message: error,
-        disabled: this.props.working || child.props.type === 'submit' && _.any(errors),
+        disabled: this.props.working || child.props.type === 'submit' && _.any(validatorErrors),
       }, this._walkChildren(child.props.children, errors))
     })
   },
 
   render() {
-    const errors = _.assign({}, this.props.errors, this.state.errors)
     return (
       <form className={classNames('fields', this.props.className)} noValidate onSubmit={this.onSubmit}>
-        {this._walkChildren(this.props.children, errors)}
+        {this._walkChildren(this.props.children, this.props.errors, this.state.errors)}
       </form>
     )
   },
