@@ -2849,11 +2849,10 @@ func testPMs(s *serverUnderTest) {
 		logan, _, err := s.Account(ctx, kms, "email", "logan"+nonce, "hunter2")
 		So(err, ShouldBeNil)
 
-		// Create recipient
+		// Create recipient and remain online to receive pm-initiate-event.
 		r := s.Connect("pminit")
 		r.expectPing()
 		r.expectSnapshot(s.backend.Version(), nil, nil)
-		r.Close()
 
 		// Try to invite recipient to PM but fail because not logged in
 		c := s.Connect("pminvite")
@@ -2873,7 +2872,10 @@ func testPMs(s *serverUnderTest) {
 		capture := c.expect("1", "pm-initiate-reply", `{"pm_id":"*"}`)
 		c.Close()
 
-		// Reconnect to PM room
+		// Recipient receive pm-initiate-event and reconnect to PM room
+		r.expect(
+			"", "pm-initiate-event", `{"from":"%s","from_nick":"","from_room":"pminvite2","pm_id":"%s"}`,
+			c.id(), capture["pm_id"])
 		roomName := fmt.Sprintf("pm:%s", capture["pm_id"])
 		r.accountHasAccess = true
 		r = s.Reconnect(r, roomName)

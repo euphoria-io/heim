@@ -870,7 +870,17 @@ func (s *session) handlePMInitiateCommand(msg *proto.PMInitiateCommand) *respons
 	if err != nil {
 		return &response{err: fmt.Errorf("pm initiate: %s", err)}
 	}
-	// TODO: NotifyUser
+
+	event := proto.PMInitiateEvent{
+		From:     s.Identity().ID(),
+		FromNick: s.Identity().Name(),
+		FromRoom: s.room.ID(),
+		PMID:     pmID,
+	}
+	if err := s.backend.NotifyUser(s.ctx, msg.UserID, proto.PMInitiateEventType, event); err != nil {
+		return &response{err: err}
+	}
+
 	return &response{
 		packet: &proto.PMInitiateReply{
 			PMID: pmID,
