@@ -565,4 +565,45 @@ export default function initPlugins(roomName) {
       )
     })
   }
+
+  if (roomName === 'sandersforpresident') {
+    Heim.hook('main-pane-top', function BernieBarInject() {
+      const MessageText = require('./ui/message-text').default
+      return (
+        <div className="secondary-top-bar"><MessageText onlyEmoji content=":us:" /> Welcome to the <a href="https://reddit.com/r/sandersforpresident">/r/SandersForPresident</a> live chat! Please <a href="https://www.reddit.com/r/SandersForPresident/wiki/livechat">read our rules</a>.</div>
+      )
+    })
+
+    Heim.hook('page-bottom', () => {
+      return (
+        <style key="sanders-style" dangerouslySetInnerHTML={{__html: `
+          .top-bar {
+            background: #327bbe;
+          }
+
+          .top-bar button {
+            background: rgba(255, 255, 255, .5) !important;
+          }
+
+          .secondary-top-bar {
+            color: white;
+            background: #193e60;
+            padding: 10px 6px;
+          }
+
+          .secondary-top-bar a, .main-pane .top-bar .room .name {
+            color: white;
+          }
+
+          .sidebar-pane {
+            background: #f2f2f2;
+          }
+
+          .sidebar-pane h1 {
+            color: #4d5763;
+          },
+        `}} />
+      )
+    })
+  }
 }
