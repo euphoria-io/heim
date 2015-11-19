@@ -282,7 +282,9 @@ type ChangeNameCommand struct {
 }
 
 // The `change-name-reply` packet indicates a successful name change.
-type ChangeNameReply struct{}
+type ChangeNameReply struct {
+	Name string `json:"name"` // the new name associated with the account
+}
 
 // The `change-password` command changes the password of the signed in account.
 type ChangePasswordCommand struct {

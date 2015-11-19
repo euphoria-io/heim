@@ -1327,7 +1327,7 @@ func testAccountChangeName(s *serverUnderTest) {
 		conn.expectPing()
 		conn.expectSnapshot(s.backend.Version(), nil, nil)
 		conn.send("1", "change-name", `{"name":"logan"}`)
-		conn.expect("1", "change-name-reply", `{}`)
+		conn.expect("1", "change-name-reply", `{"name":"logan"}`)
 		conn.Close()
 
 		conn.accountName = "logan"
