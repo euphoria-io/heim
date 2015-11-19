@@ -55,6 +55,9 @@ export default function handleCopy(ev) {
     const el = lineEl.parentNode
     const messageId = el.dataset.messageId
     const message = Heim.chat.store.state.messages.get(messageId)
+    if (!message) {
+      return
+    }
 
     const preContentItems = []
     preContentItems.push(_.repeat(' ', 2 * (el.dataset.depth - minDepth)))
