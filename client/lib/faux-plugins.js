@@ -570,7 +570,7 @@ export default function initPlugins(roomName) {
     Heim.hook('main-pane-top', function BernieBarInject() {
       const MessageText = require('./ui/message-text').default
       return (
-        <div className="secondary-top-bar"><MessageText onlyEmoji content=":us:" /> Welcome to the <a href="https://reddit.com/r/sandersforpresident">/r/SandersForPresident</a> live chat! Please <a href="https://www.reddit.com/r/SandersForPresident/wiki/livechat">read our rules</a>.</div>
+        <div className="secondary-top-bar"><MessageText onlyEmoji content=":us:" /> Welcome to the <a href="https://reddit.com/r/sandersforpresident" target="_blank">/r/SandersForPresident</a> live chat! Please <a href="https://www.reddit.com/r/SandersForPresident/wiki/livechat" target="_blank">read our rules</a>.</div>
       )
     })
 
