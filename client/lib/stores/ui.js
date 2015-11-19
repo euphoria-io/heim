@@ -567,6 +567,13 @@ const store = module.exports.store = Reflux.createStore({
       storeActions.tabKeyCombo(ev)
     } else {
       this._focusedPane().keydownOnPane(ev)
+      // FIXME: this is a hack to detect whether a KeyboardActionHandler hasn't
+      // triggered, and default to focusing the entry if no text is currently
+      // selected (so we don't disrupt ctrl-c). this should be cleaned up with
+      // an overhaul of the keyboard focus / combo handling code.
+      if (!ev.isPropagationStopped() && uiwindow.getSelection().isCollapsed) {
+        this.focusEntry()
+      }
     }
   },
 
