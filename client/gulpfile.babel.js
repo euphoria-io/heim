@@ -1,6 +1,6 @@
 // string.js (a dep) clashes with core-js string polyfill, so require first
 import 'markdown-it-anchor'
-import 'babel-core/register'
+import 'babel-polyfill'
 
 import _ from 'lodash'
 import merge from 'merge-stream'
