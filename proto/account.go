@@ -147,6 +147,12 @@ type AccountView struct {
 	Name string              `json:"name"` // the name that the holder of the account goes by
 }
 
+// PersonalAccountView describes an account to its owner.
+type PersonalAccountView struct {
+	AccountView
+	Email string `json:"email"` // the account's email address
+}
+
 // NewAccountSecurity initializes the nonce and account secrets for a new account
 // with the given password. Returns an encrypted key-encrypting-key, encrypted
 // key-pair, nonce, and error.

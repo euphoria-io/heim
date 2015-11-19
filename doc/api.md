@@ -1222,7 +1222,7 @@ It includes information about the client's authentication and associated identit
 | Field | Type | Required? | Description |
 | :-- | :-- | :-- | :--------- |
 | `id` | [UserID](#userid) | required |  the id of the agent or account logged into this session |
-| `account` | [AccountView](#accountview) | *optional* |  details about the user's account, if the session is logged in |
+| `account` | [PersonalAccountView](#personalaccountview) | *optional* |  details about the user's account, if the session is logged in |
 | `session` | [SessionView](#sessionview) | required |  details about the session |
 | `account_has_access` | [bool](#bool) | *optional* |  if true, then the account has an explicit access grant to the current room |
 | `room_is_private` | [bool](#bool) | required |  if true, the session is connected to a private room |

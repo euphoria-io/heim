@@ -260,6 +260,7 @@ func run() error {
 	ts.registerType("AuthOption")
 	ts.registerType("Message")
 	ts.registerType("PacketType")
+	ts.registerType("PersonalAccountView")
 	ts.registerType("SessionView")
 	ts.registerType("Snowflake")
 	ts.registerType("Time")

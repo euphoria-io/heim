@@ -506,7 +506,15 @@ func (s *session) sendHello(roomIsPrivate, accountHasAccess bool) error {
 		Version:          s.room.Version(),
 	}
 	if s.client.Account != nil {
-		event.AccountView = s.client.Account.View(s.roomName)
+		event.AccountView = &proto.PersonalAccountView{
+			AccountView: *s.client.Account.View(s.roomName),
+		}
+		for _, pid := range s.client.Account.PersonalIdentities() {
+			if pid.Namespace() == "email" {
+				event.AccountView.Email = pid.ID()
+				break
+			}
+		}
 	}
 	event.ID = event.SessionView.ID
 	cmd, err := proto.MakeEvent(event)
