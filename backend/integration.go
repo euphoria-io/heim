@@ -202,6 +202,7 @@ type testConn struct {
 	userID           string
 	accountID        string
 	accountName      string
+	accountEmail     string
 	accountHasAccess bool
 	isStaff          bool
 	isManager        bool
@@ -228,6 +229,13 @@ func (tc *testConn) send(id, cmdType, data string, args ...interface{}) {
 	}
 	if tc.debugOn {
 		fmt.Printf("sent %s\n", msg)
+	}
+	if cmdType == "login" || cmdType == "register-account" {
+		// parse msg and extract email address
+		var parsed map[string]interface{}
+		err := json.Unmarshal([]byte(data), &parsed)
+		So(err, ShouldBeNil)
+		tc.accountEmail = parsed["id"].(string)
 	}
 	So(tc.Conn.WriteMessage(websocket.TextMessage, []byte(msg)), ShouldBeNil)
 }
@@ -390,7 +398,7 @@ func (tc *testConn) expectHello() {
 	sessionParts := ""
 	isParts := ""
 	if tc.accountID != "" {
-		account = fmt.Sprintf(`"account":{"id":"%s","name":"%s"`, tc.accountID, tc.accountName)
+		account = fmt.Sprintf(`"account":{"id":"%s","name":"%s","email":"%s"`, tc.accountID, tc.accountName, tc.accountEmail)
 		if tc.isStaff {
 			sessionParts += `,"is_staff":true`
 		}
