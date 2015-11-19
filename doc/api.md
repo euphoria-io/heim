@@ -548,7 +548,10 @@ The `change-name` command changes the name associated with the signed in account
 The `change-name-reply` packet indicates a successful name change.
 
 
-This packet has no fields.
+| Field | Type | Required? | Description |
+| :-- | :-- | :-- | :--------- |
+| `name` | [string](#string) | required |  the new name associated with the account |
+
 
 
 

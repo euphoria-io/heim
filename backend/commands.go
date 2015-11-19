@@ -480,7 +480,7 @@ func (s *session) handleChangeNameCommand(msg *proto.ChangeNameCommand) *respons
 	if err := s.backend.AccountManager().ChangeName(s.ctx, s.client.Account.ID(), msg.Name); err != nil {
 		return &response{err: err}
 	}
-	return &response{packet: &proto.ChangeNameReply{}}
+	return &response{packet: &proto.ChangeNameReply{Name: msg.Name}}
 }
 
 func (s *session) handleChangePasswordCommand(msg *proto.ChangePasswordCommand) *response {
