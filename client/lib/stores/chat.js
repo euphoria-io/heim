@@ -11,7 +11,8 @@ import plugins from './plugins'
 import hueHash from '../hue-hash'
 
 
-const mentionRe = module.exports.mentionRe = /\B@([^\s]+?(?=$|[,.!?;&'\s]|&#39;|&quot;|&amp;))/g
+const mentionDelim = String.raw`(^|$|[,.!?;&'"\s]|&#39;|&quot;|&amp;)`
+const mentionFindRe = module.exports.mentionFindRe = new RegExp(mentionDelim + String.raw`@(\S+?)` + mentionDelim, 'g')
 
 const storeActions = module.exports.actions = Reflux.createActions([
   'messageReceived',
@@ -206,7 +207,8 @@ module.exports.store = Reflux.createStore({
     this.state.who = this.state.who.withMutations(who => {
       _.each(messages, message => {
         if (nick) {
-          const mention = message.content.match(mentionRe)
+          const mention = message.content.match(mentionFindRe)
+          // Note: we are relying on hueHash.normalize to strip the preceding and following characters from the mention regex match here.
           if (mention && _.any(mention, m => hueHash.normalize(m.substr(1)) === hueHash.normalize(nick))) {
             message._mention = true
           }

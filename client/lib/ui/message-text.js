@@ -67,9 +67,9 @@ export default React.createClass({
         ReactDOMServer.renderToStaticMarkup(<a href={heimURL('/room/' + name + '/')} target="_blank">&amp;{name}</a>)
       )
 
-      html = html.replace(chat.mentionRe, (match, name) => {
+      html = html.replace(chat.mentionFindRe, (match, pre, name, post) => {
         const color = 'hsl(' + hueHash.hue(name) + ', 50%, 42%)'
-        return ReactDOMServer.renderToStaticMarkup(<span style={{color: color}} className="mention-nick">@{name}</span>)
+        return pre + ReactDOMServer.renderToStaticMarkup(<span style={{color: color}} className="mention-nick">@{name}</span>) + post
       })
     }
 
