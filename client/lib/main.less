@@ -1724,34 +1724,28 @@ iframe.js {
   left: 8px;
 }
 
-.bubble.update {
-  position: absolute;
-  top: 40px;
-  right: 6px;
-  padding: 0;
-  background: none;
+.update-button {
+  margin: 10px;
+  float: right;
+  background: @welcome-color;
+  border: 1px solid darken(@welcome-color, 30%);
+  border-radius: 3px;
+  padding: 6px 8px;
+  font-size: .8em;
+  .button-icon('../res/update.svg', 24px, 8px);
+  .touchable-bg(@welcome-color);
+  box-shadow: 0 0 8px fade(black, 25%);
 
-  .update-button {
-    margin-left: auto;
-    background: @welcome-color;
-    border: 1px solid darken(@welcome-color, 30%);
-    border-radius: 3px;
-    padding: 6px 8px;
-    font-size: .8em;
-    .button-icon('../res/update.svg', 24px, 8px);
-    .touchable-bg(@welcome-color);
+  p {
+    text-align: left;
+    margin: 0;
 
-    p {
-      text-align: left;
-      margin: 0;
-
-      em {
-        display: block;
-        font-size: .8em;
-        margin-top: 1px;
-        opacity: .65;
-        font-style: normal;
-      }
+    em {
+      display: block;
+      font-size: .8em;
+      margin-top: 1px;
+      opacity: .65;
+      font-style: normal;
     }
   }
 }

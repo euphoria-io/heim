@@ -4,9 +4,7 @@ import ReactCSSTransitionGroup from 'react-addons-css-transition-group'
 import classNames from 'classnames'
 import Immutable from 'immutable'
 
-import update from '../stores/update'
 import FastButton from './fast-button'
-import Bubble from './toggle-bubble'
 import RoomTitle from './room-title'
 
 
@@ -31,7 +29,6 @@ export default React.createClass({
     managerMode: React.PropTypes.bool,
     toggleManagerMode: React.PropTypes.func,
     working: React.PropTypes.bool,
-    updateReady: React.PropTypes.bool,
   },
 
   mixins: [require('react-immutable-render-mixin')],
@@ -50,9 +47,6 @@ export default React.createClass({
           <ReactCSSTransitionGroup transitionName="spinner" transitionEnterTimeout={100} transitionLeaveTimeout={100}>{this.props.working && <div key="spinner" className="spinner" />}</ReactCSSTransitionGroup>
           {this.props.joined && <FastButton fastTouch className="user-count" onClick={this.props.toggleUserList}>{userCount}</FastButton>}
         </div>
-        <Bubble ref="updateBubble" className="update" visible={this.props.updateReady}>
-          <FastButton className="update-button" onClick={update.perform}><p>update ready<em>{Heim.isTouch ? 'tap' : 'click'} to reload</em></p></FastButton>
-        </Bubble>
       </div>
     )
   },

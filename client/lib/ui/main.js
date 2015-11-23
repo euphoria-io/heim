@@ -7,6 +7,7 @@ import Reflux from 'reflux'
 
 import chat from '../stores/chat'
 import ui from '../stores/ui'
+import update from '../stores/update'
 import notification from '../stores/notification'
 import activity from '../stores/activity'
 import HooksMixin from './hooks-mixin'
@@ -31,7 +32,7 @@ export default React.createClass({
     Reflux.connect(activity.store, 'activity'),
     Reflux.connect(ui.store, 'ui'),
     Reflux.connect(require('../stores/notification').store, 'notification'),
-    Reflux.connect(require('../stores/update').store, 'update'),
+    Reflux.connect(update.store, 'update'),
     Reflux.connect(require('../stores/storage').store, 'storage'),
     Reflux.listenTo(ui.selectThreadInList, 'selectThreadInList'),
     Reflux.listenTo(ui.panViewTo, 'panViewTo'),
@@ -281,7 +282,7 @@ export default React.createClass({
           <NotificationList tree={this.state.chat.messages} notifications={this.state.ui.frozenNotifications || this.state.notification.notifications} onNotificationSelect={this.onNotificationSelect} animate={!this.state.ui.thin} />
         </div>
         <div className="chat-pane-container main-pane" onClickCapture={_.partial(this.onPaneClick, 'main')}>
-          <ChatTopBar who={this.state.chat.who} roomName={roomName} connected={this.state.chat.connected} joined={!!this.state.chat.joined} authType={this.state.chat.authType} isManager={this.state.chat.isManager} managerMode={this.state.ui.managerMode} updateReady={this.state.update.get('ready')} working={this.state.chat.loadingLogs} showInfoPaneButton={!thin || !Heim.isTouch} infoPaneOpen={infoPaneOpen} collapseInfoPane={ui.collapseInfoPane} expandInfoPane={ui.expandInfoPane} toggleUserList={ui.toggleUserList} toggleManagerMode={ui.toggleManagerMode} />
+          <ChatTopBar who={this.state.chat.who} roomName={roomName} connected={this.state.chat.connected} joined={!!this.state.chat.joined} authType={this.state.chat.authType} isManager={this.state.chat.isManager} managerMode={this.state.ui.managerMode} working={this.state.chat.loadingLogs} showInfoPaneButton={!thin || !Heim.isTouch} infoPaneOpen={infoPaneOpen} collapseInfoPane={ui.collapseInfoPane} expandInfoPane={ui.expandInfoPane} toggleUserList={ui.toggleUserList} toggleManagerMode={ui.toggleManagerMode} />
           {this.templateHook('main-pane-top')}
           <ReactCSSTransitionGroup className="notice-stack" transitionName="slide-down" transitionEnterTimeout={150} transitionLeaveTimeout={150}>
             {this.state.ui.notices.contains('notifications') && <div className="notice notifications">
@@ -295,6 +296,7 @@ export default React.createClass({
               </div>
               <FastButton className="close" onClick={() => ui.dismissNotice('notifications')} />
             </div>}
+            {this.state.update.get('ready') && <FastButton className="update-button" onClick={update.perform}><p>update ready<em>{Heim.isTouch ? 'tap' : 'click'} to reload</em></p></FastButton>}
           </ReactCSSTransitionGroup>
           <div className="main-pane-stack">
             <ChatPane pane={this.state.ui.panes.get('main')} showTimeStamps={this.state.ui.showTimestamps} onScrollbarSize={this.onScrollbarSize} disabled={!!mainPaneThreadId} />
