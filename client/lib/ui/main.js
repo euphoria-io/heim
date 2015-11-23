@@ -254,6 +254,8 @@ export default React.createClass({
     const infoPaneOpen = infoPaneHidden ? this.state.ui.panPos === 'info' : this.state.ui.infoPaneExpanded
     const sidebarPaneHidden = thin
 
+    const roomName = this.state.chat.roomName
+
     const snapPoints = {main: 0}
     if (infoPaneHidden) {
       snapPoints.info = 240
@@ -275,12 +277,25 @@ export default React.createClass({
           <div className="thread-list-container">
             <ThreadList ref="threadList" threadData={ui.store.threadData} threadTree={this.state.ui.frozenThreadList || this.state.chat.messages.threads} tree={this.state.chat.messages} onScroll={this.onThreadsScroll} onThreadSelect={this.onThreadSelect} />
           </div>
-          {!(this.state.ui.thin && Heim.isTouch) && <NotificationSettings roomName={this.state.chat.roomName} />}
+          {!(this.state.ui.thin && Heim.isTouch) && <NotificationSettings roomName={roomName} />}
           <NotificationList tree={this.state.chat.messages} notifications={this.state.ui.frozenNotifications || this.state.notification.notifications} onNotificationSelect={this.onNotificationSelect} animate={!this.state.ui.thin} />
         </div>
         <div className="chat-pane-container main-pane" onClickCapture={_.partial(this.onPaneClick, 'main')}>
-          <ChatTopBar who={this.state.chat.who} roomName={this.state.chat.roomName} connected={this.state.chat.connected} joined={!!this.state.chat.joined} authType={this.state.chat.authType} isManager={this.state.chat.isManager} managerMode={this.state.ui.managerMode} updateReady={this.state.update.get('ready')} working={this.state.chat.loadingLogs} showInfoPaneButton={!thin || !Heim.isTouch} infoPaneOpen={infoPaneOpen} collapseInfoPane={ui.collapseInfoPane} expandInfoPane={ui.expandInfoPane} toggleUserList={ui.toggleUserList} toggleManagerMode={ui.toggleManagerMode} />
+          <ChatTopBar who={this.state.chat.who} roomName={roomName} connected={this.state.chat.connected} joined={!!this.state.chat.joined} authType={this.state.chat.authType} isManager={this.state.chat.isManager} managerMode={this.state.ui.managerMode} updateReady={this.state.update.get('ready')} working={this.state.chat.loadingLogs} showInfoPaneButton={!thin || !Heim.isTouch} infoPaneOpen={infoPaneOpen} collapseInfoPane={ui.collapseInfoPane} expandInfoPane={ui.expandInfoPane} toggleUserList={ui.toggleUserList} toggleManagerMode={ui.toggleManagerMode} />
           {this.templateHook('main-pane-top')}
+          <ReactCSSTransitionGroup className="notice-stack" transitionName="slide-down" transitionEnterTimeout={150} transitionLeaveTimeout={150}>
+            {this.state.ui.notices.contains('notifications') && <div className="notice notifications">
+              <div className="content">
+                <span className="title">what would you like notifications for?</span>
+                <div className="actions">
+                  <FastButton onClick={() => ui.notificationsNoticeChoice('message')}>new messages</FastButton>
+                  or
+                  <FastButton onClick={() => ui.notificationsNoticeChoice('mention')}>just mentions<span className="long"> of @{this.state.chat.nick}</span></FastButton>
+                </div>
+              </div>
+              <FastButton className="close" onClick={() => ui.dismissNotice('notifications')} />
+            </div>}
+          </ReactCSSTransitionGroup>
           <div className="main-pane-stack">
             <ChatPane pane={this.state.ui.panes.get('main')} showTimeStamps={this.state.ui.showTimestamps} onScrollbarSize={this.onScrollbarSize} disabled={!!mainPaneThreadId} />
             <ReactCSSTransitionGroup transitionName="slide" transitionLeave={!mainPaneThreadId} transitionLeaveTimeout={200} transitionEnter={false}>

@@ -41,6 +41,8 @@ const storeActions = Reflux.createActions([
   'finishMessageSelectionDrag',
   'openManagerToolbox',
   'closeManagerToolbox',
+  'notificationsNoticeChoice',
+  'dismissNotice',
 ])
 _.extend(module.exports, storeActions)
 
@@ -301,6 +303,8 @@ const store = module.exports.store = Reflux.createStore({
       managerToolboxAnchorEl: null,
       draggingMessageSelection: false,
       draggingMessageSelectionToggle: null,
+      notices: Immutable.OrderedSet(),
+      notificationsNoticeDismissed: false,
     }
 
     this.threadData = new MessageData({selected: false})
@@ -318,15 +322,28 @@ const store = module.exports.store = Reflux.createStore({
     }
     this.state.infoPaneExpanded = _.get(data, ['room', this.chatState.roomName, 'infoPaneExpanded'], false)
     this.state.sidebarPaneExpanded = _.get(data, ['room', this.chatState.roomName, 'sidebarPaneExpanded'], true)
+    this.state.notificationsNoticeDismissed = _.get(data, ['room', this.chatState.roomName, 'notificationsNoticeDismissed'], false)
+    this._updateNotices()
     this.trigger(this.state)
   },
 
   chatChange(state) {
     this.chatState = state
+    this._updateNotices()
+    this.trigger(this.state)
   },
 
   notificationChange(state) {
     this.notificationState = state
+  },
+
+  _updateNotices() {
+    const notifications = this.chatState.joined && this.chatState.nick && !this.state.notificationsNoticeDismissed
+    if (notifications) {
+      this.state.notices = this.state.notices.add('notifications')
+    } else {
+      this.state.notices = this.state.notices.delete('notifications')
+    }
   },
 
   setUISize(width, height) {
@@ -625,6 +642,18 @@ const store = module.exports.store = Reflux.createStore({
   finishMessageSelectionDrag() {
     this.state.draggingMessageSelection = false
     this.trigger(this.state)
+  },
+
+  notificationsNoticeChoice(choice) {
+    notification.enablePopups()
+    notification.setRoomNotificationMode(this.chatState.roomName, choice)
+    this.dismissNotice('notifications')
+  },
+
+  dismissNotice(name) {
+    if (name === 'notifications') {
+      storage.setRoom(this.chatState.roomName, 'notificationsNoticeDismissed', true)
+    }
   },
 })
 

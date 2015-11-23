@@ -72,7 +72,7 @@ export default React.createClass({
 
   render() {
     return (
-      <ReactCSSTransitionGroup transitionName="bubble" transitionEnterTimeout={150} transitionLeaveTimeout={150}>
+      <ReactCSSTransitionGroup transitionName="slide-down" transitionEnterTimeout={150} transitionLeaveTimeout={150}>
         {this.props.visible &&
           <div ref="bubble" key="bubble" className={classNames('bubble', this.props.className)}>
             {this.props.children}

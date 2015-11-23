@@ -615,6 +615,74 @@ iframe.js {
       padding: @messages-padding;
     }
   }
+
+  .notice-stack {
+    position: absolute;
+    left: 0;
+    right: 0;
+    z-index: 11;
+  }
+
+  .notice {
+    display: flex;
+    align-items: center;
+    padding: 6px 10px;
+    color: white;
+    font-weight: bold;
+    font-size: .9em;
+    box-shadow: 0 0 8px fade(black, 25%);
+    user-select: none;
+    overflow: hidden;
+
+    &.notifications {
+      background: @brand-color;
+    }
+
+    .content {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-top: -4px;
+
+      .title, .actions {
+        margin-top: 4px;
+      }
+
+      .title {
+        flex-shrink: 0;
+        margin-right: 1.25em;
+      }
+
+      .actions {
+        flex-shrink: 0;
+
+        button {
+          .raised-filled-button(white);
+          color: darken(@brand-color, 25%);
+          margin: 0 .75em;
+          flex-shrink: 0;
+
+          &:first-child {
+            margin-left: 0;
+          }
+
+          &:last-child {
+            margin-right: 0;
+          }
+        }
+      }
+    }
+
+    .close {
+      position: relative;
+      padding: 6px;
+      border-radius: 3px;
+      .touchable-bg(white);
+      .button-icon('../res/close-notification.svg', 11px, 0, 1);
+      .larger-touch-target(10px, 10px);
+    }
+  }
 }
 
 .chat-pane {
@@ -737,7 +805,7 @@ iframe.js {
   background: white;
   box-shadow: 0 0 8px fade(black, 25%);
   white-space: nowrap;
-  z-index: 11;
+  z-index: 12;
   user-select: none;
 
   .update-available, .user-count {
@@ -1623,27 +1691,27 @@ iframe.js {
   padding: 4px 8px;
   border-radius: 3px;
   box-shadow: 0 0 8px fade(black, 25%);
+}
 
-  &.bubble-enter-active, &.bubble-leave-active {
-    transition: .15s ease;
-    transition-property: transform, opacity;
-  }
+&.slide-down-enter, &.slide-down-leave {
+  transition: .15s ease;
+  transition-property: transform, opacity;
 
-  &.bubble-enter {
+  &.slide-down-enter {
     opacity: 0;
     transform: translateY(-10px);
 
-    &.bubble-enter-active {
+    &.slide-down-enter-active {
       opacity: 1;
       transform: translateY(0);
     }
   }
 
-  &.bubble-leave {
+  &.slide-down-leave {
     opacity: 1;
     transform: translateY(0);
 
-    &.bubble-leave-active {
+    &.slide-down-leave-active {
       opacity: 0;
       transform: translateY(-10px);
     }
@@ -1968,6 +2036,10 @@ iframe.js {
 @media (max-width: @mobile-breakpoint) {
   .info-pane, .sidebar-pane, .thread-panes {
     margin-top: 0;
+  }
+
+  .notice .long {
+    display: none;
   }
 
   body.touch .info-pane {
