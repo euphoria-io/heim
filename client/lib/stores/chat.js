@@ -355,6 +355,7 @@ module.exports.store = Reflux.createStore({
       this.state.authType = roomStorage.auth.type
       this.state.authData = roomStorage.auth.data
     }
+    this.setRoomSettings({showAllReplies: roomStorage.showAllReplies})
     this._seenMessages = Immutable.Map(roomStorage.seenMessages || {})
     this.trigger(this.state)
   },

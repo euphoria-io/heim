@@ -206,6 +206,7 @@ const Message = React.createClass({
 
   render() {
     const message = this.state.node
+    const showAllReplies = this.props.showAllReplies || this.props.roomSettings.get('showAllReplies')
 
     if (message.get('deleted')) {
       return <div data-message-id={message.get('id')} className="message-node deleted" />
@@ -229,7 +230,7 @@ const Message = React.createClass({
     const contentExpanded = paneData.get('contentExpanded')
 
     let repliesExpanded
-    if (this.props.showAllReplies) {
+    if (showAllReplies) {
       repliesExpanded = true
     } else {
       repliesExpanded = paneData.get('repliesExpanded')
@@ -289,7 +290,7 @@ const Message = React.createClass({
       }
     } else if (children.size > 0 || focused) {
       const composingReply = focused && children.size === 0
-      const inlineReplies = composingReply || this.props.visibleCount > 0 || this.props.showAllReplies
+      const inlineReplies = composingReply || this.props.visibleCount > 0 || showAllReplies
       let childCount
       let childNewCount
       if (!inlineReplies && !repliesExpanded) {
@@ -332,7 +333,7 @@ const Message = React.createClass({
       } else {
         let focusAction
         let expandRestOfReplies
-        const canCollapse = !this.props.showAllReplies && children.size > this.props.visibleCount
+        const canCollapse = !showAllReplies && children.size > this.props.visibleCount
         if (canCollapse && !repliesExpanded) {
           const descCount = this.props.tree.calculateDescendantCount(this.props.nodeId, this.props.visibleCount)
           childCount = descCount.get('descendants')
