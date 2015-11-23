@@ -322,8 +322,24 @@ func (ec *EmailConfig) Get(cfg *ServerConfig) (*templates.Templater, emails.Deli
 	localDomain := cfg.CommonEmailParams.EmailDomain
 	cfg.CommonEmailParams.CommonData.LocalDomain = localDomain
 
+	// Load templates and configure email sender.
+	templater := &templates.Templater{}
+	// TODO: replace -static with a better sense of a static root
+	if errs := templater.Load(filepath.Join(cfg.StaticPath, "..", "email")); errs != nil {
+		return nil, nil, errs[0]
+	}
+
+	// Verify templates.
+	if errs := proto.ValidateEmailTemplates(templater); errs != nil {
+		for _, err := range errs {
+			fmt.Printf("error: %s\n", err)
+		}
+		return nil, nil, fmt.Errorf("template validation failed: %s...", errs[0].Error())
+	}
+
+	// Set up deliverer.
 	if ec.Server == "" {
-		return nil, nil, nil
+		return templater, nil, nil
 	}
 
 	var sslHost string
@@ -345,21 +361,6 @@ func (ec *EmailConfig) Get(cfg *ServerConfig) (*templates.Templater, emails.Deli
 			return nil, nil, fmt.Errorf("PLAIN authentication requires TLS")
 		}
 		auth = smtp.PlainAuth(ec.Identity, ec.Username, ec.Password, sslHost)
-	}
-
-	// Load templates and configure email sender.
-	templater := &templates.Templater{}
-	// TODO: replace -static with a better sense of a static root
-	if errs := templater.Load(filepath.Join(cfg.StaticPath, "..", "email")); errs != nil {
-		return nil, nil, errs[0]
-	}
-
-	// Verify templates.
-	if errs := proto.ValidateEmailTemplates(templater); errs != nil {
-		for _, err := range errs {
-			fmt.Printf("error: %s\n", err)
-		}
-		return nil, nil, fmt.Errorf("template validation failed: %s...", errs[0].Error())
 	}
 
 	deliverer := emails.NewSMTPDeliverer(localDomain, ec.Server, sslHost, auth)
