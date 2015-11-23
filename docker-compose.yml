@@ -73,7 +73,7 @@ backend:
     HEIM_ETCD: http://etcd:4001
     HEIM_ETCD_HOME: /dev/euphoria.io
     HEIM_CONFIG: /go/src/euphoria.io/heim/heim.yml
-  command: run.sh heimctl serve -http :80 -console :2222 -static /srv/heim/client/src/build/heim
+  command: run.sh heimctl -static /srv/heim/client/src/build/heim serve -http :80 -console :2222
 
 # The embed container serves static files for the embed domain.
 embed:
