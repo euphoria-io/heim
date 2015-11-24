@@ -12,15 +12,15 @@ export default {
 
     return postAPI(url, data)
       .then(response => {
-        if (response.success) {
+        if (response.error) {
           this.triggerUpdate(this.state.merge({
             working: false,
-            done: true,
+            errors: Immutable.Map({reason: response.error}),
           }))
         } else {
           this.triggerUpdate(this.state.merge({
             working: false,
-            errors: Immutable.Map({reason: response.reason}),
+            done: true,
           }))
         }
       })

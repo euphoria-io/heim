@@ -6,6 +6,7 @@ import (
 	"path"
 
 	"encoding/hex"
+	"encoding/json"
 
 	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/logging"
@@ -238,20 +239,42 @@ func (s *Server) handleResetPassword(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleResetPasswordPost(w http.ResponseWriter, r *http.Request) {
-	confirmation := r.PostForm.Get("confirmation")
-	password := r.PostForm.Get("password")
+	type response struct {
+		Error string `json:"error,omitempty"`
+	}
+
+	reply := func(err error, status int) {
+		data := struct {
+			Error string `json:"error,omitempty"`
+		}{}
+		if err != nil {
+			data.Error = err.Error()
+		}
+		w.WriteHeader(status)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(data)
+	}
+
+	var req struct {
+		Password struct {
+			Text     string `json:"text"`
+			Strength string `json:"strength"`
+		} `json:"password"`
+		Confirmation string `json:"confirmation"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		reply(err, http.StatusBadRequest)
+		return
+	}
 
 	ctx := s.rootCtx.Fork()
-	if err := s.b.AccountManager().ConfirmPasswordReset(ctx, s.kms, confirmation, password); err != nil {
+	if err := s.b.AccountManager().ConfirmPasswordReset(ctx, s.kms, req.Confirmation, req.Password.Text); err != nil {
 		status := http.StatusInternalServerError
 		if err == proto.ErrInvalidConfirmationCode {
 			status = http.StatusBadRequest
 		}
-		http.Error(w, err.Error(), status)
-		return
+		reply(err, status)
+	} else {
+		reply(nil, http.StatusOK)
 	}
-
-	// TODO: serve success template
-	w.Header().Set("Content-Type", "text/plain")
-	w.Write([]byte("ok"))
 }

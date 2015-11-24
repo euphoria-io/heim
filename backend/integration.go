@@ -1,6 +1,7 @@
 package backend
 
 import (
+	"bytes"
 	"crypto/hmac"
 	"crypto/sha1"
 	"encoding/base32"
@@ -1288,10 +1289,17 @@ func testAccountResetPassword(s *serverUnderTest) {
 		So(ok, ShouldBeTrue)
 
 		// Apply new password with confirmation code.
-		resp, err := http.PostForm(s.server.URL+"/prefs/reset-password", url.Values{
-			"confirmation": []string{p.Confirmation},
-			"password":     []string{"newpass"},
-		})
+		req := struct {
+			Confirmation string `json:"confirmation"`
+			Password     struct {
+				Text string `json:"text"`
+			} `json:"password"`
+		}{}
+		req.Confirmation = p.Confirmation
+		req.Password.Text = "newpass"
+		reqBytes, err := json.Marshal(req)
+		So(err, ShouldBeNil)
+		resp, err := http.Post(s.server.URL+"/prefs/reset-password", "application/json", bytes.NewReader(reqBytes))
 		So(err, ShouldBeNil)
 		So(resp.StatusCode, ShouldEqual, 200)
 
