@@ -285,7 +285,7 @@ export default React.createClass({
           <ChatTopBar who={this.state.chat.who} roomName={roomName} connected={this.state.chat.connected} joined={!!this.state.chat.joined} authType={this.state.chat.authType} isManager={this.state.chat.isManager} managerMode={this.state.ui.managerMode} working={this.state.chat.loadingLogs} showInfoPaneButton={!thin || !Heim.isTouch} infoPaneOpen={infoPaneOpen} collapseInfoPane={ui.collapseInfoPane} expandInfoPane={ui.expandInfoPane} toggleUserList={ui.toggleUserList} toggleManagerMode={ui.toggleManagerMode} />
           {this.templateHook('main-pane-top')}
           <ReactCSSTransitionGroup className="notice-stack" transitionName="slide-down" transitionEnterTimeout={150} transitionLeaveTimeout={150}>
-            {this.state.ui.notices.contains('notifications') && <div className="notice notifications">
+            {this.state.ui.notices.contains('notifications') && this.state.notification.popupsSupported && <div className="notice notifications">
               <div className="content">
                 <span className="title">what would you like notifications for?</span>
                 <div className="actions">
