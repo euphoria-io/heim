@@ -8,6 +8,7 @@ import Reflux from 'reflux'
 import chat from '../stores/chat'
 import ui from '../stores/ui'
 import update from '../stores/update'
+import hueHash from '../hue-hash'
 import notification from '../stores/notification'
 import activity from '../stores/activity'
 import HooksMixin from './hooks-mixin'
@@ -291,7 +292,7 @@ export default React.createClass({
                 <div className="actions">
                   <FastButton onClick={() => ui.notificationsNoticeChoice('message')}>new messages</FastButton>
                   or
-                  <FastButton onClick={() => ui.notificationsNoticeChoice('mention')}>just mentions<span className="long"> of @{this.state.chat.nick}</span></FastButton>
+                  <FastButton onClick={() => ui.notificationsNoticeChoice('mention')}>just mentions<span className="long"> of @{hueHash.normalize(this.state.chat.nick)}</span></FastButton>
                 </div>
               </div>
               <FastButton className="close" onClick={() => ui.dismissNotice('notifications')} />
