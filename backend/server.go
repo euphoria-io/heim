@@ -11,6 +11,7 @@ import (
 
 	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/security"
+	"euphoria.io/heim/templates"
 	"euphoria.io/scope"
 
 	gorillactx "github.com/gorilla/context"
@@ -30,15 +31,17 @@ var upgrader = websocket.Upgrader{
 }
 
 type Server struct {
-	ID         string
-	Era        string
-	r          *mux.Router
-	heim       *proto.Heim
-	b          proto.Backend
-	kms        security.KMS
-	staticPath string
-	sc         *securecookie.SecureCookie
-	rootCtx    scope.Context
+	ID            string
+	Era           string
+	r             *mux.Router
+	heim          *proto.Heim
+	b             proto.Backend
+	kms           security.KMS
+	pageModTime   time.Time
+	pageTemplater *templates.Templater
+	staticPath    string
+	sc            *securecookie.SecureCookie
+	rootCtx       scope.Context
 
 	allowRoomCreation     bool
 	newAccountMinAgentAge time.Duration
@@ -59,14 +62,16 @@ func NewServer(heim *proto.Heim, id, era string) (*Server, error) {
 	}
 
 	s := &Server{
-		ID:         id,
-		Era:        era,
-		heim:       heim,
-		b:          heim.Backend,
-		kms:        heim.KMS,
-		staticPath: heim.StaticPath,
-		sc:         securecookie.New(cookieSecret, nil),
-		rootCtx:    heim.Context,
+		ID:            id,
+		Era:           era,
+		heim:          heim,
+		b:             heim.Backend,
+		kms:           heim.KMS,
+		pageModTime:   time.Now(),
+		pageTemplater: heim.PageTemplater,
+		staticPath:    heim.StaticPath,
+		sc:            securecookie.New(cookieSecret, nil),
+		rootCtx:       heim.Context,
 	}
 	s.route()
 	return s, nil

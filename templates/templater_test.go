@@ -101,9 +101,7 @@ func TestTemplater(t *testing.T) {
 		So(os.RemoveAll(filepath.Join(td, "static")), ShouldBeNil)
 
 		templater := &Templater{}
-		errs := templater.Load(td)
-		So(len(errs), ShouldEqual, 1)
-		So(errs[0].Error(), ShouldEndWith, "/static: no such file or directory")
+		So(templater.Load(td), ShouldBeNil)
 	})
 
 	Convey("Static file unreadable", t, func() {
@@ -176,8 +174,7 @@ func TestTemplater(t *testing.T) {
 	Convey("Template not found", t, func() {
 		t := &Templater{}
 		_, err := t.Evaluate("test.html", nil)
-		So(err, ShouldNotBeNil)
-		So(err.Error(), ShouldEqual, "no template found for test.html")
+		So(err, ShouldEqual, ErrTemplateNotFound)
 	})
 
 	Convey("Evaluation error", t, func() {

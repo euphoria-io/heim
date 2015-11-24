@@ -149,6 +149,12 @@ func (cfg *ServerConfig) LoadFromFile(path string) error {
 }
 
 func (cfg *ServerConfig) Heim(ctx scope.Context) (*proto.Heim, error) {
+	pageTemplater, err := LoadPageTemplates(filepath.Join(cfg.StaticPath, "pages"))
+	if err != nil {
+		return nil, fmt.Errorf("page templates: %s", err)
+	}
+
+	// Load and verify page templates.
 	c, err := cfg.Cluster.EtcdCluster(ctx)
 	if err != nil {
 		return nil, err
@@ -169,8 +175,9 @@ func (cfg *ServerConfig) Heim(ctx scope.Context) (*proto.Heim, error) {
 		Cluster:        c,
 		PeerDesc:       cfg.Cluster.DescribeSelf(),
 		KMS:            kms,
-		EmailTemplater: emailTemplater,
 		EmailDeliverer: emailDeliverer,
+		EmailTemplater: emailTemplater,
+		PageTemplater:  pageTemplater,
 		SiteName:       cfg.SiteName,
 		StaticPath:     cfg.StaticPath,
 	}
