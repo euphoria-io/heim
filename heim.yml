@@ -2,6 +2,8 @@ cluster:
   etcd: /dev/euphoria.io
 database:
   dsn: postgres://postgres:heimlich@psql/heim?sslmode=disable
+email:
+  server: $stdout
 kms:
   aes256:
     key-file: /keys/masterkey

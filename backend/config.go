@@ -3,6 +3,7 @@ package backend
 import (
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net"
 	"net/smtp"
@@ -345,31 +346,48 @@ func (ec *EmailConfig) Get(cfg *ServerConfig) (*templates.Templater, emails.Deli
 	}
 
 	// Set up deliverer.
-	if ec.Server == "" {
-		return templater, nil, nil
-	}
-
-	var sslHost string
-	if ec.UseTLS {
-		var err error
-		sslHost, _, err = net.SplitHostPort(ec.Server)
-		if err != nil {
-			return nil, nil, err
-		}
-	}
-
-	var auth smtp.Auth
-	switch strings.ToUpper(ec.AuthMethod) {
+	fmt.Printf("setting up deliverer for %#v\n", ec)
+	switch ec.Server {
 	case "":
-	case "CRAM-MD5":
-		auth = smtp.CRAMMD5Auth(ec.Username, ec.Password)
-	case "PLAIN":
-		if !ec.UseTLS {
-			return nil, nil, fmt.Errorf("PLAIN authentication requires TLS")
+		return templater, nil, nil
+	case "$stdout":
+		return templater, &mockDeliverer{Writer: os.Stdout}, nil
+	default:
+		var sslHost string
+		if ec.UseTLS {
+			var err error
+			sslHost, _, err = net.SplitHostPort(ec.Server)
+			if err != nil {
+				return nil, nil, err
+			}
 		}
-		auth = smtp.PlainAuth(ec.Identity, ec.Username, ec.Password, sslHost)
-	}
 
-	deliverer := emails.NewSMTPDeliverer(localDomain, ec.Server, sslHost, auth)
-	return templater, deliverer, nil
+		var auth smtp.Auth
+		switch strings.ToUpper(ec.AuthMethod) {
+		case "":
+		case "CRAM-MD5":
+			auth = smtp.CRAMMD5Auth(ec.Username, ec.Password)
+		case "PLAIN":
+			if !ec.UseTLS {
+				return nil, nil, fmt.Errorf("PLAIN authentication requires TLS")
+			}
+			auth = smtp.PlainAuth(ec.Identity, ec.Username, ec.Password, sslHost)
+		}
+
+		deliverer := emails.NewSMTPDeliverer(localDomain, ec.Server, sslHost, auth)
+		return templater, deliverer, nil
+	}
+}
+
+type mockDeliverer struct {
+	io.Writer
+}
+
+func (d *mockDeliverer) LocalName() string { return "localhost" }
+
+func (d *mockDeliverer) Deliver(ctx scope.Context, ref *emails.EmailRef) error {
+	fmt.Fprintf(d, "mock delivery of email from %s to %s:\n", ref.SendFrom, ref.SendTo)
+	d.Write(ref.Message)
+	fmt.Fprintf(d, "----- END OF MESSAGE -----\n")
+	return nil
 }
