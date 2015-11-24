@@ -85,6 +85,10 @@ type AccountManager interface {
 	RequestPasswordReset(
 		ctx scope.Context, kms security.KMS, namespace, id string) (Account, *PasswordResetRequest, error)
 
+	// CheckPasswordResetRequest returns the account associated with
+	// a password reset request, or an error if invalid or expired.
+	GetPasswordResetAccount(ctx scope.Context, confirmation string) (Account, error)
+
 	// ConfirmPasswordReset verifies a password reset confirmation code,
 	// and applies the new password to the account referred to by the
 	// confirmation code.
