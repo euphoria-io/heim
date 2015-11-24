@@ -74,10 +74,10 @@ func (s *Server) handleHomeStatic(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleAboutStatic(w http.ResponseWriter, r *http.Request) {
 	if s.staticPath == "" || r.URL.Path == "" {
-		s.serveGzippedFile(w, r, "/pages/about.html", false)
+		s.servePage("about", nil, w, r)
 		return
 	}
-	s.serveGzippedFile(w, r, "/pages"+path.Clean(r.URL.Path)+".html", false)
+	s.servePage(path.Clean(r.URL.Path)[1:]+".html", nil, w, r)
 }
 
 func (s *Server) handleRobotsTxt(w http.ResponseWriter, r *http.Request) {
@@ -208,11 +208,12 @@ func (s *Server) handleResetPassword(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case "GET":
-		// TODO: serve password reset template
-		w.Header().Set("Content-Type", "text/html")
-		fmt.Fprintf(w, `<form method="POST"><input type="hidden" name="confirmation" value="%s">`,
-			r.Form.Get("confirmation"))
-		fmt.Fprintf(w, `<input type="password" name="password"></form>`)
+		// TODO: look up email
+		params := map[string]interface{}{
+			"confirmation": r.Form.Get("confirmation"),
+			"email":        "unknown",
+		}
+		s.servePage(ResetPasswordPage, params, w, r)
 	case "POST":
 		s.handleResetPasswordPost(w, r)
 	default:

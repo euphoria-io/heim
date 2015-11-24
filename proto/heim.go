@@ -25,8 +25,9 @@ type Heim struct {
 	SiteName   string
 	StaticPath string
 
-	EmailTemplater *templates.Templater
 	EmailDeliverer emails.Deliverer
+	EmailTemplater *templates.Templater
+	PageTemplater  *templates.Templater
 }
 
 func (heim *Heim) MockDeliverer() emails.MockDeliverer {

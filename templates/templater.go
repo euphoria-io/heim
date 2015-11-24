@@ -6,9 +6,12 @@ import (
 	"html/template"
 	"io/ioutil"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strings"
 )
+
+var ErrTemplateNotFound = fmt.Errorf("template not found")
 
 type TemplateTest struct {
 	Data interface{}
@@ -20,15 +23,7 @@ type Templater struct {
 	staticFiles map[string][]byte
 }
 
-func (t *Templater) Load(path string) []error {
-	// Initialize if necessary.
-	if t.staticFiles == nil {
-		t.staticFiles = map[string][]byte{}
-	}
-	if t.Templates == nil {
-		t.Templates = map[string]*template.Template{}
-	}
-
+func (t *Templater) findAndParse(prefix, path string) []error {
 	// Scan the top-level directory of the given path.
 	entries, err := ioutil.ReadDir(path)
 	if err != nil {
@@ -39,23 +34,81 @@ func (t *Templater) Load(path string) []error {
 	errors := []error{}
 	for _, entry := range entries {
 		filename := entry.Name()
-		if strings.HasSuffix(filename, ".html") {
-			tmplName := strings.TrimSuffix(filename, ".html")
-			t.Templates[tmplName], err = template.ParseGlob(filepath.Join(path, tmplName+".*"))
+		if entry.IsDir() {
+			serrs := t.findAndParse(prefix, filepath.Join(path, filename))
+			errors = append(errors, serrs...)
+		} else if strings.HasSuffix(filename, ".html") {
+			tmplName, err := filepath.Rel(prefix, filepath.Join(path, strings.TrimSuffix(filename, ".html")))
 			if err != nil {
 				errors = append(errors, err)
 				continue
 			}
+			tmpl, errs := t.parseGlob(prefix, path, filepath.Base(tmplName)+".*")
+			if len(errs) > 0 {
+				errors = append(errors, errs...)
+				continue
+			}
+			t.Templates[tmplName] = tmpl
 		}
 	}
 	if len(errors) > 0 {
 		return errors
 	}
+	return nil
+}
+
+func (t *Templater) parseGlob(prefix, path, pattern string) (*template.Template, []error) {
+	matches, err := filepath.Glob(filepath.Join(path, pattern))
+	if err != nil {
+		return nil, []error{err}
+	}
+	if len(matches) == 0 {
+		return nil, []error{fmt.Errorf("not found: %s", pattern)}
+	}
+	basePath, err := filepath.Rel(prefix, path)
+	if err != nil {
+		return nil, []error{err}
+	}
+	if basePath == "." {
+		basePath = ""
+	} else {
+		basePath = basePath + "/"
+	}
+	errors := []error{}
+	tmpl := template.New(basePath + matches[0])
+	for _, match := range matches {
+		subTmpl, err := template.ParseFiles(match)
+		if err != nil {
+			errors = append(errors, err)
+			continue
+		}
+		_, err = tmpl.AddParseTree(basePath+filepath.Base(match), subTmpl.Tree)
+		if err != nil {
+			errors = append(errors, err)
+		}
+	}
+	if len(errors) > 0 {
+		return nil, errors
+	}
+	return tmpl, nil
+}
+
+func (t *Templater) Load(path string) []error {
+	// Initialize if necessary.
+	if t.staticFiles == nil {
+		t.staticFiles = map[string][]byte{}
+	}
+	if t.Templates == nil {
+		t.Templates = map[string]*template.Template{}
+	}
+
+	// Scan the static directory under the given path for templates.
+	errors := t.findAndParse(path, path)
 
 	// Scan the static directory under the given path for possible attachments, and load into
 	// memory.
-	entries, err = ioutil.ReadDir(filepath.Join(path, "static"))
-	if err != nil {
+	entries, err := ioutil.ReadDir(filepath.Join(path, "static"))
+	if err != nil && !os.IsNotExist(err) {
 		return []error{err}
 	}
 	for _, entry := range entries {
@@ -76,12 +129,11 @@ func (t *Templater) Load(path string) []error {
 }
 
 func (t *Templater) Evaluate(name string, context interface{}) ([]byte, error) {
-	baseName := filepath.Base(name)
-	ext := filepath.Ext(baseName)
-	tmplName := baseName[:len(baseName)-len(ext)]
+	ext := filepath.Ext(name)
+	tmplName := name[:len(name)-len(ext)]
 	tmpl, ok := t.Templates[tmplName]
 	if !ok {
-		return nil, fmt.Errorf("no template found for %s", name)
+		return nil, ErrTemplateNotFound
 	}
 
 	if sf, ok := context.(staticFiles); ok {
