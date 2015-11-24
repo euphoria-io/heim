@@ -205,7 +205,7 @@ export default function initPlugins(roomName) {
             <div className="aspect-wrapper">
               <YouTubeTV />
             </div>
-            <MessageText className="notice" content={this.state.tv.getIn(['notice', 'content'])} />
+            <MessageText className="notice-board" content={this.state.tv.getIn(['notice', 'content'])} />
           </div>
         )
       },
@@ -336,7 +336,7 @@ export default function initPlugins(roomName) {
             height: 60vmin;
           }
 
-          .youtube-pane .notice {
+          .youtube-pane .notice-board {
             background: white;
             padding: 10px;
             overflow: auto;
