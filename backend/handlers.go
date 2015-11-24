@@ -208,12 +208,28 @@ func (s *Server) handleResetPassword(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case "GET":
-		// TODO: look up email
-		params := map[string]interface{}{
-			"confirmation": r.Form.Get("confirmation"),
-			"email":        "unknown",
+		confirmation := r.Form.Get("confirmation")
+		ctx := s.rootCtx.Fork()
+		account, err := s.b.AccountManager().GetPasswordResetAccount(ctx, confirmation)
+		switch err {
+		case nil:
+			params := map[string]interface{}{
+				"confirmation": confirmation,
+				"email":        "unknown",
+			}
+			for _, pid := range account.PersonalIdentities() {
+				if pid.Namespace() == "email" {
+					params["email"] = pid.ID()
+					break
+				}
+			}
+			s.servePage(ResetPasswordPage, params, w, r)
+		case proto.ErrInvalidConfirmationCode:
+			// TODO: show a friendly expiration message if that's the cause of this error
+			http.Error(w, "400 bad request", http.StatusBadRequest)
+		default:
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
-		s.servePage(ResetPasswordPage, params, w, r)
 	case "POST":
 		s.handleResetPasswordPost(w, r)
 	default:

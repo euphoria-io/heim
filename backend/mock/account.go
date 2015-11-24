@@ -288,33 +288,42 @@ func (m *accountManager) RequestPasswordReset(
 	return m.b.accounts[pi.accountID], req, nil
 }
 
+func (m *accountManager) GetPasswordResetAccount(ctx scope.Context, confirmation string) (proto.Account, error) {
+	id, mac, err := proto.ParsePasswordResetConfirmation(confirmation)
+	if err != nil {
+		return nil, err
+	}
+
+	req, ok := m.b.resetReqs[id]
+	if !ok {
+		return nil, proto.ErrInvalidConfirmationCode
+	}
+
+	if !req.VerifyMAC(mac) {
+		return nil, proto.ErrInvalidConfirmationCode
+	}
+
+	if req.Expires.Before(time.Now()) {
+		return nil, proto.ErrInvalidConfirmationCode
+	}
+
+	account, ok := m.b.accounts[req.AccountID]
+	if !ok {
+		return nil, proto.ErrInvalidConfirmationCode
+	}
+
+	return account, nil
+}
+
 func (m *accountManager) ConfirmPasswordReset(
 	ctx scope.Context, kms security.KMS, confirmation, password string) error {
 
 	m.b.Lock()
 	defer m.b.Unlock()
 
-	id, mac, err := proto.ParsePasswordResetConfirmation(confirmation)
+	account, err := m.GetPasswordResetAccount(ctx, confirmation)
 	if err != nil {
 		return err
-	}
-
-	req, ok := m.b.resetReqs[id]
-	if !ok {
-		return proto.ErrInvalidConfirmationCode
-	}
-
-	if !req.VerifyMAC(mac) {
-		return proto.ErrInvalidConfirmationCode
-	}
-
-	if req.Expires.Before(time.Now()) {
-		return proto.ErrInvalidConfirmationCode
-	}
-
-	account, ok := m.b.accounts[req.AccountID]
-	if !ok {
-		return proto.ErrInvalidConfirmationCode
 	}
 
 	sec, err := account.(*memAccount).sec.ResetPassword(kms, password)
