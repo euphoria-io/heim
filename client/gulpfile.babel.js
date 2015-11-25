@@ -208,6 +208,7 @@ gulp.task('site-templates', ['heim-git-commit'], () => {
   const page = reload('./site/page.js')
   const pages = [
     'home',
+    'error',
     'verify-email',
     'reset-password',
     'about',

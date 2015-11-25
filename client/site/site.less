@@ -850,7 +850,7 @@ body.about {
   }
 }
 
-body.form-page {
+body.form-page, body.error-page {
   .container.main {
     display: flex;
     flex-direction: column;
@@ -858,18 +858,20 @@ body.form-page {
     text-align: center;
   }
 
+  h1 {
+    margin-bottom: 35px;
+  }
+
+  h2, h3 {
+    font-weight: normal;
+  }
+}
+
+body.form-page {
   form {
     text-align: center;
     max-width: 500px;
     margin: 0 auto;
-
-    h1 {
-      margin-bottom: 35px;
-    }
-
-    h2 {
-      font-weight: normal;
-    }
 
     h2, .field-label-container {
       text-align: left;
@@ -920,6 +922,32 @@ body.form-page {
         background-size: 143px 143px;
       }
     }
+  }
+}
+
+body.error-page {
+  h1 {
+    width: 215px;
+    height: 215px;
+    background: data-uri('../res/error-mild.svg') no-repeat center center;
+    background-size: contain;
+    font-size: 0;
+    margin: 0 auto;
+    margin-bottom: 35px;
+    text-indent: -9999px;
+  }
+
+  h2, h3 {
+    margin: 0;
+  }
+
+  h2 {
+    font-size: 4em;
+    margin-bottom: 8px;
+  }
+
+  h3 {
+    font-size: 1.5em;
   }
 }
 
