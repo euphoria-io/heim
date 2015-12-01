@@ -48,6 +48,7 @@ module.exports.store = Reflux.createStore({
   verify() {
     this._postAPI(heimURL('/prefs/verify'), {
       confirmation: this.state.confirmation,
+      email: this.state.email,
     })
   },
 })

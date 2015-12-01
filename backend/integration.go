@@ -1502,9 +1502,16 @@ func testAccountRegistration(s *serverUnderTest) {
 		So(ok, ShouldBeTrue)
 
 		// The verification token should be valid.
-		url := fmt.Sprintf("%s/prefs/verify?email=registration@euphoria.io&token=%s",
-			s.server.URL, params.VerificationToken)
-		resp, err := http.Get(url)
+		req := struct {
+			Confirmation string `json:"confirmation"`
+			Email        string `json:"email"`
+		}{
+			Confirmation: params.VerificationToken,
+			Email:        "registration@euphoria.io",
+		}
+		reqBytes, err := json.Marshal(req)
+		So(err, ShouldBeNil)
+		resp, err := http.Post(s.server.URL+"/prefs/verify", "application/json", bytes.NewReader(reqBytes))
 		So(err, ShouldBeNil)
 		So(resp.StatusCode, ShouldEqual, 200)
 
