@@ -1370,6 +1370,29 @@ This packet has no fields.
 
 
 
+## login-event
+
+The `login-event` packet is sent to all sessions of an agent when that
+agent is logged in (except for the session that issued the login command).
+
+
+| Field | Type | Required? | Description |
+| :-- | :-- | :-- | :--------- |
+| `account_id` | [Snowflake](#snowflake) | required |  |
+
+
+
+
+## logout-event
+
+The `logout-event` packet is sent to all sessions of an agent when that
+agent is logged out (except for the session that issued the logout command).
+
+
+This packet has no fields.
+
+
+
 ## network-event
 
 A `network-event` indicates some server-side event that impacts the presence
