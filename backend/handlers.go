@@ -60,17 +60,19 @@ func (s *Server) handleStatic(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleRoomStatic(w http.ResponseWriter, r *http.Request) {
-	if !s.allowRoomCreation {
-		roomName := mux.Vars(r)["room"]
-		_, err := s.b.GetRoom(scope.New(), roomName)
-		if err != nil {
-			if err == proto.ErrRoomNotFound {
-				s.serveErrorPage("room not found", http.StatusNotFound, w, r)
-				return
-			}
+	roomName := mux.Vars(r)["room"]
+	_, err := s.b.GetRoom(scope.New(), roomName)
+	if err != nil {
+		if !s.allowRoomCreation && err == proto.ErrRoomNotFound {
+			s.serveErrorPage("room not found", http.StatusNotFound, w, r)
+			return
+		} else {
+			s.serveErrorPage(err.Error(), http.StatusInternalServerError, w, r)
+			return
 		}
 	}
-	s.serveGzippedFile(w, r, "/pages/room.html", false)
+	params := map[string]interface{}{"RoomName": roomName}
+	s.servePage("room.html", params, w, r)
 }
 
 func (s *Server) handleHomeStatic(w http.ResponseWriter, r *http.Request) {
