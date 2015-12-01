@@ -160,14 +160,52 @@ func (s *Server) handlePrefsVerify(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	email := r.Form.Get("email")
-	token, err := hex.DecodeString(r.Form.Get("token"))
+	switch r.Method {
+	case "GET":
+		confirmation := r.Form.Get("token")
+		email := r.Form.Get("email")
+		params := map[string]interface{}{
+			"confirmation": confirmation,
+			"email":        email,
+		}
+		s.servePage(VerifyEmailPage, params, w, r)
+	case "POST":
+		s.handlePrefsVerifyPost(w, r)
+	default:
+		s.serveErrorPage("invalid method", http.StatusMethodNotAllowed, w, r)
+	}
+}
+
+func (s *Server) handlePrefsVerifyPost(w http.ResponseWriter, r *http.Request) {
+	reply := func(err error, status int) {
+		data := struct {
+			Error string `json:"error,omitempty"`
+		}{}
+		if err != nil {
+			data.Error = err.Error()
+		}
+		w.WriteHeader(status)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(data)
+	}
+
+	var req struct {
+		Confirmation string `json:"confirmation"`
+		Email        string `json:"email"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		reply(err, http.StatusBadRequest)
+		return
+	}
+
+	email := req.Email
+	token, err := hex.DecodeString(req.Confirmation)
 	if err != nil {
-		s.serveErrorPage(err.Error(), http.StatusBadRequest, w, r)
+		reply(err, http.StatusBadRequest)
 		return
 	}
 	if email == "" || len(token) == 0 {
-		s.serveErrorPage("missing parameters", http.StatusBadRequest, w, r)
+		reply(fmt.Errorf("missing parameters"), http.StatusBadRequest)
 		return
 	}
 
@@ -178,7 +216,7 @@ func (s *Server) handlePrefsVerify(w http.ResponseWriter, r *http.Request) {
 		if err == proto.ErrAccountNotFound {
 			status = http.StatusNotFound
 		}
-		s.serveErrorPage(err.Error(), status, w, r)
+		reply(err, status)
 		return
 	}
 
@@ -187,18 +225,16 @@ func (s *Server) handlePrefsVerify(w http.ResponseWriter, r *http.Request) {
 		if err == proto.ErrInvalidVerificationToken {
 			status = http.StatusForbidden
 		}
-		s.serveErrorPage(err.Error(), status, w, r)
+		reply(err, status)
 		return
 	}
 
 	if err := s.b.AccountManager().VerifyPersonalIdentity(ctx, "email", email); err != nil {
-		s.serveErrorPage(err.Error(), http.StatusInternalServerError, w, r)
+		reply(err, http.StatusInternalServerError)
 		return
 	}
 
-	// TODO: serve success template
-	w.Header().Set("Content-Type", "text/plain")
-	w.Write([]byte("ok"))
+	reply(nil, http.StatusOK)
 }
 
 func (s *Server) handlePrefsResetPassword(w http.ResponseWriter, r *http.Request) {
@@ -238,10 +274,6 @@ func (s *Server) handlePrefsResetPassword(w http.ResponseWriter, r *http.Request
 }
 
 func (s *Server) handlePrefsResetPasswordPost(w http.ResponseWriter, r *http.Request) {
-	type response struct {
-		Error string `json:"error,omitempty"`
-	}
-
 	reply := func(err error, status int) {
 		data := struct {
 			Error string `json:"error,omitempty"`
