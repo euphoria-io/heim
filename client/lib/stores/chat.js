@@ -143,10 +143,7 @@ module.exports.store = Reflux.createStore({
       this.state.authType = ev.data.room_is_private ? 'passcode' : 'public'
       this.state.account = Immutable.fromJS(ev.data.account)
       if (this.state.account) {
-        // FIXME placholder until we have account name information
         this.state.account = this.state.account
-          .set('name', this.state.tentativeNick || this.state.nick)
-          .set('email', '???')
       }
       if (ev.data.account_has_access) {
         // note: if there was a stored passcode, we could have an outgoing
