@@ -61,7 +61,7 @@ func (s *Server) handleRoomStatic(w http.ResponseWriter, r *http.Request) {
 		_, err := s.b.GetRoom(scope.New(), roomName)
 		if err != nil {
 			if err == proto.ErrRoomNotFound {
-				http.Error(w, "404 page not found", http.StatusNotFound)
+				s.serveErrorPage("room not found", http.StatusNotFound, w, r)
 				return
 			}
 		}
@@ -156,18 +156,18 @@ func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handlePrefsVerify(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		s.serveErrorPage("bad request", http.StatusBadRequest, w, r)
 		return
 	}
 
 	email := r.Form.Get("email")
 	token, err := hex.DecodeString(r.Form.Get("token"))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		s.serveErrorPage(err.Error(), http.StatusBadRequest, w, r)
 		return
 	}
 	if email == "" || len(token) == 0 {
-		http.Error(w, "missing parameters", http.StatusBadRequest)
+		s.serveErrorPage("missing parameters", http.StatusBadRequest, w, r)
 		return
 	}
 
@@ -178,7 +178,7 @@ func (s *Server) handlePrefsVerify(w http.ResponseWriter, r *http.Request) {
 		if err == proto.ErrAccountNotFound {
 			status = http.StatusNotFound
 		}
-		http.Error(w, err.Error(), status)
+		s.serveErrorPage(err.Error(), status, w, r)
 		return
 	}
 
@@ -187,12 +187,12 @@ func (s *Server) handlePrefsVerify(w http.ResponseWriter, r *http.Request) {
 		if err == proto.ErrInvalidVerificationToken {
 			status = http.StatusForbidden
 		}
-		http.Error(w, err.Error(), status)
+		s.serveErrorPage(err.Error(), status, w, r)
 		return
 	}
 
 	if err := s.b.AccountManager().VerifyPersonalIdentity(ctx, "email", email); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		s.serveErrorPage(err.Error(), http.StatusInternalServerError, w, r)
 		return
 	}
 
@@ -203,7 +203,7 @@ func (s *Server) handlePrefsVerify(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleResetPassword(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		s.serveErrorPage(err.Error(), http.StatusBadRequest, w, r)
 		return
 	}
 
@@ -226,15 +226,14 @@ func (s *Server) handleResetPassword(w http.ResponseWriter, r *http.Request) {
 			}
 			s.servePage(ResetPasswordPage, params, w, r)
 		case proto.ErrInvalidConfirmationCode:
-			// TODO: show a friendly expiration message if that's the cause of this error
-			http.Error(w, "400 bad request", http.StatusBadRequest)
+			s.serveErrorPage("invalid/expired confirmation code", http.StatusBadRequest, w, r)
 		default:
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			s.serveErrorPage(err.Error(), http.StatusInternalServerError, w, r)
 		}
 	case "POST":
 		s.handleResetPasswordPost(w, r)
 	default:
-		http.Error(w, "invalid method", http.StatusMethodNotAllowed)
+		s.serveErrorPage("invalid method", http.StatusMethodNotAllowed, w, r)
 	}
 }
 

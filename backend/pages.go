@@ -82,12 +82,23 @@ func (s *Server) servePage(name string, context map[string]interface{}, w http.R
 	if err != nil {
 		switch err {
 		case templates.ErrTemplateNotFound:
-			http.Error(w, "404 page not found", http.StatusNotFound)
+			s.serveErrorPage("page not found", http.StatusNotFound, w, r)
 		default:
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			s.serveErrorPage(err.Error(), http.StatusInternalServerError, w, r)
 		}
 		return
 	}
 	// TODO: figure out real modtime
 	http.ServeContent(w, r, name, s.pageModTime, bytes.NewReader(content))
+}
+
+func (s *Server) serveErrorPage(message string, code int, w http.ResponseWriter, r *http.Request) {
+	params := map[string]interface{}{"Message": message, "Code": code}
+	content, err := s.pageTemplater.Evaluate("error.html", params)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(code)
+	http.ServeContent(w, r, "error.html", s.pageModTime, bytes.NewReader(content))
 }
