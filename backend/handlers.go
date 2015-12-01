@@ -18,6 +18,10 @@ import (
 
 func (s *Server) route() {
 	s.r = mux.NewRouter().StrictSlash(true)
+	s.r.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		s.serveErrorPage("page not found", http.StatusNotFound, w, r)
+	})
+
 	s.r.Path("/").Methods("OPTIONS").HandlerFunc(s.handleProbe)
 	s.r.Path("/robots.txt").HandlerFunc(s.handleRobotsTxt)
 	s.r.Path("/metrics").Handler(
