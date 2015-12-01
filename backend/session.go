@@ -164,6 +164,7 @@ func (s *session) Close() {
 }
 
 func (s *session) ID() string               { return s.id }
+func (s *session) AgentID() string          { return s.client.Agent.IDString() }
 func (s *session) ServerID() string         { return s.serverID }
 func (s *session) ServerEra() string        { return s.serverEra }
 func (s *session) Identity() proto.Identity { return s.identity }

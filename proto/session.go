@@ -11,6 +11,8 @@ type Session interface {
 	// the Session.
 	ServerID() string
 
+	AgentID() string
+
 	// Identity returns the Identity associated with the Session.
 	Identity() Identity
 

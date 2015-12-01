@@ -470,6 +470,10 @@ func (s *session) handleLogoutCommand() *response {
 	if err := s.backend.AgentTracker().ClearClientKey(s.ctx, s.client.Agent.IDString()); err != nil {
 		return &response{err: err}
 	}
+	err := s.backend.NotifyUser(s.ctx, proto.UserID("agent:"+s.AgentID()), proto.LogoutEventType, proto.LogoutEvent{}, s)
+	if err != nil {
+		return &response{err: err}
+	}
 	return &response{packet: &proto.LogoutReply{}}
 }
 
