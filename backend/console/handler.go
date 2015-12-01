@@ -42,6 +42,7 @@ type console struct {
 // TODO: log details about the client
 func (c *console) Identity() proto.Identity { return (*consoleIdentity)(c) }
 func (c *console) ID() string               { return "console" }
+func (c *console) AgentID() string          { return "!console!" }
 func (c *console) ServerID() string         { return "" }
 func (c *console) SetName(name string)      {}
 func (c *console) Close()                   {}

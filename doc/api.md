@@ -43,6 +43,8 @@
   * [edit-message-event](#edit-message-event)
   * [hello-event](#hello-event)
   * [join-event](#join-event)
+  * [login-event](#login-event)
+  * [logout-event](#logout-event)
   * [network-event](#network-event)
   * [nick-event](#nick-event)
   * [part-event](#part-event)
@@ -1246,6 +1248,29 @@ A `join-event` indicates a session just joined the room.
 | `is_staff` | [bool](#bool) | *optional* |  if true, this session belongs to a member of staff |
 | `is_manager` | [bool](#bool) | *optional* |  if true, this session belongs to a manager of the room |
 
+
+
+
+## login-event
+
+The `login-event` packet is sent to all sessions of an agent when that
+agent is logged in (except for the session that issued the login command).
+
+
+| Field | Type | Required? | Description |
+| :-- | :-- | :-- | :--------- |
+| `account_id` | [Snowflake](#snowflake) | required |  |
+
+
+
+
+## logout-event
+
+The `logout-event` packet is sent to all sessions of an agent when that
+agent is logged out (except for the session that issued the logout command).
+
+
+This packet has no fields.
 
 
 

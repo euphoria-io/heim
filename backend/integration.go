@@ -2838,5 +2838,24 @@ func testNotifyUser(s *serverUnderTest) {
 
 		// Same cookie, different room should receive a login-event
 		conn4.expect("", "login-event", `{"account_id": "%s"}`, cammie.ID())
+
+		// Log in second cookie.
+		conn5.send("1", "login", `{"namespace":"email","id":"cammie%s","password":"cammiepass"}`, nonce)
+		conn5.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, cammie.ID())
+
+		// Log out on first connection, expect a logout-reply
+		conn1.send("2", "logout", `{}`)
+		conn1.expect("2", "logout-reply", `{}`)
+
+		// Same cookie, same room should receive a logout-event
+		conn2.expect("", "logout-event", `{}`)
+
+		// Same cookie, different room should receive a logout-event
+		conn4.expect("", "logout-event", `{}`)
+
+		// Different cookie should not receive logout-event
+		conn4.Close()
+		conn5.expect("", "part-event",
+			`{"session_id":"%s","id":"*","name":"","server_id":"*","server_era":"*"}`, conn4.sessionID)
 	})
 }

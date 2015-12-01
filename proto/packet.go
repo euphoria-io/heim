@@ -58,6 +58,7 @@ var (
 	LoginReplyType = LoginType.Reply()
 
 	LogoutType      = PacketType("logout")
+	LogoutEventType = LogoutType.Event()
 	LogoutReplyType = LogoutType.Reply()
 
 	NickType      = PacketType("nick")
@@ -199,6 +200,7 @@ var (
 		LoginReplyType: reflect.TypeOf(LoginReply{}),
 
 		LogoutType:      reflect.TypeOf(LogoutCommand{}),
+		LogoutEventType: reflect.TypeOf(LogoutEvent{}),
 		LogoutReplyType: reflect.TypeOf(LogoutReply{}),
 
 		RegisterAccountType:      reflect.TypeOf(RegisterAccountCommand{}),
@@ -533,6 +535,8 @@ type LoginReply struct {
 	AccountID snowflake.Snowflake `json:"account_id,omitempty"` // if `success` was true, the id of the account the session logged into.
 }
 
+// The `login-event` packet is sent to all sessions of an agent when that
+// agent is logged in (except for the session that issued the login command).
 type LoginEvent struct {
 	AccountID snowflake.Snowflake `json:"account_id"`
 }
@@ -544,6 +548,10 @@ type LoginEvent struct {
 // `disconnect-event` shortly after. The next connection the client
 // makes will be a logged out session.
 type LogoutCommand struct{}
+
+// The `logout-event` packet is sent to all sessions of an agent when that
+// agent is logged out (except for the session that issued the logout command).
+type LogoutEvent struct{}
 
 // The `logout-reply` packet confirms a logout.
 type LogoutReply struct{}
