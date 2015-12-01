@@ -37,7 +37,7 @@ func (s *Server) route() {
 
 	s.r.Handle(
 		"/prefs/reset-password",
-		prometheus.InstrumentHandlerFunc("prefsResetPassword", s.handleResetPassword))
+		prometheus.InstrumentHandlerFunc("prefsResetPassword", s.handlePrefsResetPassword))
 	s.r.Handle(
 		"/prefs/verify", prometheus.InstrumentHandlerFunc("prefsVerify", s.handlePrefsVerify))
 }
@@ -201,7 +201,7 @@ func (s *Server) handlePrefsVerify(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("ok"))
 }
 
-func (s *Server) handleResetPassword(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handlePrefsResetPassword(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		s.serveErrorPage(err.Error(), http.StatusBadRequest, w, r)
 		return
@@ -231,13 +231,13 @@ func (s *Server) handleResetPassword(w http.ResponseWriter, r *http.Request) {
 			s.serveErrorPage(err.Error(), http.StatusInternalServerError, w, r)
 		}
 	case "POST":
-		s.handleResetPasswordPost(w, r)
+		s.handlePrefsResetPasswordPost(w, r)
 	default:
 		s.serveErrorPage("invalid method", http.StatusMethodNotAllowed, w, r)
 	}
 }
 
-func (s *Server) handleResetPasswordPost(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handlePrefsResetPasswordPost(w http.ResponseWriter, r *http.Request) {
 	type response struct {
 		Error string `json:"error,omitempty"`
 	}
