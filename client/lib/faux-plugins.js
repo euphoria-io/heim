@@ -606,22 +606,4 @@ export default function initPlugins(roomName) {
       )
     })
   }
-
-  Heim.hook('page-bottom', () => {
-    return (
-      <style key="cozy-style" dangerouslySetInnerHTML={{__html: `
-        .messages-content {
-          background: white url(/static/thanksgiving.svg) right bottom no-repeat !important;
-          background-size: 250px !important;
-        }
-
-
-        @media (max-width: 650px) {
-          .messages-content {
-            background-size: 180px !important;
-          }
-        }
-      `}} />
-    )
-  })
 }
