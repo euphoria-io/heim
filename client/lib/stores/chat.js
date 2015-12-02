@@ -221,7 +221,7 @@ module.exports.store = Reflux.createStore({
         }
         storeActions[kind].completed()
       }
-    } else if (ev.type === 'login-event') {
+    } else if (ev.type === 'login-event' || ev.type === 'logout-event') {
       this.socket.reconnect()
     } else if (ev.type === 'disconnect-event') {
       if (ev.data.reason === 'authentication changed') {
