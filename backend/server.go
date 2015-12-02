@@ -2,9 +2,11 @@ package backend
 
 import (
 	"fmt"
+	"html/template"
 	"mime"
 	"net/http"
 	"net/url"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -30,15 +32,16 @@ var upgrader = websocket.Upgrader{
 }
 
 type Server struct {
-	ID         string
-	Era        string
-	r          *mux.Router
-	heim       *proto.Heim
-	b          proto.Backend
-	kms        security.KMS
-	staticPath string
-	sc         *securecookie.SecureCookie
-	rootCtx    scope.Context
+	ID           string
+	Era          string
+	r            *mux.Router
+	heim         *proto.Heim
+	b            proto.Backend
+	kms          security.KMS
+	staticPath   string
+	roomTemplate *template.Template
+	sc           *securecookie.SecureCookie
+	rootCtx      scope.Context
 
 	allowRoomCreation     bool
 	newAccountMinAgentAge time.Duration
@@ -58,15 +61,21 @@ func NewServer(heim *proto.Heim, id, era string) (*Server, error) {
 		return nil, fmt.Errorf("error coordinating shared cookie secret: %s", err)
 	}
 
+	roomTemplate, err := template.ParseFiles(filepath.Join(heim.StaticPath, "room.html"))
+	if err != nil {
+		return nil, fmt.Errorf("error parsing room.html: %s", err)
+	}
+
 	s := &Server{
-		ID:         id,
-		Era:        era,
-		heim:       heim,
-		b:          heim.Backend,
-		kms:        heim.KMS,
-		staticPath: heim.StaticPath,
-		sc:         securecookie.New(cookieSecret, nil),
-		rootCtx:    heim.Context,
+		ID:           id,
+		Era:          era,
+		heim:         heim,
+		b:            heim.Backend,
+		kms:          heim.KMS,
+		staticPath:   heim.StaticPath,
+		roomTemplate: roomTemplate,
+		sc:           securecookie.New(cookieSecret, nil),
+		rootCtx:      heim.Context,
 	}
 	s.route()
 	return s, nil
