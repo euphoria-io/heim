@@ -1693,28 +1693,28 @@ iframe.js {
   box-shadow: 0 0 8px fade(black, 25%);
 }
 
-&.slide-down-enter, &.slide-down-leave {
+&.slide-down-enter-active, &.slide-down-leave-active {
   transition: .15s ease;
   transition-property: transform, opacity;
+}
 
-  &.slide-down-enter {
-    opacity: 0;
-    transform: translateY(-10px);
+&.slide-down-enter {
+  opacity: 0;
+  transform: translateY(-10px);
 
-    &.slide-down-enter-active {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  &.slide-down-leave {
+  &.slide-down-enter-active {
     opacity: 1;
     transform: translateY(0);
+  }
+}
 
-    &.slide-down-leave-active {
-      opacity: 0;
-      transform: translateY(-10px);
-    }
+&.slide-down-leave {
+  opacity: 1;
+  transform: translateY(0);
+
+  &.slide-down-leave-active {
+    opacity: 0;
+    transform: translateY(-10px);
   }
 }
 
