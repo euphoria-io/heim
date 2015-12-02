@@ -47,9 +47,8 @@ const storeActions = Reflux.createActions([
   'notificationsNoticeChoice',
   'dismissNotice',
   'openAccountAuthDialog',
-  'closeAccountAuthDialog',
   'openAccountSettingsDialog',
-  'closeAccountSettingsDialog',
+  'closeDialog',
 ])
 _.extend(module.exports, storeActions)
 
@@ -342,7 +341,7 @@ const store = module.exports.store = Reflux.createStore({
     this.trigger(this.state)
 
     if (!state.account && this.state.modalDialog === 'account-settings') {
-      this.closeAccountSettingsDialog()
+      this.closeDialog()
     }
   },
 
@@ -594,6 +593,9 @@ const store = module.exports.store = Reflux.createStore({
 
   keydownOnPage(ev) {
     if (this.state.modalDialog) {
+      if (ev.key === 'Escape') {
+        this.closeDialog()
+      }
       return
     }
 
@@ -691,20 +693,18 @@ const store = module.exports.store = Reflux.createStore({
     this.trigger(this.state)
   },
 
-  closeAccountAuthDialog() {
-    this.state.modalDialog = null
-    accountAuthFlow.reset()
-    this.trigger(this.state)
-  },
-
   openAccountSettingsDialog() {
     this.state.modalDialog = 'account-settings'
     this.trigger(this.state)
   },
 
-  closeAccountSettingsDialog() {
+  closeDialog() {
+    if (this.state.modalDialog === 'account-auth') {
+      accountAuthFlow.reset()
+    } else if (this.state.modalDialog === 'account-settings') {
+      accountSettingsFlow.reset()
+    }
     this.state.modalDialog = null
-    accountSettingsFlow.reset()
     this.trigger(this.state)
   },
 })
