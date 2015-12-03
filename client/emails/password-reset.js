@@ -13,7 +13,7 @@ module.exports = (
     </TopBubbleBox>
     <BodyBox>
       <Item>
-        <Text {...textDefaults}>hey {'{{.AccountName}}'}, we've received a password reset request for your <Link {...textDefaults} href="{{.SiteURL}}">{'{{.SiteName}}'}</Link> account:</Text>
+        <Text {...textDefaults}>hey, we've received a password reset request for your <Link {...textDefaults} href="{{.SiteURL}}">{'{{.SiteName}}'}</Link> account:</Text>
       </Item>
       <BigButton color="#dca955" href="{{.ResetPasswordURL}}">
         reset your password

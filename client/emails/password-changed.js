@@ -13,7 +13,7 @@ module.exports = (
     </TopBubbleBox>
     <BodyBox>
       <Item>
-        <Text {...textDefaults}>hey {'{{.AccountName}}'}, just keeping you in the loop. if you just updated your <Link {...textDefaults} href="{{.SiteURL}}">{'{{.SiteName}}'}</Link> password, you're good to go!</Text>
+        <Text {...textDefaults}>hey, just keeping you in the loop. if you just updated your <Link {...textDefaults} href="{{.SiteURL}}">{'{{.SiteName}}'}</Link> password, you're good to go!</Text>
       </Item>
       <Item>
         <Text {...textDefaults}>if you did not change your password and suspect something fishy is going on, please reply to this email immediately.</Text>
