@@ -1004,6 +1004,14 @@ func (s *session) handlePMInitiateCommand(msg *proto.PMInitiateCommand) *respons
 	if s.client.Account == nil {
 		return &response{err: proto.ErrAccessDenied}
 	}
+	// Temporary: pm-initiate requires staff or host of current room.
+	if s.managedRoom == nil || s.client.Account == nil {
+		return &response{err: proto.ErrAccessDenied}
+	}
+	if s.client.Authorization.ManagerKeyPair == nil && s.staffKMS == nil {
+		return &response{err: proto.ErrAccessDenied}
+	}
+
 	pmID, err := s.backend.PMTracker().Initiate(s.ctx, s.kms, s.client, msg.UserID)
 	if err != nil {
 		return &response{err: fmt.Errorf("pm initiate: %s", err)}

@@ -74,7 +74,11 @@ func (s *serverUnderTest) Close() {
 func (s *serverUnderTest) openWebsocket(roomName string, cookies []*http.Cookie, params url.Values) (proto.Room, *websocket.Conn, *http.Response) {
 	headers := http.Header{}
 	for _, cookie := range cookies {
-		headers.Add("Cookie", cookie.String())
+		clientCookie := http.Cookie{
+			Name:  cookie.Name,
+			Value: cookie.Value,
+		}
+		headers.Add("Cookie", clientCookie.String())
 	}
 	url := strings.Replace(s.server.URL, "http:", "ws:", 1) + "/room/" + roomName + "/ws"
 	if params != nil {
@@ -92,8 +96,15 @@ func (s *serverUnderTest) openWebsocket(roomName string, cookies []*http.Cookie,
 	// Mimic the ws request handler so we can resolve the room.
 	headersBuf := &bytes.Buffer{}
 	So(headers.Write(headersBuf), ShouldBeNil)
-	r, err := http.NewRequest("GET", url, headersBuf)
+	r, err := http.NewRequest("GET", url, nil)
 	So(err, ShouldBeNil)
+	for _, cookie := range cookies {
+		clientCookie := http.Cookie{
+			Name:  cookie.Name,
+			Value: cookie.Value,
+		}
+		r.Header.Add("Cookie", clientCookie.String())
+	}
 	ctx := scope.New()
 	agent, _, agentKey, err := getAgent(ctx, s.app, r)
 	So(err, ShouldBeNil)
@@ -104,6 +115,11 @@ func (s *serverUnderTest) openWebsocket(roomName string, cookies []*http.Cookie,
 		},
 	}
 	client.FromRequest(ctx, r)
+	if agent.AccountID != "" {
+		var accountID snowflake.Snowflake
+		So(accountID.FromString(agent.AccountID), ShouldBeNil)
+		So(client.AuthenticateWithAgent(ctx, s.backend, agent, agentKey), ShouldBeNil)
+	}
 	var prefix string
 	if strings.HasPrefix(roomName, "pm:") {
 		prefix = "pm:"
@@ -3131,6 +3147,9 @@ func testPMs(s *serverUnderTest) {
 		c.send("2", "login", `{"namespace":"email","id":"logan%s","password":"hunter2"}`, nonce)
 		c.expect("2", "login-reply", `{"success":true,"account_id":"%s"}`, logan.ID())
 		c.Close()
+		_, err = s.Room(ctx, kms, false, "pminvite2", logan)
+		So(err, ShouldBeNil)
+		c.isManager = true
 		c = s.Reconnect(c, "pminvite2")
 		c.expectPing()
 		c.expectSnapshot(s.backend.Version(), nil, nil)
@@ -3158,6 +3177,81 @@ func testPMs(s *serverUnderTest) {
 		So(capture["encryption_key_id"], ShouldEqual, "v1/"+roomName)
 
 		c.accountHasAccess = true
+		c.isManager = false
+		c = s.Reconnect(c, roomName)
+		defer c.Close()
+		c.expectPing()
+		c.expectSnapshot(s.backend.Version(), []string{id}, []string{msg})
+		c.send("1", "nick", `{"name":"c"}`)
+		c.expect("1", "nick-reply", `{"session_id":"*","id":"*","from":"","to":"c"}`)
+		c.send("2", "send", `{"content":"hello"}`)
+		c.expect("2", "send-reply", `{"id":"*","time":"*","sender":"*","content":"*","encryption_key_id":"%s"}`, capture["encryption_key_id"])
+		r.expect("", "join-event", `{"session_id":"*","id":"*","name":"","server_id":"*","server_era":"*"}`)
+		r.expect("", "nick-event", `{"session_id":"*","id":"*","from":"","to":"c"}`)
+		r.expect("", "send-event", `{"id":"*","time":"*","sender":"*","content":"hello","encryption_key_id":"*"}`)
+	})
+
+	Convey("Initiate with account and interact", func() {
+		// Create initiator
+		ctx := scope.New()
+		kms := s.app.kms
+		nonce := fmt.Sprintf("%s", time.Now())
+		alice, _, err := s.Account(ctx, kms, "email", "alice"+nonce, "hunter2")
+		So(err, ShouldBeNil)
+		bob, _, err := s.Account(ctx, kms, "email", "bob"+nonce, "hunter2")
+		So(err, ShouldBeNil)
+		_, err = s.Room(ctx, kms, false, "pmtoaccount", alice)
+
+		// Log in both parties and connect to common room.
+		r := s.Connect("pmtoaccount2")
+		r.expectPing()
+		r.expectSnapshot(s.backend.Version(), nil, nil)
+		r.send("1", "login", `{"namespace":"email","id":"bob%s","password":"hunter2"}`, nonce)
+		r.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, bob.ID())
+		r.Close()
+
+		r = s.Reconnect(r, "pmtoaccount2")
+		r.expectPing()
+		r.expectSnapshot(s.backend.Version(), nil, nil)
+
+		c := s.Connect("pmtoaccount")
+		c.expectPing()
+		c.expectSnapshot(s.backend.Version(), nil, nil)
+		c.send("1", "login", `{"namespace":"email","id":"alice%s","password":"hunter2"}`, nonce)
+		c.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, alice.ID())
+		c.Close()
+
+		c.isManager = true
+		c = s.Reconnect(c, "pmtoaccount")
+		c.expectPing()
+		c.expectSnapshot(s.backend.Version(), nil, nil)
+
+		c.send("1", "pm-initiate", `{"user_id":"%s"}`, r.id())
+		capture := c.expect("1", "pm-initiate-reply", `{"pm_id":"*"}`)
+		c.Close()
+
+		// Recipient receive pm-initiate-event and reconnect to PM room
+		r.expect(
+			"", "pm-initiate-event", `{"from":"%s","from_nick":"","from_room":"pmtoaccount","pm_id":"%s"}`,
+			c.id(), capture["pm_id"])
+		roomName := fmt.Sprintf("pm:%s", capture["pm_id"])
+		r.Close()
+		r.accountHasAccess = true
+		r = s.Reconnect(r, roomName)
+		defer r.Close()
+		r.expectPing()
+		r.expectSnapshot(s.backend.Version(), nil, nil)
+		r.send("1", "nick", `{"name":"r"}`)
+		r.expect("1", "nick-reply", `{"session_id":"*","id":"*","from":"","to":"r"}`)
+		r.send("2", "send", `{"content":"hi"}`)
+		id := `{"session_id":"*","id":"*","name":"r","server_id":"*","server_era":"*"}`
+		capture = r.expect("2", "send-reply", `{"id":"*","time":"*","sender":%s,"content":"*","encryption_key_id":"*"}`, id)
+		msg := fmt.Sprintf(`{"id":"%s","time":%f,"sender":%s,"content":"hi","encryption_key_id":"%s"}`,
+			capture["id"], capture["time"], id, capture["encryption_key_id"])
+		So(capture["encryption_key_id"], ShouldEqual, "v1/"+roomName)
+
+		c.accountHasAccess = true
+		c.isManager = false
 		c = s.Reconnect(c, roomName)
 		defer c.Close()
 		c.expectPing()
