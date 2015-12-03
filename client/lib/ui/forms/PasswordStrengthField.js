@@ -67,6 +67,12 @@ export default React.createClass({
   render() {
     const strengthClass = this.props.showFeedback ? this.state.strength : null
     const strengthMessage = this.props.showFeedback ? this.state.message : null
+    let message
+    if (!this.props.message || this.state.focused && strengthMessage) {
+      message = strengthMessage
+    } else {
+      message = this.props.message
+    }
     return (
       <TextField
         ref="field"
@@ -74,7 +80,7 @@ export default React.createClass({
         {...this.props}
         value={this.props.value && this.props.value.text}
         className={classNames('password-field', strengthClass)}
-        message={(this.props.message && !this.state.focused) ? this.props.message : strengthMessage}
+        message={message}
         onModify={this.onModify}
         onFocus={this.onFocus}
         onBlur={this.onBlur}
