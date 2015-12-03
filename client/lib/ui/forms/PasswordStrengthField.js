@@ -33,6 +33,12 @@ export default React.createClass({
     }
   },
 
+  componentWillReceiveProps(nextProps) {
+    if (this.props.minEntropy !== nextProps.minEntropy) {
+      this._checkStrength(this.props.value && this.props.value.text, nextProps.minEntropy)
+    }
+  },
+
   onFocus() {
     this.setState({focused: true})
   },
@@ -42,11 +48,19 @@ export default React.createClass({
   },
 
   onModify(value) {
+    const strength = this._checkStrength(value, this.props.minEntropy)
+    this.props.onModify({
+      text: value,
+      strength: strength,
+    })
+  },
+
+  _checkStrength(value, minEntropy) {
     let strength = 'unknown'
-    if (this.props.minEntropy) {
+    if (minEntropy) {
       const entropy = entropizer.evaluate(value)
       let message
-      if (entropy < this.props.minEntropy) {
+      if (entropy < minEntropy) {
         strength = 'weak'
         message = 'too simple — add more!'
       } else {
@@ -54,10 +68,7 @@ export default React.createClass({
       }
       this.setState({strength, message})
     }
-    this.props.onModify({
-      text: value,
-      strength: strength,
-    })
+    return strength
   },
 
   focus() {
