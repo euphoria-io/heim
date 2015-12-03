@@ -336,13 +336,13 @@ const store = module.exports.store = Reflux.createStore({
   },
 
   chatChange(state) {
-    this.chatState = state
-    this._updateNotices()
-    this.trigger(this.state)
-
     if (!state.account && this.state.modalDialog === 'account-settings') {
       this.closeDialog()
     }
+
+    this.chatState = state
+    this._updateNotices()
+    this.trigger(this.state)
   },
 
   notificationChange(state) {
