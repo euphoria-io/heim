@@ -178,6 +178,19 @@ func (s *session) View() *proto.SessionView {
 	}
 }
 
+func (s *session) writeMessage(messageType int, data []byte) error {
+	if err := s.conn.SetWriteDeadline(time.Now().Add(MaxKeepAliveMisses * KeepAlive)); err != nil {
+		return err
+	}
+	if err := s.conn.WriteMessage(messageType, data); err != nil {
+		return err
+	}
+	if err := s.conn.SetWriteDeadline(time.Time{}); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (s *session) Send(ctx scope.Context, cmdType proto.PacketType, payload interface{}) error {
 	var err error
 	payload, err = proto.DecryptPayload(payload, &s.client.Authorization)
@@ -347,7 +360,7 @@ func (s *session) serve() error {
 				return err
 			}
 
-			if err := s.conn.WriteMessage(websocket.TextMessage, data); err != nil {
+			if err := s.writeMessage(websocket.TextMessage, data); err != nil {
 				logger.Printf("error: write message: %s", err)
 				return err
 			}
@@ -372,7 +385,7 @@ func (s *session) serve() error {
 				return err
 			}
 
-			if err := s.conn.WriteMessage(websocket.TextMessage, data); err != nil {
+			if err := s.writeMessage(websocket.TextMessage, data); err != nil {
 				logger.Printf("error: write message: %s", err)
 				return err
 			}
@@ -520,7 +533,7 @@ func (s *session) sendHello(roomIsPrivate, accountHasAccess bool) error {
 		return err
 	}
 
-	if err := s.conn.WriteMessage(websocket.TextMessage, data); err != nil {
+	if err := s.writeMessage(websocket.TextMessage, data); err != nil {
 		logger.Printf("error: write hello event: %s", err)
 		return err
 	}
@@ -545,7 +558,7 @@ func (s *session) sendPing() error {
 		return err
 	}
 
-	if err := s.conn.WriteMessage(websocket.TextMessage, data); err != nil {
+	if err := s.writeMessage(websocket.TextMessage, data); err != nil {
 		logger.Printf("error: write ping event: %s", err)
 		return err
 	}
