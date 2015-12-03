@@ -496,7 +496,7 @@ func (s *session) join() error {
 
 	s.onClose = func() {
 		if err := s.room.Part(s.ctx, s); err != nil {
-			// TODO: error handling
+			logging.Logger(s.ctx).Printf("room part failed: %s", err)
 			return
 		}
 	}
