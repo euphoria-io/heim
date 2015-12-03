@@ -222,7 +222,7 @@ func (s *session) Send(ctx scope.Context, cmdType proto.PacketType, payload inte
 
 func (s *session) serve() error {
 	defer func() {
-		s.finishFastKeepalive()
+		s.finishFastKeepAlive()
 		if s.onClose != nil {
 			s.onClose()
 		}
@@ -598,7 +598,7 @@ func (s *session) CheckAbandoned() error {
 	return s.sendPing()
 }
 
-func (s *session) finishFastKeepalive() {
+func (s *session) finishFastKeepAlive() {
 	s.m.Lock()
 	defer s.m.Unlock()
 

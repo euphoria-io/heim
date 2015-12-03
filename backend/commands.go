@@ -113,7 +113,7 @@ func (s *session) handleCoreCommands(payload interface{}) *response {
 	case *proto.PingCommand:
 		return &response{packet: &proto.PingReply{UnixTime: msg.UnixTime}}
 	case *proto.PingReply:
-		s.finishFastKeepalive()
+		s.finishFastKeepAlive()
 		if time.Time(msg.UnixTime).Unix() == s.expectedPingReply {
 			s.outstandingPings = 0
 		} else if s.outstandingPings > 1 {
