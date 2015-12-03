@@ -8,5 +8,4 @@ We hope you have a wonderful time here. If you have any questions or comments, f
 
 ---
 
-This message was sent to {{.AccountEmailAddress}} because someone signed up for an account on {{.SiteURL}} with this email address. If you did not request this
-email, please disregard.
+This message was sent to {{.AccountEmailAddress}} because someone signed up for an account on {{.SiteURL}} with this email address. If you did not request this email, please disregard.
