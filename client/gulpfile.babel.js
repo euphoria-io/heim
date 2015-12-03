@@ -258,7 +258,7 @@ gulp.task('email-static', () => {
 function watchifyTask(name, bundler, outFile, dest) {
   gulp.task(name, ['build-statics'], () => {
     // via https://github.com/gulpjs/gulp/blob/master/docs/recipes/fast-browserify-builds-with-watchify.md
-    const watchBundler = watchify(bundler(watchify.args))
+    const watchBundler = watchify(bundler({debug: true, ...watchify.args}))
 
     function rebundle() {
       return watchBundler.bundle()
