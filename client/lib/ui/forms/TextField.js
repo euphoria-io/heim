@@ -16,6 +16,7 @@ export default React.createClass({
     onFocus: React.PropTypes.func,
     onBlur: React.PropTypes.func,
     error: React.PropTypes.bool,
+    isFirstError: React.PropTypes.bool,
     autoFocus: React.PropTypes.bool,
     message: React.PropTypes.string,
     className: React.PropTypes.string,
@@ -23,6 +24,12 @@ export default React.createClass({
     tabIndex: React.PropTypes.number,
     spellCheck: React.PropTypes.bool,
     disabled: React.PropTypes.bool,
+  },
+
+  componentDidUpdate(prevProps) {
+    if (!prevProps.error && this.props.isFirstError) {
+      this.refs.input.focus()
+    }
   },
 
   onChange(ev) {

@@ -96,17 +96,24 @@ export default React.createClass({
     return !newError ? null : origError
   },
 
-  _walkChildren(children, serverErrors, validatorErrors) {
+  _walkChildren(children, serverErrors, validatorErrors, errorSeen) {
+    let foundError = errorSeen
     const errors = _.assign({}, serverErrors, validatorErrors)
     return React.Children.map(children, child => {
       if (!React.isValidElement(child)) {
         return child
       } else if (!child.props.name && child.props.type !== 'submit') {
-        return React.cloneElement(child, {}, this._walkChildren(child.props.children, serverErrors, validatorErrors))
+        return React.cloneElement(child, {}, this._walkChildren(child.props.children, serverErrors, validatorErrors, foundError))
       }
 
       const name = child.props.name
       const error = name && errors[name]
+      let firstError = false
+      if (!foundError && error) {
+        foundError = true
+        firstError = true
+      }
+
       return React.cloneElement(child, {
         onModify: value => {
           this.onFieldModify(name, value)
@@ -117,9 +124,10 @@ export default React.createClass({
         onValidate: () => this.onFieldValidate(name),
         value: this.state.values[name],
         error: !!error,
+        isFirstError: firstError,
         message: error,
         disabled: this.props.working || child.props.type === 'submit' && _.any(validatorErrors),
-      }, this._walkChildren(child.props.children, serverErrors, validatorErrors))
+      }, this._walkChildren(child.props.children, serverErrors, validatorErrors, foundError))
     })
   },
 
