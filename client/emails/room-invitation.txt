@@ -1,4 +1,4 @@
-hi,
+Hi,
 
 {{.SenderName}} invites you to join &{{.RoomName}}:
 
@@ -6,7 +6,7 @@ hi,
 
 ---
 
-a note from {{.SenderName}}:
+A note from {{.SenderName}}:
 
 {{.SenderMessage}}
 

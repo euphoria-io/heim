@@ -18,7 +18,7 @@ module.exports = (
     </TopBubbleBox>
     <BodyBox>
       <Item align="center">
-        <Text {...textDefaults} color="#7d7d7d">a note from {'{{.SenderName}}'}:</Text>
+        <Text {...textDefaults} color="#7d7d7d">A note from {'{{.SenderName}}'}:</Text>
       </Item>
       <Item>
         <Text {...textDefaults}>{'{{.SenderMessage}}'}</Text>
