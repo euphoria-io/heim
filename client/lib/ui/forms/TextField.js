@@ -36,7 +36,9 @@ export default React.createClass({
   },
 
   onBlur(ev) {
-    this.props.onValidate()
+    if (!this.props.disabled) {
+      this.props.onValidate()
+    }
     if (this.props.onBlur) {
       this.props.onBlur(ev)
     }
