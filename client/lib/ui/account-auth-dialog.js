@@ -68,7 +68,7 @@ export default React.createClass({
           <div className="notice">{flow.step === 'register-email-sent' ? 'done! we\'ve sent you a verification email.' : 'ok! we\'ve sent you a password reset email.'}</div>
           <div className="bottom">
             <div className="action-line centered">
-              <button type="button" tabIndex="1" className="continue major-action" onClick={this.props.onClose}>{flow.step === 'register-email-sent' ? 'continue to account' : 'continue'}</button>
+              <button type="button" tabIndex="1" className="continue major-action" onClick={this.props.onClose}>continue</button>
             </div>
           </div>
         </div>
