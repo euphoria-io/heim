@@ -1,1 +1,2 @@
+From: {{.SenderAddress}}
 Subject: {{.Subject}}
