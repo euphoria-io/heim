@@ -26,6 +26,9 @@ var (
 	SendEventType = SendType.Event()
 	SendReplyType = SendType.Reply()
 
+	ChangeEmailType      = PacketType("change-email")
+	ChangeEmailReplyType = ChangeEmailType.Reply()
+
 	ChangeNameType      = PacketType("change-name")
 	ChangeNameReplyType = ChangeNameType.Reply()
 
@@ -123,6 +126,9 @@ var (
 		SendType:      reflect.TypeOf(SendCommand{}),
 		SendReplyType: reflect.TypeOf(SendReply{}),
 		SendEventType: reflect.TypeOf(SendEvent{}),
+
+		ChangeEmailType:      reflect.TypeOf(ChangeEmailCommand{}),
+		ChangeEmailReplyType: reflect.TypeOf(ChangeEmailReply{}),
 
 		ChangeNameType:      reflect.TypeOf(ChangeNameCommand{}),
 		ChangeNameReplyType: reflect.TypeOf(ChangeNameReply{}),
@@ -276,6 +282,19 @@ type EditMessageCommand struct {
 	Content        string              `json:"content,omitempty"` // the new content of the message (*not yet implemented*)
 	Delete         bool                `json:"delete"`            // the new deletion status of the message
 	Announce       bool                `json:"announce"`          // if true, broadcast an `edit-message-event` to the room
+}
+
+// The `change-email` command changes the primary email address associated with
+// the signed in account. The email address may need to be verified before the
+// change is fully applied.
+type ChangeEmailCommand struct {
+	Email string `json:"email"` // the new primary email address for the account
+}
+
+// The `change-email-reply` packet indicates that the primary email address has
+// been changed.
+type ChangeEmailReply struct {
+	VerificationNeeded bool `json:"verification_needed"` // if true, a verification email will be sent out, and the user must verify the address before it becomes their primary address
 }
 
 // The `change-name` command changes the name associated with the signed in account.

@@ -8,13 +8,13 @@ import (
 	"strings"
 	"time"
 
+	"gopkg.in/gorp.v1"
+
 	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/logging"
 	"euphoria.io/heim/proto/security"
 	"euphoria.io/heim/proto/snowflake"
 	"euphoria.io/scope"
-
-	"gopkg.in/gorp.v1"
 )
 
 const OTPKeyType = security.AES128
@@ -22,6 +22,7 @@ const OTPKeyType = security.AES128
 type Account struct {
 	ID                  string
 	Name                string
+	Email               string
 	Nonce               []byte
 	MAC                 []byte
 	EncryptedSystemKey  []byte         `db:"encrypted_system_key"`
@@ -108,6 +109,15 @@ func (ab *AccountBinding) ID() snowflake.Snowflake {
 }
 
 func (ab *AccountBinding) Name() string { return ab.Account.Name }
+
+func (ab *AccountBinding) Email() (string, bool) {
+	for _, pid := range ab.identities {
+		if pid.Namespace() == "email" && ab.Account.Email == pid.ID() {
+			return ab.Account.Email, pid.Verified()
+		}
+	}
+	return ab.Account.Email, false
+}
 
 func (ab *AccountBinding) KeyFromPassword(password string) *security.ManagedKey {
 	return security.KeyFromPasscode([]byte(password), ab.Account.Nonce, proto.ClientKeyType)
@@ -235,22 +245,55 @@ type AccountManagerBinding struct {
 }
 
 func (b *AccountManagerBinding) VerifyPersonalIdentity(ctx scope.Context, namespace, id string) error {
-	res, err := b.DbMap.Exec(
+	t, err := b.DbMap.Begin()
+	if err != nil {
+		return err
+	}
+
+	checkResult := func(res sql.Result) error {
+		n, err := res.RowsAffected()
+		if err != nil {
+			return err
+		}
+		if n == 0 {
+			return proto.ErrAccountNotFound
+		}
+		return nil
+	}
+
+	res, err := t.Exec(
 		"UPDATE personal_identity SET verified = true WHERE namespace = $1 and id = $2",
 		namespace, id)
 	if err != nil {
+		rollback(ctx, t)
 		if err == sql.ErrNoRows {
 			return proto.ErrAccountNotFound
 		}
 		return err
 	}
-
-	n, err := res.RowsAffected()
-	if err != nil {
+	if err := checkResult(res); err != nil {
+		rollback(ctx, t)
 		return err
 	}
-	if n == 0 {
-		return proto.ErrAccountNotFound
+
+	if namespace == "email" {
+		res, err = t.Exec(
+			"UPDATE account SET email = (SELECT id FROM personal_identity WHERE namespace = 'email' AND id = $1)", id)
+		if err != nil {
+			rollback(ctx, t)
+			if err == sql.ErrNoRows {
+				return proto.ErrAccountNotFound
+			}
+			return err
+		}
+		if err := checkResult(res); err != nil {
+			rollback(ctx, t)
+			return err
+		}
+	}
+
+	if err := t.Commit(); err != nil {
+		return err
 	}
 
 	return nil
@@ -792,6 +835,75 @@ func (b *AccountManagerBinding) ChangeName(ctx scope.Context, accountID snowflak
 		return proto.ErrAccountNotFound
 	}
 	return nil
+}
+
+func (b *AccountManagerBinding) ChangeEmail(ctx scope.Context, accountID snowflake.Snowflake, email string) (bool, error) {
+	t, err := b.DbMap.Begin()
+	if err != nil {
+		return false, err
+	}
+
+	account, err := b.get(t, accountID)
+	if err != nil {
+		rollback(ctx, t)
+		return false, err
+	}
+
+	other, err := b.resolve(t, "email", email)
+	if err != nil && err != proto.ErrAccountNotFound {
+		rollback(ctx, t)
+		return false, err
+	}
+	if err == nil && other.ID() != accountID {
+		rollback(ctx, t)
+		return false, proto.ErrPersonalIdentityInUse
+	}
+
+	for _, pid := range account.identities {
+		if pid.Namespace() == "email" && pid.ID() == email {
+			if pid.Verified() {
+				res, err := t.Exec("UPDATE account SET email = $2 WHERE id = $1", accountID.String(), email)
+				if err != nil {
+					if err == sql.ErrNoRows {
+						return false, proto.ErrAccountNotFound
+					}
+					rollback(ctx, t)
+					return false, err
+				}
+				n, err := res.RowsAffected()
+				if err != nil {
+					rollback(ctx, t)
+					return false, err
+				}
+				if n < 1 {
+					rollback(ctx, t)
+					return false, proto.ErrAccountNotFound
+				}
+				if err := t.Commit(); err != nil {
+					return false, err
+				}
+				return true, nil
+			}
+			rollback(ctx, t)
+			return false, nil
+		}
+	}
+
+	pid := &PersonalIdentity{
+		Namespace: "email",
+		ID:        email,
+		AccountID: accountID.String(),
+	}
+	if err := t.Insert(pid); err != nil {
+		rollback(ctx, t)
+		return false, err
+	}
+
+	if err := t.Commit(); err != nil {
+		return false, err
+	}
+
+	return false, nil
 }
 
 func (b *AccountManagerBinding) getRawOTP(db gorp.SqlExecutor, accountID snowflake.Snowflake) (*OTP, error) {

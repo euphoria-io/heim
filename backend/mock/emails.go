@@ -21,7 +21,7 @@ type EmailTracker struct {
 
 func (et *EmailTracker) Send(
 	ctx scope.Context, js jobs.JobService, templater *templates.Templater, deliverer emails.Deliverer,
-	account proto.Account, templateName string, data interface{}) (
+	account proto.Account, to, templateName string, data interface{}) (
 	*emails.EmailRef, error) {
 
 	sf, err := snowflake.New()
@@ -29,30 +29,6 @@ func (et *EmailTracker) Send(
 		return nil, err
 	}
 	msgID := fmt.Sprintf("<%s@%s>", sf, deliverer.LocalName())
-
-	to := ""
-	/*
-		requireVerifiedAddress := true
-		switch templateName {
-		case proto.WelcomeEmail, proto.RoomInvitationWelcomeEmail, proto.PasswordResetEmail:
-			requireVerifiedAddress = false
-		}
-	*/
-	for _, pid := range account.PersonalIdentities() {
-		if pid.Namespace() == "email" {
-			/*
-				if !pid.Verified() && requireVerifiedAddress {
-					continue
-				}
-			*/
-			to = pid.ID()
-			break
-		}
-	}
-	if to == "" {
-		fmt.Printf("no email address to deliver to\n")
-		return nil, fmt.Errorf("account has no email address to deliver %s to", templateName)
-	}
 
 	ref, err := emails.NewEmail(templater, msgID, to, templateName, data)
 	if err != nil {

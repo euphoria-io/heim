@@ -94,6 +94,11 @@ type AccountManager interface {
 	// confirmation code.
 	ConfirmPasswordReset(ctx scope.Context, kms security.KMS, confirmation, password string) error
 
+	// ChangeEmail changes an account's primary email address. It returns true if the email
+	// address is verified for this account. If false is returned, then a verification
+	// email will be sent out.
+	ChangeEmail(ctx scope.Context, accountID snowflake.Snowflake, email string) (bool, error)
+
 	// ChangeName changes an account's name.
 	ChangeName(ctx scope.Context, accountID snowflake.Snowflake, name string) error
 
@@ -134,6 +139,7 @@ func ValidateAccountPassword(password string) (bool, string) {
 type Account interface {
 	ID() snowflake.Snowflake
 	Name() string
+	Email() (string, bool)
 	KeyFromPassword(password string) *security.ManagedKey
 	KeyPair() security.ManagedKeyPair
 	Unlock(clientKey *security.ManagedKey) (*security.ManagedKeyPair, error)
