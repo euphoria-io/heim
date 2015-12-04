@@ -34,6 +34,7 @@ func NewAccount(kms security.KMS, password string) (proto.Account, *security.Man
 type memAccount struct {
 	id                 snowflake.Snowflake
 	name               string
+	email              string
 	sec                proto.AccountSecurity
 	staffCapability    security.Capability
 	personalIdentities []proto.PersonalIdentity
@@ -41,6 +42,15 @@ type memAccount struct {
 
 func (a *memAccount) ID() snowflake.Snowflake { return a.id }
 func (a *memAccount) Name() string            { return a.name }
+
+func (a *memAccount) Email() (string, bool) {
+	for _, pid := range a.personalIdentities {
+		if pid.Namespace() == "email" && a.email == pid.ID() {
+			return a.email, pid.Verified()
+		}
+	}
+	return a.email, false
+}
 
 func (a *memAccount) KeyFromPassword(password string) *security.ManagedKey {
 	return security.KeyFromPasscode([]byte(password), a.sec.Nonce, a.sec.UserKey.KeyType)
@@ -105,9 +115,9 @@ type personalIdentity struct {
 	verified  bool
 }
 
-func (pi *personalIdentity) Namespace() string { return pi.namespace }
-func (pi *personalIdentity) ID() string        { return pi.id }
-func (pi *personalIdentity) Verified() bool    { return pi.verified }
+func (pid *personalIdentity) Namespace() string { return pid.namespace }
+func (pid *personalIdentity) ID() string        { return pid.id }
+func (pid *personalIdentity) Verified() bool    { return pid.verified }
 
 type accountManager struct {
 	b *TestBackend
@@ -122,8 +132,14 @@ func (m *accountManager) VerifyPersonalIdentity(ctx scope.Context, namespace, id
 	if !ok {
 		return proto.ErrAccountNotFound
 	}
-
 	pid.verified = true
+
+	if namespace == "email" {
+		if a, ok := m.b.accounts[pid.accountID]; ok {
+			a.(*memAccount).email = id
+		}
+	}
+
 	return nil
 }
 
@@ -166,16 +182,16 @@ func (m *accountManager) Register(
 		m.b.accounts[account.ID()] = account
 	}
 
-	pi := &personalIdentity{
+	pid := &personalIdentity{
 		accountID: account.ID(),
 		namespace: namespace,
 		id:        id,
 	}
-	account.(*memAccount).personalIdentities = []proto.PersonalIdentity{pi}
+	account.(*memAccount).personalIdentities = []proto.PersonalIdentity{pid}
 	if m.b.accountIDs == nil {
-		m.b.accountIDs = map[string]*personalIdentity{key: pi}
+		m.b.accountIDs = map[string]*personalIdentity{key: pid}
 	} else {
-		m.b.accountIDs[key] = pi
+		m.b.accountIDs[key] = pid
 	}
 
 	agent, err := m.b.AgentTracker().Get(ctx, agentID)
@@ -198,11 +214,11 @@ func (m *accountManager) Resolve(ctx scope.Context, namespace, id string) (proto
 	defer m.b.Unlock()
 
 	key := fmt.Sprintf("%s:%s", namespace, id)
-	pi, ok := m.b.accountIDs[key]
+	pid, ok := m.b.accountIDs[key]
 	if !ok {
 		return nil, proto.ErrAccountNotFound
 	}
-	return m.b.accounts[pi.accountID], nil
+	return m.b.accounts[pid.accountID], nil
 }
 
 func (m *accountManager) Get(ctx scope.Context, id snowflake.Snowflake) (proto.Account, error) {
@@ -269,12 +285,12 @@ func (m *accountManager) RequestPasswordReset(
 	defer m.b.Unlock()
 
 	key := fmt.Sprintf("%s:%s", namespace, id)
-	pi, ok := m.b.accountIDs[key]
+	pid, ok := m.b.accountIDs[key]
 	if !ok {
 		return nil, nil, proto.ErrAccountNotFound
 	}
 
-	req, err := proto.GeneratePasswordResetRequest(kms, pi.accountID)
+	req, err := proto.GeneratePasswordResetRequest(kms, pid.accountID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -285,7 +301,7 @@ func (m *accountManager) RequestPasswordReset(
 		m.b.resetReqs[req.ID] = req
 	}
 
-	return m.b.accounts[pi.accountID], req, nil
+	return m.b.accounts[pid.accountID], req, nil
 }
 
 func (m *accountManager) GetPasswordResetAccount(ctx scope.Context, confirmation string) (proto.Account, error) {
@@ -339,6 +355,45 @@ func (m *accountManager) ConfirmPasswordReset(
 	}
 
 	return nil
+}
+
+func (m *accountManager) ChangeEmail(ctx scope.Context, accountID snowflake.Snowflake, email string) (bool, error) {
+	m.b.Lock()
+	defer m.b.Unlock()
+
+	account, ok := m.b.accounts[accountID]
+	if !ok {
+		return false, proto.ErrAccountNotFound
+	}
+
+	key := fmt.Sprintf("email:%s", email)
+	conflict, ok := m.b.accountIDs[key]
+	if ok && conflict.accountID != accountID {
+		return false, proto.ErrPersonalIdentityInUse
+	}
+
+	for _, pid := range account.PersonalIdentities() {
+		if pid.Namespace() == "email" && pid.ID() == email {
+			if pid.Verified() {
+				account.(*memAccount).email = email
+				return true, nil
+			}
+			return false, nil
+		}
+	}
+
+	pid := &personalIdentity{
+		accountID: accountID,
+		namespace: "email",
+		id:        email,
+	}
+	account.(*memAccount).personalIdentities = append(account.(*memAccount).personalIdentities, pid)
+	if m.b.accountIDs == nil {
+		m.b.accountIDs = map[string]*personalIdentity{key: pid}
+	} else {
+		m.b.accountIDs[key] = pid
+	}
+	return false, nil
 }
 
 func (m *accountManager) ChangeName(ctx scope.Context, accountID snowflake.Snowflake, name string) error {

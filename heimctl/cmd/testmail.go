@@ -109,7 +109,7 @@ func (cmd *testmailCmd) run(ctx scope.Context, args []string) error {
 		return err
 	}
 
-	ref, err := heim.SendEmail(ctx, heim.Backend, account, templateName, testCase.Data)
+	ref, err := heim.SendEmail(ctx, heim.Backend, account, args[1], templateName, testCase.Data)
 	if err != nil {
 		return fmt.Errorf("send failed: %s", err)
 	}

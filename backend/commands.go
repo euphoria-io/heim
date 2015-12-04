@@ -122,6 +122,8 @@ func (s *session) handleCoreCommands(payload interface{}) *response {
 		return &response{}
 
 	// account management commands
+	case *proto.ChangeEmailCommand:
+		return s.handleChangeEmailCommand(msg)
 	case *proto.ChangeNameCommand:
 		return s.handleChangeNameCommand(msg)
 	case *proto.ChangePasswordCommand:
@@ -475,6 +477,22 @@ func (s *session) handleLogoutCommand() *response {
 		return &response{err: err}
 	}
 	return &response{packet: &proto.LogoutReply{}}
+}
+
+func (s *session) handleChangeEmailCommand(msg *proto.ChangeEmailCommand) *response {
+	if s.client.Account == nil {
+		return &response{err: proto.ErrNotLoggedIn}
+	}
+	verified, err := s.backend.AccountManager().ChangeEmail(s.ctx, s.client.Account.ID(), msg.Email)
+	if err != nil {
+		return &response{err: err}
+	}
+	err = s.heim.OnAccountEmailChanged(
+		s.ctx, s.backend, s.client.Account, s.client.Authorization.ClientKey, msg.Email, verified)
+	if err != nil {
+		return &response{err: err}
+	}
+	return &response{packet: &proto.ChangeEmailReply{VerificationNeeded: !verified}}
 }
 
 func (s *session) handleChangeNameCommand(msg *proto.ChangeNameCommand) *response {

@@ -35,9 +35,52 @@ func (heim *Heim) MockDeliverer() emails.MockDeliverer {
 }
 
 func (heim *Heim) SendEmail(
-	ctx scope.Context, b Backend, account Account, templateName string, data interface{}) (*emails.EmailRef, error) {
+	ctx scope.Context, b Backend, account Account, to, templateName string, data interface{}) (*emails.EmailRef, error) {
 
-	return b.EmailTracker().Send(ctx, b.Jobs(), heim.EmailTemplater, heim.EmailDeliverer, account, templateName, data)
+	if to == "" {
+		for _, pid := range account.PersonalIdentities() {
+			if pid.Namespace() == "email" {
+				if pid.Verified() {
+					to = pid.ID()
+					break
+				}
+				if to == "" {
+					to = pid.ID()
+				}
+			}
+		}
+	}
+	return b.EmailTracker().Send(ctx, b.Jobs(), heim.EmailTemplater, heim.EmailDeliverer, account, to, templateName, data)
+}
+
+func (heim *Heim) OnAccountEmailChanged(
+	ctx scope.Context, b Backend, account Account, clientKey *security.ManagedKey, email string, verified bool) error {
+
+	if verified {
+		return nil
+	}
+
+	userKey := account.UserKey()
+	if err := userKey.Decrypt(clientKey); err != nil {
+		return err
+	}
+
+	token, err := emailVerificationToken(&userKey, email)
+	if err != nil {
+		return fmt.Errorf("verification token: %s", err)
+	}
+
+	params := &VerificationEmailParams{
+		CommonEmailParams: DefaultCommonEmailParams,
+		VerificationToken: hex.EncodeToString(token),
+	}
+	// Force delivery to the new address.
+	params.CommonEmailParams.AccountEmailAddress = email
+	if _, err := heim.SendEmail(ctx, b, account, email, VerificationEmail, params); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (heim *Heim) OnAccountPasswordChanged(ctx scope.Context, b Backend, account Account) error {
@@ -46,7 +89,7 @@ func (heim *Heim) OnAccountPasswordChanged(ctx scope.Context, b Backend, account
 		CommonEmailParams: DefaultCommonEmailParams,
 		AccountName:       account.Name(),
 	}
-	if _, err := heim.SendEmail(ctx, b, account, PasswordChangedEmail, params); err != nil {
+	if _, err := heim.SendEmail(ctx, b, account, "", PasswordChangedEmail, params); err != nil {
 		return err
 	}
 
@@ -62,7 +105,7 @@ func (heim *Heim) OnAccountPasswordResetRequest(
 		AccountName:       account.Name(),
 		Confirmation:      req.String(),
 	}
-	if _, err := heim.SendEmail(ctx, b, account, PasswordResetEmail, params); err != nil {
+	if _, err := heim.SendEmail(ctx, b, account, "", PasswordResetEmail, params); err != nil {
 		return err
 	}
 
@@ -102,7 +145,7 @@ func (heim *Heim) OnAccountRegistration(
 			CommonEmailParams: DefaultCommonEmailParams,
 			VerificationToken: hex.EncodeToString(token),
 		}
-		if _, err := heim.SendEmail(ctx, b, account, WelcomeEmail, params); err != nil {
+		if _, err := heim.SendEmail(ctx, b, account, email, WelcomeEmail, params); err != nil {
 			return err
 		}
 	}

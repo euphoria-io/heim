@@ -447,6 +447,17 @@ func (tc *testConn) Close() {
 	So(tc.room.WaitForPart(tc.sessionID), ShouldBeNil)
 }
 
+func receiveEmail(ch <-chan *emails.TestMessage) *emails.TestMessage {
+	timeout := time.After(time.Second)
+	select {
+	case <-timeout:
+		So("email receiver timed out", ShouldEqual, "")
+		return nil
+	case msg := <-ch:
+		return msg
+	}
+}
+
 func IntegrationTest(t *testing.T, factory proto.BackendFactory) {
 	save := security.TestMode
 	defer func() { security.TestMode = save }()
@@ -524,6 +535,7 @@ func IntegrationTest(t *testing.T, factory proto.BackendFactory) {
 	runTest("Staff OTP", testStaffOTP)
 	runTest("Staff invasion", testStaffInvasion)
 	runTest("NotifyUser", testNotifyUser)
+	runTest("Account change email", testAccountChangeEmail)
 
 }
 
@@ -1351,6 +1363,129 @@ func testAccountChangeName(s *serverUnderTest) {
 		conn.expectPing()
 		conn.expectSnapshot(s.backend.Version(), nil, nil)
 		conn.Close()
+	})
+}
+
+func testAccountChangeEmail(s *serverUnderTest) {
+	ctx := scope.New()
+	kms := s.app.kms
+	nonce := fmt.Sprintf("%s", time.Now())
+	logan, _, err := s.Account(ctx, kms, "email", "logan"+nonce, "loganpass")
+	So(err, ShouldBeNil)
+	c := s.Connect("changeemail")
+	c.expectPing()
+	c.expectSnapshot(s.backend.Version(), nil, nil)
+	c.send("1", "login", `{"namespace":"email","id":"logan%s","password":"loganpass"}`, nonce)
+	c.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, logan.ID())
+	c = s.Reconnect(c)
+	c.expectPing()
+	c.expectSnapshot(s.backend.Version(), nil, nil)
+	defer c.Close()
+
+	Convey("Change email to unverified address", func() {
+		inbox := s.app.heim.MockDeliverer().Inbox("logan2" + nonce)
+		c.send("2", "change-email", `{"email":"logan2%s"}`, nonce)
+		c.expect("2", "change-email-reply", `{"verification_needed":true}`)
+
+		// Receive verification token in email.
+		msg := receiveEmail(inbox)
+		So(msg.EmailType, ShouldEqual, proto.VerificationEmail)
+		p, ok := msg.Data.(*proto.VerificationEmailParams)
+		So(ok, ShouldBeTrue)
+
+		// New email should resolve, but not be the primary email until verified.
+		account, err := s.backend.AccountManager().Resolve(ctx, "email", "logan2"+nonce)
+		So(err, ShouldBeNil)
+		email, verified := account.Email()
+		So(email, ShouldEqual, "")
+		So(verified, ShouldBeFalse)
+		found := false
+		for _, pid := range account.PersonalIdentities() {
+			if pid.Namespace() == "email" && pid.ID() == "logan2"+nonce {
+				So(pid.Verified(), ShouldBeFalse)
+				found = true
+				break
+			}
+		}
+		So(found, ShouldBeTrue)
+
+		// Verify email via POST.
+		req := struct {
+			Confirmation string `json:"confirmation"`
+			Email        string `json:"email"`
+		}{
+			Confirmation: p.VerificationToken,
+			Email:        "logan2" + nonce,
+		}
+		reqBytes, err := json.Marshal(req)
+		So(err, ShouldBeNil)
+		resp, err := http.Post(s.server.URL+"/prefs/verify", "application/json", bytes.NewReader(reqBytes))
+		So(err, ShouldBeNil)
+		So(resp.StatusCode, ShouldEqual, 200)
+
+		// New email should be assigned and verified.
+		account, err = s.backend.AccountManager().Resolve(ctx, "email", "logan2"+nonce)
+		So(err, ShouldBeNil)
+		email, verified = account.Email()
+		So(email, ShouldEqual, "logan2"+nonce)
+		So(verified, ShouldBeTrue)
+		found = false
+		for _, pid := range account.PersonalIdentities() {
+			if pid.Namespace() == "email" && pid.ID() == "logan2"+nonce {
+				So(pid.Verified(), ShouldBeTrue)
+				found = true
+				break
+			}
+		}
+		So(found, ShouldBeTrue)
+	})
+
+	Convey("Change email to verified address", func() {
+		am := s.backend.AccountManager()
+		So(am.VerifyPersonalIdentity(ctx, "email", "logan"+nonce), ShouldBeNil)
+		verified, err := am.ChangeEmail(ctx, logan.ID(), "logan2"+nonce)
+		So(verified, ShouldBeFalse)
+		So(err, ShouldBeNil)
+		So(am.VerifyPersonalIdentity(ctx, "email", "logan2"+nonce), ShouldBeNil)
+
+		a, err := am.Get(ctx, logan.ID())
+		So(err, ShouldBeNil)
+		email, verified := a.Email()
+		So(email, ShouldEqual, "logan2"+nonce)
+		So(verified, ShouldBeTrue)
+
+		c.Close()
+		c = s.Reconnect(c)
+		c.expectPing()
+		c.expectSnapshot(s.backend.Version(), nil, nil)
+		c.send("1", "change-email", `{"email":"logan%s"}`, nonce)
+		c.expect("1", "change-email-reply", `{"verification_needed":false}`)
+
+		a, err = am.Get(ctx, logan.ID())
+		So(err, ShouldBeNil)
+		email, verified = a.Email()
+		So(email, ShouldEqual, "logan"+nonce)
+		So(verified, ShouldBeTrue)
+	})
+
+	Convey("Email can't be changed to someone else's verified address", func() {
+		am := s.backend.AccountManager()
+		So(am.VerifyPersonalIdentity(ctx, "email", "logan"+nonce), ShouldBeNil)
+
+		other, _, err := s.Account(ctx, kms, "email", "other"+nonce, "otherpass")
+		So(err, ShouldBeNil)
+
+		o := s.Connect("changeemail")
+		o.expectPing()
+		o.expectSnapshot(s.backend.Version(), nil, nil)
+		o.send("1", "login", `{"namespace":"email","id":"other%s","password":"otherpass"}`, nonce)
+		o.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, other.ID())
+		o = s.Reconnect(o)
+		defer o.Close()
+		o.expectPing()
+		o.expectSnapshot(s.backend.Version(), nil, nil)
+		o.send("1", "change-email", `{"email":"logan%s"}`, nonce)
+		o.expectError("1", "change-email-reply", "personal identity already in use")
 	})
 }
 
@@ -2583,7 +2718,7 @@ func testEmailsLowLevel(s *serverUnderTest) {
 	}
 
 	sendEmail := func(templateName string) *emails.EmailRef {
-		ref, err := et.Send(ctx, js, nil, deliverer, account, templateName, nil)
+		ref, err := et.Send(ctx, js, nil, deliverer, account, "", templateName, nil)
 		So(err, ShouldBeNil)
 		return normalizeRef(ref)
 	}

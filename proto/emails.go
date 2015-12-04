@@ -18,6 +18,7 @@ const (
 	PasswordResetEmail         = "password-reset"
 	RoomInvitationEmail        = "room-invitation"
 	RoomInvitationWelcomeEmail = "room-invitation-welcome"
+	VerificationEmail          = "verification"
 	WelcomeEmail               = "welcome"
 )
 
@@ -27,7 +28,7 @@ type EmailTracker interface {
 	MarkDelivered(ctx scope.Context, accountID snowflake.Snowflake, id string) error
 	Send(
 		ctx scope.Context, js jobs.JobService, templater *templates.Templater, deliverer emails.Deliverer,
-		account Account, templateName string, data interface{}) (*emails.EmailRef, error)
+		account Account, to, templateName string, data interface{}) (*emails.EmailRef, error)
 }
 
 type CommonEmailParams struct {
@@ -49,6 +50,19 @@ func (p *CommonEmailParams) EmailPreferencesURL() template.HTML {
 	return template.HTML(fmt.Sprintf("%s/prefs/emails", p.SiteURL))
 }
 
+type VerificationEmailParams struct {
+	*CommonEmailParams
+	VerificationToken string
+}
+
+func (p VerificationEmailParams) Subject() template.HTML {
+	return template.HTML("verification of new email address")
+}
+
+func (p VerificationEmailParams) VerifyEmailURL() template.HTML {
+	return verificationURL(p.SiteURL, p.AccountEmailAddress, p.VerificationToken)
+}
+
 type WelcomeEmailParams struct {
 	*CommonEmailParams
 	VerificationToken string
@@ -59,15 +73,7 @@ func (p WelcomeEmailParams) Subject() template.HTML {
 }
 
 func (p *WelcomeEmailParams) VerifyEmailURL() template.HTML {
-	v := url.Values{
-		"email": []string{p.AccountEmailAddress},
-		"token": []string{p.VerificationToken},
-	}
-	u := url.URL{
-		Path:     "/prefs/verify",
-		RawQuery: v.Encode(),
-	}
-	return template.HTML(p.SiteURL + u.String())
+	return verificationURL(p.SiteURL, p.AccountEmailAddress, p.VerificationToken)
 }
 
 type PasswordChangedEmailParams struct {
@@ -210,4 +216,16 @@ func ValidateEmailTemplates(templater *templates.Templater) []error {
 		return nil
 	}
 	return errors
+}
+
+func verificationURL(siteURL, email, token string) template.HTML {
+	v := url.Values{
+		"email": []string{email},
+		"token": []string{token},
+	}
+	u := url.URL{
+		Path:     "/prefs/verify",
+		RawQuery: v.Encode(),
+	}
+	return template.HTML(siteURL + u.String())
 }
