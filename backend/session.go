@@ -211,8 +211,13 @@ func (s *session) Send(ctx scope.Context, cmdType proto.PacketType, payload inte
 	// Add to outgoing channel. If channel is full, defer to goroutine so as not to block
 	// the caller (this may result in deliveries coming out of order).
 	select {
+	case <-ctx.Done():
+		// Session is closed, return error.
+		return ctx.Err()
 	case s.outgoing <- cmd:
+		// Packet delivered to queue.
 	default:
+		// Queue is full.
 		logging.Logger(s.ctx).Printf("outgoing channel full, ordering cannot be guaranteed")
 		go func() { s.outgoing <- cmd }()
 	}
@@ -495,8 +500,11 @@ func (s *session) join() error {
 	}
 
 	s.onClose = func() {
-		if err := s.room.Part(s.ctx, s); err != nil {
-			logging.Logger(s.ctx).Printf("room part failed: %s", err)
+		// Use a fork of the server's root context, because the session's context
+		// might be closed.
+		ctx := s.server.rootCtx.Fork()
+		if err := s.room.Part(ctx, s); err != nil {
+			logging.Logger(ctx).Printf("room part failed: %s", err)
 			return
 		}
 	}
