@@ -200,7 +200,7 @@ export default React.createClass({
             <div className="field-action-box">
               <div className="inner">{account.get('email')}</div>
               <div className="spacer" />
-              <button type="button" tabIndex="2" className="major-secondary-action" onClick={accountSettingsFlow.openChangeEmail}>change<span className="long"> email</span></button>
+              {false && <button type="button" tabIndex="2" className="major-secondary-action" onClick={accountSettingsFlow.openChangeEmail}>change<span className="long"> email</span></button>}
             </div>
           </FieldLabelContainer>
           <FieldLabelContainer label="password">
