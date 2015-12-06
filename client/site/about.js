@@ -53,7 +53,7 @@ module.exports = (
       <h3>We're a small team who care deeply about online socialization and citizenship.</h3>
       <div className="messages wrap">
         <FauxMessage sender="intortus" message="hi, I'm logan. I'm an erstwhile motorcycle racer and one of euphoria's programmers. you can meet new users with me in &welcome or discuss backend development with me in &heim." />
-        <FauxMessage sender="chromakode" message="hey, I'm Max! I live in San Francisco, where I work on Euphora's user interface and design. you can often find me jamming in &music or working in &heim." />
+        <FauxMessage sender="chromakode" message="hey, I'm Max! I live in San Francisco, where I work on Euphoria's user interface and design. you can often find me jamming in &music or working in &heim." />
         <FauxMessage sender="greenie" message="oh hai, I’m Kris. I live with too many cats in the deep forest of Vermont. when I’m not busy getting into moose-caused traffic jams, I do community stuff for Euphoria. I tend to be found linking articles in &space and playing bluegrass tunes in &music." />
         <FauxMessage sender="ezzie" message="hi, I'm ezzie, the office dog!" embed={heimURL('/static/ezzie.jpg')}>
           <div className="replies">
