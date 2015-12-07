@@ -1,7 +1,7 @@
 import React from 'react'
 import Immutable from 'immutable'
 
-import MessageText from './message-text'
+import MessageText from './MessageText'
 
 
 export default React.createClass({

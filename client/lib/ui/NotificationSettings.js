@@ -6,7 +6,7 @@ import moment from 'moment'
 import notification from '../stores/notification'
 import storage from '../stores/storage'
 import clock from '../stores/clock'
-import FastButton from './fast-button'
+import FastButton from './FastButton'
 
 
 export default React.createClass({

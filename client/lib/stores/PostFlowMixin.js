@@ -1,6 +1,6 @@
 import Immutable from 'immutable'
 
-import { postAPI } from '../fetch-api'
+import { postAPI } from '../fetchAPI'
 
 
 export default {

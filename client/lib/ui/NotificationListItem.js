@@ -4,10 +4,10 @@ import ReactDOM from 'react-dom'
 import classNames from 'classnames'
 import Reflux from 'reflux'
 
-import FastButton from './fast-button'
-import MessageText from './message-text'
-import LiveTimeAgo from './live-time-ago'
-import TreeNodeMixin from './tree-node-mixin'
+import FastButton from './FastButton'
+import MessageText from './MessageText'
+import LiveTimeAgo from './LiveTimeAgo'
+import TreeNodeMixin from './TreeNodeMixin'
 
 
 export default React.createClass({

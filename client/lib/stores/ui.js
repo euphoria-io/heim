@@ -7,10 +7,10 @@ import clamp from '../clamp'
 import actions from '../actions'
 import storage from './storage'
 import chat from './chat'
-import accountAuthFlow from './account-auth-flow'
-import accountSettingsFlow from './account-settings-flow'
+import accountAuthFlow from './accountAuthFlow'
+import accountSettingsFlow from './accountSettingsFlow'
 import notification from './notification'
-import MessageData from '../message-data'
+import MessageData from '../MessageData'
 
 
 const storeActions = Reflux.createActions([

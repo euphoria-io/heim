@@ -1,7 +1,7 @@
 import React from 'react'
 import Immutable from 'immutable'
 
-import FastButton from './fast-button'
+import FastButton from './FastButton'
 
 
 export default React.createClass({

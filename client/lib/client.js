@@ -1,9 +1,9 @@
 import 'babel-polyfill'
 import 'whatwg-fetch'
 
-import clientRoom from './client-room'
-import clientVerifyEmail from './client-verify-email'
-import clientResetPassword from './client-reset-password'
+import clientRoom from './clientRoom'
+import clientVerifyEmail from './clientVerifyEmail'
+import clientResetPassword from './clientResetPassword'
 
 
 // setup globals (used by env frame)
@@ -21,7 +21,7 @@ const entrypoint = tag.getAttribute('data-entrypoint')
 if (!entrypoint) {
   clientRoom()
 } else {
-  const crashHandler = require('./ui/crash-handler').default
+  const crashHandler = require('./ui/crashHandler').default
   document.addEventListener('ravenHandle', crashHandler)
   if (entrypoint === 'verify-email') {
     clientVerifyEmail()

@@ -1,8 +1,8 @@
 import React from 'react'
 import classNames from 'classnames'
 
-import FastButton from './fast-button'
-import ToggleBubble from './toggle-bubble'
+import FastButton from './FastButton'
+import ToggleBubble from './ToggleBubble'
 
 
 export default React.createClass({

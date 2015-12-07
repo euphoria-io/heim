@@ -3,7 +3,7 @@ import Reflux from 'reflux'
 
 import actions from '../actions'
 import { Pane } from '../stores/ui'
-import EntryMixin from './entry-mixin'
+import EntryMixin from './EntryMixin'
 
 
 export default React.createClass({

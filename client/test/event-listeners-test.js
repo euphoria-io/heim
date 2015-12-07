@@ -2,7 +2,7 @@ require('./support/setup')
 import assert from 'assert'
 import sinon from 'sinon'
 
-import EventListeners from '../lib/event-listeners'
+import EventListeners from '../lib/EventListeners'
 
 
 describe('EventListeners', () => {

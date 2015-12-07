@@ -2,7 +2,7 @@ import React from 'react'
 import classNames from 'classnames'
 
 import Popup from './popup'
-import FastButton from './fast-button'
+import FastButton from './FastButton'
 import Spinner from './spinner'
 
 

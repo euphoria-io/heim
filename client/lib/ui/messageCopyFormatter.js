@@ -2,8 +2,8 @@ import _ from 'lodash'
 import React from 'react'
 import ReactDOMServer from 'react-dom/server'
 
-import findParent from '../find-parent'
-import domWalkForward from '../dom-walk-forward'
+import findParent from '../findParent'
+import domWalkForward from '../domWalkForward'
 import emoji from '../emoji'
 
 

@@ -1,6 +1,6 @@
 import React from 'react'
 
-import MessageText from '../../lib/ui/message-text'
+import MessageText from '../../lib/ui/MessageText'
 import FauxNick from './FauxNick'
 
 

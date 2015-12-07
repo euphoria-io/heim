@@ -2,9 +2,9 @@ import _ from 'lodash'
 import Reflux from 'reflux'
 import Immutable from 'immutable'
 
-import heimURL from '../heim-url'
-import ImmutableMixin from './immutable-mixin'
-import PostFlowMixin from './post-flow-mixin'
+import heimURL from '../heimURL'
+import ImmutableMixin from './ImmutableMixin'
+import PostFlowMixin from './PostFlowMixin'
 
 
 const storeActions = Reflux.createActions([

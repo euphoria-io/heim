@@ -1,7 +1,7 @@
 import React from 'react'
 import Reflux from 'reflux'
 
-import verifyEmailFlow from '../stores/verify-email-flow'
+import verifyEmailFlow from '../stores/verifyEmailFlow'
 import { Form, ErrorMessage } from './forms'
 
 

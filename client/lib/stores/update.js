@@ -3,7 +3,7 @@ import Reflux from 'reflux'
 import Immutable from 'immutable'
 
 import activity from './activity'
-import ImmutableMixin from './immutable-mixin'
+import ImmutableMixin from './ImmutableMixin'
 
 
 const storeActions = Reflux.createActions([

@@ -1,7 +1,7 @@
 import React from 'react'
 
-import MessageText from '../../lib/ui/message-text'
-import hueHash from '../../lib/hue-hash'
+import MessageText from '../../lib/ui/MessageText'
+import hueHash from '../../lib/hueHash'
 
 
 export default function FauxNick(props) {

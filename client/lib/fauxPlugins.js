@@ -88,7 +88,7 @@ export default function initPlugins(roomName) {
 
   if (roomName === 'music' || roomName === 'youtube') {
     const Embed = require('./ui/embed').default
-    const MessageText = require('./ui/message-text').default
+    const MessageText = require('./ui/MessageText').default
 
     let clientTimeOffset = 0
     Heim.chat.store.socket.on('receive', ev => {
@@ -568,7 +568,7 @@ export default function initPlugins(roomName) {
 
   if (roomName === 'sandersforpresident') {
     Heim.hook('main-pane-top', function BernieBarInject() {
-      const MessageText = require('./ui/message-text').default
+      const MessageText = require('./ui/MessageText').default
       return (
         <div key="sanders-top-bar" className="secondary-top-bar"><MessageText onlyEmoji content=":us:" /> Welcome to the <a href="https://reddit.com/r/sandersforpresident" target="_blank">/r/SandersForPresident</a> live chat! Please <a href="https://www.reddit.com/r/SandersForPresident/wiki/livechat" target="_blank">read our rules</a>.</div>
       )

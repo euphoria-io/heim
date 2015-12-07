@@ -3,8 +3,8 @@ import classNames from 'classnames'
 import Reflux from 'reflux'
 
 import toolbox from '../stores/toolbox'
-import FastButton from './fast-button'
-import domWalkForward from '../dom-walk-forward'
+import FastButton from './FastButton'
+import domWalkForward from '../domWalkForward'
 
 
 export default React.createClass({

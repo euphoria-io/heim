@@ -144,7 +144,7 @@ module.exports.store = Reflux.createStore({
     this.state.soundEnabled = data.notifySound
     if (this.state.soundEnabled) {
       // preload audio file
-      require('../alert-sound')
+      require('../alertSound')
     }
 
     this._roomStorage = data.room
@@ -447,7 +447,7 @@ module.exports.store = Reflux.createStore({
 
     if (this.state.popupsPermission && this._popupsAreEnabled()) {
       if (this.state.soundEnabled && alertKind === 'new-mention') {
-        require('../alert-sound').play()
+        require('../alertSound').play()
       }
 
       const timeoutDuration = options.timeout

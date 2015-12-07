@@ -1,6 +1,6 @@
 import React from 'react'
 
-import heimURL from '../../lib/heim-url'
+import heimURL from '../../lib/heimURL'
 
 
 export default function Page(props) {

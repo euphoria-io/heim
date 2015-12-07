@@ -2,13 +2,13 @@ import React from 'react'
 import Reflux from 'reflux'
 import classNames from 'classnames'
 
-import FastButton from './fast-button'
-import MessageText from './message-text'
-import LiveTimeAgo from './live-time-ago'
+import FastButton from './FastButton'
+import MessageText from './MessageText'
+import LiveTimeAgo from './LiveTimeAgo'
 import Tree from '../tree'
-import MessageData from '../message-data'
-import TreeNodeMixin from './tree-node-mixin'
-import MessageDataMixin from './message-data-mixin'
+import MessageData from '../MessageData'
+import TreeNodeMixin from './TreeNodeMixin'
+import MessageDataMixin from './MessageDataMixin'
 
 
 const ThreadListItem = React.createClass({

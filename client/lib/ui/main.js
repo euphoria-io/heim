@@ -8,22 +8,22 @@ import Reflux from 'reflux'
 import chat from '../stores/chat'
 import ui from '../stores/ui'
 import update from '../stores/update'
-import hueHash from '../hue-hash'
+import hueHash from '../hueHash'
 import notification from '../stores/notification'
 import activity from '../stores/activity'
-import HooksMixin from './hooks-mixin'
-import ChatPane from './chat-pane'
-import ChatTopBar from './chat-top-bar'
-import MessageText from './message-text'
-import NotificationSettings from './notification-settings'
-import NotificationList from './notification-list'
-import ThreadList from './thread-list'
-import UserList from './user-list'
-import AccountButton from './account-button'
-import AccountAuthDialog from './account-auth-dialog'
-import AccountSettingsDialog from './account-settings-dialog'
+import HooksMixin from './HooksMixin'
+import ChatPane from './ChatPane'
+import ChatTopBar from './ChatTopBar'
+import MessageText from './MessageText'
+import NotificationSettings from './NotificationSettings'
+import NotificationList from './NotificationList'
+import ThreadList from './ThreadList'
+import UserList from './UserList'
+import AccountButton from './AccountButton'
+import AccountAuthDialog from './AccountAuthDialog'
+import AccountSettingsDialog from './AccountSettingsDialog'
 import Bubble from './bubble'
-import FastButton from './fast-button'
+import FastButton from './FastButton'
 import Panner from './panner'
 
 export default React.createClass({
@@ -268,7 +268,7 @@ export default React.createClass({
 
     const selectedMessageCount = this.state.chat.selectedMessages.size
     // lazy load manager toolbox ui (and store)
-    const ManagerToolbox = this.state.ui.managerMode && require('./manager-toolbox').default
+    const ManagerToolbox = this.state.ui.managerMode && require('./ManagerToolbox').default
 
     return (
       <div id="ui" className={classNames({'disconnected': this.state.chat.connected === false})} onKeyDown={ui.keydownOnPage}>

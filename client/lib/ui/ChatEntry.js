@@ -6,9 +6,9 @@ import actions from '../actions'
 import { Pane } from '../stores/ui'
 import chat from '../stores/chat'
 import mention from '../mention'
-import KeyboardActionHandler from './keyboard-action-handler'
-import EntryMixin from './entry-mixin'
-import EntryDragHandle from './entry-drag-handle'
+import KeyboardActionHandler from './KeyboardActionHandler'
+import EntryMixin from './EntryMixin'
+import EntryDragHandle from './EntryDragHandle'
 
 
 export default React.createClass({

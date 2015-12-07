@@ -3,8 +3,8 @@ import React from 'react'
 import classNames from 'classnames'
 import Immutable from 'immutable'
 
-import FastButton from './fast-button'
-import RoomTitle from './room-title'
+import FastButton from './FastButton'
+import RoomTitle from './RoomTitle'
 import Spinner from './spinner'
 
 

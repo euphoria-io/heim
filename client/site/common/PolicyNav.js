@@ -1,7 +1,7 @@
 import React from 'react'
 import classNames from 'classnames'
 
-import heimURL from '../../lib/heim-url'
+import heimURL from '../../lib/heimURL'
 
 
 export default function PolicyNav(props) {

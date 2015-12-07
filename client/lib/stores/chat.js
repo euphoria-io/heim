@@ -4,11 +4,11 @@ import Reflux from 'reflux'
 import Immutable from 'immutable'
 
 import actions from '../actions'
-import ChatTree from '../chat-tree'
+import ChatTree from '../ChatTree'
 import storage from './storage'
 import activity from './activity'
 import plugins from './plugins'
-import hueHash from '../hue-hash'
+import hueHash from '../hueHash'
 
 
 const mentionDelim = String.raw`^|$|[,.!?;&<'"\s]|&#39;|&quot;|&amp;`

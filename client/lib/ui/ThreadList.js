@@ -1,9 +1,9 @@
 import React from 'react'
 
 import Tree from '../tree'
-import ThreadListItem from './thread-list-item'
-import MessageData from '../message-data'
-import TreeNodeMixin from './tree-node-mixin'
+import ThreadListItem from './ThreadListItem'
+import MessageData from '../MessageData'
+import TreeNodeMixin from './TreeNodeMixin'
 
 
 export default React.createClass({

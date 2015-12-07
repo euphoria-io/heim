@@ -13,7 +13,7 @@ function setupCrashHandler(evs) {
   if (crashHandlerSetup) {
     return
   }
-  const crashHandler = require('./ui/crash-handler').default
+  const crashHandler = require('./ui/crashHandler').default
   evs.addEventListener(document, 'ravenHandle', crashHandler)
   evs.addEventListener(uidocument, 'ravenHandle', crashHandler)
   crashHandlerSetup = true
@@ -25,7 +25,7 @@ export default function clientRoom() {
   } else {
     const queryString = require('querystring')
     const _ = require('lodash')
-    const EventListeners = require('./event-listeners').default
+    const EventListeners = require('./EventListeners').default
 
     const evs = new EventListeners()
     if (!window.onReady) {
@@ -89,8 +89,8 @@ export default function clientRoom() {
       },
     })
 
-    const isTextInput = require('./is-text-input').default
-    const BatchTransition = require('./batch-transition').default
+    const isTextInput = require('./isTextInput').default
+    const BatchTransition = require('./BatchTransition').default
 
     window.Heim = {
       addEventListener: evs.addEventListener.bind(evs),
@@ -258,7 +258,7 @@ export default function clientRoom() {
         Heim.addEventListener(uidocument.body, 'mousedown', () => Heim.activity.touch(roomName), false)
       }
 
-      Heim.setFavicon = _.partial(require('./set-favicon').default, uidocument)
+      Heim.setFavicon = _.partial(require('./setFavicon').default, uidocument)
       if (Heim._favicon) {
         Heim.setFavicon(Heim._favicon)
         delete Heim._favicon

@@ -1,12 +1,12 @@
 import React from 'react'
 import Reflux from 'reflux'
 
-import accountSettingsFlow from '../stores/account-settings-flow'
+import accountSettingsFlow from '../stores/accountSettingsFlow'
 import chat from '../stores/chat'
 import Dialog from './dialog'
 import { Form, TextField, FieldLabelContainer, PasswordStrengthField } from './forms'
-import { validateEmail, validatePassword, minPasswordEntropy } from './form-validators'
-import hueHash from '../hue-hash'
+import { validateEmail, validatePassword, minPasswordEntropy } from './formValidators'
+import hueHash from '../hueHash'
 
 
 export default React.createClass({

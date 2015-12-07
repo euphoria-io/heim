@@ -3,7 +3,7 @@ import _ from 'lodash'
 import { assert } from 'chai'
 import Immutable from 'immutable'
 
-import ChatTree from '../lib/chat-tree'
+import ChatTree from '../lib/ChatTree'
 
 describe('ChatTree', () => {
   describe('a new empty chat tree', () => {

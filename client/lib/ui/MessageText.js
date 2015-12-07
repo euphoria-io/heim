@@ -6,8 +6,8 @@ import twemoji from 'twemoji'
 import emoji from '../emoji'
 
 import chat from '../stores/chat'
-import hueHash from '../hue-hash'
-import heimURL from '../heim-url'
+import hueHash from '../hueHash'
+import heimURL from '../heimURL'
 
 
 const autolinker = new Autolinker({

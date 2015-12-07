@@ -2,11 +2,11 @@ import React from 'react'
 import classNames from 'classnames'
 import Reflux from 'reflux'
 
-import accountAuthFlow from '../stores/account-auth-flow'
+import accountAuthFlow from '../stores/accountAuthFlow'
 import Dialog from './dialog'
 import { Form, CheckField, TextField, PasswordStrengthField, ErrorMessage } from './forms'
-import { validateEmail, validatePassword, minPasswordEntropy } from './form-validators'
-import heimURL from '../heim-url'
+import { validateEmail, validatePassword, minPasswordEntropy } from './formValidators'
+import heimURL from '../heimURL'
 
 
 export default React.createClass({

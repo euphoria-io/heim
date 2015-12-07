@@ -1,17 +1,17 @@
 import React from 'react'
 import ReactDOM from 'react-dom'
 
-import verifyEmailFlow from './stores/verify-email-flow'
-import VerifyEmailForm from './ui/verify-email-form'
+import resetPasswordFlow from './stores/resetPasswordFlow'
+import ResetPasswordForm from './ui/ResetPasswordForm'
 
 
-export default function clientVerifyEmail() {
+export default function clientResetPassword() {
   const attachPoint = uidocument.getElementById('form-container')
   const contextData = JSON.parse(attachPoint.getAttribute('data-context'))
-  verifyEmailFlow.initData(contextData)
+  resetPasswordFlow.initData(contextData)
 
   ReactDOM.render(
-    <VerifyEmailForm />,
+    <ResetPasswordForm />,
     attachPoint
   )
 }

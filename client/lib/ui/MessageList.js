@@ -3,7 +3,7 @@ import React from 'react'
 import Message from './message'
 import Tree from '../tree'
 import { Pane } from '../stores/ui'
-import TreeNodeMixin from './tree-node-mixin'
+import TreeNodeMixin from './TreeNodeMixin'
 
 
 export default React.createClass({

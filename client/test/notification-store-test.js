@@ -3,7 +3,7 @@ import _ from 'lodash'
 import assert from 'assert'
 import sinon from 'sinon'
 
-import ChatTree from '../lib/chat-tree'
+import ChatTree from '../lib/ChatTree'
 import notification from '../lib/stores/notification'
 import storage from '../lib/stores/storage'
 import ui from '../lib/stores/ui'
