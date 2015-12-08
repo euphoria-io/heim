@@ -15,6 +15,7 @@ const storeActions = Reflux.createActions([
   'changeName',
   'changeEmail',
   'changePassword',
+  'resendVerifyEmail',
   'resetPassword',
   'logout',
 ])
@@ -43,6 +44,8 @@ module.exports.store = Reflux.createStore({
     {changeEmailFailed: chat.changeEmail.failed},
     {changePasswordCompleted: chat.changePassword.completed},
     {changePasswordFailed: chat.changePassword.failed},
+    {resendVerifyEmailCompleted: chat.resendVerifyEmail.completed},
+    {resendVerifyEmailFailed: chat.resendVerifyEmail.failed},
     {resetPasswordCompleted: chat.resetPassword.completed},
     {resetPasswordFailed: chat.resetPassword.failed},
   ],
@@ -112,6 +115,15 @@ module.exports.store = Reflux.createStore({
     }))
   },
 
+  resendVerifyEmailCompleted() {
+    this.triggerUpdate(new StateRecord({step: 'verify-email-sent'}))
+  },
+
+  resendVerifyEmailFailed(data) {
+    this.triggerUpdate(this.state.set('working', false))
+    throw new Error('unable to resend verify email: ' + data.error)
+  },
+
   resetPasswordCompleted() {
     this.triggerUpdate(this.state.merge({
       step: 'reset-email-sent',
@@ -166,6 +178,14 @@ module.exports.store = Reflux.createStore({
       errors: Immutable.Map(),
     }))
     chat.changePassword(oldPassword, newPassword)
+  },
+
+  resendVerifyEmail() {
+    this.triggerUpdate(this.state.merge({
+      working: true,
+      errors: Immutable.Map(),
+    }))
+    chat.resendVerifyEmail()
   },
 
   resetPassword() {

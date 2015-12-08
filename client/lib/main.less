@@ -1990,12 +1990,16 @@ iframe.js {
 }
 
 .account-settings-dialog .content {
-  .account-state {
+  .account-state, .not-verified {
     margin: 15px 0;
 
-    .sign-out {
+    .sign-out, .resend-verify {
       margin-left: .5em;
     }
+  }
+
+  .not-verified {
+    color: @error-color;
   }
 
   .field-label-container {
