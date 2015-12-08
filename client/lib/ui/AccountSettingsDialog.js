@@ -62,6 +62,7 @@ export default React.createClass({
   render() {
     const flow = this.state.flow
     const account = this.state.chat.account
+    const accountEmailVerified = this.state.chat.accountEmailVerified
 
     let title
     let dialogContent
@@ -191,6 +192,7 @@ export default React.createClass({
       dialogContent = (
         <Form {...formParams}>
           <div className="account-state">you're signed into your account. <button type="button" tabIndex="4" className="sign-out minor-secondary-action" onClick={accountSettingsFlow.logout}>sign out</button></div>
+          {!accountEmailVerified && <div className="not-verified">your email is not verified. <button type="button" tabIndex="4" className="resend-verify minor-secondary-action" onClick={accountSettingsFlow.resendVerifyEmail}>re-send email</button></div>}
           {false && <FieldLabelContainer label="account name">
             <div className="field-action-box">
               <div className="inner">

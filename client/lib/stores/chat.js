@@ -33,6 +33,7 @@ storeActions.resetPassword = Reflux.createAction({asyncResult: true})
 storeActions.changeName = Reflux.createAction({asyncResult: true})
 storeActions.changeEmail = Reflux.createAction({asyncResult: true})
 storeActions.changePassword = Reflux.createAction({asyncResult: true})
+storeActions.resendVerifyEmail = Reflux.createAction({asyncResult: true})
 
 storeActions.setRoomSettings.sync = true
 storeActions.messagesChanged.sync = true
@@ -66,6 +67,7 @@ module.exports.store = Reflux.createStore({
       authState: null,
       authData: null,
       account: null,
+      accountEmailVerified: false,
       isManager: null,
       isStaff: null,
       messages: new ChatTree(),
@@ -120,6 +122,7 @@ module.exports.store = Reflux.createStore({
       'change-name-reply': 'changeName',
       'change-email-reply': 'changeEmail',
       'change-password-reply': 'changePassword',
+      'resend-verify-email-reply': 'resendVerifyEmail',
     }
 
     if (ev.type === 'send-event') {
@@ -147,6 +150,7 @@ module.exports.store = Reflux.createStore({
       if (this.state.account) {
         this.state.account = this.state.account
       }
+      this.state.accountEmailVerified = ev.data.account_email_verified
       if (ev.data.account_has_access) {
         // note: if there was a stored passcode, we could have an outgoing
         // auth event and authState === 'trying-stored'
@@ -618,6 +622,12 @@ module.exports.store = Reflux.createStore({
         old_password: oldPassword,
         new_password: newPassword,
       },
+    })
+  },
+
+  resendVerifyEmail() {
+    this.socket.send({
+      type: 'resend-verify-email',
     })
   },
 
