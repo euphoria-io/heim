@@ -25,7 +25,14 @@ export default React.createClass({
       .groupBy(user => /^bot:/.test(user.get('id')) ? 'bot' : 'human')
 
     function formatUser(user) {
-      return <MessageText key={user.get('session_id')} className="nick" onlyEmoji style={{background: 'hsl(' + user.get('hue') + ', 65%, 85%)'}} content={user.get('name')} title={user.get('name')} />
+      return <MessageText
+        key={user.get('session_id')}
+        className="nick"
+        onlyEmoji
+        style={{background: 'hsl(' + user.get('hue') + ', 65%, 85%)'}}
+        content={user.get('name')}
+        title={user.get('name')}
+      />
     }
 
     return (
