@@ -40,8 +40,8 @@ const storeActions = Reflux.createActions([
   'globalMouseUp',
   'globalMouseMove',
   'toggleManagerMode',
-  'startMessageSelectionDrag',
-  'finishMessageSelectionDrag',
+  'startToolboxSelectionDrag',
+  'finishToolboxSelectionDrag',
   'openManagerToolbox',
   'closeManagerToolbox',
   'notificationsNoticeChoice',
@@ -308,8 +308,8 @@ const store = module.exports.store = Reflux.createStore({
       threadPopupAnchorEl: null,
       managerMode: false,
       managerToolboxAnchorEl: null,
-      draggingMessageSelection: false,
-      draggingMessageSelectionToggle: null,
+      draggingToolboxSelection: false,
+      draggingToolboxSelectionToggle: null,
       notices: Immutable.OrderedSet(),
       notificationsNoticeDismissed: false,
       modalDialog: null,
@@ -665,14 +665,14 @@ const store = module.exports.store = Reflux.createStore({
     this.trigger(this.state)
   },
 
-  startMessageSelectionDrag(toggleState) {
-    this.state.draggingMessageSelection = true
-    this.state.draggingMessageSelectionToggle = toggleState
+  startToolboxSelectionDrag(toggleState) {
+    this.state.draggingToolboxSelection = true
+    this.state.draggingToolboxSelectionToggle = toggleState
     this.trigger(this.state)
   },
 
-  finishMessageSelectionDrag() {
-    this.state.draggingMessageSelection = false
+  finishToolboxSelectionDrag() {
+    this.state.draggingToolboxSelection = false
     this.trigger(this.state)
   },
 

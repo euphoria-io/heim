@@ -231,8 +231,8 @@ export default React.createClass({
   },
 
   globalMouseUp() {
-    if (this.state.ui.draggingMessageSelection) {
-      ui.finishMessageSelectionDrag()
+    if (this.state.ui.draggingToolboxSelection) {
+      ui.finishToolboxSelectionDrag()
     }
   },
 

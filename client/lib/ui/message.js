@@ -140,14 +140,14 @@ const Message = React.createClass({
     if (ui.store.state.managerMode) {
       const selected = this.state.node.get('_selected')
       chat.setMessageSelected(this.props.nodeId, !selected)
-      ui.startMessageSelectionDrag(!selected)
+      ui.startToolboxSelectionDrag(!selected)
       ev.preventDefault()
     }
   },
 
   onMouseEnter() {
-    if (ui.store.state.managerMode && ui.store.state.draggingMessageSelection) {
-      chat.setMessageSelected(this.props.nodeId, ui.store.state.draggingMessageSelectionToggle)
+    if (ui.store.state.managerMode && ui.store.state.draggingToolboxSelection) {
+      chat.setMessageSelected(this.props.nodeId, ui.store.state.draggingToolboxSelectionToggle)
     }
   },
 
