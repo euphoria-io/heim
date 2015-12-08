@@ -63,9 +63,11 @@ func (s *Server) handleRoomStatic(w http.ResponseWriter, r *http.Request) {
 	roomName := mux.Vars(r)["room"]
 	_, err := s.b.GetRoom(scope.New(), roomName)
 	if err != nil {
-		if !s.allowRoomCreation && err == proto.ErrRoomNotFound {
-			s.serveErrorPage("room not found", http.StatusNotFound, w, r)
-			return
+		if err == proto.ErrRoomNotFound {
+			if !s.allowRoomCreation {
+				s.serveErrorPage("room not found", http.StatusNotFound, w, r)
+				return
+			}
 		} else {
 			s.serveErrorPage(err.Error(), http.StatusInternalServerError, w, r)
 			return
