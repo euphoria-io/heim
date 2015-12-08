@@ -20,7 +20,7 @@ const storeActions = module.exports.actions = Reflux.createActions([
   'messagesChanged',
   'setRoomSettings',
   'markMessagesSeen',
-  'setSelected',
+  'setMessageSelected',
   'deselectAll',
   'editMessage',
   'banUser',
@@ -514,7 +514,7 @@ module.exports.store = Reflux.createStore({
     }
   },
 
-  setSelected(id, value) {
+  setMessageSelected(id, value) {
     this.state.messages.mergeNodes(id, {_selected: value})
     this.state.selectedMessages = this.state.selectedMessages[value ? 'add' : 'delete'](id)
     this.trigger(this.state)

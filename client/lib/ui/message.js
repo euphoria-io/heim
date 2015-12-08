@@ -139,7 +139,7 @@ const Message = React.createClass({
   onMouseDown(ev) {
     if (ui.store.state.managerMode) {
       const selected = this.state.node.get('_selected')
-      chat.setSelected(this.props.nodeId, !selected)
+      chat.setMessageSelected(this.props.nodeId, !selected)
       ui.startMessageSelectionDrag(!selected)
       ev.preventDefault()
     }
@@ -147,7 +147,7 @@ const Message = React.createClass({
 
   onMouseEnter() {
     if (ui.store.state.managerMode && ui.store.state.draggingMessageSelection) {
-      chat.setSelected(this.props.nodeId, ui.store.state.draggingMessageSelectionToggle)
+      chat.setMessageSelected(this.props.nodeId, ui.store.state.draggingMessageSelectionToggle)
     }
   },
 
