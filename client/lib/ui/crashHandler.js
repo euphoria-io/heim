@@ -59,8 +59,8 @@ export default function displayCrashDialog(ev) {
   uidocument.body.appendChild(container)
 
   function onRavenSent(responseEv) {
-    ev.srcElement.removeEventListener('ravenSuccess', onRavenSent, false)
-    ev.srcElement.removeEventListener('ravenFailure', onRavenSent, false)
+    ev.target.removeEventListener('ravenSuccess', onRavenSent, false)
+    ev.target.removeEventListener('ravenFailure', onRavenSent, false)
     let ravenEventId = false
     if (responseEv.type === 'ravenSuccess') {
       ravenEventId = responseEv.data.event_id
@@ -69,6 +69,6 @@ export default function displayCrashDialog(ev) {
     ReactDOM.render(updatedComponent, container)
   }
 
-  ev.srcElement.addEventListener('ravenSuccess', onRavenSent, false)
-  ev.srcElement.addEventListener('ravenFailure', onRavenSent, false)
+  ev.target.addEventListener('ravenSuccess', onRavenSent, false)
+  ev.target.addEventListener('ravenFailure', onRavenSent, false)
 }
