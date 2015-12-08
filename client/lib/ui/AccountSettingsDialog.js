@@ -126,6 +126,8 @@ export default React.createClass({
             name="password"
             label="password"
             inputType="password"
+            action="forgot?"
+            onAction={accountSettingsFlow.resetPassword}
             tabIndex={2}
           />
           <div className="bottom">
@@ -137,12 +139,12 @@ export default React.createClass({
           </div>
         </Form>
       )
-    } else if (flow.step === 'verify-email-sent') {
+    } else if (flow.step === 'verify-email-sent' || flow.step === 'reset-email-sent') {
       title = 'check your email'
       dialogContent = (
         <div className="content">
           <div className="email-icon" />
-          <div className="notice">ok! we've sent you a verification email.</div>
+          <div className="notice">{flow.step === 'verify-email-sent' ? 'ok! we\'ve sent you a verification email.' : 'ok! we\'ve sent you a password reset email.'}</div>
           <div className="bottom">
             <div className="action-line centered">
               <button type="button" tabIndex="1" className="continue major-action" onClick={accountSettingsFlow.openSettings}>continue</button>
@@ -163,6 +165,8 @@ export default React.createClass({
           <PasswordStrengthField
             name="password"
             label="old password"
+            action="forgot?"
+            onAction={accountSettingsFlow.resetPassword}
             tabIndex={1}
             autoFocus
           />

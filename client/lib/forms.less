@@ -78,9 +78,21 @@ button.major-secondary-action {
     display: block;
     margin: 15px 0;
 
-    .label {
+    .label-line {
+      display: flex;
       font-size: .85rem;
       margin-bottom: 5px;
+    }
+
+    .action {
+      font-size: inherit;
+      margin-left: 1em;
+      font-weight: bold;
+      color: fade(@account-color, 50%);
+    }
+
+    .spacer {
+      flex: 1;
     }
 
     &, .message, &:before {
@@ -93,13 +105,6 @@ button.major-secondary-action {
       bottom: 0;
       right: 2px;
       background-size: 26px;
-    }
-
-    .message {
-      position: absolute;
-      top: 0;
-      right: 0;
-      opacity: 0;
     }
 
     &.error {

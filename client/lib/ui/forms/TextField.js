@@ -15,6 +15,8 @@ export default React.createClass({
     onValidate: React.PropTypes.func,
     onFocus: React.PropTypes.func,
     onBlur: React.PropTypes.func,
+    action: React.PropTypes.string,
+    onAction: React.PropTypes.func,
     error: React.PropTypes.bool,
     isFirstError: React.PropTypes.bool,
     autoFocus: React.PropTypes.bool,
@@ -60,6 +62,8 @@ export default React.createClass({
       <FieldLabelContainer
         className={classNames('text-field', this.props.className)}
         label={this.props.label}
+        action={this.props.action}
+        onAction={this.props.onAction}
         error={this.props.error}
         message={this.props.message}
       >
