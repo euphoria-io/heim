@@ -15,6 +15,7 @@ const storeActions = Reflux.createActions([
   'changeName',
   'changeEmail',
   'changePassword',
+  'resetPassword',
   'logout',
 ])
 _.extend(module.exports, storeActions)
@@ -25,6 +26,7 @@ storeActions.changeEmail.sync = true
 storeActions.changePassword.sync = true
 
 const StateRecord = Immutable.Record({
+  email: null,
   step: 'settings',
   passwordChanged: false,
   errors: Immutable.Map(),
@@ -41,6 +43,8 @@ module.exports.store = Reflux.createStore({
     {changeEmailFailed: chat.changeEmail.failed},
     {changePasswordCompleted: chat.changePassword.completed},
     {changePasswordFailed: chat.changePassword.failed},
+    {resetPasswordCompleted: chat.resetPassword.completed},
+    {resetPasswordFailed: chat.resetPassword.failed},
   ],
 
   mixins: [ImmutableMixin],
@@ -51,6 +55,10 @@ module.exports.store = Reflux.createStore({
 
   getInitialState() {
     return this.state
+  },
+
+  chatChange(state) {
+    this.triggerUpdate(this.state.set('email', state.account && state.account.email))
   },
 
   changeNameCompleted() {
@@ -104,6 +112,18 @@ module.exports.store = Reflux.createStore({
     }))
   },
 
+  resetPasswordCompleted() {
+    this.triggerUpdate(this.state.merge({
+      step: 'reset-email-sent',
+      working: false,
+    }))
+  },
+
+  resetPasswordFailed(data) {
+    this.triggerUpdate(this.state.set('working', false))
+    throw new Error('unable to reset password: ' + data.error)
+  },
+
   reset() {
     this.triggerUpdate(new StateRecord())
   },
@@ -146,6 +166,14 @@ module.exports.store = Reflux.createStore({
       errors: Immutable.Map(),
     }))
     chat.changePassword(oldPassword, newPassword)
+  },
+
+  resetPassword() {
+    this.triggerUpdate(this.state.merge({
+      working: true,
+      errors: Immutable.Map(),
+    }))
+    chat.resetPassword(this.state.get('email'))
   },
 
   logout() {
