@@ -455,7 +455,11 @@ module.exports.store = Reflux.createStore({
 
       options.body = message.getIn(['sender', 'name']) + ': ' + message.get('content')
 
-      alert.popup = new Notification(roomName, options)
+      try {
+        alert.popup = new Notification(roomName, options)
+      } catch (err) {
+        Raven.captureException(err)
+      }
 
       const ui = require('./ui')  // avoid import loop
       alert.popup.onclick = () => {
