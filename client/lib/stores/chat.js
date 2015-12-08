@@ -214,11 +214,6 @@ module.exports.store = Reflux.createStore({
       if (ev.error) {
         storeActions[kind].failed(ev)
       } else {
-        if (kind === 'changeName') {
-          this.state.account = this.state.account.set('name', 'FIXME')
-        } else if (kind === 'changeEmail') {
-          this.state.account = this.state.account.set('email', 'FIXME')
-        }
         storeActions[kind].completed()
       }
     } else if (ev.type === 'login-event' || ev.type === 'logout-event') {
