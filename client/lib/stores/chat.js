@@ -641,14 +641,14 @@ module.exports.store = Reflux.createStore({
   editMessage(id, data) {
     this.socket.send({
       type: 'edit-message',
-      data: _.merge(data, {id: id}),
+      data: _.merge(data, {id}),
     })
   },
 
   banUser(id, data) {
     this.socket.send({
       type: 'ban',
-      data: _.merge(data, {id: id}),
+      data: _.merge(data, {id}),
     })
   },
 
