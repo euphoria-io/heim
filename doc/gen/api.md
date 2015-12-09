@@ -44,6 +44,8 @@
   * [edit-message-event](#edit-message-event)
   * [hello-event](#hello-event)
   * [join-event](#join-event)
+  * [login-event](#login-event)
+  * [logout-event](#logout-event)
   * [network-event](#network-event)
   * [nick-event](#nick-event)
   * [part-event](#part-event)
@@ -432,6 +434,16 @@ The following events may be sent from the server to the client at any time.
 A `join-event` indicates a session just joined the room.
 
 {{template "fields.md" (object "PresenceEvent")}}
+
+## login-event
+
+{{(packet "login-event").Doc}}
+{{template "fields.md" (object "LoginEvent")}}
+
+## logout-event
+
+{{(packet "logout-event").Doc}}
+{{template "fields.md" (object "LogoutEvent")}}
 
 ## network-event
 

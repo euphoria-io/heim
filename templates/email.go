@@ -8,6 +8,7 @@ import (
 	"io"
 	"mime"
 	"mime/multipart"
+	"mime/quotedprintable"
 	"net/textproto"
 	"path/filepath"
 	"sort"
@@ -54,25 +55,17 @@ func (e *Email) WriteTo(w io.Writer) (int64, error) {
 	// Write text part.
 	textHeader := textproto.MIMEHeader{}
 	textHeader.Set("Content-Type", `text/plain; charset="utf-8"; format="fixed"`)
-	// TODO: Content-Transfer-Encoding
+	textHeader.Set("Content-Transfer-Encoding", "quoted-printable")
 	pw, err := mpw.CreatePart(textHeader)
 	if err != nil {
 		return wc.n, fmt.Errorf("create text part: %s", err)
 	}
-	if _, err := pw.Write(e.Text); err != nil {
+	qpw := quotedprintable.NewWriter(pw)
+	if _, err := qpw.Write(e.Text); err != nil {
 		return wc.n, fmt.Errorf("write text part: %s", err)
 	}
-
-	// Write html part.
-	htmlHeader := textproto.MIMEHeader{}
-	htmlHeader.Set("Content-Type", `text/html; charset="utf-8"`)
-	// TODO: Content-Transfer-Encoding
-	pw, err = mpw.CreatePart(htmlHeader)
-	if err != nil {
-		return wc.n, fmt.Errorf("create html part: %s", err)
-	}
-	if _, err := pw.Write(e.HTML); err != nil {
-		return wc.n, fmt.Errorf("write html part: %s", err)
+	if err := qpw.Close(); err != nil {
+		return wc.n, fmt.Errorf("close text part: %s", err)
 	}
 
 	// Write attachments.
@@ -93,6 +86,22 @@ func (e *Email) WriteTo(w io.Writer) (int64, error) {
 		if err := b64w.Close(); err != nil {
 			return wc.n, fmt.Errorf("close attachment %s: %s", att.Name, err)
 		}
+	}
+
+	// Write html part.
+	htmlHeader := textproto.MIMEHeader{}
+	htmlHeader.Set("Content-Type", `text/html; charset="utf-8"`)
+	htmlHeader.Set("Content-Transfer-Encoding", "quoted-printable")
+	pw, err = mpw.CreatePart(htmlHeader)
+	if err != nil {
+		return wc.n, fmt.Errorf("create html part: %s", err)
+	}
+	qpw = quotedprintable.NewWriter(pw)
+	if _, err := qpw.Write(e.HTML); err != nil {
+		return wc.n, fmt.Errorf("write html part: %s", err)
+	}
+	if err := qpw.Close(); err != nil {
+		return wc.n, fmt.Errorf("close html part: %s", err)
 	}
 
 	// Finalize.

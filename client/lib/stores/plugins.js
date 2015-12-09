@@ -2,7 +2,7 @@ import _ from 'lodash'
 import Reflux from 'reflux'
 
 import Hooks from '../hooks'
-import fauxPlugins from '../faux-plugins'
+import fauxPlugins from '../fauxPlugins'
 
 
 const storeActions = Reflux.createActions([

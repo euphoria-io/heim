@@ -144,7 +144,7 @@ module.exports.store = Reflux.createStore({
     this.state.soundEnabled = data.notifySound
     if (this.state.soundEnabled) {
       // preload audio file
-      require('../alert-sound')
+      require('../alertSound')
     }
 
     this._roomStorage = data.room
@@ -447,7 +447,7 @@ module.exports.store = Reflux.createStore({
 
     if (this.state.popupsPermission && this._popupsAreEnabled()) {
       if (this.state.soundEnabled && alertKind === 'new-mention') {
-        require('../alert-sound').play()
+        require('../alertSound').play()
       }
 
       const timeoutDuration = options.timeout
@@ -455,7 +455,11 @@ module.exports.store = Reflux.createStore({
 
       options.body = message.getIn(['sender', 'name']) + ': ' + message.get('content')
 
-      alert.popup = new Notification(roomName, options)
+      try {
+        alert.popup = new Notification(roomName, options)
+      } catch (err) {
+        Raven.captureException(err)
+      }
 
       const ui = require('./ui')  // avoid import loop
       alert.popup.onclick = () => {

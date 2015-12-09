@@ -113,13 +113,14 @@ func (lm ListenerMap) NotifyUser(ctx scope.Context, userID proto.UserID, event *
 	if err != nil {
 		return err
 	}
+	kind, id := userID.Parse()
 	for sessionID, listener := range lm {
 		// check that the listener is not excluded
 		if _, ok := excludeSet[sessionID]; ok {
 			continue
 		}
 
-		if listener.Identity().ID() == userID {
+		if listener.Identity().ID() == userID || (kind == "agent" && id == listener.AgentID()) {
 			listener.Send(ctx, event.Type, payload)
 		}
 	}

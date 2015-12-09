@@ -12,13 +12,13 @@ module.exports = (
       </Item>
       <Item align="center">
         <Link href="{{.RoomURL}}">
-          <Text {...textDefaults} fontSize={32} color={null}>&{'{{.RoomName}}'}</Text>
+          <Text {...textDefaults} fontSize={28} color={null}>&{'{{.RoomName}}'}</Text>
         </Link>
       </Item>
     </TopBubbleBox>
     <BodyBox>
       <Item align="center">
-        <Text {...textDefaults} color="#7d7d7d">a note from {'{{.SenderName}}'}:</Text>
+        <Text {...textDefaults} color="#7d7d7d">A note from {'{{.SenderName}}'}:</Text>
       </Item>
       <Item>
         <Text {...textDefaults}>{'{{.SenderMessage}}'}</Text>

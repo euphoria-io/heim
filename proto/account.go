@@ -85,6 +85,10 @@ type AccountManager interface {
 	RequestPasswordReset(
 		ctx scope.Context, kms security.KMS, namespace, id string) (Account, *PasswordResetRequest, error)
 
+	// CheckPasswordResetRequest returns the account associated with
+	// a password reset request, or an error if invalid or expired.
+	GetPasswordResetAccount(ctx scope.Context, confirmation string) (Account, error)
+
 	// ConfirmPasswordReset verifies a password reset confirmation code,
 	// and applies the new password to the account referred to by the
 	// confirmation code.
@@ -145,6 +149,12 @@ type Account interface {
 type AccountView struct {
 	ID   snowflake.Snowflake `json:"id"`   // the id of the account
 	Name string              `json:"name"` // the name that the holder of the account goes by
+}
+
+// PersonalAccountView describes an account to its owner.
+type PersonalAccountView struct {
+	AccountView
+	Email string `json:"email"` // the account's email address
 }
 
 // NewAccountSecurity initializes the nonce and account secrets for a new account

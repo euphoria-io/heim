@@ -12,9 +12,9 @@ import (
 )
 
 func TestRoomPresence(t *testing.T) {
-	userA := newSession("A")
-	userA2 := newSession("A")
-	userB := newSession("B")
+	userA := newSession("A", "A1")
+	userA2 := newSession("A", "A2")
+	userB := newSession("B", "B1")
 
 	ctx := scope.New()
 	kms := security.LocalKMS()
@@ -66,9 +66,9 @@ func TestRoomPresence(t *testing.T) {
 }
 
 func TestRoomBroadcast(t *testing.T) {
-	userA := newSession("A")
-	userB := newSession("B")
-	userC := newSession("C")
+	userA := newSession("A", "A1")
+	userB := newSession("B", "B1")
+	userC := newSession("C", "C1")
 
 	ctx := scope.New()
 	kms := security.LocalKMS()

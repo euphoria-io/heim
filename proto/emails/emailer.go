@@ -50,6 +50,7 @@ func NewEmail(templater *templates.Templater, msgID, to, templateName string, da
 		return nil, err
 	}
 
+	email.Header.Set("To", to)
 	email.Header.Set("Message-ID", msgID)
 	ref.SendFrom = email.Header.Get("From")
 

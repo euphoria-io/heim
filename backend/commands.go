@@ -113,7 +113,7 @@ func (s *session) handleCoreCommands(payload interface{}) *response {
 	case *proto.PingCommand:
 		return &response{packet: &proto.PingReply{UnixTime: msg.UnixTime}}
 	case *proto.PingReply:
-		s.finishFastKeepalive()
+		s.finishFastKeepAlive()
 		if time.Time(msg.UnixTime).Unix() == s.expectedPingReply {
 			s.outstandingPings = 0
 		} else if s.outstandingPings > 1 {
@@ -495,6 +495,10 @@ func (s *session) handleLogoutCommand() *response {
 	if err := s.backend.AgentTracker().ClearClientKey(s.ctx, s.client.Agent.IDString()); err != nil {
 		return &response{err: err}
 	}
+	err := s.backend.NotifyUser(s.ctx, proto.UserID("agent:"+s.AgentID()), proto.LogoutEventType, proto.LogoutEvent{}, s)
+	if err != nil {
+		return &response{err: err}
+	}
 	return &response{packet: &proto.LogoutReply{}}
 }
 
@@ -505,7 +509,7 @@ func (s *session) handleChangeNameCommand(msg *proto.ChangeNameCommand) *respons
 	if err := s.backend.AccountManager().ChangeName(s.ctx, s.client.Account.ID(), msg.Name); err != nil {
 		return &response{err: err}
 	}
-	return &response{packet: &proto.ChangeNameReply{}}
+	return &response{packet: &proto.ChangeNameReply{Name: msg.Name}}
 }
 
 func (s *session) handleChangePasswordCommand(msg *proto.ChangePasswordCommand) *response {

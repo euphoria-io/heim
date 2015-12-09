@@ -1,5 +1,4 @@
 @mobile-breakpoint: 650px;
-@base-font-size: 12pt;
 
 .touchable {
   transition: all .25s ease;
@@ -13,7 +12,7 @@
   .touchable;
 
   &.touching, body:not(.touch) &:active {
-    background: darken(desaturate(@bgcolor, 15%), 25%);
+    background: fade(darken(desaturate(@bgcolor, 15%), 45%), 50%);
   }
 }
 
@@ -33,15 +32,21 @@
   }
 }
 
-.larger-touch-target(@width, @height) {
+.larger-target(@width, @height) {
   // note: requires element to be positioned.
-  body.touch &:after {
+  &:after {
     content: '';
     position: absolute;
     left: -@width;
     right: -@width;
     top: -@height;
     bottom: -@height;
+  }
+}
+
+.larger-touch-target(@width, @height) {
+  body.touch & {
+    .larger-target(@width, @height);
   }
 }
 
@@ -102,6 +107,7 @@
   font-weight: bold;
   white-space: nowrap;
   background: @color;
+  border: none;
   padding: 4px 14px;
   border-radius: @radius;
   box-shadow: 0 2*@depth 2*@depth fade(black, 12.5%);
@@ -124,6 +130,13 @@
   }
 }
 
+@dialog-padding: 22px;
+.dialog-shape() {
+  background: rgba(240, 240, 240, .95);
+  border-radius: 10px;
+  box-shadow: 0 3px 20px rgba(0, 0, 0, .15);
+}
+
 .emoji {
   display: inline-block;
   width: 1.25em;
@@ -139,12 +152,14 @@
 @neutral-color: #e8e8e8;
 @public-color: lighten(blue, 43%);
 @welcome-color: #e5f2e5;
+@account-color: #006500;
 @passcode-color: #eedba0;
 @manager-color: #ddccff;
 @manager-dark-color: darken(desaturate(@manager-color, 15%), 25%);
 @topic-color: #4040a8;
 @faded-topic-color: #7070be;
 @disconnected-color: #ff7c7c;
+@error-color: #9d5a5a;
 @focus-green: fade(green, 50%);
 @brand-color: #80c080;
 @pane-bg-color: #f4f4f4;

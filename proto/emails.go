@@ -36,8 +36,8 @@ type CommonEmailParams struct {
 	EmailDomain   string `yaml:"email_domain"`
 	SiteName      string `yaml:"site_name"`
 	SiteURL       string `yaml:"site_url"`
-	HelpAddress   string `yaml:"help_address"`
-	SenderAddress string `yaml:"sender_address"`
+	HelpAddress   template.HTML `yaml:"help_address"`
+	SenderAddress template.HTML `yaml:"sender_address"`
 }
 
 func (p *CommonEmailParams) SiteURLShort() template.HTML {
@@ -55,7 +55,7 @@ type WelcomeEmailParams struct {
 }
 
 func (p WelcomeEmailParams) Subject() template.HTML {
-	return template.HTML(fmt.Sprintf("welcome to %s!", p.SiteName))
+	return template.HTML(fmt.Sprintf("Welcome to %s!", p.SiteName))
 }
 
 func (p *WelcomeEmailParams) VerifyEmailURL() template.HTML {
@@ -76,7 +76,7 @@ type PasswordChangedEmailParams struct {
 }
 
 func (p PasswordChangedEmailParams) Subject() template.HTML {
-	return template.HTML(fmt.Sprintf("your %s account password has been changed", p.SiteName))
+	return template.HTML(fmt.Sprintf("Your %s account password has been changed", p.SiteName))
 }
 
 type PasswordResetEmailParams struct {
@@ -86,7 +86,7 @@ type PasswordResetEmailParams struct {
 }
 
 func (p PasswordResetEmailParams) Subject() template.HTML {
-	return template.HTML(fmt.Sprintf("password reset request for your %s account", p.SiteName))
+	return template.HTML(fmt.Sprintf("Password reset request for your %s account", p.SiteName))
 }
 
 func (p PasswordResetEmailParams) ResetPasswordURL() template.HTML {

@@ -142,11 +142,10 @@ rights notices incorporated in or accompanying the Services or Content.
 By making any User Content available through Services you hereby grant to
 Euphoria a non-exclusive, transferable, sublicenseable, worldwide, royalty-free
 license to use, host, copy, modify, store, cache, reproduce, create derivative
-works based upon, distribute, publicly display, publicly perform, and
-distribute your User Content in connection with operating and providing the
-Services and Content to you and to other users. Please note, this license grant
-continues even if you stop using the Services mainly because of the nature of
-the Services.
+works based upon, publicly display, publicly perform, and distribute your User
+Content in connection with operating and providing the Services and Content to
+you and to other users. Please note, this license grant continues even if you
+stop using the Services mainly because of the nature of the Services.
 
 You are solely responsible for all your User Content. You represent and warrant
 that you own all your User Content or you have all rights that are necessary to

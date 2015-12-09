@@ -4,14 +4,15 @@ import Reflux from 'reflux'
 import Immutable from 'immutable'
 
 import actions from '../actions'
-import ChatTree from '../chat-tree'
+import ChatTree from '../ChatTree'
 import storage from './storage'
 import activity from './activity'
 import plugins from './plugins'
-import hueHash from '../hue-hash'
+import hueHash from '../hueHash'
 
 
-const mentionRe = module.exports.mentionRe = /\B@([^\s]+?(?=$|[,.!?;&'\s]|&#39;|&quot;|&amp;))/g
+const mentionDelim = String.raw`^|$|[,.!?;&<'"\s]|&#39;|&quot;|&amp;`
+const mentionFindRe = module.exports.mentionFindRe = new RegExp('(' + mentionDelim + String.raw`)@(\S+?)(?=` + mentionDelim + ')', 'g')
 
 const storeActions = module.exports.actions = Reflux.createActions([
   'messageReceived',
@@ -19,11 +20,20 @@ const storeActions = module.exports.actions = Reflux.createActions([
   'messagesChanged',
   'setRoomSettings',
   'markMessagesSeen',
-  'setSelected',
+  'setMessageSelected',
+  'setUserSelected',
   'deselectAll',
   'editMessage',
   'banUser',
 ])
+storeActions.login = Reflux.createAction({asyncResult: true})
+storeActions.logout = Reflux.createAction({asyncResult: true})
+storeActions.registerAccount = Reflux.createAction({asyncResult: true})
+storeActions.resetPassword = Reflux.createAction({asyncResult: true})
+storeActions.changeName = Reflux.createAction({asyncResult: true})
+storeActions.changeEmail = Reflux.createAction({asyncResult: true})
+storeActions.changePassword = Reflux.createAction({asyncResult: true})
+
 storeActions.setRoomSettings.sync = true
 storeActions.messagesChanged.sync = true
 _.extend(module.exports, storeActions)
@@ -55,6 +65,7 @@ module.exports.store = Reflux.createStore({
       authType: null,
       authState: null,
       authData: null,
+      account: null,
       isManager: null,
       isStaff: null,
       messages: new ChatTree(),
@@ -63,6 +74,7 @@ module.exports.store = Reflux.createStore({
       who: Immutable.Map(),
       bannedIds: Immutable.Set(),
       selectedMessages: Immutable.Set(),
+      selectedUsers: Immutable.Set(),
     }
 
     this.socket = null
@@ -102,6 +114,14 @@ module.exports.store = Reflux.createStore({
   },
 
   socketEvent(ev) {
+    const changeActionMap = {
+      'logout-reply': 'logout',
+      'reset-password-reply': 'resetPassword',
+      'change-name-reply': 'changeName',
+      'change-email-reply': 'changeEmail',
+      'change-password-reply': 'changePassword',
+    }
+
     if (ev.type === 'send-event') {
       this._handleMessageUpdate(ev.data, true)
     } else if (ev.type === 'send-reply') {
@@ -123,6 +143,10 @@ module.exports.store = Reflux.createStore({
       this.state.isManager = ev.data.session.is_manager
       this.state.isStaff = ev.data.session.is_staff
       this.state.authType = ev.data.room_is_private ? 'passcode' : 'public'
+      this.state.account = Immutable.fromJS(ev.data.account)
+      if (this.state.account) {
+        this.state.account = this.state.account
+      }
       if (ev.data.account_has_access) {
         // note: if there was a stored passcode, we could have an outgoing
         // auth event and authState === 'trying-stored'
@@ -159,26 +183,55 @@ module.exports.store = Reflux.createStore({
       if (!ev.error) {
         this.state.who = this.state.who
           .mergeIn([ev.data.session_id], {
+            present: true,
+            id: ev.data.id,
             session_id: ev.data.session_id,
             name: ev.data.to,
             hue: hueHash.hue(ev.data.to),
           })
       }
     } else if (ev.type === 'join-event') {
+      ev.data.present = true
       ev.data.hue = hueHash.hue(ev.data.name)
       this.state.who = this.state.who
         .set(ev.data.session_id, Immutable.fromJS(ev.data))
     } else if (ev.type === 'part-event') {
-      this.state.who = this.state.who.delete(ev.data.session_id)
+      this.state.who = this.state.who
+        .mergeIn([ev.data.session_id], {
+          present: false,
+        })
     } else if (ev.type === 'network-event' && ev.data.type === 'partition') {
       const id = ev.data.server_id
       const era = ev.data.server_era
-      this.state.who = this.state.who.filterNot(v => v.get('server_id') === id && v.get('server_era') === era)
+      this.state.who = this.state.who.map(v => {
+        const gone = v.get('server_id') === id && v.get('server_era') === era
+        return gone ? v.set('present', false) : v
+      })
     } else if (ev.type === 'ban-reply') {
       if (!ev.error) {
         this.state.bannedIds = this.state.bannedIds.add(ev.data.id)
       } else {
         console.warn('error banning:', ev.error)  // eslint-disable-line no-console
+      }
+    } else if (ev.type === 'login-reply' || ev.type === 'register-account-reply') {
+      const kind = ev.type === 'login-reply' ? 'login' : 'registerAccount'
+      if (ev.data.success) {
+        storeActions[kind].completed()
+      } else {
+        storeActions[kind].failed(ev.data)
+      }
+    } else if (_.has(changeActionMap, ev.type)) {
+      const kind = changeActionMap[ev.type]
+      if (ev.error) {
+        storeActions[kind].failed(ev)
+      } else {
+        storeActions[kind].completed()
+      }
+    } else if (ev.type === 'login-event' || ev.type === 'logout-event') {
+      this.socket.reconnect()
+    } else if (ev.type === 'disconnect-event') {
+      if (ev.data.reason === 'authentication changed') {
+        this.socket.reconnect()
       }
     } else if (ev.type === 'ping-event' || ev.type === 'ping-reply') {
       // ignore
@@ -206,7 +259,8 @@ module.exports.store = Reflux.createStore({
     this.state.who = this.state.who.withMutations(who => {
       _.each(messages, message => {
         if (nick) {
-          const mention = message.content.match(mentionRe)
+          const mention = message.content.match(mentionFindRe)
+          // Note: we are relying on hueHash.normalize to strip the preceding and following characters from the mention regex match here.
           if (mention && _.any(mention, m => hueHash.normalize(m.substr(1)) === hueHash.normalize(nick))) {
             message._mention = true
           }
@@ -286,6 +340,7 @@ module.exports.store = Reflux.createStore({
     this.state.who = Immutable.OrderedMap(
       Immutable.Seq(data.listing)
         .map(user => {
+          user.present = true
           user.hue = hueHash.hue(user.name)
           return [user.session_id, Immutable.Map(user)]
         })
@@ -353,6 +408,7 @@ module.exports.store = Reflux.createStore({
       this.state.authType = roomStorage.auth.type
       this.state.authData = roomStorage.auth.data
     }
+    this.setRoomSettings({showAllReplies: roomStorage.showAllReplies})
     this._seenMessages = Immutable.Map(roomStorage.seenMessages || {})
     this.trigger(this.state)
   },
@@ -470,15 +526,21 @@ module.exports.store = Reflux.createStore({
     }
   },
 
-  setSelected(id, value) {
+  setMessageSelected(id, value) {
     this.state.messages.mergeNodes(id, {_selected: value})
     this.state.selectedMessages = this.state.selectedMessages[value ? 'add' : 'delete'](id)
+    this.trigger(this.state)
+  },
+
+  setUserSelected(id, value) {
+    this.state.selectedUsers = this.state.selectedUsers[value ? 'add' : 'delete'](id)
     this.trigger(this.state)
   },
 
   deselectAll() {
     this.state.messages.mergeNodes(this.state.selectedMessages.toArray(), {_selected: false})
     this.state.selectedMessages = this.state.selectedMessages.clear()
+    this.state.selectedUsers = this.state.selectedUsers.clear()
     this.trigger(this.state)
   },
 
@@ -488,6 +550,73 @@ module.exports.store = Reflux.createStore({
       data: {
         content: content,
         parent: parent || null,
+      },
+    })
+  },
+
+  logout() {
+    this.socket.send({
+      type: 'logout',
+    })
+  },
+
+  login(email, password) {
+    this.socket.send({
+      type: 'login',
+      data: {
+        namespace: 'email',
+        id: email,
+        password: password,
+      },
+    })
+  },
+
+  registerAccount(email, password) {
+    this.socket.send({
+      type: 'register-account',
+      data: {
+        namespace: 'email',
+        id: email,
+        password: password,
+      },
+    })
+  },
+
+  resetPassword(email) {
+    this.socket.send({
+      type: 'reset-password',
+      data: {
+        namespace: 'email',
+        id: email,
+      },
+    })
+  },
+
+  changeName(name) {
+    this.socket.send({
+      type: 'change-name',
+      data: {
+        name: name,
+      },
+    })
+  },
+
+  changeEmail(email, password) {
+    this.socket.send({
+      type: 'change-email',
+      data: {
+        email: email,
+        password: password,
+      },
+    })
+  },
+
+  changePassword(oldPassword, newPassword) {
+    this.socket.send({
+      type: 'change-password',
+      data: {
+        old_password: oldPassword,
+        new_password: newPassword,
       },
     })
   },

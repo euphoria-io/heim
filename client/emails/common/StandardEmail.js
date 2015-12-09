@@ -5,7 +5,7 @@ import { Email } from '../email'
 
 export default function StandardEmail({children}) {
   return (
-    <Email title="{{.Subject}}" bgcolor="#f0f0f0" cellSpacing={30}>
+    <Email title="{{.Subject}}" bgcolor="#f0f0f0" cellSpacing={10} style={{paddingTop: '20px', paddingBottom: '20px'}}>
       {children}
     </Email>
   )

@@ -93,16 +93,6 @@ func TestEmail(t *testing.T) {
 		So(err, ShouldBeNil)
 		So(string(data), ShouldEqual, "text")
 
-		// Verify html part.
-		part, err = mpr.NextPart()
-		So(err, ShouldBeNil)
-		So(part.Header, ShouldResemble, textproto.MIMEHeader{
-			"Content-Type": []string{`text/html; charset="utf-8"`},
-		})
-		data, err = ioutil.ReadAll(part)
-		So(err, ShouldBeNil)
-		So(string(data), ShouldEqual, "html")
-
 		// Verify attachments.
 		part, err = mpr.NextPart()
 		So(err, ShouldBeNil)
@@ -129,6 +119,16 @@ func TestEmail(t *testing.T) {
 		data, err = ioutil.ReadAll(decoder)
 		So(err, ShouldBeNil)
 		So(string(data), ShouldEqual, "b")
+
+		// Verify html part.
+		part, err = mpr.NextPart()
+		So(err, ShouldBeNil)
+		So(part.Header, ShouldResemble, textproto.MIMEHeader{
+			"Content-Type": []string{`text/html; charset="utf-8"`},
+		})
+		data, err = ioutil.ReadAll(part)
+		So(err, ShouldBeNil)
+		So(string(data), ShouldEqual, "html")
 	})
 
 	Convey("EvaluateEmail", t, func() {

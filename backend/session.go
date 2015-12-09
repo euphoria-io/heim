@@ -169,6 +169,7 @@ func (s *session) Close() {
 }
 
 func (s *session) ID() string               { return s.id }
+func (s *session) AgentID() string          { return s.client.Agent.IDString() }
 func (s *session) ServerID() string         { return s.serverID }
 func (s *session) ServerEra() string        { return s.serverEra }
 func (s *session) Identity() proto.Identity { return s.identity }
@@ -181,6 +182,19 @@ func (s *session) View() *proto.SessionView {
 		IsStaff:      s.client.Account != nil && s.client.Account.IsStaff(),
 		IsManager:    s.client.Authorization.ManagerKeyPair != nil,
 	}
+}
+
+func (s *session) writeMessage(messageType int, data []byte) error {
+	if err := s.conn.SetWriteDeadline(time.Now().Add(MaxKeepAliveMisses * KeepAlive)); err != nil {
+		return err
+	}
+	if err := s.conn.WriteMessage(messageType, data); err != nil {
+		return err
+	}
+	if err := s.conn.SetWriteDeadline(time.Time{}); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *session) Send(ctx scope.Context, cmdType proto.PacketType, payload interface{}) error {
@@ -203,8 +217,13 @@ func (s *session) Send(ctx scope.Context, cmdType proto.PacketType, payload inte
 	// Add to outgoing channel. If channel is full, defer to goroutine so as not to block
 	// the caller (this may result in deliveries coming out of order).
 	select {
+	case <-ctx.Done():
+		// Session is closed, return error.
+		return ctx.Err()
 	case s.outgoing <- cmd:
+		// Packet delivered to queue.
 	default:
+		// Queue is full.
 		logging.Logger(s.ctx).Printf("outgoing channel full, ordering cannot be guaranteed")
 		go func() { s.outgoing <- cmd }()
 	}
@@ -214,7 +233,7 @@ func (s *session) Send(ctx scope.Context, cmdType proto.PacketType, payload inte
 
 func (s *session) serve() error {
 	defer func() {
-		s.finishFastKeepalive()
+		s.finishFastKeepAlive()
 		if s.onClose != nil {
 			s.onClose()
 		}
@@ -350,7 +369,7 @@ func (s *session) serve() error {
 				return err
 			}
 
-			if err := s.conn.WriteMessage(websocket.TextMessage, data); err != nil {
+			if err := s.writeMessage(websocket.TextMessage, data); err != nil {
 				logger.Printf("error: write message: %s", err)
 				return err
 			}
@@ -375,7 +394,7 @@ func (s *session) serve() error {
 				return err
 			}
 
-			if err := s.conn.WriteMessage(websocket.TextMessage, data); err != nil {
+			if err := s.writeMessage(websocket.TextMessage, data); err != nil {
 				logger.Printf("error: write message: %s", err)
 				return err
 			}
@@ -485,8 +504,11 @@ func (s *session) join() error {
 	}
 
 	s.onClose = func() {
-		if err := s.room.Part(s.ctx, s); err != nil {
-			// TODO: error handling
+		// Use a fork of the server's root context, because the session's context
+		// might be closed.
+		ctx := s.server.rootCtx.Fork()
+		if err := s.room.Part(ctx, s); err != nil {
+			logging.Logger(ctx).Printf("room part failed: %s", err)
 			return
 		}
 	}
@@ -509,7 +531,15 @@ func (s *session) sendHello(roomIsPrivate, accountHasAccess bool) error {
 		Version:          s.room.Version(),
 	}
 	if s.client.Account != nil {
-		event.AccountView = s.client.Account.View(s.roomName)
+		event.AccountView = &proto.PersonalAccountView{
+			AccountView: *s.client.Account.View(s.roomName),
+		}
+		for _, pid := range s.client.Account.PersonalIdentities() {
+			if pid.Namespace() == "email" {
+				event.AccountView.Email = pid.ID()
+				break
+			}
+		}
 	}
 	event.ID = event.SessionView.ID
 	cmd, err := proto.MakeEvent(event)
@@ -523,7 +553,7 @@ func (s *session) sendHello(roomIsPrivate, accountHasAccess bool) error {
 		return err
 	}
 
-	if err := s.conn.WriteMessage(websocket.TextMessage, data); err != nil {
+	if err := s.writeMessage(websocket.TextMessage, data); err != nil {
 		logger.Printf("error: write hello event: %s", err)
 		return err
 	}
@@ -548,7 +578,7 @@ func (s *session) sendPing() error {
 		return err
 	}
 
-	if err := s.conn.WriteMessage(websocket.TextMessage, data); err != nil {
+	if err := s.writeMessage(websocket.TextMessage, data); err != nil {
 		logger.Printf("error: write ping event: %s", err)
 		return err
 	}
@@ -588,7 +618,7 @@ func (s *session) CheckAbandoned() error {
 	return s.sendPing()
 }
 
-func (s *session) finishFastKeepalive() {
+func (s *session) finishFastKeepAlive() {
 	s.m.Lock()
 	defer s.m.Unlock()
 

@@ -130,18 +130,18 @@ func isExcluded(toCheck proto.Session, excluding []proto.Session) bool {
 }
 
 func (b *TestBackend) NotifyUser(ctx scope.Context, userID proto.UserID, packetType proto.PacketType, payload interface{}, excluding ...proto.Session) error {
+	kind, id := userID.Parse()
 	for _, room := range b.rooms {
 		mRoom, _ := room.(*memRoom)
-		sessList, ok := mRoom.live[userID]
-		if !ok {
-			continue
-		}
-		for _, sess := range sessList {
-			if isExcluded(sess, excluding) {
-				continue
-			}
-			if err := sess.Send(ctx, packetType, payload); err != nil {
-				return err
+		for u, sessList := range mRoom.live {
+			for _, sess := range sessList {
+				if u == userID || (kind == "agent" && sess.AgentID() == id) {
+					if !isExcluded(sess, excluding) {
+						if err := sess.Send(ctx, packetType, payload); err != nil {
+							return err
+						}
+					}
+				}
 			}
 		}
 	}

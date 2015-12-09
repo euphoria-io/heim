@@ -44,6 +44,8 @@
   * [edit-message-event](#edit-message-event)
   * [hello-event](#hello-event)
   * [join-event](#join-event)
+  * [login-event](#login-event)
+  * [logout-event](#logout-event)
   * [network-event](#network-event)
   * [nick-event](#nick-event)
   * [part-event](#part-event)
@@ -578,7 +580,10 @@ The `change-name` command changes the name associated with the signed in account
 The `change-name-reply` packet indicates a successful name change.
 
 
-This packet has no fields.
+| Field | Type | Required? | Description |
+| :-- | :-- | :-- | :--------- |
+| `name` | [string](#string) | required |  the new name associated with the account |
+
 
 
 
@@ -1249,7 +1254,7 @@ It includes information about the client's authentication and associated identit
 | Field | Type | Required? | Description |
 | :-- | :-- | :-- | :--------- |
 | `id` | [UserID](#userid) | required |  the id of the agent or account logged into this session |
-| `account` | [AccountView](#accountview) | *optional* |  details about the user's account, if the session is logged in |
+| `account` | [PersonalAccountView](#personalaccountview) | *optional* |  details about the user's account, if the session is logged in |
 | `session` | [SessionView](#sessionview) | required |  details about the session |
 | `account_has_access` | [bool](#bool) | *optional* |  if true, then the account has an explicit access grant to the current room |
 | `room_is_private` | [bool](#bool) | required |  if true, the session is connected to a private room |
@@ -1273,6 +1278,29 @@ A `join-event` indicates a session just joined the room.
 | `is_staff` | [bool](#bool) | *optional* |  if true, this session belongs to a member of staff |
 | `is_manager` | [bool](#bool) | *optional* |  if true, this session belongs to a manager of the room |
 
+
+
+
+## login-event
+
+The `login-event` packet is sent to all sessions of an agent when that
+agent is logged in (except for the session that issued the login command).
+
+
+| Field | Type | Required? | Description |
+| :-- | :-- | :-- | :--------- |
+| `account_id` | [Snowflake](#snowflake) | required |  |
+
+
+
+
+## logout-event
+
+The `logout-event` packet is sent to all sessions of an agent when that
+agent is logged out (except for the session that issued the logout command).
+
+
+This packet has no fields.
 
 
 

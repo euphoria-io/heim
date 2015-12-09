@@ -224,6 +224,7 @@ type testConn struct {
 	userID           string
 	accountID        string
 	accountName      string
+	accountEmail     string
 	accountHasAccess bool
 	isStaff          bool
 	isManager        bool
@@ -250,6 +251,13 @@ func (tc *testConn) send(id, cmdType, data string, args ...interface{}) {
 	}
 	if tc.debugOn {
 		fmt.Printf("sent %s\n", msg)
+	}
+	if cmdType == "login" || cmdType == "register-account" {
+		// parse msg and extract email address
+		var parsed map[string]interface{}
+		err := json.Unmarshal([]byte(data), &parsed)
+		So(err, ShouldBeNil)
+		tc.accountEmail = parsed["id"].(string)
 	}
 	So(tc.Conn.WriteMessage(websocket.TextMessage, []byte(msg)), ShouldBeNil)
 }
@@ -412,7 +420,7 @@ func (tc *testConn) expectHello() {
 	sessionParts := ""
 	isParts := ""
 	if tc.accountID != "" {
-		account = fmt.Sprintf(`"account":{"id":"%s","name":"%s"`, tc.accountID, tc.accountName)
+		account = fmt.Sprintf(`"account":{"id":"%s","name":"%s","email":"%s"`, tc.accountID, tc.accountName, tc.accountEmail)
 		if tc.isStaff {
 			sessionParts += `,"is_staff":true`
 		}
@@ -1302,10 +1310,17 @@ func testAccountResetPassword(s *serverUnderTest) {
 		So(ok, ShouldBeTrue)
 
 		// Apply new password with confirmation code.
-		resp, err := http.PostForm(s.server.URL+"/prefs/reset-password", url.Values{
-			"confirmation": []string{p.Confirmation},
-			"password":     []string{"newpass"},
-		})
+		req := struct {
+			Confirmation string `json:"confirmation"`
+			Password     struct {
+				Text string `json:"text"`
+			} `json:"password"`
+		}{}
+		req.Confirmation = p.Confirmation
+		req.Password.Text = "newpass"
+		reqBytes, err := json.Marshal(req)
+		So(err, ShouldBeNil)
+		resp, err := http.Post(s.server.URL+"/prefs/reset-password", "application/json", bytes.NewReader(reqBytes))
 		So(err, ShouldBeNil)
 		So(resp.StatusCode, ShouldEqual, 200)
 
@@ -1349,7 +1364,7 @@ func testAccountChangeName(s *serverUnderTest) {
 		conn.expectPing()
 		conn.expectSnapshot(s.backend.Version(), nil, nil)
 		conn.send("1", "change-name", `{"name":"logan"}`)
-		conn.expect("1", "change-name-reply", `{}`)
+		conn.expect("1", "change-name-reply", `{"name":"logan"}`)
 		conn.Close()
 
 		conn.accountName = "logan"
@@ -1508,9 +1523,16 @@ func testAccountRegistration(s *serverUnderTest) {
 		So(ok, ShouldBeTrue)
 
 		// The verification token should be valid.
-		url := fmt.Sprintf("%s/prefs/verify?email=registration@euphoria.io&token=%s",
-			s.server.URL, params.VerificationToken)
-		resp, err := http.Get(url)
+		req := struct {
+			Confirmation string `json:"confirmation"`
+			Email        string `json:"email"`
+		}{
+			Confirmation: params.VerificationToken,
+			Email:        "registration@euphoria.io",
+		}
+		reqBytes, err := json.Marshal(req)
+		So(err, ShouldBeNil)
+		resp, err := http.Post(s.server.URL+"/prefs/verify", "application/json", bytes.NewReader(reqBytes))
 		So(err, ShouldBeNil)
 		So(resp.StatusCode, ShouldEqual, 200)
 
@@ -2837,6 +2859,25 @@ func testNotifyUser(s *serverUnderTest) {
 
 		// Same cookie, different room should receive a login-event
 		conn4.expect("", "login-event", `{"account_id": "%s"}`, cammie.ID())
+
+		// Log in second cookie.
+		conn5.send("1", "login", `{"namespace":"email","id":"cammie%s","password":"cammiepass"}`, nonce)
+		conn5.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, cammie.ID())
+
+		// Log out on first connection, expect a logout-reply
+		conn1.send("2", "logout", `{}`)
+		conn1.expect("2", "logout-reply", `{}`)
+
+		// Same cookie, same room should receive a logout-event
+		conn2.expect("", "logout-event", `{}`)
+
+		// Same cookie, different room should receive a logout-event
+		conn4.expect("", "logout-event", `{}`)
+
+		// Different cookie should not receive logout-event
+		conn4.Close()
+		conn5.expect("", "part-event",
+			`{"session_id":"%s","id":"*","name":"","server_id":"*","server_era":"*"}`, conn4.sessionID)
 	})
 }
 

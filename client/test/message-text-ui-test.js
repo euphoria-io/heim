@@ -4,7 +4,7 @@ import React from 'react'
 import ReactDOM from 'react-dom'
 import TestUtils from 'react-addons-test-utils'
 
-import MessageText from '../lib/ui/message-text'
+import MessageText from '../lib/ui/MessageText'
 
 
 describe('<MessageText>', () => {

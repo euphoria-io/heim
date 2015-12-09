@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>euphoria</title>
+  <title>{{.RoomName}}</title>
   <link rel="icon" id="favicon" href="<%- HEIM_PREFIX %>/static/favicon.png" sizes="32x32">
   <link rel="icon" href="<%- HEIM_PREFIX %>/static/favicon-192.png" sizes="192x192">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
@@ -12,7 +12,7 @@
 <body>
   <div id="container"></div>
   <iframe id="env" class="js"></iframe>
-  <script async src="<%- HEIM_PREFIX %>/static/main.js?v=<%- HEIM_GIT_COMMIT %>"></script>
+  <script async id="heim-js" src="<%- HEIM_PREFIX %>/static/main.js?v=<%- HEIM_GIT_COMMIT %>"></script>
   <link rel="stylesheet" type="text/css" id="css" href="<%- HEIM_PREFIX %>/static/main.css?v=<%- HEIM_GIT_COMMIT %>">
   <noscript><div id="noscript-notice"><img src="<%- HEIM_PREFIX %>/static/favicon-192.png" /><p><a href="http://enable-javascript.com" target="_blank">Please enable JavaScript to proceed</a>.</p></div></noscript>
 </body>

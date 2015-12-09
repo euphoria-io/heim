@@ -58,6 +58,7 @@ var (
 	LoginReplyType = LoginType.Reply()
 
 	LogoutType      = PacketType("logout")
+	LogoutEventType = LogoutType.Event()
 	LogoutReplyType = LogoutType.Reply()
 
 	NickType      = PacketType("nick")
@@ -203,6 +204,7 @@ var (
 		LoginReplyType: reflect.TypeOf(LoginReply{}),
 
 		LogoutType:      reflect.TypeOf(LogoutCommand{}),
+		LogoutEventType: reflect.TypeOf(LogoutEvent{}),
 		LogoutReplyType: reflect.TypeOf(LogoutReply{}),
 
 		PMInitiateType:      reflect.TypeOf(PMInitiateCommand{}),
@@ -290,7 +292,9 @@ type ChangeNameCommand struct {
 }
 
 // The `change-name-reply` packet indicates a successful name change.
-type ChangeNameReply struct{}
+type ChangeNameReply struct {
+	Name string `json:"name"` // the new name associated with the account
+}
 
 // The `change-password` command changes the password of the signed in account.
 type ChangePasswordCommand struct {
@@ -485,12 +489,12 @@ type GetMessageReply Message
 // A `hello-event` is sent by the server to the client when a session is started.
 // It includes information about the client's authentication and associated identity.
 type HelloEvent struct {
-	ID               UserID       `json:"id"`                           // the id of the agent or account logged into this session
-	AccountView      *AccountView `json:"account,omitempty"`            // details about the user's account, if the session is logged in
-	SessionView      *SessionView `json:"session"`                      // details about the session
-	AccountHasAccess bool         `json:"account_has_access,omitempty"` // if true, then the account has an explicit access grant to the current room
-	RoomIsPrivate    bool         `json:"room_is_private"`              // if true, the session is connected to a private room
-	Version          string       `json:"version"`                      // the version of the code being run and served by the server
+	ID               UserID               `json:"id"`                           // the id of the agent or account logged into this session
+	AccountView      *PersonalAccountView `json:"account,omitempty"`            // details about the user's account, if the session is logged in
+	SessionView      *SessionView         `json:"session"`                      // details about the session
+	AccountHasAccess bool                 `json:"account_has_access,omitempty"` // if true, then the account has an explicit access grant to the current room
+	RoomIsPrivate    bool                 `json:"room_is_private"`              // if true, the session is connected to a private room
+	Version          string               `json:"version"`                      // the version of the code being run and served by the server
 }
 
 // A `snapshot-event` indicates that a session has successfully joined a room.
@@ -539,6 +543,8 @@ type LoginReply struct {
 	AccountID snowflake.Snowflake `json:"account_id,omitempty"` // if `success` was true, the id of the account the session logged into.
 }
 
+// The `login-event` packet is sent to all sessions of an agent when that
+// agent is logged in (except for the session that issued the login command).
 type LoginEvent struct {
 	AccountID snowflake.Snowflake `json:"account_id"`
 }
@@ -550,6 +556,10 @@ type LoginEvent struct {
 // `disconnect-event` shortly after. The next connection the client
 // makes will be a logged out session.
 type LogoutCommand struct{}
+
+// The `logout-event` packet is sent to all sessions of an agent when that
+// agent is logged out (except for the session that issued the logout command).
+type LogoutEvent struct{}
 
 // The `logout-reply` packet confirms a logout.
 type LogoutReply struct{}

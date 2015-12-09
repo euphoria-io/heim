@@ -3,6 +3,7 @@ package backend
 import (
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net"
 	"net/smtp"
@@ -149,6 +150,12 @@ func (cfg *ServerConfig) LoadFromFile(path string) error {
 }
 
 func (cfg *ServerConfig) Heim(ctx scope.Context) (*proto.Heim, error) {
+	pageTemplater, err := LoadPageTemplates(filepath.Join(cfg.StaticPath, "pages"))
+	if err != nil {
+		return nil, fmt.Errorf("page templates: %s", err)
+	}
+
+	// Load and verify page templates.
 	c, err := cfg.Cluster.EtcdCluster(ctx)
 	if err != nil {
 		return nil, err
@@ -169,8 +176,9 @@ func (cfg *ServerConfig) Heim(ctx scope.Context) (*proto.Heim, error) {
 		Cluster:        c,
 		PeerDesc:       cfg.Cluster.DescribeSelf(),
 		KMS:            kms,
-		EmailTemplater: emailTemplater,
 		EmailDeliverer: emailDeliverer,
+		EmailTemplater: emailTemplater,
+		PageTemplater:  pageTemplater,
 		SiteName:       cfg.SiteName,
 		StaticPath:     cfg.StaticPath,
 	}
@@ -322,31 +330,6 @@ func (ec *EmailConfig) Get(cfg *ServerConfig) (*templates.Templater, emails.Deli
 	localDomain := cfg.CommonEmailParams.EmailDomain
 	cfg.CommonEmailParams.CommonData.LocalDomain = localDomain
 
-	if ec.Server == "" {
-		return nil, nil, nil
-	}
-
-	var sslHost string
-	if ec.UseTLS {
-		var err error
-		sslHost, _, err = net.SplitHostPort(ec.Server)
-		if err != nil {
-			return nil, nil, err
-		}
-	}
-
-	var auth smtp.Auth
-	switch strings.ToUpper(ec.AuthMethod) {
-	case "":
-	case "CRAM-MD5":
-		auth = smtp.CRAMMD5Auth(ec.Username, ec.Password)
-	case "PLAIN":
-		if !ec.UseTLS {
-			return nil, nil, fmt.Errorf("PLAIN authentication requires TLS")
-		}
-		auth = smtp.PlainAuth(ec.Identity, ec.Username, ec.Password, sslHost)
-	}
-
 	// Load templates and configure email sender.
 	templater := &templates.Templater{}
 	// TODO: replace -static with a better sense of a static root
@@ -362,6 +345,49 @@ func (ec *EmailConfig) Get(cfg *ServerConfig) (*templates.Templater, emails.Deli
 		return nil, nil, fmt.Errorf("template validation failed: %s...", errs[0].Error())
 	}
 
-	deliverer := emails.NewSMTPDeliverer(localDomain, ec.Server, sslHost, auth)
-	return templater, deliverer, nil
+	// Set up deliverer.
+	fmt.Printf("setting up deliverer for %#v\n", ec)
+	switch ec.Server {
+	case "":
+		return templater, nil, nil
+	case "$stdout":
+		return templater, &mockDeliverer{Writer: os.Stdout}, nil
+	default:
+		var sslHost string
+		if ec.UseTLS {
+			var err error
+			sslHost, _, err = net.SplitHostPort(ec.Server)
+			if err != nil {
+				return nil, nil, err
+			}
+		}
+
+		var auth smtp.Auth
+		switch strings.ToUpper(ec.AuthMethod) {
+		case "":
+		case "CRAM-MD5":
+			auth = smtp.CRAMMD5Auth(ec.Username, ec.Password)
+		case "PLAIN":
+			if !ec.UseTLS {
+				return nil, nil, fmt.Errorf("PLAIN authentication requires TLS")
+			}
+			auth = smtp.PlainAuth(ec.Identity, ec.Username, ec.Password, sslHost)
+		}
+
+		deliverer := emails.NewSMTPDeliverer(localDomain, ec.Server, sslHost, auth)
+		return templater, deliverer, nil
+	}
+}
+
+type mockDeliverer struct {
+	io.Writer
+}
+
+func (d *mockDeliverer) LocalName() string { return "localhost" }
+
+func (d *mockDeliverer) Deliver(ctx scope.Context, ref *emails.EmailRef) error {
+	fmt.Fprintf(d, "mock delivery of email from %s to %s:\n", ref.SendFrom, ref.SendTo)
+	d.Write(ref.Message)
+	fmt.Fprintf(d, "----- END OF MESSAGE -----\n")
+	return nil
 }

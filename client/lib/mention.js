@@ -1,4 +1,4 @@
-import { stripSpaces } from './hue-hash'
+import { stripSpaces } from './hueHash'
 
 
 /**

@@ -6,6 +6,7 @@ import (
 	"path"
 
 	"encoding/hex"
+	"encoding/json"
 
 	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/logging"
@@ -18,13 +19,17 @@ import (
 
 func (s *Server) route() {
 	s.r = mux.NewRouter().StrictSlash(true)
+	s.r.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		s.serveErrorPage("page not found", http.StatusNotFound, w, r)
+	})
+
 	s.r.Path("/").Methods("OPTIONS").HandlerFunc(s.handleProbe)
 	s.r.Path("/robots.txt").HandlerFunc(s.handleRobotsTxt)
 	s.r.Path("/metrics").Handler(
 		prometheus.InstrumentHandler("metrics", prometheus.UninstrumentedHandler()))
 
 	s.r.PathPrefix("/static/").Handler(
-		prometheus.InstrumentHandler("static", http.StripPrefix("/static", http.HandlerFunc(s.handleStatic))))
+		prometheus.InstrumentHandler("static", http.HandlerFunc(s.handleStatic)))
 
 	s.r.Handle("/", prometheus.InstrumentHandlerFunc("home", s.handleHomeStatic))
 
@@ -37,7 +42,7 @@ func (s *Server) route() {
 
 	s.r.Handle(
 		"/prefs/reset-password",
-		prometheus.InstrumentHandlerFunc("prefsResetPassword", s.handleResetPassword))
+		prometheus.InstrumentHandlerFunc("prefsResetPassword", s.handlePrefsResetPassword))
 	s.r.Handle(
 		"/prefs/verify", prometheus.InstrumentHandlerFunc("prefsVerify", s.handlePrefsVerify))
 }
@@ -56,33 +61,37 @@ func (s *Server) handleStatic(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleRoomStatic(w http.ResponseWriter, r *http.Request) {
-	if !s.allowRoomCreation {
-		roomName := mux.Vars(r)["room"]
-		_, err := s.b.GetRoom(scope.New(), roomName)
-		if err != nil {
-			if err == proto.ErrRoomNotFound {
-				http.Error(w, "404 page not found", http.StatusNotFound)
+	roomName := mux.Vars(r)["room"]
+	_, err := s.b.GetRoom(scope.New(), roomName)
+	if err != nil {
+		if err == proto.ErrRoomNotFound {
+			if !s.allowRoomCreation {
+				s.serveErrorPage("room not found", http.StatusNotFound, w, r)
 				return
 			}
+		} else {
+			s.serveErrorPage(err.Error(), http.StatusInternalServerError, w, r)
+			return
 		}
 	}
-	s.serveGzippedFile(w, r, "room.html", false)
+	params := map[string]interface{}{"RoomName": roomName}
+	s.servePage("room.html", params, w, r)
 }
 
 func (s *Server) handleHomeStatic(w http.ResponseWriter, r *http.Request) {
-	s.serveGzippedFile(w, r, "home.html", false)
+	s.serveGzippedFile(w, r, "/pages/home.html", false)
 }
 
 func (s *Server) handleAboutStatic(w http.ResponseWriter, r *http.Request) {
 	if s.staticPath == "" || r.URL.Path == "" {
-		s.serveGzippedFile(w, r, "about.html", false)
+		s.servePage("about", nil, w, r)
 		return
 	}
-	s.serveGzippedFile(w, r, path.Clean(r.URL.Path)+".html", false)
+	s.servePage(path.Clean(r.URL.Path)[1:]+".html", nil, w, r)
 }
 
 func (s *Server) handleRobotsTxt(w http.ResponseWriter, r *http.Request) {
-	s.serveGzippedFile(w, r, "robots.txt", false)
+	s.serveGzippedFile(w, r, "/static/robots.txt", false)
 }
 
 func (s *Server) resolveRoom(ctx scope.Context, prefix, roomName string, client *proto.Client) (room proto.Room, err error) {
@@ -205,18 +214,56 @@ func (s *Server) serveRoomWebsocket(
 
 func (s *Server) handlePrefsVerify(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		s.serveErrorPage("bad request", http.StatusBadRequest, w, r)
 		return
 	}
 
-	email := r.Form.Get("email")
-	token, err := hex.DecodeString(r.Form.Get("token"))
+	switch r.Method {
+	case "GET":
+		confirmation := r.Form.Get("token")
+		email := r.Form.Get("email")
+		params := map[string]interface{}{
+			"confirmation": confirmation,
+			"email":        email,
+		}
+		s.servePage(VerifyEmailPage, params, w, r)
+	case "POST":
+		s.handlePrefsVerifyPost(w, r)
+	default:
+		s.serveErrorPage("invalid method", http.StatusMethodNotAllowed, w, r)
+	}
+}
+
+func (s *Server) handlePrefsVerifyPost(w http.ResponseWriter, r *http.Request) {
+	reply := func(err error, status int) {
+		data := struct {
+			Error string `json:"error,omitempty"`
+		}{}
+		if err != nil {
+			data.Error = err.Error()
+		}
+		w.WriteHeader(status)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(data)
+	}
+
+	var req struct {
+		Confirmation string `json:"confirmation"`
+		Email        string `json:"email"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		reply(err, http.StatusBadRequest)
+		return
+	}
+
+	email := req.Email
+	token, err := hex.DecodeString(req.Confirmation)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		reply(err, http.StatusBadRequest)
 		return
 	}
 	if email == "" || len(token) == 0 {
-		http.Error(w, "missing parameters", http.StatusBadRequest)
+		reply(fmt.Errorf("missing parameters"), http.StatusBadRequest)
 		return
 	}
 
@@ -227,7 +274,7 @@ func (s *Server) handlePrefsVerify(w http.ResponseWriter, r *http.Request) {
 		if err == proto.ErrAccountNotFound {
 			status = http.StatusNotFound
 		}
-		http.Error(w, err.Error(), status)
+		reply(err, status)
 		return
 	}
 
@@ -236,55 +283,87 @@ func (s *Server) handlePrefsVerify(w http.ResponseWriter, r *http.Request) {
 		if err == proto.ErrInvalidVerificationToken {
 			status = http.StatusForbidden
 		}
-		http.Error(w, err.Error(), status)
+		reply(err, status)
 		return
 	}
 
 	if err := s.b.AccountManager().VerifyPersonalIdentity(ctx, "email", email); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		reply(err, http.StatusInternalServerError)
 		return
 	}
 
-	// TODO: serve success template
-	w.Header().Set("Content-Type", "text/plain")
-	w.Write([]byte("ok"))
+	reply(nil, http.StatusOK)
 }
 
-func (s *Server) handleResetPassword(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handlePrefsResetPassword(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		s.serveErrorPage(err.Error(), http.StatusBadRequest, w, r)
 		return
 	}
 
 	switch r.Method {
 	case "GET":
-		// TODO: serve password reset template
-		w.Header().Set("Content-Type", "text/html")
-		fmt.Fprintf(w, `<form method="POST"><input type="hidden" name="confirmation" value="%s">`,
-			r.Form.Get("confirmation"))
-		fmt.Fprintf(w, `<input type="password" name="password"></form>`)
+		confirmation := r.Form.Get("confirmation")
+		ctx := s.rootCtx.Fork()
+		account, err := s.b.AccountManager().GetPasswordResetAccount(ctx, confirmation)
+		switch err {
+		case nil:
+			params := map[string]interface{}{
+				"confirmation": confirmation,
+				"email":        "unknown",
+			}
+			for _, pid := range account.PersonalIdentities() {
+				if pid.Namespace() == "email" {
+					params["email"] = pid.ID()
+					break
+				}
+			}
+			s.servePage(ResetPasswordPage, params, w, r)
+		case proto.ErrInvalidConfirmationCode:
+			s.serveErrorPage("invalid/expired confirmation code", http.StatusBadRequest, w, r)
+		default:
+			s.serveErrorPage(err.Error(), http.StatusInternalServerError, w, r)
+		}
 	case "POST":
-		s.handleResetPasswordPost(w, r)
+		s.handlePrefsResetPasswordPost(w, r)
 	default:
-		http.Error(w, "invalid method", http.StatusMethodNotAllowed)
+		s.serveErrorPage("invalid method", http.StatusMethodNotAllowed, w, r)
 	}
 }
 
-func (s *Server) handleResetPasswordPost(w http.ResponseWriter, r *http.Request) {
-	confirmation := r.PostForm.Get("confirmation")
-	password := r.PostForm.Get("password")
+func (s *Server) handlePrefsResetPasswordPost(w http.ResponseWriter, r *http.Request) {
+	reply := func(err error, status int) {
+		data := struct {
+			Error string `json:"error,omitempty"`
+		}{}
+		if err != nil {
+			data.Error = err.Error()
+		}
+		w.WriteHeader(status)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(data)
+	}
+
+	var req struct {
+		Password struct {
+			Text     string `json:"text"`
+			Strength string `json:"strength"`
+		} `json:"password"`
+		Confirmation string `json:"confirmation"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		reply(err, http.StatusBadRequest)
+		return
+	}
 
 	ctx := s.rootCtx.Fork()
-	if err := s.b.AccountManager().ConfirmPasswordReset(ctx, s.kms, confirmation, password); err != nil {
+	if err := s.b.AccountManager().ConfirmPasswordReset(ctx, s.kms, req.Confirmation, req.Password.Text); err != nil {
 		status := http.StatusInternalServerError
 		if err == proto.ErrInvalidConfirmationCode {
 			status = http.StatusBadRequest
 		}
-		http.Error(w, err.Error(), status)
-		return
+		reply(err, status)
+	} else {
+		reply(nil, http.StatusOK)
 	}
-
-	// TODO: serve success template
-	w.Header().Set("Content-Type", "text/plain")
-	w.Write([]byte("ok"))
 }

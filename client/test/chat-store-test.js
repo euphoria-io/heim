@@ -922,7 +922,7 @@ describe('chat store', () => {
         assert.equal(state.who.size, whoReply.data.listing.length)
         assert(Immutable.Iterable(whoReply.data.listing).every(user => {
           const whoEntry = state.who.get(user.session_id)
-          return !!whoEntry && whoEntry.isSuperset(Immutable.fromJS(user))
+          return !!whoEntry && whoEntry.get('present') && whoEntry.isSuperset(Immutable.fromJS(user))
         }))
         done()
       })
@@ -1111,6 +1111,7 @@ describe('chat store', () => {
     it('should add to user list', done => {
       handleSocket(joinEvent, state => {
         assert(state.who.get(joinEvent.data.session_id).isSuperset(Immutable.fromJS(joinEvent.data)))
+        assert.equal(state.who.get(joinEvent.data.session_id).get('present'), true)
         done()
       })
     })
@@ -1134,10 +1135,10 @@ describe('chat store', () => {
       },
     }
 
-    it('should remove from user list', done => {
+    it('should set non-present in user list', done => {
       handleSocket(whoReply, () => {
         handleSocket(partEvent, state => {
-          assert(!state.who.has(partEvent.data.session_id))
+          assert.equal(state.who.get(partEvent.data.session_id).get('present'), false)
           done()
         })
       })
@@ -1294,11 +1295,12 @@ describe('chat store', () => {
       },
     }
 
-    it('should remove all associated users from the user list', done => {
+    it('should set associated users non-present in the user list', done => {
       handleSocket(whoReply, () => {
         handleSocket(networkPartitionEvent, state => {
-          assert.equal(state.who.size, 1)
-          assert.equal(state.who.first().get('id'), whoReply.data.listing[2].id)
+          assert.equal(state.who.get(whoReply.data.listing[0].session_id).get('present'), false)
+          assert.equal(state.who.get(whoReply.data.listing[1].session_id).get('present'), false)
+          assert.equal(state.who.get(whoReply.data.listing[2].session_id).get('present'), true)
           done()
         })
       })

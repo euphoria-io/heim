@@ -3,6 +3,7 @@ package emails
 import (
 	"crypto/tls"
 	"fmt"
+	"net/mail"
 	"net/smtp"
 	"time"
 
@@ -59,11 +60,19 @@ func (s *SMTPDeliverer) Deliver(ctx scope.Context, ref *EmailRef) error {
 	if ref.SendFrom == "" {
 		ref.SendFrom = "noreply@" + s.localName
 	}
-	if err := c.Mail(ref.SendFrom); err != nil {
+	sendFrom, err := mail.ParseAddress(ref.SendFrom)
+	if err != nil {
+		return fmt.Errorf("%s: from address error: %s", s, err)
+	}
+	if err := c.Mail(sendFrom.Address); err != nil {
 		return fmt.Errorf("%s: mail error: %s", s, err)
 	}
 
-	if err := c.Rcpt(ref.SendTo); err != nil {
+	sendTo, err := mail.ParseAddress(ref.SendTo)
+	if err != nil {
+		return fmt.Errorf("%s: to address error: %s", s, err)
+	}
+	if err := c.Rcpt(sendTo.Address); err != nil {
 		return fmt.Errorf("%s: rcpt error: %s", s, err)
 	}
 

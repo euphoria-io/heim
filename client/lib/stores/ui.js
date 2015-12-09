@@ -7,12 +7,15 @@ import clamp from '../clamp'
 import actions from '../actions'
 import storage from './storage'
 import chat from './chat'
+import accountAuthFlow from './accountAuthFlow'
+import accountSettingsFlow from './accountSettingsFlow'
 import notification from './notification'
-import MessageData from '../message-data'
+import MessageData from '../MessageData'
 
 
 const storeActions = Reflux.createActions([
   'keydownOnPage',
+  'tabKeyCombo',
   'setUISize',
   'focusEntry',
   'focusPane',
@@ -37,15 +40,21 @@ const storeActions = Reflux.createActions([
   'globalMouseUp',
   'globalMouseMove',
   'toggleManagerMode',
-  'startMessageSelectionDrag',
-  'finishMessageSelectionDrag',
+  'startToolboxSelectionDrag',
+  'finishToolboxSelectionDrag',
   'openManagerToolbox',
   'closeManagerToolbox',
+  'notificationsNoticeChoice',
+  'dismissNotice',
+  'openAccountAuthDialog',
+  'openAccountSettingsDialog',
+  'closeDialog',
 ])
 _.extend(module.exports, storeActions)
 
 // sync to allow entry to preventDefault keydown events
 storeActions.keydownOnPage.sync = true
+storeActions.tabKeyCombo.sync = true
 
 // sync so UI mode changes don't flicker on load
 storeActions.setUISize.sync = true
@@ -299,8 +308,11 @@ const store = module.exports.store = Reflux.createStore({
       threadPopupAnchorEl: null,
       managerMode: false,
       managerToolboxAnchorEl: null,
-      draggingMessageSelection: false,
-      draggingMessageSelectionToggle: null,
+      draggingToolboxSelection: false,
+      draggingToolboxSelectionToggle: null,
+      notices: Immutable.OrderedSet(),
+      notificationsNoticeDismissed: false,
+      modalDialog: null,
     }
 
     this.threadData = new MessageData({selected: false})
@@ -318,15 +330,32 @@ const store = module.exports.store = Reflux.createStore({
     }
     this.state.infoPaneExpanded = _.get(data, ['room', this.chatState.roomName, 'infoPaneExpanded'], false)
     this.state.sidebarPaneExpanded = _.get(data, ['room', this.chatState.roomName, 'sidebarPaneExpanded'], true)
+    this.state.notificationsNoticeDismissed = _.get(data, ['room', this.chatState.roomName, 'notificationsNoticeDismissed'], false)
+    this._updateNotices()
     this.trigger(this.state)
   },
 
   chatChange(state) {
+    if (!state.account && this.state.modalDialog === 'account-settings') {
+      this.closeDialog()
+    }
+
     this.chatState = state
+    this._updateNotices()
+    this.trigger(this.state)
   },
 
   notificationChange(state) {
     this.notificationState = state
+  },
+
+  _updateNotices() {
+    const notifications = this.chatState.joined && this.chatState.nick && !this.state.notificationsNoticeDismissed
+    if (notifications) {
+      this.state.notices = this.state.notices.add('notifications')
+    } else {
+      this.state.notices = this.state.notices.delete('notifications')
+    }
   },
 
   setUISize(width, height) {
@@ -493,7 +522,7 @@ const store = module.exports.store = Reflux.createStore({
           lastFocusedPane.blurEntry()
         }
         if (!Heim.isTouch) {
-          this.state.panes.get(id).focusEntry()
+          this.focusEntry()
         }
       })
     })
@@ -536,7 +565,9 @@ const store = module.exports.store = Reflux.createStore({
   },
 
   focusEntry(character) {
-    this._focusedPane().focusEntry(character)
+    if (!this.state.modalDialog) {
+      this._focusedPane().focusEntry(character)
+    }
   },
 
   onViewPan(target) {
@@ -561,7 +592,25 @@ const store = module.exports.store = Reflux.createStore({
   },
 
   keydownOnPage(ev) {
-    this._focusedPane().keydownOnPane(ev)
+    if (this.state.modalDialog) {
+      if (ev.key === 'Escape') {
+        this.closeDialog()
+      }
+      return
+    }
+
+    if (Heim.tabPressed) {
+      storeActions.tabKeyCombo(ev)
+    } else {
+      this._focusedPane().keydownOnPane(ev)
+      // FIXME: this is a hack to detect whether a KeyboardActionHandler hasn't
+      // triggered, and default to focusing the entry if no text is currently
+      // selected (so we don't disrupt ctrl-c). this should be cleaned up with
+      // an overhaul of the keyboard focus / combo handling code.
+      if (!ev.isPropagationStopped() && uiwindow.getSelection().isCollapsed) {
+        this.focusEntry()
+      }
+    }
   },
 
   gotoMessageInPane(messageId) {
@@ -616,14 +665,46 @@ const store = module.exports.store = Reflux.createStore({
     this.trigger(this.state)
   },
 
-  startMessageSelectionDrag(toggleState) {
-    this.state.draggingMessageSelection = true
-    this.state.draggingMessageSelectionToggle = toggleState
+  startToolboxSelectionDrag(toggleState) {
+    this.state.draggingToolboxSelection = true
+    this.state.draggingToolboxSelectionToggle = toggleState
     this.trigger(this.state)
   },
 
-  finishMessageSelectionDrag() {
-    this.state.draggingMessageSelection = false
+  finishToolboxSelectionDrag() {
+    this.state.draggingToolboxSelection = false
+    this.trigger(this.state)
+  },
+
+  notificationsNoticeChoice(choice) {
+    notification.enablePopups()
+    notification.setRoomNotificationMode(this.chatState.roomName, choice)
+    this.dismissNotice('notifications')
+  },
+
+  dismissNotice(name) {
+    if (name === 'notifications') {
+      storage.setRoom(this.chatState.roomName, 'notificationsNoticeDismissed', true)
+    }
+  },
+
+  openAccountAuthDialog() {
+    this.state.modalDialog = 'account-auth'
+    this.trigger(this.state)
+  },
+
+  openAccountSettingsDialog() {
+    this.state.modalDialog = 'account-settings'
+    this.trigger(this.state)
+  },
+
+  closeDialog() {
+    if (this.state.modalDialog === 'account-auth') {
+      accountAuthFlow.reset()
+    } else if (this.state.modalDialog === 'account-settings') {
+      accountSettingsFlow.reset()
+    }
+    this.state.modalDialog = null
     this.trigger(this.state)
   },
 })

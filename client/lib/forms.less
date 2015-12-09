@@ -1,0 +1,239 @@
+@import "defs.less";
+
+
+.line-button(@color) {
+  position: relative;
+  color: @color;
+  font-weight: bold;
+  background: linear-gradient(to bottom, fade(@color, 0%) 0%, fade(@color, 35%) 0%) repeat-x;
+  background-size: 1px 1px;
+  background-position: 0 1.1em;
+  .touchable-custom({
+    color: black;
+  });
+
+  transition: color .25s ease;
+
+  .larger-target(10px, 10px);
+
+  &:focus {
+    color: mix(@color, black, 15%);
+    background: fade(@account-color, 20%);
+    border-radius: 3px;
+  }
+
+  &:disabled {
+    opacity: .5;
+    pointer-events: none;
+  }
+}
+
+.fill-button(@color) {
+  @bgcolor: mix(lighten(@color, 5%), white, 30%);
+  .raised-filled-button(@bgcolor);
+  color: @color;
+  padding: 10px 26px;
+
+  // prevent other properties from transitioning (such as when form switches into forgot password mode)
+  transition:
+    background .15s ease,
+    box-shadow .15s ease,
+    transform .15s ease,
+    opacity .15s ease;
+
+  &:focus {
+    background: darken(@bgcolor, 10%);
+  }
+
+  &:disabled {
+    opacity: .5;
+    pointer-events: none;
+  }
+}
+
+button.minor-action {
+  .line-button(@account-color);
+}
+
+button.minor-secondary-action {
+  .line-button(fade(black, 65%));
+  opacity: .65;
+
+  &.highlight {
+    opacity: 1;
+  }
+}
+
+button.major-action {
+  .fill-button(@account-color);
+}
+
+button.major-secondary-action {
+  .fill-button(#666);
+}
+
+.fields {
+  .field-label-container {
+    position: relative;
+    display: block;
+    margin: 15px 0;
+
+    .label {
+      font-size: .85rem;
+      margin-bottom: 5px;
+    }
+
+    &, .message, &:before {
+      transition: opacity .1s ease, color .1s ease;
+    }
+
+    .icon('../res/error.svg', 40px, 0, 0);
+    &:before {
+      position: absolute;
+      bottom: 0;
+      right: 2px;
+      background-size: 26px;
+    }
+
+    .message {
+      position: absolute;
+      top: 0;
+      right: 0;
+      opacity: 0;
+    }
+
+    &.error {
+      .message, &:before {
+        opacity: 1;
+      }
+    }
+  }
+
+  .field-action-box {
+    display: flex;
+    align-items: center;
+    background: fade(black, 4%);
+    padding: 5px;
+
+    button {
+      box-shadow: none;
+      padding: 7px 15px;
+    }
+
+    .inner {
+      font-size: 1.15rem;
+      margin: 5px;
+    }
+  }
+
+  .field-action-box, .text-field input {
+    border-radius: 3px;
+    box-shadow: 0 0 5px fade(black, 35%);
+  }
+
+  .text-field {
+    input {
+      display: block;
+      width: 100%;
+      border: 0;
+      padding: 10px;
+      font-size: 1.15rem;
+      box-sizing: border-box;
+
+      &:focus {
+        box-shadow: 0 0 8px fade(saturate(@account-color, 95%), 55%);
+      }
+
+      &:disabled {
+        background: white;
+      }
+    }
+
+    &.error {
+      input {
+        box-shadow: 0 0 8px fade(@error-color, 70%);
+        padding-right: 44px;
+      }
+    }
+
+    &.password-field {
+      .message {
+        opacity: 1;
+      }
+
+      &:not(.error) {
+        &.weak .message {
+          color: #8e7f52;
+        }
+      }
+    }
+  }
+
+  .check-field {
+    @size: 20px;
+    position: relative;
+    display: block;
+    margin: 15px 0;
+    padding-left: @size + 10px;
+    line-height: @size;
+
+    input[type="checkbox"] {
+      // keep visible so that tabIndex works.
+      position: absolute;
+      left: -9999px;
+    }
+
+    input[type="checkbox"] + label {
+      &:after {
+        content: '';
+        display: inline-block;
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: @size;
+        height: @size;
+        background: white;
+        box-shadow: 0 0 5px fade(black, 35%);
+        border-radius: 2px;
+        cursor: pointer;
+        transition: box-shadow .1s ease;
+      }
+
+      .icon('../res/check.svg', 23px);
+      &:before {
+        position: absolute;
+        left: 1px;
+        top: -3px;
+        cursor: pointer;
+        z-index: 10;
+        opacity: 0;
+        transition: opacity .1s ease;
+      }
+    }
+
+    input[type="checkbox"]:focus + label {
+      &:after {
+        box-shadow: 0 0 8px fade(saturate(@account-color, 95%), 70%);
+      }
+    }
+
+    input[type="checkbox"]:checked + label {
+      &:before {
+        opacity: 1;
+      }
+    }
+
+    a {
+      color: @account-color;
+      font-weight: bold;
+    }
+  }
+
+  .message {
+    font-size: .85rem;
+  }
+
+  .error .message, .message.error {
+    color: darken(@error-color, 5%);
+  }
+}
