@@ -24,6 +24,10 @@ func (et *EmailTracker) Send(
 	account proto.Account, to, templateName string, data interface{}) (
 	*emails.EmailRef, error) {
 
+	if to == "" {
+		to, _ = account.Email()
+	}
+
 	sf, err := snowflake.New()
 	if err != nil {
 		return nil, err

@@ -420,6 +420,9 @@ func (b *AccountManagerBinding) Register(
 		EncryptedPrivateKey: sec.KeyPair.EncryptedPrivateKey,
 		PublicKey:           sec.KeyPair.PublicKey,
 	}
+	if namespace == "email" {
+		account.Email = id
+	}
 	personalIdentity := &PersonalIdentity{
 		Namespace: namespace,
 		ID:        id,
