@@ -1372,20 +1372,36 @@ func testAccountChangeEmail(s *serverUnderTest) {
 	nonce := fmt.Sprintf("%s", time.Now())
 	logan, _, err := s.Account(ctx, kms, "email", "logan"+nonce, "loganpass")
 	So(err, ShouldBeNil)
-	c := s.Connect("changeemail")
-	c.expectPing()
-	c.expectSnapshot(s.backend.Version(), nil, nil)
-	c.send("1", "login", `{"namespace":"email","id":"logan%s","password":"loganpass"}`, nonce)
-	c.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, logan.ID())
-	c = s.Reconnect(c)
-	c.expectPing()
-	c.expectSnapshot(s.backend.Version(), nil, nil)
-	defer c.Close()
+
+	counter := 0
+	login := func() *testConn {
+		counter++
+		c := s.Connect(fmt.Sprintf("changeemail%d", counter))
+		c.expectPing()
+		c.expectSnapshot(s.backend.Version(), nil, nil)
+		c.send("1", "login", `{"namespace":"email","id":"logan%s","password":"loganpass"}`, nonce)
+		c.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, logan.ID())
+		counter++
+		c = s.Reconnect(c, fmt.Sprintf("changeemail%d", counter))
+		c.expectPing()
+		c.expectSnapshot(s.backend.Version(), nil, nil)
+		return c
+	}
+
+	Convey("Require correct password to change email", func() {
+		c := login()
+		c.send("2", "change-email", `{"email":"logan2%s","password":"wrongpass"}`, nonce)
+		c.expectError("2", "change-email-reply", "access denied")
+		c.Close()
+	})
 
 	Convey("Change email to unverified address", func() {
 		inbox := s.app.heim.MockDeliverer().Inbox("logan2" + nonce)
-		c.send("2", "change-email", `{"email":"logan2%s"}`, nonce)
-		c.expect("2", "change-email-reply", `{"verification_needed":true}`)
+
+		c := login()
+		c.send("3", "change-email", `{"email":"logan2%s","password":"loganpass"}`, nonce)
+		c.expect("3", "change-email-reply", `{"verification_needed":true}`)
+		c.Close()
 
 		// Receive verification token in email.
 		msg := receiveEmail(inbox)
@@ -1454,12 +1470,10 @@ func testAccountChangeEmail(s *serverUnderTest) {
 		So(email, ShouldEqual, "logan2"+nonce)
 		So(verified, ShouldBeTrue)
 
-		c.Close()
-		c = s.Reconnect(c)
-		c.expectPing()
-		c.expectSnapshot(s.backend.Version(), nil, nil)
-		c.send("1", "change-email", `{"email":"logan%s"}`, nonce)
+		c := login()
+		c.send("1", "change-email", `{"email":"logan%s","password":"loganpass"}`, nonce)
 		c.expect("1", "change-email-reply", `{"verification_needed":false}`)
+		c.Close()
 
 		a, err = am.Get(ctx, logan.ID())
 		So(err, ShouldBeNil)
@@ -1475,17 +1489,18 @@ func testAccountChangeEmail(s *serverUnderTest) {
 		other, _, err := s.Account(ctx, kms, "email", "other"+nonce, "otherpass")
 		So(err, ShouldBeNil)
 
-		o := s.Connect("changeemail")
+		o := s.Connect("changeemailother1")
 		o.expectPing()
 		o.expectSnapshot(s.backend.Version(), nil, nil)
 		o.send("1", "login", `{"namespace":"email","id":"other%s","password":"otherpass"}`, nonce)
 		o.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, other.ID())
-		o = s.Reconnect(o)
-		defer o.Close()
+		o.Close()
+		o = s.Reconnect(o, "changeemailother2")
 		o.expectPing()
 		o.expectSnapshot(s.backend.Version(), nil, nil)
-		o.send("1", "change-email", `{"email":"logan%s"}`, nonce)
+		o.send("1", "change-email", `{"email":"logan%s","password":"otherpass"}`, nonce)
 		o.expectError("1", "change-email-reply", "personal identity already in use")
+		o.Close()
 	})
 }
 

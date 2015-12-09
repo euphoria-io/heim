@@ -288,7 +288,8 @@ type EditMessageCommand struct {
 // the signed in account. The email address may need to be verified before the
 // change is fully applied.
 type ChangeEmailCommand struct {
-	Email string `json:"email"` // the new primary email address for the account
+	Email    string `json:"email"`    // the new primary email address for the account
+	Password string `json:"password"` // the account's password
 }
 
 // The `change-email-reply` packet indicates that the primary email address has

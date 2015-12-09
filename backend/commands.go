@@ -483,6 +483,9 @@ func (s *session) handleChangeEmailCommand(msg *proto.ChangeEmailCommand) *respo
 	if s.client.Account == nil {
 		return &response{err: proto.ErrNotLoggedIn}
 	}
+	if _, err := s.client.Account.Unlock(s.client.Account.KeyFromPassword(msg.Password)); err != nil {
+		return &response{err: err}
+	}
 	verified, err := s.backend.AccountManager().ChangeEmail(s.ctx, s.client.Account.ID(), msg.Email)
 	if err != nil {
 		return &response{err: err}
