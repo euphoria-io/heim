@@ -69,35 +69,56 @@ module.exports.store = Reflux.createStore({
 
   _updateSelection(startState, chatState) {
     let state = startState
-    if (chatState.selectedMessages.size) {
-      state = state.set('items',
-        chatState.selectedMessages
-          .toSeq()
-          .map(id => {
-            const message = chatState.messages.get(id)
-            if (!message || !message.get('$count')) {
-              return false
-            }
 
-            const sender = message.get('sender')
-            const senderId = sender.get('id')
-            return Immutable.fromJS([
-              {
-                kind: 'message',
-                id: id,
-                removed: !!message.get('deleted'),
-              },
-              {
-                kind: 'user',
-                id: senderId,
-                name: sender.get('name'),
-                removed: chatState.bannedIds.has(senderId),
-              },
-            ])
-          })
-          .filter(Boolean)
-          .flatten(1)
-          .toSet()
+    const messageItems = chatState.selectedMessages
+      .toSeq()
+      .map(id => {
+        const message = chatState.messages.get(id)
+        if (!message || !message.get('$count')) {
+          return false
+        }
+
+        const sender = message.get('sender')
+        const senderId = sender.get('id')
+        return Immutable.fromJS([
+          {
+            kind: 'message',
+            id: id,
+            removed: !!message.get('deleted'),
+          },
+          {
+            kind: 'user',
+            id: senderId,
+            name: sender.get('name'),
+            removed: chatState.bannedIds.has(senderId),
+          },
+        ])
+      })
+      .filter(Boolean)
+      .flatten(1)
+      .toSet()
+
+    const userItems = chatState.selectedUsers
+      .map(sessionId => {
+        const userInfo = chatState.who.get(sessionId)
+        if (!userInfo) {
+          return false
+        }
+
+        const userId = userInfo.get('id')
+        return Immutable.Map({
+          kind: 'user',
+          id: userId,
+          name: userInfo.get('name'),
+          removed: chatState.bannedIds.has(userId),
+        })
+      })
+      .filter(Boolean)
+
+    if (messageItems.size || userItems.size) {
+      state = state.set('items',
+        messageItems
+          .union(userItems)
           .sortBy(item => [!item.get('removed'), item.get('kind')])
       )
       state = this._updateFilter(state)

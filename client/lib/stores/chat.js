@@ -21,6 +21,7 @@ const storeActions = module.exports.actions = Reflux.createActions([
   'setRoomSettings',
   'markMessagesSeen',
   'setMessageSelected',
+  'setUserSelected',
   'deselectAll',
   'editMessage',
   'banUser',
@@ -73,6 +74,7 @@ module.exports.store = Reflux.createStore({
       who: Immutable.Map(),
       bannedIds: Immutable.Set(),
       selectedMessages: Immutable.Set(),
+      selectedUsers: Immutable.Set(),
     }
 
     this.socket = null
@@ -181,6 +183,7 @@ module.exports.store = Reflux.createStore({
       if (!ev.error) {
         this.state.who = this.state.who
           .mergeIn([ev.data.session_id], {
+            id: ev.data.id,
             session_id: ev.data.session_id,
             name: ev.data.to,
             hue: hueHash.hue(ev.data.to),
@@ -520,9 +523,15 @@ module.exports.store = Reflux.createStore({
     this.trigger(this.state)
   },
 
+  setUserSelected(id, value) {
+    this.state.selectedUsers = this.state.selectedUsers[value ? 'add' : 'delete'](id)
+    this.trigger(this.state)
+  },
+
   deselectAll() {
     this.state.messages.mergeNodes(this.state.selectedMessages.toArray(), {_selected: false})
     this.state.selectedMessages = this.state.selectedMessages.clear()
+    this.state.selectedUsers = this.state.selectedUsers.clear()
     this.trigger(this.state)
   },
 

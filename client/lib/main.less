@@ -1672,6 +1672,16 @@ iframe.js {
     background: fade(@manager-color, 45%) !important;
     border-radius: 4px;
   }
+
+  .user-list .nick {
+    cursor: pointer;
+    user-select: none;
+
+    &.selected {
+      background: fade(@manager-color, 45%) !important;
+      font-weight: bold;
+    }
+  }
 }
 
 .replies.collapsed, .expand-rest, .message-node .content, .thread-list, .notification-list {

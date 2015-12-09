@@ -266,7 +266,7 @@ export default React.createClass({
       snapPoints.sidebar = -150
     }
 
-    const selectedMessageCount = this.state.chat.selectedMessages.size
+    const selectedThingCount = this.state.chat.selectedMessages.size + this.state.chat.selectedUsers.size
     // lazy load manager toolbox ui (and store)
     const ManagerToolbox = this.state.ui.managerMode && require('./ManagerToolbox').default
 
@@ -275,7 +275,7 @@ export default React.createClass({
         <Panner ref="panner" id="ui-panes" snapPoints={snapPoints} onMove={ui.onViewPan} className={classNames({'info-pane-hidden': infoPaneHidden, 'sidebar-pane-hidden': sidebarPaneHidden, 'info-pane-focused': this.state.ui.focusedPane === this.state.ui.popupPane, 'manager-mode': this.state.ui.managerMode})} onMouseDownCapture={this.onMouseDown} onClickCapture={this.onClick} onTouchMove={this.onTouchMove}>
           {this.state.storage && this.state.storage.useOpenDyslexic && <link rel="stylesheet" type="text/css" id="css" href="/static/od.css" />}
           <div className="info-pane" onMouseEnter={ui.freezeInfo} onMouseLeave={ui.thawInfo}>
-            {this.state.ui.managerMode && <FastButton ref="toolboxButton" className={classNames('toolbox-button', {'empty': !this.state.chat.selectedMessages.size, 'selected': !!this.state.ui.managerToolboxAnchorEl})} onClick={this.state.ui.managerToolboxAnchorEl ? ui.closeManagerToolbox : this.openManagerToolbox}>toolbox {selectedMessageCount > -1 && <span className="count">{selectedMessageCount} selected</span>}</FastButton>}
+            {this.state.ui.managerMode && <FastButton ref="toolboxButton" className={classNames('toolbox-button', {'empty': !this.state.chat.selectedMessages.size, 'selected': !!this.state.ui.managerToolboxAnchorEl})} onClick={this.state.ui.managerToolboxAnchorEl ? ui.closeManagerToolbox : this.openManagerToolbox}>toolbox {selectedThingCount > -1 && <span className="count">{selectedThingCount} selected</span>}</FastButton>}
             {this.state.chat.connected && <div className="account-area"><AccountButton ref="accountButton" account={this.state.chat.account} onOpenAccountAuthDialog={ui.openAccountAuthDialog} onOpenAccountSettingsDialog={ui.openAccountSettingsDialog} /></div>}
             <h2>discussions</h2>
             <div className="thread-list-container">
@@ -318,7 +318,7 @@ export default React.createClass({
             </div>
           </div>
           {(thin || this.state.ui.sidebarPaneExpanded) && <div className="sidebar-pane">
-            <UserList users={this.state.chat.who} />
+            <UserList users={this.state.chat.who} selected={this.state.chat.selectedUsers} />
             {this.templateHook('main-sidebar')}
           </div>}
           {!thin && <div className="thread-panes" style={{flex: threadPanesFlex, WebkitFlex: threadPanesFlex}}>
