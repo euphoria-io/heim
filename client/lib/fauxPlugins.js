@@ -606,4 +606,39 @@ export default function initPlugins(roomName) {
       )
     })
   }
+
+  if (roomName === 'xkcd') {
+    Heim.hook('main-pane-top', () => {
+      return (
+        <div key="xkcd-top-bar" className="secondary-top-bar"><span className="motto" title="If problems arise, throw bots at them until they resolve.">Ita in qu&aelig;stiones machin&aelig; loquendi iaciantur ut solvent.</span></div>
+      )
+    })
+
+    Heim.hook('page-bottom', () => {
+      return (
+        <style key="xkcd-top-style" dangerouslySetInnerHTML={{__html: `
+          .secondary-top-bar {
+            color: black;
+            background: white;
+            padding: 0.25em;
+            text-align: center;
+            box-shadow: 0 0 8px rgba(0, 0, 0, 0.25);
+            z-index: 10;
+          }
+
+          .motto {
+            font-family: "Droid Serif", Georgia, serif;
+            text-transform: uppercase;
+          }
+
+          .motto::before {
+            content: "~ ";
+          }
+          .motto::after {
+            content: " ~";
+          }
+        `}} />
+      )
+    })
+  }
 }
