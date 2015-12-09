@@ -176,6 +176,10 @@ func (m *accountManager) Register(
 		return nil, nil, err
 	}
 
+	if namespace == "email" {
+		account.(*memAccount).email = id
+	}
+
 	if m.b.accounts == nil {
 		m.b.accounts = map[snowflake.Snowflake]proto.Account{account.ID(): account}
 	} else {

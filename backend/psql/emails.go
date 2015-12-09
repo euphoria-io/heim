@@ -87,6 +87,10 @@ func (et *EmailTracker) Send(
 	account proto.Account, to, templateName string, data interface{}) (
 	*emails.EmailRef, error) {
 
+	if to == "" {
+		to, _ = account.Email()
+	}
+
 	// choose a Message-ID
 	sf, err := snowflake.New()
 	if err != nil {

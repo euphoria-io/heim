@@ -1413,7 +1413,7 @@ func testAccountChangeEmail(s *serverUnderTest) {
 		account, err := s.backend.AccountManager().Resolve(ctx, "email", "logan2"+nonce)
 		So(err, ShouldBeNil)
 		email, verified := account.Email()
-		So(email, ShouldEqual, "")
+		So(email, ShouldEqual, "logan"+nonce)
 		So(verified, ShouldBeFalse)
 		found := false
 		for _, pid := range account.PersonalIdentities() {
