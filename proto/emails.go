@@ -36,8 +36,8 @@ type CommonEmailParams struct {
 	EmailDomain   string `yaml:"email_domain"`
 	SiteName      string `yaml:"site_name"`
 	SiteURL       string `yaml:"site_url"`
-	HelpAddress   string `yaml:"help_address"`
-	SenderAddress string `yaml:"sender_address"`
+	HelpAddress   template.HTML `yaml:"help_address"`
+	SenderAddress template.HTML `yaml:"sender_address"`
 }
 
 func (p *CommonEmailParams) SiteURLShort() template.HTML {
