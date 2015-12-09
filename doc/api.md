@@ -13,6 +13,7 @@
     * [send](#send)
     * [who](#who)
   * [Account Management](#account-management)
+    * [change-email](#change-email)
     * [change-name](#change-name)
     * [change-password](#change-password)
     * [login](#login)
@@ -533,6 +534,36 @@ This packet has no fields.
 These commands enable a client to register, associate, and dissociate with an account.
 An account allows an identity to be shared across browsers and devices, and is a
 prerequisite for room management.
+
+### change-email
+
+The `change-email` command changes the primary email address associated with
+the signed in account. The email address may need to be verified before the
+change is fully applied.
+
+
+| Field | Type | Required? | Description |
+| :-- | :-- | :-- | :--------- |
+| `email` | [string](#string) | required |  the new primary email address for the account |
+| `password` | [string](#string) | required |  the account's password |
+
+
+
+
+
+The `change-email-reply` packet indicates that the primary email address has
+been changed.
+
+
+| Field | Type | Required? | Description |
+| :-- | :-- | :-- | :--------- |
+| `verification_needed` | [bool](#bool) | required |  if true, a verification email will be sent out, and the user must verify the address before it becomes their primary address |
+
+
+
+
+
+
 
 ### change-name
 
