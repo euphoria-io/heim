@@ -183,6 +183,7 @@ module.exports.store = Reflux.createStore({
       if (!ev.error) {
         this.state.who = this.state.who
           .mergeIn([ev.data.session_id], {
+            present: true,
             id: ev.data.id,
             session_id: ev.data.session_id,
             name: ev.data.to,
@@ -190,15 +191,22 @@ module.exports.store = Reflux.createStore({
           })
       }
     } else if (ev.type === 'join-event') {
+      ev.data.present = true
       ev.data.hue = hueHash.hue(ev.data.name)
       this.state.who = this.state.who
         .set(ev.data.session_id, Immutable.fromJS(ev.data))
     } else if (ev.type === 'part-event') {
-      this.state.who = this.state.who.delete(ev.data.session_id)
+      this.state.who = this.state.who
+        .mergeIn([ev.data.session_id], {
+          present: false,
+        })
     } else if (ev.type === 'network-event' && ev.data.type === 'partition') {
       const id = ev.data.server_id
       const era = ev.data.server_era
-      this.state.who = this.state.who.filterNot(v => v.get('server_id') === id && v.get('server_era') === era)
+      this.state.who = this.state.who.map(v => {
+        const gone = v.get('server_id') === id && v.get('server_era') === era
+        return gone ? v.set('present', false) : v
+      })
     } else if (ev.type === 'ban-reply') {
       if (!ev.error) {
         this.state.bannedIds = this.state.bannedIds.add(ev.data.id)
@@ -332,6 +340,7 @@ module.exports.store = Reflux.createStore({
     this.state.who = Immutable.OrderedMap(
       Immutable.Seq(data.listing)
         .map(user => {
+          user.present = true
           user.hue = hueHash.hue(user.name)
           return [user.session_id, Immutable.Map(user)]
         })
