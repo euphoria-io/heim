@@ -1373,15 +1373,13 @@ func testAccountChangeEmail(s *serverUnderTest) {
 	logan, _, err := s.Account(ctx, kms, "email", "logan"+nonce, "loganpass")
 	So(err, ShouldBeNil)
 
-	counter := 0
 	login := func() *testConn {
-		counter++
-		c := s.Connect(fmt.Sprintf("changeemail%d", counter))
+		counter := time.Now().UnixNano()
+		c := s.Connect(fmt.Sprintf("changeemaillogin%d", counter))
 		c.expectPing()
 		c.expectSnapshot(s.backend.Version(), nil, nil)
 		c.send("1", "login", `{"namespace":"email","id":"logan%s","password":"loganpass"}`, nonce)
 		c.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, logan.ID())
-		counter++
 		c = s.Reconnect(c, fmt.Sprintf("changeemail%d", counter))
 		c.expectPing()
 		c.expectSnapshot(s.backend.Version(), nil, nil)
