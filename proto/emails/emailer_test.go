@@ -6,9 +6,9 @@ import (
 	"html/template"
 	"io"
 	"io/ioutil"
+	"mime"
 	"mime/multipart"
 	"net/textproto"
-	"strings"
 	"testing"
 
 	"euphoria.io/heim/templates"
@@ -23,12 +23,11 @@ func parseEmail(data []byte) *templates.Email {
 	So(err, ShouldBeNil)
 
 	So(h.Get("Mime-Version"), ShouldEqual, "1.0")
-	ctype := h.Get("Content-Type")
-	So(ctype, ShouldStartWith, "multipart/alternative;")
-	So(ctype, ShouldEndWith, `"`)
-	idx := strings.Index(ctype, `boundary="`)
-	So(idx, ShouldBeGreaterThan, -1)
-	mpr := multipart.NewReader(r, ctype[idx+len(`boundary="`):len(ctype)-1])
+	contentType, contentParams, err := mime.ParseMediaType(h.Get("Content-Type"))
+	So(err, ShouldBeNil)
+	So(contentType, ShouldEqual, "multipart/alternative")
+	boundary := contentParams["boundary"]
+	mpr := multipart.NewReader(r, boundary)
 
 	part, err := mpr.NextPart()
 	So(err, ShouldBeNil)
@@ -57,13 +56,9 @@ func parseEmail(data []byte) *templates.Email {
 		So(err, ShouldBeNil)
 
 		contentID := part.Header.Get("Content-ID")
-		disposition := part.Header.Get("Content-Disposition")
-		idx = strings.Index(disposition, `filename="`)
-		So(idx, ShouldBeGreaterThan, -1)
-		filename := disposition[idx+len(`filename="`):]
-		idx = strings.IndexRune(filename, '"')
-		So(idx, ShouldBeGreaterThan, -1)
-		filename = filename[:idx]
+		_, dispositionParams, err := mime.ParseMediaType(h.Get("Content-Disposition"))
+		So(err, ShouldBeNil)
+		filename := dispositionParams["filename"]
 		content, err := ioutil.ReadAll(part)
 		So(err, ShouldBeNil)
 

@@ -5,11 +5,11 @@ import (
 	"bytes"
 	"encoding/base64"
 	"io/ioutil"
+	"mime"
 	"mime/multipart"
 	"net/textproto"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
@@ -68,19 +68,15 @@ func TestEmail(t *testing.T) {
 		So(n, ShouldEqual, buf.Len())
 
 		header, content := splitEmail(buf.Bytes())
-		ctype := header.Get("Content-Type")
-		So(ctype, ShouldStartWith, "multipart/alternative")
-		So(ctype, ShouldEndWith, `"`)
-		idx := strings.Index(ctype, `boundary="`)
-		So(idx, ShouldBeGreaterThan, 0)
-		boundary := ctype[idx+len(`boundary="`) : len(ctype)-1]
-
 		So(header, ShouldResemble, textproto.MIMEHeader{
 			"Subject":      []string{"test"},
 			"Mime-Version": []string{"1.0"},
 			"Content-Type": []string{header.Get("Content-Type")},
 		})
-
+		contentType, contentParams, err := mime.ParseMediaType(header.Get("Content-Type"))
+		So(err, ShouldBeNil)
+		So(contentType, ShouldEqual, "multipart/alternative")
+		boundary := contentParams["boundary"]
 		mpr := multipart.NewReader(bytes.NewReader(content), boundary)
 
 		// Verify text part.
