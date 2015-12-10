@@ -68,6 +68,45 @@ func (e *Email) WriteTo(w io.Writer) (int64, error) {
 		return wc.n, fmt.Errorf("close text part: %s", err)
 	}
 
+	// Write top-level HTML multipart/related headers.
+
+	// Chicken-and-egg: we need the inner multipart boundary to write the outer
+	// part headers, but we can't get the boundary until we've constructed
+	// multipart.Writer with a part writer. We'll generate the boundary ahead
+	// of time and then manually supply it to the inner multipart.Writer.
+	htmlRelatedBoundary := multipart.NewWriter(nil).Boundary()
+
+	htmlRelatedHeader := textproto.MIMEHeader{}
+	htmlRelatedHeader.Set("Content-Type", fmt.Sprintf(`multipart/related; boundary="%s"`, htmlRelatedBoundary))
+	htmlRelatedHeader.Set("MIME-Version", "1.0")
+	pw, err = mpw.CreatePart(htmlRelatedHeader)
+	if err != nil {
+		return wc.n, fmt.Errorf("create html multipart part: %s", err)
+	}
+
+	// Create inner multipart data for HTML with attachments.
+	htmlmpw := multipart.NewWriter(pw)
+	htmlmpw.SetBoundary(htmlRelatedBoundary)
+	if err != nil {
+		return wc.n, fmt.Errorf("set html multipart boundary: %s", err)
+	}
+
+	// Write html part.
+	htmlHeader := textproto.MIMEHeader{}
+	htmlHeader.Set("Content-Type", `text/html; charset="utf-8"`)
+	htmlHeader.Set("Content-Transfer-Encoding", "quoted-printable")
+	htmlpw, err := htmlmpw.CreatePart(htmlHeader)
+	if err != nil {
+		return wc.n, fmt.Errorf("create html part: %s", err)
+	}
+	qpw = quotedprintable.NewWriter(htmlpw)
+	if _, err := qpw.Write(e.HTML); err != nil {
+		return wc.n, fmt.Errorf("write html part: %s", err)
+	}
+	if err := qpw.Close(); err != nil {
+		return wc.n, fmt.Errorf("close html part: %s", err)
+	}
+
 	// Write attachments.
 	for _, att := range e.Attachments {
 		attHeader := textproto.MIMEHeader{}
@@ -75,11 +114,11 @@ func (e *Email) WriteTo(w io.Writer) (int64, error) {
 		attHeader.Set("Content-Type", mime.TypeByExtension(filepath.Ext(att.Name)))
 		attHeader.Set("Content-Transfer-Encoding", "base64")
 		attHeader.Set("Content-Disposition", fmt.Sprintf(`inline; filename="%s"`, att.Name))
-		pw, err := mpw.CreatePart(attHeader)
+		htmlpw, err := htmlmpw.CreatePart(attHeader)
 		if err != nil {
 			return wc.n, fmt.Errorf("create attachment %s: %s", att.Name, err)
 		}
-		b64w := base64.NewEncoder(base64.StdEncoding, pw)
+		b64w := base64.NewEncoder(base64.StdEncoding, htmlpw)
 		if _, err := b64w.Write(att.Content); err != nil {
 			return wc.n, fmt.Errorf("write attachment %s: %s", att.Name, err)
 		}
@@ -88,20 +127,9 @@ func (e *Email) WriteTo(w io.Writer) (int64, error) {
 		}
 	}
 
-	// Write html part.
-	htmlHeader := textproto.MIMEHeader{}
-	htmlHeader.Set("Content-Type", `text/html; charset="utf-8"`)
-	htmlHeader.Set("Content-Transfer-Encoding", "quoted-printable")
-	pw, err = mpw.CreatePart(htmlHeader)
-	if err != nil {
-		return wc.n, fmt.Errorf("create html part: %s", err)
-	}
-	qpw = quotedprintable.NewWriter(pw)
-	if _, err := qpw.Write(e.HTML); err != nil {
-		return wc.n, fmt.Errorf("write html part: %s", err)
-	}
-	if err := qpw.Close(); err != nil {
-		return wc.n, fmt.Errorf("close html part: %s", err)
+	// Finalize HTML multipart/related.
+	if err := htmlmpw.Close(); err != nil {
+		return wc.n, fmt.Errorf("multipart close: %s", err)
 	}
 
 	// Finalize.

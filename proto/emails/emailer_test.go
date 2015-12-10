@@ -37,6 +37,15 @@ func parseEmail(data []byte) *templates.Email {
 
 	part, err = mpr.NextPart()
 	So(err, ShouldBeNil)
+	So(part.Header.Get("Mime-Version"), ShouldEqual, "1.0")
+	innerContentType, innerContentParams, err := mime.ParseMediaType(part.Header.Get("Content-Type"))
+	So(err, ShouldBeNil)
+	So(innerContentType, ShouldEqual, "multipart/related")
+	innerBoundary := innerContentParams["boundary"]
+	htmlmpr := multipart.NewReader(part, innerBoundary)
+
+	part, err = htmlmpr.NextPart()
+	So(err, ShouldBeNil)
 	So(part.Header.Get("Content-Type"), ShouldEqual, `text/html; charset="utf-8"`)
 	html, err := ioutil.ReadAll(part)
 	So(err, ShouldBeNil)
@@ -49,7 +58,7 @@ func parseEmail(data []byte) *templates.Email {
 	}
 
 	for {
-		part, err = mpr.NextPart()
+		part, err = htmlmpr.NextPart()
 		if err == io.EOF {
 			break
 		}

@@ -89,8 +89,31 @@ func TestEmail(t *testing.T) {
 		So(err, ShouldBeNil)
 		So(string(data), ShouldEqual, "text")
 
-		// Verify attachments.
+		// Verify html mime/multipart part.
 		part, err = mpr.NextPart()
+		So(err, ShouldBeNil)
+		So(part.Header, ShouldResemble, textproto.MIMEHeader{
+			"Content-Type": []string{part.Header.Get("Content-Type")},
+			"Mime-Version": []string{"1.0"},
+		})
+		innerContentType, innerContentParams, err := mime.ParseMediaType(part.Header.Get("Content-Type"))
+		So(err, ShouldBeNil)
+		So(innerContentType, ShouldEqual, "multipart/related")
+		innerBoundary := innerContentParams["boundary"]
+		htmlmpr := multipart.NewReader(part, innerBoundary)
+
+		// Verify html part.
+		part, err = htmlmpr.NextPart()
+		So(err, ShouldBeNil)
+		So(part.Header, ShouldResemble, textproto.MIMEHeader{
+			"Content-Type": []string{`text/html; charset="utf-8"`},
+		})
+		data, err = ioutil.ReadAll(part)
+		So(err, ShouldBeNil)
+		So(string(data), ShouldEqual, "html")
+
+		// Verify attachments.
+		part, err = htmlmpr.NextPart()
 		So(err, ShouldBeNil)
 		So(part.Header, ShouldResemble, textproto.MIMEHeader{
 			"Content-Id":                []string{"<a.png@localhost>"},
@@ -103,7 +126,7 @@ func TestEmail(t *testing.T) {
 		So(err, ShouldBeNil)
 		So(string(data), ShouldEqual, "lmao")
 
-		part, err = mpr.NextPart()
+		part, err = htmlmpr.NextPart()
 		So(err, ShouldBeNil)
 		So(part.Header, ShouldResemble, textproto.MIMEHeader{
 			"Content-Id":                []string{"<b.png@localhost>"},
@@ -115,16 +138,6 @@ func TestEmail(t *testing.T) {
 		data, err = ioutil.ReadAll(decoder)
 		So(err, ShouldBeNil)
 		So(string(data), ShouldEqual, "b")
-
-		// Verify html part.
-		part, err = mpr.NextPart()
-		So(err, ShouldBeNil)
-		So(part.Header, ShouldResemble, textproto.MIMEHeader{
-			"Content-Type": []string{`text/html; charset="utf-8"`},
-		})
-		data, err = ioutil.ReadAll(part)
-		So(err, ShouldBeNil)
-		So(string(data), ShouldEqual, "html")
 	})
 
 	Convey("EvaluateEmail", t, func() {
