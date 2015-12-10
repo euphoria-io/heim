@@ -557,6 +557,8 @@ been changed.
 
 | Field | Type | Required? | Description |
 | :-- | :-- | :-- | :--------- |
+| `success` | [bool](#bool) | required |  true if authentication succeeded and the email was changed |
+| `reason` | [string](#string) | *optional* |  if `success` was false, the reason for failure |
 | `verification_needed` | [bool](#bool) | required |  if true, a verification email will be sent out, and the user must verify the address before it becomes their primary address |
 
 
