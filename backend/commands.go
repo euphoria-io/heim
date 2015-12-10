@@ -565,10 +565,6 @@ func (s *session) handleChangePasswordCommand(msg *proto.ChangePasswordCommand) 
 }
 
 func (s *session) handleResetPasswordCommand(msg *proto.ResetPasswordCommand) *response {
-	if s.client.Account != nil {
-		return &response{err: proto.ErrLoggedIn}
-	}
-
 	acc, req, err := s.backend.AccountManager().RequestPasswordReset(s.ctx, s.kms, msg.Namespace, msg.ID)
 	if err != nil {
 		return &response{err: err}
