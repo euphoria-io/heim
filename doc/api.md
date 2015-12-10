@@ -1260,6 +1260,7 @@ It includes information about the client's authentication and associated identit
 | `account` | [PersonalAccountView](#personalaccountview) | *optional* |  details about the user's account, if the session is logged in |
 | `session` | [SessionView](#sessionview) | required |  details about the session |
 | `account_has_access` | [bool](#bool) | *optional* |  if true, then the account has an explicit access grant to the current room |
+| `account_email_verified` | [bool](#bool) | *optional* |  whether the account's email address has been verified |
 | `room_is_private` | [bool](#bool) | required |  if true, the session is connected to a private room |
 | `version` | [string](#string) | required |  the version of the code being run and served by the server |
 
