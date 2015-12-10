@@ -25,6 +25,7 @@ const storeActions = module.exports.actions = Reflux.createActions([
   'deselectAll',
   'editMessage',
   'banUser',
+  'pmInitiate',
 ])
 storeActions.login = Reflux.createAction({asyncResult: true})
 storeActions.logout = Reflux.createAction({asyncResult: true})
@@ -75,6 +76,7 @@ module.exports.store = Reflux.createStore({
       bannedIds: Immutable.Set(),
       selectedMessages: Immutable.Set(),
       selectedUsers: Immutable.Set(),
+      activePMs: Immutable.Set(),
     }
 
     this.socket = null
@@ -213,6 +215,18 @@ module.exports.store = Reflux.createStore({
       } else {
         console.warn('error banning:', ev.error)  // eslint-disable-line no-console
       }
+    } else if (ev.type === 'pm-initiate-reply') {
+      this.state.activePMs = this.state.activePMs.add(Immutable.Map({
+        kind: 'to',
+        nick: ev.data.to_nick,
+        id: ev.data.pm_id,
+      }))
+    } else if (ev.type === 'pm-initiate-event') {
+      this.state.activePMs = this.state.activePMs.add(Immutable.Map({
+        kind: 'from',
+        nick: ev.data.from_nick,
+        id: ev.data.pm_id,
+      }))
     } else if (ev.type === 'login-reply' || ev.type === 'register-account-reply') {
       const kind = ev.type === 'login-reply' ? 'login' : 'registerAccount'
       if (ev.data.success) {
@@ -632,6 +646,13 @@ module.exports.store = Reflux.createStore({
     this.socket.send({
       type: 'ban',
       data: _.merge(data, {id}),
+    })
+  },
+
+  pmInitiate(id) {
+    this.socket.send({
+      type: 'pm-initiate',
+      data: {id},
     })
   },
 })

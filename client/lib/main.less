@@ -701,8 +701,15 @@ iframe.js {
       padding: 6px;
       border-radius: 3px;
       .touchable-bg(white);
-      .button-icon('../res/close-notification.svg', 11px, 0, 1);
       .larger-touch-target(10px, 10px);
+    }
+
+    &.dark .close {
+      .button-icon('../res/close-notification.svg', 11px, 0, 1);
+    }
+
+    &.light .close {
+      .button-icon('../res/close-notification-black.svg', 11px, 0, 1);
     }
   }
 }

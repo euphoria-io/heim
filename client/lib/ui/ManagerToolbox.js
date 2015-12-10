@@ -70,6 +70,7 @@ export default React.createClass({
           <select className="command-picker" value={selectedCommand} onChange={this.selectCommand}>
             <option value="delete">delete</option>
             <option value="ban">ban</option>
+            <option value="pm">pm</option>
           </select>
           <div className="preview">{toolboxData.activeItemSummary}</div>
           {!isEmpty && selectedCommand === 'ban' && <select ref="banDuration" defaultValue={60 * 60}>

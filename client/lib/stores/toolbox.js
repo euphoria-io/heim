@@ -40,6 +40,14 @@ const commands = {
       )
     },
   },
+  pm: {
+    kind: 'user',
+    execute(items) {
+      items.forEach(item =>
+        chat.pmInitiate(item.get('id'))
+      )
+    },
+  },
 }
 
 module.exports.store = Reflux.createStore({
