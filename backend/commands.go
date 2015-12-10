@@ -484,6 +484,9 @@ func (s *session) handleChangeEmailCommand(msg *proto.ChangeEmailCommand) *respo
 		return &response{err: proto.ErrNotLoggedIn}
 	}
 	if _, err := s.client.Account.Unlock(s.client.Account.KeyFromPassword(msg.Password)); err != nil {
+		if err == proto.ErrAccessDenied {
+			return &response{packet: &proto.ChangeEmailReply{Reason: err.Error()}}
+		}
 		return &response{err: err}
 	}
 	verified, err := s.backend.AccountManager().ChangeEmail(s.ctx, s.client.Account.ID(), msg.Email)
@@ -495,7 +498,7 @@ func (s *session) handleChangeEmailCommand(msg *proto.ChangeEmailCommand) *respo
 	if err != nil {
 		return &response{err: err}
 	}
-	return &response{packet: &proto.ChangeEmailReply{VerificationNeeded: !verified}}
+	return &response{packet: &proto.ChangeEmailReply{Success: true, VerificationNeeded: !verified}}
 }
 
 func (s *session) handleChangeNameCommand(msg *proto.ChangeNameCommand) *response {

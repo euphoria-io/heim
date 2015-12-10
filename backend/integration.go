@@ -1389,7 +1389,7 @@ func testAccountChangeEmail(s *serverUnderTest) {
 	Convey("Require correct password to change email", func() {
 		c := login()
 		c.send("2", "change-email", `{"email":"logan2%s","password":"wrongpass"}`, nonce)
-		c.expectError("2", "change-email-reply", "access denied")
+		c.expect("2", "change-email-reply", `{"success":false,"reason":"access denied","verification_needed":false}`)
 		c.Close()
 	})
 
@@ -1398,7 +1398,7 @@ func testAccountChangeEmail(s *serverUnderTest) {
 
 		c := login()
 		c.send("3", "change-email", `{"email":"logan2%s","password":"loganpass"}`, nonce)
-		c.expect("3", "change-email-reply", `{"verification_needed":true}`)
+		c.expect("3", "change-email-reply", `{"success":true,"verification_needed":true}`)
 		c.Close()
 
 		// Receive verification token in email.
@@ -1470,7 +1470,7 @@ func testAccountChangeEmail(s *serverUnderTest) {
 
 		c := login()
 		c.send("1", "change-email", `{"email":"logan%s","password":"loganpass"}`, nonce)
-		c.expect("1", "change-email-reply", `{"verification_needed":false}`)
+		c.expect("1", "change-email-reply", `{"success":true,"verification_needed":false}`)
 		c.Close()
 
 		a, err = am.Get(ctx, logan.ID())

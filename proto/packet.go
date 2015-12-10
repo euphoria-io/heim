@@ -295,7 +295,9 @@ type ChangeEmailCommand struct {
 // The `change-email-reply` packet indicates that the primary email address has
 // been changed.
 type ChangeEmailReply struct {
-	VerificationNeeded bool `json:"verification_needed"` // if true, a verification email will be sent out, and the user must verify the address before it becomes their primary address
+	Success            bool   `json:"success"`             // true if authentication succeeded and the email was changed
+	Reason             string `json:"reason,omitempty"`    // if `success` was false, the reason for failure
+	VerificationNeeded bool   `json:"verification_needed"` // if true, a verification email will be sent out, and the user must verify the address before it becomes their primary address
 }
 
 // The `change-name` command changes the name associated with the signed in account.
