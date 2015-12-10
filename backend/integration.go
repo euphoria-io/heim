@@ -196,18 +196,19 @@ func (s *serverUnderTest) RoomAndManager(
 
 type testConn struct {
 	*websocket.Conn
-	room             proto.Room
-	cookies          []*http.Cookie
-	roomName         string
-	sessionID        string
-	userID           string
-	accountID        string
-	accountName      string
-	accountEmail     string
-	accountHasAccess bool
-	isStaff          bool
-	isManager        bool
-	debugOn          bool
+	room                 proto.Room
+	cookies              []*http.Cookie
+	roomName             string
+	sessionID            string
+	userID               string
+	accountID            string
+	accountName          string
+	accountEmail         string
+	accountEmailVerified bool
+	accountHasAccess     bool
+	isStaff              bool
+	isManager            bool
+	debugOn              bool
 }
 
 func (tc *testConn) clone() *testConn {
@@ -417,6 +418,9 @@ func (tc *testConn) expectHello() {
 		}
 	} else {
 		isParts += `,"room_is_private":false`
+	}
+	if tc.accountEmailVerified {
+		isParts += `,"account_email_verified":true`
 	}
 	capture := tc.expect(
 		"", "hello-event", `{%s"id":"*","session":{"id":"*","name":"","server_id":"*","server_era":"*","session_id":"*"%s}%s,"version":"*"}`,
@@ -1372,14 +1376,16 @@ func testAccountChangeEmail(s *serverUnderTest) {
 	nonce := fmt.Sprintf("%s", time.Now())
 	logan, _, err := s.Account(ctx, kms, "email", "logan"+nonce, "loganpass")
 	So(err, ShouldBeNil)
+	emailVerified := false
 
-	login := func() *testConn {
+	login := func(email string) *testConn {
 		counter := time.Now().UnixNano()
 		c := s.Connect(fmt.Sprintf("changeemaillogin%d", counter))
 		c.expectPing()
 		c.expectSnapshot(s.backend.Version(), nil, nil)
-		c.send("1", "login", `{"namespace":"email","id":"logan%s","password":"loganpass"}`, nonce)
+		c.send("1", "login", `{"namespace":"email","id":"%s","password":"loganpass"}`, email)
 		c.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, logan.ID())
+		c.accountEmailVerified = emailVerified
 		c = s.Reconnect(c, fmt.Sprintf("changeemail%d", counter))
 		c.expectPing()
 		c.expectSnapshot(s.backend.Version(), nil, nil)
@@ -1387,7 +1393,7 @@ func testAccountChangeEmail(s *serverUnderTest) {
 	}
 
 	Convey("Require correct password to change email", func() {
-		c := login()
+		c := login("logan" + nonce)
 		c.send("2", "change-email", `{"email":"logan2%s","password":"wrongpass"}`, nonce)
 		c.expect("2", "change-email-reply", `{"success":false,"reason":"access denied","verification_needed":false}`)
 		c.Close()
@@ -1396,7 +1402,7 @@ func testAccountChangeEmail(s *serverUnderTest) {
 	Convey("Change email to unverified address", func() {
 		inbox := s.app.heim.MockDeliverer().Inbox("logan2" + nonce)
 
-		c := login()
+		c := login("logan" + nonce)
 		c.send("3", "change-email", `{"email":"logan2%s","password":"loganpass"}`, nonce)
 		c.expect("3", "change-email-reply", `{"success":true,"verification_needed":true}`)
 		c.Close()
@@ -1468,7 +1474,8 @@ func testAccountChangeEmail(s *serverUnderTest) {
 		So(email, ShouldEqual, "logan2"+nonce)
 		So(verified, ShouldBeTrue)
 
-		c := login()
+		emailVerified = true
+		c := login("logan2" + nonce)
 		c.send("1", "change-email", `{"email":"logan%s","password":"loganpass"}`, nonce)
 		c.expect("1", "change-email-reply", `{"success":true,"verification_needed":false}`)
 		c.Close()
