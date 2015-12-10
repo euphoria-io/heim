@@ -19,6 +19,7 @@
     * [login](#login)
     * [logout](#logout)
     * [register-account](#register-account)
+    * [resend-verification-email](#resend-verification-email)
     * [reset-password](#reset-password)
   * [Room Manager Commands](#room-manager-commands)
     * [ban](#ban)
@@ -716,6 +717,29 @@ will be a logged in session, using the newly created account.
 | `reason` | [string](#string) | *optional* |  if `success` was false, the reason why |
 | `account_id` | [Snowflake](#snowflake) | *optional* |  if `success` was true, the id of the account the session logged into. |
 
+
+
+
+
+
+
+### resend-verification-email
+
+The `resend-verification-email` command forces a new email to be sent for
+verifying an accounts primary email address. An error will be returned if
+the account has no unverified email addresses associated with it.
+
+
+This packet has no fields.
+
+
+
+
+The `resend-verification-email-reply` packet indicates that a verification
+email has been sent.
+
+
+This packet has no fields.
 
 
 
