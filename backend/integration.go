@@ -1507,6 +1507,49 @@ func testAccountChangeEmail(s *serverUnderTest) {
 		o.expectError("1", "change-email-reply", "personal identity already in use")
 		o.Close()
 	})
+
+	Convey("Resend verification email", func() {
+		inbox3 := s.app.heim.MockDeliverer().Inbox("logan3" + nonce)
+		inbox4 := s.app.heim.MockDeliverer().Inbox("logan4" + nonce)
+		c := login("logan" + nonce)
+		c.send("3", "change-email", `{"email":"logan3%s","password":"loganpass"}`, nonce)
+		c.expect("3", "change-email-reply", `{"success":true,"verification_needed":true}`)
+		receiveEmail(inbox3)
+		c.send("4", "change-email", `{"email":"logan4%s","password":"loganpass"}`, nonce)
+		c.expect("4", "change-email-reply", `{"success":true,"verification_needed":true}`)
+		receiveEmail(inbox4)
+		So(s.backend.AccountManager().VerifyPersonalIdentity(ctx, "email", "logan4"+nonce), ShouldBeNil)
+
+		// Resend and receive verification token for logan3 in email.
+		c.send("5", "resend-verification-email", `{}`)
+		c.expect("5", "resend-verification-email-reply", `{}`)
+		c.Close()
+		msg := receiveEmail(inbox3)
+		So(msg.EmailType, ShouldEqual, proto.VerificationEmail)
+		p, ok := msg.Data.(*proto.VerificationEmailParams)
+		So(ok, ShouldBeTrue)
+
+		// Verify email via POST.
+		req := struct {
+			Confirmation string `json:"confirmation"`
+			Email        string `json:"email"`
+		}{
+			Confirmation: p.VerificationToken,
+			Email:        "logan3" + nonce,
+		}
+		reqBytes, err := json.Marshal(req)
+		So(err, ShouldBeNil)
+		resp, err := http.Post(s.server.URL+"/prefs/verify", "application/json", bytes.NewReader(reqBytes))
+		So(err, ShouldBeNil)
+		So(resp.StatusCode, ShouldEqual, 200)
+
+		// New email should be assigned and verified.
+		account, err := s.backend.AccountManager().Resolve(ctx, "email", "logan3"+nonce)
+		So(err, ShouldBeNil)
+		email, verified := account.Email()
+		So(email, ShouldEqual, "logan3"+nonce)
+		So(verified, ShouldBeTrue)
+	})
 }
 
 func testAccountLogin(s *serverUnderTest) {

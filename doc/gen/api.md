@@ -19,6 +19,7 @@
     * [login](#login)
     * [logout](#logout)
     * [register-account](#register-account)
+    * [resend-verification-email](#resend-verification-email)
     * [reset-password](#reset-password)
   * [Room Manager Commands](#room-manager-commands)
     * [ban](#ban)
@@ -330,6 +331,10 @@ prerequisite for room management.
 ### register-account
 
 {{template "command.md" "register-account"}}
+
+### resend-verification-email
+
+{{template "command.md" "resend-verification-email"}}
 
 ### reset-password
 

@@ -75,6 +75,9 @@ var (
 	RegisterAccountType      = PacketType("register-account")
 	RegisterAccountReplyType = RegisterAccountType.Reply()
 
+	ResendVerificationEmailType      = PacketType("resend-verification-email")
+	ResendVerificationEmailReplyType = ResendVerificationEmailType.Reply()
+
 	ResetPasswordType      = PacketType("reset-password")
 	ResetPasswordReplyType = ResetPasswordType.Reply()
 
@@ -211,6 +214,9 @@ var (
 
 		RegisterAccountType:      reflect.TypeOf(RegisterAccountCommand{}),
 		RegisterAccountReplyType: reflect.TypeOf(RegisterAccountReply{}),
+
+		ResendVerificationEmailType:      reflect.TypeOf(ResendVerificationEmailCommand{}),
+		ResendVerificationEmailReplyType: reflect.TypeOf(ResendVerificationEmailReply{}),
 
 		ResetPasswordType:      reflect.TypeOf(ResetPasswordCommand{}),
 		ResetPasswordReplyType: reflect.TypeOf(ResetPasswordReply{}),
@@ -594,6 +600,15 @@ type RegisterAccountCommand LoginCommand
 // disconnect-event shortly after. The next connection the client makes
 // will be a logged in session, using the newly created account.
 type RegisterAccountReply LoginReply
+
+// The `resend-verification-email` command forces a new email to be sent for
+// verifying an accounts primary email address. An error will be returned if
+// the account has no unverified email addresses associated with it.
+type ResendVerificationEmailCommand struct{}
+
+// The `resend-verification-email-reply` packet indicates that a verification
+// email has been sent.
+type ResendVerificationEmailReply struct{}
 
 // The `reset-password` command generates a password reset request. An email
 // will be sent to the owner of the given personal identifier, with

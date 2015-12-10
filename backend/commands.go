@@ -134,6 +134,8 @@ func (s *session) handleCoreCommands(payload interface{}) *response {
 		return s.handleLogoutCommand()
 	case *proto.RegisterAccountCommand:
 		return s.handleRegisterAccountCommand(msg)
+	case *proto.ResendVerificationEmailCommand:
+		return s.handleResendVerificationEmail(msg)
 	case *proto.ResetPasswordCommand:
 		return s.handleResetPasswordCommand(msg)
 
@@ -499,6 +501,34 @@ func (s *session) handleChangeEmailCommand(msg *proto.ChangeEmailCommand) *respo
 		return &response{err: err}
 	}
 	return &response{packet: &proto.ChangeEmailReply{Success: true, VerificationNeeded: !verified}}
+}
+
+func (s *session) handleResendVerificationEmail(msg *proto.ResendVerificationEmailCommand) *response {
+	if s.client.Account == nil {
+		return &response{err: proto.ErrNotLoggedIn}
+	}
+
+	// Refresh view of account.
+	account, err := s.backend.AccountManager().Get(s.ctx, s.client.Account.ID())
+	if err != nil {
+		return &response{err: err}
+	}
+	sent := false
+	for _, pid := range account.PersonalIdentities() {
+		fmt.Printf("considering pid %s/%s/%t\n", pid.Namespace(), pid.ID(), pid.Verified())
+		if pid.Namespace() == "email" && !pid.Verified() {
+			err := s.heim.OnAccountEmailChanged(
+				s.ctx, s.backend, account, s.client.Authorization.ClientKey, pid.ID(), false)
+			if err != nil {
+				return &response{err: err}
+			}
+			sent = true
+		}
+	}
+	if !sent {
+		return &response{err: proto.ErrPersonalIdentityAlreadyVerified}
+	}
+	return &response{packet: &proto.ResendVerificationEmailReply{}}
 }
 
 func (s *session) handleChangeNameCommand(msg *proto.ChangeNameCommand) *response {
