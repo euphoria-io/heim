@@ -19,6 +19,7 @@ import NotificationSettings from './NotificationSettings'
 import NotificationList from './NotificationList'
 import ThreadList from './ThreadList'
 import UserList from './UserList'
+import PMNotice from './PMNotice'
 import AccountButton from './AccountButton'
 import AccountAuthDialog from './AccountAuthDialog'
 import AccountSettingsDialog from './AccountSettingsDialog'
@@ -257,6 +258,7 @@ export default React.createClass({
     const sidebarPaneHidden = thin
 
     const roomName = this.state.chat.roomName
+    const pmNotices = this.state.chat.activePMs.filterNot(pm => this.state.ui.dismissedPMNotices.contains(pm.get('id')))
 
     const snapPoints = {main: 0}
     if (infoPaneHidden) {
@@ -288,7 +290,7 @@ export default React.createClass({
             <ChatTopBar who={this.state.chat.who} roomName={roomName} connected={this.state.chat.connected} joined={!!this.state.chat.joined} authType={this.state.chat.authType} isManager={this.state.chat.isManager} managerMode={this.state.ui.managerMode} working={this.state.chat.loadingLogs} showInfoPaneButton={!thin || !Heim.isTouch} infoPaneOpen={infoPaneOpen} collapseInfoPane={ui.collapseInfoPane} expandInfoPane={ui.expandInfoPane} toggleUserList={ui.toggleUserList} toggleManagerMode={ui.toggleManagerMode} />
             {this.templateHook('main-pane-top')}
             <ReactCSSTransitionGroup className="notice-stack" transitionName="slide-down" transitionEnterTimeout={150} transitionLeaveTimeout={150}>
-              {this.state.ui.notices.contains('notifications') && this.state.notification.popupsSupported && <div className="notice notifications">
+              {this.state.ui.notices.has('notifications') && this.state.notification.popupsSupported && <div className="notice dark notifications">
                 <div className="content">
                   <span className="title">what would you like notifications for?</span>
                   <div className="actions">
@@ -299,6 +301,7 @@ export default React.createClass({
                 </div>
                 <FastButton className="close" onClick={() => ui.dismissNotice('notifications')} />
               </div>}
+              {pmNotices.map(pm => <PMNotice key={pm.get('kind') + pm.get('id')} pmId={pm.get('id')} nick={pm.get('nick')} kind={pm.get('kind')} />) }
               {this.state.update.get('ready') && <FastButton className="update-button" onClick={update.perform}><p>update ready<em>{Heim.isTouch ? 'tap' : 'click'} to reload</em></p></FastButton>}
             </ReactCSSTransitionGroup>
             <div className="main-pane-stack">

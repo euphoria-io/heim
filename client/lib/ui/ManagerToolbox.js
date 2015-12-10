@@ -63,6 +63,7 @@ export default React.createClass({
             <option value="delete">delete</option>
             <option value="ban">ban</option>
             <option value="banIP">IP ban</option>
+            <option value="pm">pm</option>
           </select>
           <div className="preview">{toolboxData.activeItemSummary}</div>
           {!isEmpty && inputDuration && <select ref="banDuration" defaultValue={60 * 60}>

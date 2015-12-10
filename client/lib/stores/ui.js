@@ -3,6 +3,7 @@ import Reflux from 'reflux'
 import ReactDOM from 'react-dom'
 import Immutable from 'immutable'
 
+import heimURL from '../heimURL'
 import clamp from '../clamp'
 import actions from '../actions'
 import storage from './storage'
@@ -46,6 +47,8 @@ const storeActions = Reflux.createActions([
   'closeManagerToolbox',
   'notificationsNoticeChoice',
   'dismissNotice',
+  'dismissPMNotice',
+  'openPMWindow',
   'openAccountAuthDialog',
   'openAccountSettingsDialog',
   'closeDialog',
@@ -64,6 +67,9 @@ storeActions.panViewTo.sync = true
 
 // temporarily sync while testing this commit
 storeActions.focusPane.sync = true
+
+// sync so window.open works
+storeActions.openPMWindow.sync = true
 
 const Pane = module.exports.Pane = class Pane {
   constructor(paneActions, store, id, readOnly) {
@@ -312,6 +318,7 @@ const store = module.exports.store = Reflux.createStore({
       draggingToolboxSelectionToggle: null,
       notices: Immutable.OrderedSet(),
       notificationsNoticeDismissed: false,
+      dismissedPMNotices: Immutable.Set(),
       modalDialog: null,
     }
 
@@ -686,6 +693,15 @@ const store = module.exports.store = Reflux.createStore({
     if (name === 'notifications') {
       storage.setRoom(this.chatState.roomName, 'notificationsNoticeDismissed', true)
     }
+  },
+
+  dismissPMNotice(id) {
+    this.state.dismissedPMNotices = this.state.dismissedPMNotices.add(id)
+    this.trigger(this.state)
+  },
+
+  openPMWindow(pmId) {
+    window.open(heimURL('/room/pm:' + pmId))
   },
 
   openAccountAuthDialog() {
