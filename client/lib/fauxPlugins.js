@@ -640,5 +640,16 @@ export default function initPlugins(roomName) {
         `}} />
       )
     })
+
+    if (location.hash.substr(1) === 'spooky') {
+      return (
+        <style key="xkcd-top-spooky-style" dangerouslySetInnerHTML={{__html: `
+          .secondary-top-bar {
+            color: darkorange;
+            background: #2e293c;
+          }
+        `}} />
+      )
+    }
   }
 }
