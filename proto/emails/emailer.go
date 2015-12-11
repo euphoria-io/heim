@@ -42,7 +42,7 @@ func NewEmail(templater *templates.Templater, msgID, to, templateName string, da
 	}
 
 	if cd, ok := data.(commonData); ok {
-		cd.setAccountEmailAddress(to)
+		cd.initCommonData(to)
 	}
 
 	email, err := templates.EvaluateEmail(templater, templateName, data)
@@ -64,7 +64,7 @@ func NewEmail(templater *templates.Templater, msgID, to, templateName string, da
 }
 
 type commonData interface {
-	setAccountEmailAddress(string)
+	initCommonData(string)
 }
 
 type CommonData struct {
@@ -73,4 +73,7 @@ type CommonData struct {
 	LocalDomain         string
 }
 
-func (cd *CommonData) setAccountEmailAddress(addr string) { cd.AccountEmailAddress = addr }
+func (cd *CommonData) initCommonData(addr string) {
+	cd.StaticFiles.ResetAttachments()
+	cd.AccountEmailAddress = addr
+}

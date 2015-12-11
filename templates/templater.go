@@ -180,6 +180,7 @@ type StaticFiles struct {
 }
 
 func (sf *StaticFiles) setStaticFiles(files map[string][]byte) { sf.available = files }
+func (sf *StaticFiles) ResetAttachments()                      { sf.attached = nil }
 func (sf *StaticFiles) Attachments() map[string]Attachment     { return sf.attached }
 
 func (sf *StaticFiles) File(path string) (template.URL, error) {
