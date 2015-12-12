@@ -85,6 +85,11 @@ module.exports.store = Reflux.createStore({
         } else if (data.reason === 'access denied') {
           state.set('errors', Immutable.Map({password: 'no dice, sorry!'}))
           state.set('highlightForgot', true)
+        } else {
+          const error = new Error('failed to sign in: ' + data.reason)
+          error.action = 'login'
+          error.response = data
+          Raven.captureException(error)
         }
       }
     }))
@@ -108,6 +113,11 @@ module.exports.store = Reflux.createStore({
           state.set('showSignInButton', true)
         } else if (data.reason === 'not familiar yet, try again later') {
           state.set('errors', Immutable.Map({tryAgain: 'try again in a few minutes'}))
+        } else {
+          const error = new Error('failed to register: ' + data.reason)
+          error.action = 'register'
+          error.response = data
+          Raven.captureException(error)
         }
       }
     }))
@@ -130,6 +140,10 @@ module.exports.store = Reflux.createStore({
           state.set('errors', Immutable.Map({email: 'account not found'}))
         } else {
           state.set('passwordResetError', 'error sending. try again?')
+          const error = new Error('failed to reset password: ' + data.reason)
+          error.action = 'reset-password'
+          error.response = data
+          Raven.captureException(error)
         }
       }
     }))

@@ -59,11 +59,14 @@ module.exports.store = Reflux.createStore({
     }
   },
 
-  changeNameFailed() {
+  changeNameFailed(data) {
     this.triggerUpdate(this.state.withMutations(state => {
       const step = state.get('step')
       if (step === 'change-name') {
-        // TODO
+        const error = new Error('failed to change name: ' + data.reason)
+        error.action = 'change-name'
+        error.response = data
+        Raven.captureException(error)
       }
     }))
   },
@@ -81,6 +84,11 @@ module.exports.store = Reflux.createStore({
         state.set('working', false)
         if (data.error === 'access denied') {
           state.set('errors', Immutable.Map({password: 'no dice, sorry!'}))
+        } else {
+          const error = new Error('failed to change email: ' + data.reason)
+          error.action = 'change-email'
+          error.response = data
+          Raven.captureException(error)
         }
       }
     }))
@@ -99,6 +107,11 @@ module.exports.store = Reflux.createStore({
         state.set('working', false)
         if (data.error === 'access denied') {
           state.set('errors', Immutable.Map({password: 'no dice, sorry!'}))
+        } else {
+          const error = new Error('failed to change password: ' + data.reason)
+          error.action = 'change-password'
+          error.response = data
+          Raven.captureException(error)
         }
       }
     }))

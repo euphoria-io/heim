@@ -12,7 +12,8 @@ export function postAPI(url, data) {
       if (response.status >= 200 && response.status < 300) {
         return response
       }
-      const error = new Error(response.statusText)
+      const error = new Error('request failed: ' + response.statusText)
+      error.action = url
       error.response = response
       throw error
     })

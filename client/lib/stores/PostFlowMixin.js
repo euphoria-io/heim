@@ -25,7 +25,7 @@ export default {
         }
       })
       .catch(err => {
-        Raven.captureException(err, {tags: {action: url}})
+        Raven.captureException(err)
       })
   },
 }
