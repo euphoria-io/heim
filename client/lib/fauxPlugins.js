@@ -610,7 +610,7 @@ export default function initPlugins(roomName) {
   if (roomName === 'xkcd') {
     Heim.hook('main-pane-top', () => {
       return (
-        <div key="xkcd-top-bar" className="secondary-top-bar"><span className="motto" title="If problems arise, throw bots at them until they resolve.">Ita in qu&aelig;stiones machin&aelig; loquendi iaciantur ut solvent.</span></div>
+        <div key="xkcd-top-bar" className="secondary-top-bar"><span className="motto" title="All problems are solvable by being thrown at with bots.">Omnes qu&aelig;stiones solvuntur iactando eas machinis.</span></div>
       )
     })
 
