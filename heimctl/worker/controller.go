@@ -107,7 +107,10 @@ func (c *Controller) processOne(ctx scope.Context) error {
 		defer processedCounter.With(labels).Inc()
 		if err := c.w.Work(ctx, job, payload); err != nil {
 			failedCounter.With(labels).Inc()
-			return err
+			if ferr := job.Fail(ctx, err.Error()); ferr != nil {
+				return ferr
+			}
+			return nil
 		}
 		completedCounter.With(labels).Inc()
 		return nil
