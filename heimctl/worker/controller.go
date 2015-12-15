@@ -79,6 +79,7 @@ func (c *Controller) background(ctx scope.Context) {
 		if err := c.processOne(ctx); err != nil {
 			// TODO: retry a couple times before giving up
 			logging.Logger(ctx).Printf("error: %s: %s", c.w.QueueName(), err)
+			errorCounter.Inc()
 			return
 		}
 	}
@@ -107,10 +108,7 @@ func (c *Controller) processOne(ctx scope.Context) error {
 		defer processedCounter.With(labels).Inc()
 		if err := c.w.Work(ctx, job, payload); err != nil {
 			failedCounter.With(labels).Inc()
-			if ferr := job.Fail(ctx, err.Error()); ferr != nil {
-				return ferr
-			}
-			return nil
+			return err
 		}
 		completedCounter.With(labels).Inc()
 		return nil

@@ -21,6 +21,12 @@ var (
 		Help:      "Number of past-due jobs per queue",
 	}, []string{"queue"})
 
+	errorCounter = prometheus.NewCounter(prometheus.CounterOpts{
+		Name:      "error",
+		Subsystem: "jobs",
+		Help:      "Counter of system errors with job management under this worker.",
+	})
+
 	failedCounter = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Name:      "failed",
 		Subsystem: "jobs",
@@ -42,7 +48,10 @@ var (
 
 func init() {
 	prometheus.MustRegister(claimedGauge)
+	prometheus.MustRegister(completedCounter)
 	prometheus.MustRegister(dueGauge)
+	prometheus.MustRegister(errorCounter)
+	prometheus.MustRegister(failedCounter)
 	prometheus.MustRegister(processedCounter)
 	prometheus.MustRegister(waitingGauge)
 }

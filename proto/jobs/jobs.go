@@ -186,6 +186,7 @@ func (j *Job) Exec(ctx scope.Context, f func(scope.Context) error) error {
 	deadline := time.Now().Add(j.MaxWorkDuration)
 	child := logging.LoggingContext(ctx.ForkWithTimeout(j.MaxWorkDuration), w, prefix)
 	if err := f(child); err != nil {
+		logging.Logger(child).Printf("error: %s", err)
 		if err != scope.TimedOut {
 			delay := time.Duration(j.AttemptsMade+1) * BackoffDuration
 			if time.Now().Add(delay).After(deadline) {
@@ -193,17 +194,9 @@ func (j *Job) Exec(ctx scope.Context, f func(scope.Context) error) error {
 			}
 			time.Sleep(delay)
 		}
-		if ferr := j.Fail(ctx, err.Error()); ferr != nil {
-			return ferr
-		}
-		return err
+		return j.Fail(ctx, err.Error())
 	}
-
-	if err := j.Complete(ctx); err != nil {
-		return err
-	}
-
-	return nil
+	return j.Complete(ctx)
 }
 
 type JobLog struct {
