@@ -33,9 +33,9 @@ type EmailTracker interface {
 type CommonEmailParams struct {
 	emails.CommonData
 
-	EmailDomain   string `yaml:"email_domain"`
-	SiteName      string `yaml:"site_name"`
-	SiteURL       string `yaml:"site_url"`
+	EmailDomain   string        `yaml:"email_domain"`
+	SiteName      string        `yaml:"site_name"`
+	SiteURL       string        `yaml:"site_url"`
 	HelpAddress   template.HTML `yaml:"help_address"`
 	SenderAddress template.HTML `yaml:"sender_address"`
 }
@@ -50,7 +50,7 @@ func (p *CommonEmailParams) EmailPreferencesURL() template.HTML {
 }
 
 type WelcomeEmailParams struct {
-	*CommonEmailParams
+	CommonEmailParams
 	VerificationToken string
 }
 
@@ -71,7 +71,7 @@ func (p *WelcomeEmailParams) VerifyEmailURL() template.HTML {
 }
 
 type PasswordChangedEmailParams struct {
-	*CommonEmailParams
+	CommonEmailParams
 	AccountName string
 }
 
@@ -80,7 +80,7 @@ func (p PasswordChangedEmailParams) Subject() template.HTML {
 }
 
 type PasswordResetEmailParams struct {
-	*CommonEmailParams
+	CommonEmailParams
 	AccountName  string
 	Confirmation string
 }
@@ -101,7 +101,7 @@ func (p PasswordResetEmailParams) ResetPasswordURL() template.HTML {
 }
 
 type RoomInvitationEmailParams struct {
-	*CommonEmailParams
+	CommonEmailParams
 	AccountName   string
 	RoomName      string
 	SenderName    string
@@ -117,7 +117,7 @@ func (p RoomInvitationEmailParams) RoomURL() template.HTML {
 }
 
 type RoomInvitationWelcomeEmailParams struct {
-	*CommonEmailParams
+	CommonEmailParams
 	AccountName   string
 	RoomName      string
 	RoomPrivacy   string
@@ -134,7 +134,7 @@ func (p RoomInvitationWelcomeEmailParams) RoomURL() template.HTML {
 }
 
 var (
-	DefaultCommonEmailParams = &CommonEmailParams{
+	DefaultCommonEmailParams = CommonEmailParams{
 		CommonData: emails.CommonData{
 			LocalDomain: "heim.invalid",
 		},

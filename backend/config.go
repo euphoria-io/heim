@@ -26,7 +26,7 @@ import (
 
 var (
 	Config = ServerConfig{
-		CommonEmailParams: proto.DefaultCommonEmailParams,
+		CommonEmailParams: &proto.DefaultCommonEmailParams,
 	}
 
 	backendFactories = map[string]proto.BackendFactory{}
@@ -326,7 +326,7 @@ type EmailConfig struct {
 }
 
 func (ec *EmailConfig) Get(cfg *ServerConfig) (*templates.Templater, emails.Deliverer, error) {
-	proto.DefaultCommonEmailParams = cfg.CommonEmailParams
+	proto.DefaultCommonEmailParams = *cfg.CommonEmailParams
 	localDomain := cfg.CommonEmailParams.EmailDomain
 	cfg.CommonEmailParams.CommonData.LocalDomain = localDomain
 
