@@ -1,6 +1,7 @@
 package emails
 
 import (
+	"fmt"
 	"bytes"
 	"time"
 
@@ -74,6 +75,7 @@ type CommonData struct {
 }
 
 func (cd *CommonData) initCommonData(addr string) {
+	fmt.Println("PREVIOUS SHARED DATA", cd.AccountEmailAddress)
 	cd.StaticFiles.ResetAttachments()
 	cd.AccountEmailAddress = addr
 }
