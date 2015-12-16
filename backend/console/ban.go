@@ -16,8 +16,8 @@ func init() {
 type ban struct{}
 
 func (ban) usage() string {
-	return ("ban [-room <room>] [-until <duration>] -agent <agent-id>\n" +
-		"ban [-room <room>] [-until <duration>] -ip <ip>")
+	return ("ban [-room <room>] [-duration <duration>] -agent <agent-id>\n" +
+		"ban [-room <room>] [-duration <duration>] -ip <ip>")
 }
 
 func (ban) run(ctx scope.Context, c *console, args []string) error {
