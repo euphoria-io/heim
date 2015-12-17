@@ -459,6 +459,7 @@ module.exports.store = Reflux.createStore({
         alert.popup = new Notification(roomName, options)
       } catch (err) {
         Raven.captureException(err)
+        return
       }
 
       const ui = require('./ui')  // avoid import loop
