@@ -1,0 +1,11 @@
+Hi,
+
+Please verify your email address on {{.SiteName}}:
+
+{{.VerifyEmailURL}}
+
+If you did not make this request, please disregard this message. Thanks!
+
+---
+
+<%- standardFooter %>

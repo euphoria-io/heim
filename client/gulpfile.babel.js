@@ -230,7 +230,7 @@ gulp.task('site-templates', ['heim-git-commit'], () => {
 gulp.task('email-templates', () => {
   require('./emails/email/injectReactAttributes').default()
   const renderEmail = require('./emails/email/renderEmail').default
-  const emails = ['welcome', 'room-invitation', 'room-invitation-welcome', 'password-changed', 'password-reset']
+  const emails = ['welcome', 'room-invitation', 'room-invitation-welcome', 'verification', 'password-changed', 'password-reset']
 
   const htmls = merge(_.map(emails, name => {
     const html = renderEmail(reload('./emails/' + name))
