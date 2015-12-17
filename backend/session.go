@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"net"
 	"os"
 	"sync"
 	"sync/atomic"
@@ -90,18 +89,19 @@ type response struct {
 type cmdState func(*proto.Packet) *response
 
 type session struct {
-	id        string
-	ctx       scope.Context
-	server    *Server
-	conn      *websocket.Conn
-	identity  *memIdentity
-	serverID  string
-	serverEra string
-	roomName  string
-	room      proto.Room
-	backend   proto.Backend
-	kms       security.KMS
-	heim      *proto.Heim
+	id         string
+	ctx        scope.Context
+	server     *Server
+	conn       *websocket.Conn
+	clientAddr string
+	identity   *memIdentity
+	serverID   string
+	serverEra  string
+	roomName   string
+	room       proto.Room
+	backend    proto.Backend
+	kms        security.KMS
+	heim       *proto.Heim
 
 	state    cmdState
 	client   *proto.Client
@@ -126,7 +126,7 @@ type session struct {
 }
 
 func newSession(
-	ctx scope.Context, server *Server, conn *websocket.Conn,
+	ctx scope.Context, server *Server, conn *websocket.Conn, clientAddr string,
 	roomName string, room proto.Room, client *proto.Client, agentKey *security.ManagedKey) *session {
 
 	nextID := atomic.AddUint64(&sessionIDCounter, 1)
@@ -135,20 +135,21 @@ func newSession(
 	ctx = logging.LoggingContext(ctx, os.Stdout, fmt.Sprintf("[%s] ", sessionID))
 
 	session := &session{
-		id:        sessionID,
-		ctx:       ctx,
-		server:    server,
-		conn:      conn,
-		identity:  newMemIdentity(client.UserID(), server.ID, server.Era),
-		client:    client,
-		agentKey:  agentKey,
-		serverID:  server.ID,
-		serverEra: server.Era,
-		roomName:  roomName,
-		room:      room,
-		backend:   server.b,
-		kms:       server.kms,
-		heim:      server.heim,
+		id:         sessionID,
+		ctx:        ctx,
+		server:     server,
+		conn:       conn,
+		clientAddr: clientAddr,
+		identity:   newMemIdentity(client.UserID(), server.ID, server.Era),
+		client:     client,
+		agentKey:   agentKey,
+		serverID:   server.ID,
+		serverEra:  server.Era,
+		roomName:   roomName,
+		room:       room,
+		backend:    server.b,
+		kms:        server.kms,
+		heim:       server.heim,
 
 		incoming:     make(chan *proto.Packet),
 		outgoing:     make(chan *proto.Packet, 100),
@@ -181,13 +182,7 @@ func (s *session) View(level proto.PrivilegeLevel) *proto.SessionView {
 
 	switch level {
 	case proto.Staff:
-		addr := s.conn.RemoteAddr()
-		switch a := addr.(type) {
-		case *net.TCPAddr:
-			view.ClientAddress = a.String()
-		default:
-			view.ClientAddress = addr.String()
-		}
+		view.ClientAddress = s.clientAddr
 	}
 
 	return view

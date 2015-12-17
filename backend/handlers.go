@@ -2,6 +2,7 @@ package backend
 
 import (
 	"fmt"
+	"net"
 	"net/http"
 	"path"
 
@@ -153,8 +154,20 @@ func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
 	}
 	defer conn.Close()
 
+	// Determine client address.
+	clientAddress := r.Header.Get("X-Forwarded-For")
+	if clientAddress == "" {
+		addr := conn.RemoteAddr()
+		switch a := addr.(type) {
+		case *net.TCPAddr:
+			clientAddress = a.String()
+		default:
+			clientAddress = addr.String()
+		}
+	}
+
 	// Serve the session.
-	session := newSession(ctx, s, conn, roomName, room, client, agentKey)
+	session := newSession(ctx, s, conn, clientAddress, roomName, room, client, agentKey)
 	if err = session.serve(); err != nil {
 		// TODO: error handling
 		logging.Logger(ctx).Printf("session serve error: %s", err)
