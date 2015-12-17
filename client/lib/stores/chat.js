@@ -122,7 +122,7 @@ module.exports.store = Reflux.createStore({
       'change-name-reply': 'changeName',
       'change-email-reply': 'changeEmail',
       'change-password-reply': 'changePassword',
-      'resend-verify-email-reply': 'resendVerifyEmail',
+      'resend-verification-email-reply': 'resendVerifyEmail',
     }
 
     if (ev.type === 'send-event') {
@@ -627,7 +627,7 @@ module.exports.store = Reflux.createStore({
 
   resendVerifyEmail() {
     this.socket.send({
-      type: 'resend-verify-email',
+      type: 'resend-verification-email',
     })
   },
 
