@@ -277,8 +277,19 @@ func (b *AccountManagerBinding) VerifyPersonalIdentity(ctx scope.Context, namesp
 	}
 
 	if namespace == "email" {
-		res, err = t.Exec(
-			"UPDATE account SET email = (SELECT id FROM personal_identity WHERE namespace = 'email' AND id = $1)", id)
+		// Look up ID of account that was verified.
+		var row struct {
+			ID string `db:"account_id"`
+		}
+		err = t.SelectOne(&row, "SELECT account_id FROM personal_identity WHERE namespace = 'email' AND id = $1", id)
+		if err != nil {
+			rollback(ctx, t)
+			if err == sql.ErrNoRows {
+				return proto.ErrAccountNotFound
+			}
+			return err
+		}
+		res, err = t.Exec("UPDATE account SET email = $2 WHERE id = $1", row.ID, id)
 		if err != nil {
 			rollback(ctx, t)
 			if err == sql.ErrNoRows {
