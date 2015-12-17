@@ -47,7 +47,7 @@ func TestGrants(t *testing.T) {
 		grant, err := security.GrantSharedSecretCapability(aliceKey, rkey.Nonce(), nil, mkey.Plaintext)
 		So(err, ShouldBeNil)
 
-		alice := mock.TestSession("Alice", "A1")
+		alice := mock.TestSession("Alice", "A1", "ip1")
 		So(room.Join(ctx, alice), ShouldBeNil)
 
 		msg := proto.Message{
@@ -93,7 +93,7 @@ func TestGrants(t *testing.T) {
 		}
 		So(json.Unmarshal(bobKey.Unpad(payload), &key.Plaintext), ShouldBeNil)
 
-		bob := mock.TestSession("Bob", "B1")
+		bob := mock.TestSession("Bob", "B1", "ip2")
 		So(room.Join(ctx, bob), ShouldBeNil)
 		log, err := room.Latest(ctx, 1, 0)
 		So(err, ShouldBeNil)

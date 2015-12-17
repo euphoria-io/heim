@@ -94,7 +94,7 @@ func (s *session) joinedState(cmd *proto.Packet) *response {
 			cost:   1,
 		}
 	case *proto.WhoCommand:
-		listing, err := s.room.Listing(s.ctx)
+		listing, err := s.room.Listing(s.ctx, s.privilegeLevel())
 		if err != nil {
 			return &response{err: err}
 		}
@@ -206,7 +206,7 @@ func (s *session) handleSendCommand(cmd *proto.SendCommand) *response {
 		ID:      msgID,
 		Content: cmd.Content,
 		Parent:  cmd.Parent,
-		Sender:  s.View(),
+		Sender:  s.View(s.privilegeLevel()),
 	}
 
 	if s.keyID != "" {

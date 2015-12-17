@@ -27,10 +27,13 @@ func (p *Presence) SetFact(fact *proto.Presence) error {
 	return nil
 }
 
-func (p *Presence) SessionView() (proto.SessionView, error) {
+func (p *Presence) SessionView(level proto.PrivilegeLevel) (proto.SessionView, error) {
 	var fact proto.Presence
 	if err := json.Unmarshal(p.Fact, &fact); err != nil {
 		return proto.SessionView{}, err
+	}
+	if level != proto.Staff {
+		fact.ClientAddress = ""
 	}
 	return fact.SessionView, nil
 }

@@ -402,7 +402,7 @@ func (tc *testConn) expectHello() {
 	if tc.accountID != "" {
 		account = fmt.Sprintf(`"account":{"id":"%s","name":"%s","email":"%s"`, tc.accountID, tc.accountName, tc.accountEmail)
 		if tc.isStaff {
-			sessionParts += `,"is_staff":true`
+			sessionParts += `,"is_staff":true,"client_address":"*"`
 		}
 		if tc.isManager {
 			sessionParts += `,"is_manager":true`
@@ -2965,6 +2965,7 @@ func testStaffInvasion(s *serverUnderTest) {
 		capture = c2.expect("2", "staff-enroll-otp-reply", `{"uri":"*","qr_uri":"*"}`)
 		c2.send("3", "staff-invade", `{"password":"%s"}`, oneTimePassword(capture["uri"].(string)))
 		c2.expect("3", "staff-invade-reply", `{}`)
+		id = `{"session_id":"*","id":"*","name":"host","server_id":"*","server_era":"*","is_manager":true,"client_address":"*"}`
 		c2.expectSnapshot(s.backend.Version(), []string{id}, []string{msg})
 		c1.expect("", "join-event",
 			`{"session_id":"%s","id":"*","name":"","server_id":"*","server_era":"*","is_staff":true,"is_manager":true}`, c2.sessionID)

@@ -48,7 +48,7 @@ func (c *console) SetName(name string)      {}
 func (c *console) Close()                   {}
 func (c *console) CheckAbandoned() error    { return nil }
 
-func (c *console) View() *proto.SessionView {
+func (c *console) View(level proto.PrivilegeLevel) *proto.SessionView {
 	return &proto.SessionView{
 		IdentityView: c.Identity().View(),
 		SessionID:    "console",

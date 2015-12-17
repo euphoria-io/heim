@@ -16,7 +16,7 @@ func TestDeleteMessage(t *testing.T) {
 	ctx := scope.New()
 	kms := security.LocalKMS()
 	kms.SetMasterKey(make([]byte, security.AES256.KeySize()))
-	session := mock.TestSession("test", "T1")
+	session := mock.TestSession("test", "T1", "ip1")
 
 	sendMessage := func(room proto.Room) (proto.Message, error) {
 		msg := proto.Message{

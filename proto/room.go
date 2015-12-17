@@ -18,6 +18,14 @@ const (
 	RoomMessageKeyType = security.AES128
 )
 
+type PrivilegeLevel byte
+
+const (
+	General PrivilegeLevel = iota
+	Host
+	Staff
+)
+
 // A Listing is a sortable list of Identitys present in a Room.
 // TODO: these should be Sessions
 type Listing []SessionView
@@ -64,7 +72,7 @@ type Room interface {
 
 	// Listing returns the current global list of connected sessions to this
 	// Room.
-	Listing(scope.Context) (Listing, error)
+	Listing(scope.Context, PrivilegeLevel) (Listing, error)
 
 	// RenameUser updates the nickname of a Session in this Room.
 	RenameUser(ctx scope.Context, session Session, formerName string) (*NickEvent, error)

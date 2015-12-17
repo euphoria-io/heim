@@ -12,6 +12,7 @@ type session struct {
 	sync.Mutex
 	id      string
 	agentID string
+	ip      string
 	name    string
 	history []message
 }
@@ -21,9 +22,9 @@ type message struct {
 	payload interface{}
 }
 
-func TestSession(id, agentID string) proto.Session { return newSession(id, agentID) }
+func TestSession(id, agentID, ip string) proto.Session { return newSession(id, agentID, ip) }
 
-func newSession(id, agentID string) *session { return &session{id: id, agentID: agentID} }
+func newSession(id, agentID, ip string) *session { return &session{id: id, agentID: agentID, ip: ip} }
 
 func (s *session) ServerID() string         { return "test" }
 func (s *session) ID() string               { return s.id }
@@ -33,7 +34,7 @@ func (s *session) CheckAbandoned() error    { return nil }
 func (s *session) SetName(name string)      { s.name = name }
 func (s *session) Identity() proto.Identity { return backend.NewIdentity(s.id, s.name) }
 
-func (s *session) View() *proto.SessionView {
+func (s *session) View(level proto.PrivilegeLevel) *proto.SessionView {
 	return &proto.SessionView{
 		IdentityView: s.Identity().View(),
 		SessionID:    s.id,

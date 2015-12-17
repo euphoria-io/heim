@@ -12,9 +12,9 @@ import (
 )
 
 func TestRoomPresence(t *testing.T) {
-	userA := newSession("A", "A1")
-	userA2 := newSession("A", "A2")
-	userB := newSession("B", "B1")
+	userA := newSession("A", "A1", "ip1")
+	userA2 := newSession("A", "A2", "ip2")
+	userB := newSession("B", "B1", "ip3")
 
 	ctx := scope.New()
 	kms := security.LocalKMS()
@@ -66,9 +66,9 @@ func TestRoomPresence(t *testing.T) {
 }
 
 func TestRoomBroadcast(t *testing.T) {
-	userA := newSession("A", "A1")
-	userB := newSession("B", "B1")
-	userC := newSession("C", "C1")
+	userA := newSession("A", "A1", "ip1")
+	userB := newSession("B", "B1", "ip2")
+	userC := newSession("C", "C1", "ip3")
 
 	ctx := scope.New()
 	kms := security.LocalKMS()
@@ -96,14 +96,14 @@ func TestRoomBroadcast(t *testing.T) {
 			[]message{
 				{
 					cmdType: proto.JoinEventType,
-					payload: proto.PresenceEvent{
+					payload: &proto.PresenceEvent{
 						SessionID:    "B",
 						IdentityView: &proto.IdentityView{ID: "B"},
 					},
 				},
 				{
 					cmdType: proto.JoinEventType,
-					payload: proto.PresenceEvent{
+					payload: &proto.PresenceEvent{
 						SessionID:    "C",
 						IdentityView: &proto.IdentityView{ID: "C"},
 					},
@@ -113,7 +113,7 @@ func TestRoomBroadcast(t *testing.T) {
 			[]message{
 				{
 					cmdType: proto.JoinEventType,
-					payload: proto.PresenceEvent{
+					payload: &proto.PresenceEvent{
 						SessionID:    "C",
 						IdentityView: &proto.IdentityView{ID: "C"},
 					},
@@ -129,14 +129,14 @@ func TestRoomBroadcast(t *testing.T) {
 			[]message{
 				{
 					cmdType: proto.JoinEventType,
-					payload: proto.PresenceEvent{
+					payload: &proto.PresenceEvent{
 						SessionID:    "B",
 						IdentityView: &proto.IdentityView{ID: "B"},
 					},
 				},
 				{
 					cmdType: proto.JoinEventType,
-					payload: proto.PresenceEvent{
+					payload: &proto.PresenceEvent{
 						SessionID:    "C",
 						IdentityView: &proto.IdentityView{ID: "C"},
 					},
@@ -150,7 +150,7 @@ func TestRoomBroadcast(t *testing.T) {
 			[]message{
 				{
 					cmdType: proto.JoinEventType,
-					payload: proto.PresenceEvent{
+					payload: &proto.PresenceEvent{
 						SessionID:    "C",
 						IdentityView: &proto.IdentityView{ID: "C"},
 					},

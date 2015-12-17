@@ -9,6 +9,7 @@ import (
 
 	"euphoria.io/heim/backend/psql"
 	"euphoria.io/heim/cluster"
+	"euphoria.io/heim/proto"
 	"euphoria.io/scope"
 )
 
@@ -91,7 +92,7 @@ func scan(ctx scope.Context, c cluster.Cluster, pb *psql.Backend) error {
 			}
 
 			// Check lurker status. Currently this is indicated by a blank name on the session.
-			session, err := presence.SessionView()
+			session, err := presence.SessionView(proto.General)
 			if err != nil {
 				fmt.Printf("error: failed to extract session from presence row: %s\n", err)
 				continue

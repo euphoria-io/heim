@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"sync"
 	"sync/atomic"
@@ -170,13 +171,26 @@ func (s *session) ServerEra() string        { return s.serverEra }
 func (s *session) Identity() proto.Identity { return s.identity }
 func (s *session) SetName(name string)      { s.identity.name = name }
 
-func (s *session) View() *proto.SessionView {
-	return &proto.SessionView{
+func (s *session) View(level proto.PrivilegeLevel) *proto.SessionView {
+	view := &proto.SessionView{
 		IdentityView: s.identity.View(),
 		SessionID:    s.id,
 		IsStaff:      s.client.Account != nil && s.client.Account.IsStaff(),
 		IsManager:    s.client.Authorization.ManagerKeyPair != nil,
 	}
+
+	switch level {
+	case proto.Staff:
+		addr := s.conn.RemoteAddr()
+		switch a := addr.(type) {
+		case *net.TCPAddr:
+			view.ClientAddress = a.String()
+		default:
+			view.ClientAddress = addr.String()
+		}
+	}
+
+	return view
 }
 
 func (s *session) writeMessage(messageType int, data []byte) error {
@@ -193,6 +207,13 @@ func (s *session) writeMessage(messageType int, data []byte) error {
 }
 
 func (s *session) Send(ctx scope.Context, cmdType proto.PacketType, payload interface{}) error {
+	// Special case: presence events have privileged info that may need to be stripped from them
+	if pEvent, ok := payload.(*proto.PresenceEvent); ok {
+		if s.privilegeLevel() != proto.Staff {
+			pEvent.ClientAddress = ""
+		}
+	}
+
 	var err error
 	payload, err = proto.DecryptPayload(payload, &s.client.Authorization)
 	if err != nil {
@@ -484,13 +505,24 @@ func (s *session) sendDisconnect(reason string) error {
 	return nil
 }
 
+func (s *session) privilegeLevel() proto.PrivilegeLevel {
+	switch {
+	case s.client.Account != nil && s.client.Account.IsStaff():
+		return proto.Staff
+	case s.client.Authorization.ManagerKeyPair != nil:
+		return proto.Host
+	default:
+		return proto.General
+	}
+}
+
 func (s *session) join() error {
 	msgs, err := s.room.Latest(s.ctx, 100, 0)
 	if err != nil {
 		return err
 	}
 
-	listing, err := s.room.Listing(s.ctx)
+	listing, err := s.room.Listing(s.ctx, s.privilegeLevel())
 	if err != nil {
 		return err
 	}
@@ -522,7 +554,7 @@ func (s *session) join() error {
 func (s *session) sendHello(roomIsPrivate, accountHasAccess bool) error {
 	logger := logging.Logger(s.ctx)
 	event := &proto.HelloEvent{
-		SessionView:      s.View(),
+		SessionView:      s.View(s.privilegeLevel()),
 		AccountHasAccess: accountHasAccess,
 		RoomIsPrivate:    roomIsPrivate,
 		Version:          s.room.Version(),

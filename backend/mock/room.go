@@ -153,8 +153,8 @@ func (r *memRoom) Join(ctx scope.Context, session proto.Session) error {
 	r.live[id] = append(r.live[id], session)
 	r.clients[session.ID()] = client
 
-	return r.broadcast(ctx, proto.JoinType,
-		proto.PresenceEvent(*session.View()), session)
+	event := (*proto.PresenceEvent)(session.View(proto.Staff))
+	return r.broadcast(ctx, proto.JoinType, event, session)
 }
 
 func (r *memRoom) Part(ctx scope.Context, session proto.Session) error {
@@ -175,8 +175,8 @@ func (r *memRoom) Part(ctx scope.Context, session proto.Session) error {
 		delete(r.identities, id)
 	}
 	delete(r.clients, session.ID())
-	return r.broadcast(ctx, proto.PartEventType,
-		proto.PresenceEvent(*session.View()), session)
+	event := (*proto.PresenceEvent)(session.View(proto.Staff))
+	return r.broadcast(ctx, proto.PartEventType, event, session)
 }
 
 func (r *memRoom) Send(ctx scope.Context, session proto.Session, message proto.Message) (
@@ -255,7 +255,7 @@ func (r *memRoom) broadcast(
 	}
 
 	if cmdType == proto.PartEventType {
-		if presence, ok := payload.(proto.PresenceEvent); ok {
+		if presence, ok := payload.(*proto.PresenceEvent); ok {
 			if waiter, ok := r.partWaiters[presence.SessionID]; ok {
 				r.m.Unlock()
 				waiter <- struct{}{}
@@ -266,11 +266,11 @@ func (r *memRoom) broadcast(
 	return nil
 }
 
-func (r *memRoom) Listing(ctx scope.Context) (proto.Listing, error) {
+func (r *memRoom) Listing(ctx scope.Context, level proto.PrivilegeLevel) (proto.Listing, error) {
 	listing := proto.Listing{}
 	for _, sessions := range r.live {
 		for _, session := range sessions {
-			listing = append(listing, *session.View())
+			listing = append(listing, *session.View(level))
 		}
 	}
 	sort.Sort(listing)

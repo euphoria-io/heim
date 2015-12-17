@@ -598,7 +598,7 @@ func (b *Backend) join(ctx scope.Context, room *Room, session proto.Session) err
 		Updated:   time.Now(),
 	}
 	err = presence.SetFact(&proto.Presence{
-		SessionView:    *session.View(),
+		SessionView:    *session.View(proto.Staff),
 		LastInteracted: presence.Updated,
 	})
 	if err != nil {
@@ -619,7 +619,8 @@ func (b *Backend) join(ctx scope.Context, room *Room, session proto.Session) err
 	lm[session.ID()] = Listener{Session: session, Client: client}
 	b.Unlock()
 
-	if err := room.broadcast(ctx, t, proto.JoinEventType, proto.PresenceEvent(*session.View()), session); err != nil {
+	event := proto.PresenceEvent(*session.View(proto.Staff))
+	if err := room.broadcast(ctx, t, proto.JoinEventType, event, session); err != nil {
 		rb()
 		return err
 	}
@@ -648,7 +649,8 @@ func (b *Backend) part(ctx scope.Context, room *Room, session proto.Session) err
 
 	// Broadcast a presence event.
 	// TODO: make this an explicit action via the Room protocol, to support encryption
-	if err := room.broadcast(ctx, t, proto.PartEventType, proto.PresenceEvent(*session.View()), session); err != nil {
+	event := proto.PresenceEvent(*session.View(proto.Staff))
+	if err := room.broadcast(ctx, t, proto.PartEventType, event); err != nil {
 		rollback(ctx, t)
 		return err
 	}
@@ -666,7 +668,7 @@ func (b *Backend) part(ctx scope.Context, room *Room, session proto.Session) err
 	return nil
 }
 
-func (b *Backend) listing(ctx scope.Context, room *Room) (proto.Listing, error) {
+func (b *Backend) listing(ctx scope.Context, room *Room, level proto.PrivilegeLevel) (proto.Listing, error) {
 	// TODO: return presence in an envelope, to support encryption
 	// TODO: cache for performance
 
@@ -683,7 +685,7 @@ func (b *Backend) listing(ctx scope.Context, room *Room) (proto.Listing, error) 
 	for _, row := range rows {
 		p := row.(*Presence)
 		if b.peers[p.ServerID] == p.ServerEra {
-			if view, err := p.SessionView(); err == nil {
+			if view, err := p.SessionView(level); err == nil {
 				result = append(result, view)
 			} else {
 				b.debug("ignoring presence row because error: %s", err)

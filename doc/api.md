@@ -283,6 +283,7 @@ SessionView describes a session and its identity.
 | `session_id` | [string](#string) | required |  id of the session, unique across all sessions globally |
 | `is_staff` | [bool](#bool) | *optional* |  if true, this session belongs to a member of staff |
 | `is_manager` | [bool](#bool) | *optional* |  if true, this session belongs to a manager of the room |
+| `client_address` | [string](#string) | *optional* |  for hosts and staff, the address of the client |
 
 
 
@@ -1305,6 +1306,7 @@ A `join-event` indicates a session just joined the room.
 | `session_id` | [string](#string) | required |  id of the session, unique across all sessions globally |
 | `is_staff` | [bool](#bool) | *optional* |  if true, this session belongs to a member of staff |
 | `is_manager` | [bool](#bool) | *optional* |  if true, this session belongs to a manager of the room |
+| `client_address` | [string](#string) | *optional* |  for hosts and staff, the address of the client |
 
 
 
@@ -1407,6 +1409,7 @@ A `part-event` indicates a session just disconnected from the room.
 | `session_id` | [string](#string) | required |  id of the session, unique across all sessions globally |
 | `is_staff` | [bool](#bool) | *optional* |  if true, this session belongs to a member of staff |
 | `is_manager` | [bool](#bool) | *optional* |  if true, this session belongs to a manager of the room |
+| `client_address` | [string](#string) | *optional* |  for hosts and staff, the address of the client |
 
 
 

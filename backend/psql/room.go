@@ -283,8 +283,8 @@ func (rb *RoomBinding) EditMessage(
 	return reply, nil
 }
 
-func (rb *RoomBinding) Listing(ctx scope.Context) (proto.Listing, error) {
-	return rb.Backend.listing(ctx, rb.Room)
+func (rb *RoomBinding) Listing(ctx scope.Context, level proto.PrivilegeLevel) (proto.Listing, error) {
+	return rb.Backend.listing(ctx, rb.Room, level)
 }
 
 func (rb *RoomBinding) RenameUser(ctx scope.Context, session proto.Session, formerName string) (
@@ -298,7 +298,7 @@ func (rb *RoomBinding) RenameUser(ctx scope.Context, session proto.Session, form
 		Updated:   time.Now(),
 	}
 	err := presence.SetFact(&proto.Presence{
-		SessionView:    *session.View(),
+		SessionView:    *session.View(proto.Staff),
 		LastInteracted: presence.Updated,
 	})
 	if err != nil {
