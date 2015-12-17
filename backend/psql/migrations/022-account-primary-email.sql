@@ -1,10 +1,10 @@
 -- +migrate Up
 ALTER TABLE account ADD email TEXT NOT NULL DEFAULT '';
 
-UPDATE account SET email = (
-    SELECT personal_identity.id FROM personal_identity
-        WHERE account_id = account.id AND namespace = 'email'
-        ORDER BY verified DESC LIMIT 1);
+UPDATE account SET email = emails.email
+    FROM (SELECT account_id, personal_identity.id AS email FROM personal_identity
+        WHERE namespace = 'email' ORDER BY verified) emails
+    WHERE account.id = emails.account_id;
 
 -- +migrate Down
 ALTER TABLE account DROP IF EXISTS email;
