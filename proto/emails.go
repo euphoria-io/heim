@@ -56,7 +56,7 @@ type VerificationEmailParams struct {
 }
 
 func (p VerificationEmailParams) Subject() template.HTML {
-	return template.HTML("verification of new email address")
+	return template.HTML("Please verify your email address")
 }
 
 func (p VerificationEmailParams) VerifyEmailURL() template.HTML {
