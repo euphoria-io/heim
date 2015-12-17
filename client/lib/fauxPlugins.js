@@ -629,6 +629,7 @@ export default function initPlugins(roomName) {
           .motto {
             font-family: "Droid Serif", Georgia, serif;
             text-transform: uppercase;
+            cursor: help;
           }
 
           .motto::before {
