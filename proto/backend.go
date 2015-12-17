@@ -16,12 +16,12 @@ type Backend interface {
 	EmailTracker() EmailTracker
 	Jobs() jobs.JobService
 
-	// BanIP globally bans an IP. A zero value for until indicates a
-	// permanent ban.
-	BanIP(ctx scope.Context, ip string, until time.Time) error
+	// Ban adds an entry to the global ban list. A zero value for until
+	// indicates a permanent ban.
+	Ban(ctx scope.Context, ban Ban, until time.Time) error
 
-	// UnbanIP removes a global ban.
-	UnbanIP(ctx scope.Context, ip string) error
+	// UnbanAgent removes a global ban.
+	Unban(ctx scope.Context, ban Ban) error
 
 	Close()
 

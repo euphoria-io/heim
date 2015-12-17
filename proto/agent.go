@@ -34,13 +34,6 @@ type AgentTracker interface {
 
 	// ClearClientKey logs the agent out.
 	ClearClientKey(ctx scope.Context, agentID string) error
-
-	// BanAgent globally bans an agent. A zero value for until indicates a
-	// permanent ban.
-	BanAgent(ctx scope.Context, agentID string, until time.Time) error
-
-	// UnbanAgent removes a global ban.
-	UnbanAgent(ctx scope.Context, agentID string) error
 }
 
 func NewAgent(agentID []byte, accessKey *security.ManagedKey) (*Agent, error) {

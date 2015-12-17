@@ -30,7 +30,7 @@ func (lm ListenerMap) Broadcast(ctx scope.Context, event *proto.Packet, exclude 
 
 	// Inspect packet to see if it's a bounce event. If so, we'll deliver it
 	// only to the bounced parties.
-	bounceAgentID := ""
+	bounceAgentID := proto.UserID("")
 	bounceIP := ""
 	if event.Type == proto.BounceEventType {
 		if bounceEvent, ok := payload.(*proto.BounceEvent); ok {
@@ -62,7 +62,7 @@ func (lm ListenerMap) Broadcast(ctx scope.Context, event *proto.Packet, exclude 
 	for sessionID, listener := range lm {
 		if _, ok := excludeSet[sessionID]; !ok {
 			if bounceAgentID != "" {
-				if listener.Session.Identity().ID().String() == bounceAgentID {
+				if listener.Session.Identity().ID() == bounceAgentID {
 					logging.Logger(ctx).Printf("sending disconnect to %s: %#v", listener.ID(), payload)
 					discEvent := &proto.DisconnectEvent{Reason: payload.(*proto.BounceEvent).Reason}
 					if err := listener.Send(ctx, proto.DisconnectEventType, discEvent); err != nil {

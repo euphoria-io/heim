@@ -18,7 +18,7 @@ type TestBackend struct {
 	accounts       map[snowflake.Snowflake]proto.Account
 	accountIDs     map[string]*personalIdentity
 	agents         map[string]*proto.Agent
-	agentBans      map[string]time.Time
+	agentBans      map[proto.UserID]time.Time
 	et             EmailTracker
 	ipBans         map[string]time.Time
 	js             JobService
@@ -70,32 +70,23 @@ func (b *TestBackend) CreateRoom(
 
 func (b *TestBackend) Peers() []cluster.PeerDesc { return nil }
 
-func (b *TestBackend) BanAgent(ctx scope.Context, agentID string, until time.Time) error {
-	b.Lock()
-	defer b.Unlock()
-
+func (b *TestBackend) banAgent(ctx scope.Context, agentID proto.UserID, until time.Time) error {
 	if b.agentBans == nil {
-		b.agentBans = map[string]time.Time{agentID: until}
+		b.agentBans = map[proto.UserID]time.Time{agentID: until}
 	} else {
 		b.agentBans[agentID] = until
 	}
 	return nil
 }
 
-func (b *TestBackend) UnbanAgent(ctx scope.Context, agentID string) error {
-	b.Lock()
-	defer b.Unlock()
-
+func (b *TestBackend) unbanAgent(ctx scope.Context, agentID proto.UserID) error {
 	if _, ok := b.agentBans[agentID]; ok {
 		delete(b.agentBans, agentID)
 	}
 	return nil
 }
 
-func (b *TestBackend) BanIP(ctx scope.Context, ip string, until time.Time) error {
-	b.Lock()
-	defer b.Unlock()
-
+func (b *TestBackend) banIP(ctx scope.Context, ip string, until time.Time) error {
 	if b.ipBans == nil {
 		b.ipBans = map[string]time.Time{ip: until}
 	} else {
@@ -104,14 +95,39 @@ func (b *TestBackend) BanIP(ctx scope.Context, ip string, until time.Time) error
 	return nil
 }
 
-func (b *TestBackend) UnbanIP(ctx scope.Context, ip string) error {
-	b.Lock()
-	defer b.Unlock()
-
+func (b *TestBackend) unbanIP(ctx scope.Context, ip string) error {
 	if _, ok := b.ipBans[ip]; ok {
 		delete(b.ipBans, ip)
 	}
 	return nil
+}
+
+func (b *TestBackend) Ban(ctx scope.Context, ban proto.Ban, until time.Time) error {
+	b.Lock()
+	defer b.Unlock()
+
+	switch {
+	case ban.IP != "":
+		return b.banIP(ctx, ban.IP, until)
+	case ban.ID != "":
+		return b.banAgent(ctx, ban.ID, until)
+	default:
+		return nil
+	}
+}
+
+func (b *TestBackend) Unban(ctx scope.Context, ban proto.Ban) error {
+	b.Lock()
+	defer b.Unlock()
+
+	switch {
+	case ban.IP != "":
+		return b.unbanIP(ctx, ban.IP)
+	case ban.ID != "":
+		return b.unbanAgent(ctx, ban.ID)
+	default:
+		return nil
+	}
 }
 
 func isExcluded(toCheck proto.Session, excluding []proto.Session) bool {

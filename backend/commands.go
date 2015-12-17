@@ -852,18 +852,29 @@ func (s *session) handleEditMessageCommand(msg *proto.EditMessageCommand) *respo
 }
 
 func (s *session) handleBanCommand(msg *proto.BanCommand) *response {
-	if s.client.Account == nil || s.client.Authorization.ManagerKeyPair == nil {
+	if s.privilegeLevel() == proto.General {
 		return &response{err: proto.ErrAccessDenied}
 	}
-	if msg.Ban.IP != "" {
-		return &response{err: fmt.Errorf("ip bans not supported")}
+	if s.privilegeLevel() != proto.Staff {
+		if msg.Ban.Global {
+			return &response{err: proto.ErrAccessDenied}
+		}
+		if msg.Ban.IP != "" {
+			return &response{err: fmt.Errorf("ip bans not supported")}
+		}
 	}
 	var until time.Time
 	if msg.Seconds != 0 {
 		until = time.Now().Add(time.Duration(msg.Seconds) * time.Second)
 	}
-	if err := s.room.Ban(s.ctx, msg.Ban, until); err != nil {
-		return &response{err: err}
+	if msg.Ban.Global {
+		if err := s.backend.Ban(s.ctx, msg.Ban, until); err != nil {
+			return &response{err: err}
+		}
+	} else {
+		if err := s.room.Ban(s.ctx, msg.Ban, until); err != nil {
+			return &response{err: err}
+		}
 	}
 	return &response{
 		packet: &proto.BanReply{
@@ -874,11 +885,21 @@ func (s *session) handleBanCommand(msg *proto.BanCommand) *response {
 }
 
 func (s *session) handleUnbanCommand(msg *proto.UnbanCommand) *response {
-	if s.client.Account == nil || s.client.Authorization.ManagerKeyPair == nil {
+	if s.privilegeLevel() == proto.General {
 		return &response{err: proto.ErrAccessDenied}
 	}
-	if err := s.room.Unban(s.ctx, msg.Ban); err != nil {
-		return &response{err: err}
+	if s.privilegeLevel() != proto.Staff && msg.Global {
+		return &response{err: proto.ErrAccessDenied}
+	}
+	switch msg.Global {
+	case false:
+		if err := s.room.Unban(s.ctx, msg.Ban); err != nil {
+			return &response{err: err}
+		}
+	case true:
+		if err := s.backend.Unban(s.ctx, msg.Ban); err != nil {
+			return &response{err: err}
+		}
 	}
 	return &response{
 		packet: &proto.UnbanReply{

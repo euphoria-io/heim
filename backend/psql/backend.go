@@ -434,7 +434,78 @@ func (b *Backend) CreateRoom(
 	return room.Bind(b), nil
 }
 
-func (b *Backend) BanIP(ctx scope.Context, ip string, until time.Time) error {
+func (b *Backend) Ban(ctx scope.Context, ban proto.Ban, until time.Time) error {
+	return b.ban(ctx, global, ban, until)
+}
+func (b *Backend) Unban(ctx scope.Context, ban proto.Ban) error { return b.unban(ctx, global, ban) }
+
+func (b *Backend) ban(ctx scope.Context, room *Room, ban proto.Ban, until time.Time) error {
+	switch {
+	case ban.IP != "":
+		return b.banIP(ctx, room, ban.IP, until)
+	case ban.ID != "":
+		return b.banAgent(ctx, room, ban.ID, until)
+	default:
+		return nil
+	}
+}
+
+func (b *Backend) unban(ctx scope.Context, room *Room, ban proto.Ban) error {
+	switch {
+	case ban.IP != "":
+		return b.unbanIP(ctx, room, ban.IP)
+	case ban.ID != "":
+		return b.unbanAgent(ctx, room, ban.ID)
+	default:
+		return nil
+	}
+}
+
+func (b *Backend) banAgent(ctx scope.Context, room *Room, agentID proto.UserID, until time.Time) error {
+	ban := &BannedAgent{
+		AgentID: string(agentID),
+		Created: time.Now(),
+		Expires: gorp.NullTime{
+			Time:  until,
+			Valid: !until.IsZero(),
+		},
+	}
+
+	if room != global {
+		ban.Room = sql.NullString{
+			Valid:  true,
+			String: room.Name,
+		}
+	}
+
+	t, err := b.DbMap.Begin()
+	if err != nil {
+		return err
+	}
+
+	if err := t.Insert(ban); err != nil {
+		rollback(ctx, t)
+		return err
+	}
+
+	bounceEvent := &proto.BounceEvent{Reason: "banned", AgentID: agentID}
+	roomb := &RoomBinding{
+		Room:    room,
+		Backend: b,
+	}
+	if err := roomb.broadcast(ctx, t, proto.BounceEventType, bounceEvent); err != nil {
+		rollback(ctx, t)
+		return err
+	}
+
+	if err := t.Commit(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (b *Backend) banIP(ctx scope.Context, room *Room, ip string, until time.Time) error {
 	ban := &BannedIP{
 		IP:      ip,
 		Created: time.Now(),
@@ -442,6 +513,13 @@ func (b *Backend) BanIP(ctx scope.Context, ip string, until time.Time) error {
 			Time:  until,
 			Valid: !until.IsZero(),
 		},
+	}
+
+	if room != global {
+		ban.Room = sql.NullString{
+			Valid:  true,
+			String: room.Name,
+		}
 	}
 
 	t, err := b.DbMap.Begin()
@@ -455,7 +533,11 @@ func (b *Backend) BanIP(ctx scope.Context, ip string, until time.Time) error {
 	}
 
 	bounceEvent := &proto.BounceEvent{Reason: "banned", IP: ip}
-	if err := global.broadcast(ctx, t, proto.BounceEventType, bounceEvent); err != nil {
+	roomb := &RoomBinding{
+		Room:    room,
+		Backend: b,
+	}
+	if err := roomb.broadcast(ctx, t, proto.BounceEventType, bounceEvent); err != nil {
 		rollback(ctx, t)
 		return err
 	}
@@ -467,9 +549,26 @@ func (b *Backend) BanIP(ctx scope.Context, ip string, until time.Time) error {
 	return nil
 }
 
-func (b *Backend) UnbanIP(ctx scope.Context, ip string) error {
-	_, err := b.DbMap.Exec("DELETE FROM banned_ip WHERE ip = $1 AND room IS NULL", ip)
-	return err
+func (b *Backend) unbanAgent(ctx scope.Context, room *Room, agentID proto.UserID) error {
+	switch room {
+	case global:
+		_, err := b.DbMap.Exec("DELETE FROM banned_agent WHERE room IS NULL AND agent_id = $1", agentID.String())
+		return err
+	default:
+		_, err := b.DbMap.Exec("DELETE FROM banned_agent WHERE room = $1 AND agent_id = $2", room.Name, agentID.String())
+		return err
+	}
+}
+
+func (b *Backend) unbanIP(ctx scope.Context, room *Room, ip string) error {
+	switch room {
+	case global:
+		_, err := b.DbMap.Exec("DELETE FROM banned_ip WHERE room IS NULL AND ip = $1", ip)
+		return err
+	default:
+		_, err := b.DbMap.Exec("DELETE FROM banned_ip WHERE room = $1 AND ip = $2", room.Name, ip)
+		return err
+	}
 }
 
 func (b *Backend) sendMessageToRoom(

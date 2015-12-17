@@ -476,7 +476,7 @@ func (rb *RoomBinding) banAgent(ctx scope.Context, agentID proto.UserID, until t
 		}
 	}
 
-	bounceEvent := &proto.BounceEvent{Reason: "banned", AgentID: agentID.String()}
+	bounceEvent := &proto.BounceEvent{Reason: "banned", AgentID: agentID}
 	if err := rb.broadcast(ctx, t, proto.BounceEventType, bounceEvent); err != nil {
 		rollback(ctx, t)
 		return err

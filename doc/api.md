@@ -791,6 +791,7 @@ The command is a no-op if an identical entry already exists in the ban list.
 | :-- | :-- | :-- | :--------- |
 | `id` | [UserID](#userid) | *optional* |  the id of an agent or account |
 | `ip` | [string](#string) | *optional* |  an IP address |
+| `global` | [bool](#bool) | *optional* |  if true, the ban applies site-wide and not just to the current room |
 | `seconds` | [int](#int) | *optional* |  the duration of the ban; if not given, the ban is infinite |
 
 
@@ -804,6 +805,7 @@ The `ban-reply` packet indicates that the `ban` command succeeded.
 | :-- | :-- | :-- | :--------- |
 | `id` | [UserID](#userid) | *optional* |  the id of an agent or account |
 | `ip` | [string](#string) | *optional* |  an IP address |
+| `global` | [bool](#bool) | *optional* |  if true, the ban applies site-wide and not just to the current room |
 | `seconds` | [int](#int) | *optional* |  the duration of the ban; if not given, the ban is infinite |
 
 
@@ -982,6 +984,7 @@ The `unban` command removes an entry from the room's ban list.
 | :-- | :-- | :-- | :--------- |
 | `id` | [UserID](#userid) | *optional* |  the id of an agent or account |
 | `ip` | [string](#string) | *optional* |  an IP address |
+| `global` | [bool](#bool) | *optional* |  if true, the ban applies site-wide and not just to the current room |
 
 
 
@@ -994,6 +997,7 @@ The `unban-reply` packet indicates that the `unban` command succeeded.
 | :-- | :-- | :-- | :--------- |
 | `id` | [UserID](#userid) | *optional* |  the id of an agent or account |
 | `ip` | [string](#string) | *optional* |  an IP address |
+| `global` | [bool](#bool) | *optional* |  if true, the ban applies site-wide and not just to the current room |
 
 
 
@@ -1251,7 +1255,7 @@ A `bounce-event` indicates that access to a room is denied.
 | :-- | :-- | :-- | :--------- |
 | `reason` | [string](#string) | *optional* |  the reason why access was denied |
 | `auth_options` | [[AuthOption](#authoption)] | *optional* |  authentication options that may be used; see [auth](#auth) |
-| `agent_id` | [string](#string) | *optional* |  internal use only |
+| `agent_id` | [UserID](#userid) | *optional* |  internal use only |
 | `ip` | [string](#string) | *optional* |  internal use only |
 
 

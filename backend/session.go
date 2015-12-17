@@ -118,7 +118,6 @@ type session struct {
 
 	m                   sync.Mutex
 	joined              bool
-	banned              bool
 	maybeAbandoned      bool
 	outstandingPings    int
 	expectedPingReply   int64

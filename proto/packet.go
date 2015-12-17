@@ -456,8 +456,9 @@ type AuthReply struct {
 // `Ban` describes an entry in a ban list. When incoming sessions match one of
 // these entries, they are rejected.
 type Ban struct {
-	ID UserID `json:"id,omitempty"` // the id of an agent or account
-	IP string `json:"ip,omitempty"` // an IP address
+	ID     UserID `json:"id,omitempty"`     // the id of an agent or account
+	IP     string `json:"ip,omitempty"`     // an IP address
+	Global bool   `json:"global,omitempty"` // if true, the ban applies site-wide and not just to the current room
 }
 
 // The `ban` command adds an entry to the room's ban list. Any joined sessions
@@ -485,7 +486,7 @@ type UnbanReply UnbanCommand
 type BounceEvent struct {
 	Reason      string       `json:"reason,omitempty"`       // the reason why access was denied
 	AuthOptions []AuthOption `json:"auth_options,omitempty"` // authentication options that may be used; see [auth](#auth)
-	AgentID     string       `json:"agent_id,omitempty"`     // internal use only
+	AgentID     UserID       `json:"agent_id,omitempty"`     // internal use only
 	IP          string       `json:"ip,omitempty"`           // internal use only
 }
 

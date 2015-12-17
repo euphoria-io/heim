@@ -41,48 +41,34 @@ func (ban) run(ctx scope.Context, c *console, args []string) error {
 		untilStr = fmt.Sprintf("until %s", until)
 	}
 
+	ban := proto.Ban{}
+
 	switch {
 	case *agent != "":
-		switch *roomName {
-		case "":
-			if err := c.backend.AgentTracker().BanAgent(ctx, *agent, until); err != nil {
-				return err
-			}
-			c.Printf("agent %s banned globally %s\n", *agent, untilStr)
-			return nil
-		default:
-			room, err := c.backend.GetRoom(ctx, *roomName)
-			if err != nil {
-				return err
-			}
-			if err := room.Ban(ctx, proto.Ban{ID: proto.UserID(*agent)}, until); err != nil {
-				return err
-			}
-			c.Printf("agent %s banned in room %s %s\n", *agent, *roomName, untilStr)
-			return nil
-		}
+		ban.ID = proto.UserID(*agent)
 	case *ip != "":
-		switch *roomName {
-		case "":
-			if err := c.backend.BanIP(ctx, *ip, until); err != nil {
-				return err
-			}
-			c.Printf("ip %s banned globally %s\n", *ip, untilStr)
-			return nil
-		default:
-			room, err := c.backend.GetRoom(ctx, *roomName)
-			if err != nil {
-				return err
-			}
-			if err := room.Ban(ctx, proto.Ban{IP: *ip}, until); err != nil {
-				return err
-			}
-			c.Printf("ip %s banned in room %s %s\n", *ip, *roomName, untilStr)
-			return nil
-		}
+		ban.IP = *ip
 	default:
 		return fmt.Errorf("-agent <agent-id> or -ip <ip> is required")
 	}
+
+	if *roomName == "" {
+		if err := c.backend.Ban(ctx, ban, until); err != nil {
+			return err
+		}
+		c.Printf("banned globally for %s: %#v\n", untilStr, ban)
+	} else {
+		room, err := c.backend.GetRoom(ctx, *roomName)
+		if err != nil {
+			return err
+		}
+		if err := room.Ban(ctx, ban, until); err != nil {
+			return err
+		}
+		c.Printf("banned in room %s for %s: %#v\n", *roomName, untilStr, ban)
+	}
+
+	return nil
 }
 
 type unban struct{}
@@ -101,46 +87,32 @@ func (unban) run(ctx scope.Context, c *console, args []string) error {
 		return err
 	}
 
+	ban := proto.Ban{}
+
 	switch {
 	case *agent != "":
-		switch *roomName {
-		case "":
-			if err := c.backend.AgentTracker().UnbanAgent(ctx, *agent); err != nil {
-				return err
-			}
-			c.Printf("global ban of agent %s lifted\n", *agent)
-			return nil
-		default:
-			room, err := c.backend.GetRoom(ctx, *roomName)
-			if err != nil {
-				return err
-			}
-			if err := room.Unban(ctx, proto.Ban{ID: proto.UserID(*agent)}); err != nil {
-				return err
-			}
-			c.Printf("ban of agent %s in room %s lifted\n", *agent, *roomName)
-			return nil
-		}
+		ban.ID = proto.UserID(*agent)
 	case *ip != "":
-		switch *roomName {
-		case "":
-			if err := c.backend.UnbanIP(ctx, *ip); err != nil {
-				return err
-			}
-			c.Printf("global ban of ip %s lifted\n", *ip)
-			return nil
-		default:
-			room, err := c.backend.GetRoom(ctx, *roomName)
-			if err != nil {
-				return err
-			}
-			if err := room.Unban(ctx, proto.Ban{IP: *ip}); err != nil {
-				return err
-			}
-			c.Printf("ban of ip %s in room %s lifted\n", *ip, *roomName)
-			return nil
-		}
+		ban.IP = *ip
 	default:
 		return fmt.Errorf("-agent <agent-id> or -ip <ip> is required")
 	}
+
+	if *roomName == "" {
+		if err := c.backend.Unban(ctx, ban); err != nil {
+			return err
+		}
+		c.Printf("global unban: %#v\n", ban)
+	} else {
+		room, err := c.backend.GetRoom(ctx, *roomName)
+		if err != nil {
+			return err
+		}
+		if err := room.Unban(ctx, ban); err != nil {
+			return err
+		}
+		c.Printf("unban in room %s: %#v\n", *roomName, ban)
+	}
+
+	return nil
 }

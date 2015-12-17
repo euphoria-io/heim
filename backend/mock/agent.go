@@ -1,8 +1,6 @@
 package mock
 
 import (
-	"time"
-
 	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/security"
 	"euphoria.io/heim/proto/snowflake"
@@ -11,14 +9,6 @@ import (
 
 type agentTracker struct {
 	b *TestBackend
-}
-
-func (t *agentTracker) BanAgent(ctx scope.Context, agentID string, until time.Time) error {
-	return t.b.BanAgent(ctx, agentID, until)
-}
-
-func (t *agentTracker) UnbanAgent(ctx scope.Context, agentID string) error {
-	return t.b.UnbanAgent(ctx, agentID)
 }
 
 func (t *agentTracker) Register(ctx scope.Context, agent *proto.Agent) error {

@@ -32,45 +32,6 @@ type AgentTrackerBinding struct {
 	*Backend
 }
 
-func (atb *AgentTrackerBinding) BanAgent(ctx scope.Context, agentID string, until time.Time) error {
-	ban := &BannedAgent{
-		AgentID: agentID,
-		Created: time.Now(),
-		Expires: gorp.NullTime{
-			Time:  until,
-			Valid: !until.IsZero(),
-		},
-	}
-
-	t, err := atb.DbMap.Begin()
-	if err != nil {
-		return err
-	}
-
-	if err := t.Insert(ban); err != nil {
-		rollback(ctx, t)
-		return err
-	}
-
-	bounceEvent := &proto.BounceEvent{Reason: "banned", AgentID: agentID}
-	if err := global.broadcast(ctx, t, proto.BounceEventType, bounceEvent); err != nil {
-		rollback(ctx, t)
-		return err
-	}
-
-	if err := t.Commit(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (atb *AgentTrackerBinding) UnbanAgent(ctx scope.Context, agentID string) error {
-	_, err := atb.Backend.DbMap.Exec(
-		"DELETE FROM banned_agent WHERE agent_id = $1 AND room IS NULL", agentID)
-	return err
-}
-
 func (atb *AgentTrackerBinding) Register(ctx scope.Context, agent *proto.Agent) error {
 	row := &Agent{
 		ID:      agent.IDString(),
