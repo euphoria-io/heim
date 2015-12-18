@@ -160,7 +160,7 @@ func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
 		addr := conn.RemoteAddr()
 		switch a := addr.(type) {
 		case *net.TCPAddr:
-			clientAddress = a.String()
+			clientAddress = a.IP.String()
 		default:
 			clientAddress = addr.String()
 		}
