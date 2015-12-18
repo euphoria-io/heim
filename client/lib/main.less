@@ -2096,7 +2096,7 @@ iframe.js {
         .icon('../res/euphorian.svg', 12px, 4px, .5);
       }
 
-      .id, .ip {
+      .id, .ip-addr {
         margin-left: 4px;
         font-size: .75em;
         font-family: monospace;
@@ -2106,7 +2106,7 @@ iframe.js {
         color: fade(black, 50%);
       }
 
-      .ip {
+      .ip-addr {
         color: darkred;
       }
     }
@@ -2130,8 +2130,11 @@ iframe.js {
       height: 22px;
     }
 
-    .preview {
+    .preview, .toggle-global {
       margin: 0 10px;
+    }
+
+    .preview {
       color: @manager-dark-color;
       font-size: 1.05em;
     }

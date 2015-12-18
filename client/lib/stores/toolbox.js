@@ -40,6 +40,20 @@ const commands = {
       )
     },
   },
+  banIP: {
+    kind: 'user',
+    filter(item) {
+      return !!item.get('ipAddr')
+    },
+    execute(items, commandParams) {
+      items.forEach(item =>
+        chat.banIP(item.get('ipAddr'), {
+          seconds: commandParams.seconds,
+          global: commandParams.global,
+        })
+      )
+    },
+  },
 }
 
 module.exports.store = Reflux.createStore({
@@ -80,6 +94,8 @@ module.exports.store = Reflux.createStore({
 
         const sender = message.get('sender')
         const senderId = sender.get('id')
+        const userInfo = chatState.who.get(sender.get('session_id'))
+        const ipAddr = userInfo && userInfo.get('client_address')
         return Immutable.fromJS([
           {
             kind: 'message',
@@ -90,7 +106,8 @@ module.exports.store = Reflux.createStore({
             kind: 'user',
             id: senderId,
             name: sender.get('name'),
-            removed: chatState.bannedIds.has(senderId),
+            ipAddr,
+            removed: chatState.bannedIds.has(senderId) || chatState.bannedIPs.has(ipAddr),
           },
         ])
       })
@@ -106,12 +123,13 @@ module.exports.store = Reflux.createStore({
         }
 
         const userId = userInfo.get('id')
+        const ipAddr = userInfo.get('client_address')
         return Immutable.Map({
           kind: 'user',
           id: userId,
           name: userInfo.get('name'),
-          ip: userInfo.get('client_address'),
-          removed: chatState.bannedIds.has(userId),
+          ipAddr,
+          removed: chatState.bannedIds.has(userId) || chatState.bannedIPs.has(ipAddr),
         })
       })
       .filter(Boolean)
@@ -133,10 +151,11 @@ module.exports.store = Reflux.createStore({
   _updateFilter(startState) {
     let state = startState
     const commandKind = commands[state.selectedCommand].kind
+    const commandFilter = commands[state.selectedCommand].filter || (() => true)
 
     state = state.set('items',
       state.items.map(
-        item => item.set('active', !item.get('removed') && item.get('kind') === commandKind)
+        item => item.set('active', !item.get('removed') && item.get('kind') === commandKind && commandFilter(item))
       )
     )
 

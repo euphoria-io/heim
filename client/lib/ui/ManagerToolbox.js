@@ -2,6 +2,7 @@ import React from 'react'
 import classNames from 'classnames'
 import Reflux from 'reflux'
 
+import chat from '../stores/chat'
 import toolbox from '../stores/toolbox'
 import FastButton from './FastButton'
 
@@ -10,6 +11,7 @@ export default React.createClass({
   displayName: 'ManagerToolbox',
 
   mixins: [
+    Reflux.connect(chat.store, 'chat'),
     Reflux.connect(toolbox.store, 'toolbox'),
   ],
 
@@ -19,7 +21,8 @@ export default React.createClass({
 
   apply() {
     let commandParams
-    if (this.state.toolbox.selectedCommand === 'ban') {
+    const selectedCommand = this.state.toolbox.selectedCommand
+    if (selectedCommand === 'ban' || selectedCommand === 'banIP') {
       commandParams = {
         seconds: {
           h: 60 * 60,
@@ -30,6 +33,11 @@ export default React.createClass({
         }[this.refs.banDuration.value],
       }
     }
+    if (selectedCommand === 'banIP') {
+      commandParams = {
+        global: this.refs.banGlobally.checked,
+      }
+    }
     toolbox.apply(commandParams)
   },
 
@@ -37,6 +45,7 @@ export default React.createClass({
     const toolboxData = this.state.toolbox
     const isEmpty = !toolboxData.items.size
     const selectedCommand = this.state.toolbox.selectedCommand
+    const inputDuration = selectedCommand === 'ban' || selectedCommand === 'banIP'
     return (
       <div className="manager-toolbox">
         <div className={classNames('items', {'empty': isEmpty})} onCopy={this.onCopy}>
@@ -45,7 +54,7 @@ export default React.createClass({
             <span key={item.get('kind') + '-' + item.get('id') + '-' + item.get('name', '')} className={classNames('item', item.get('kind'), {'active': item.get('active'), 'removed': item.get('removed')})}>
               {item.has('name') && <div className="name">{item.get('name')}</div>}
               <div className="id">{item.get('id')}</div>
-              {item.has('ip') && <div className="ip">{item.get('ip')}</div>}
+              {item.has('ipAddr') && <div className="ip-addr">{item.get('ipAddr')}</div>}
             </span>
           )}
         </div>
@@ -53,15 +62,17 @@ export default React.createClass({
           <select className="command-picker" value={selectedCommand} onChange={this.selectCommand}>
             <option value="delete">delete</option>
             <option value="ban">ban</option>
+            {this.state.chat.isStaff && <option value="banIP">IP ban</option>}
           </select>
           <div className="preview">{toolboxData.activeItemSummary}</div>
-          {!isEmpty && selectedCommand === 'ban' && <select ref="banDuration" defaultValue={60 * 60}>
+          {!isEmpty && inputDuration && <select ref="banDuration" defaultValue={60 * 60}>
             <option value="h">for 1 hour</option>
             <option value="d">for 1 day</option>
             <option value="w">for 1 week</option>
             <option value="m">for 30 days</option>
             <option value="f">forever</option>
           </select>}
+          {!isEmpty && selectedCommand === 'banIP' && <label className="toggle-global"><input type="checkbox" ref="banGlobally" /> everywhere</label>}
           <div className="spacer" />
           <FastButton className="apply" onClick={this.apply}>
             <div className="emoji emoji-26a1" /> apply

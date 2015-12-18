@@ -25,6 +25,7 @@ const storeActions = module.exports.actions = Reflux.createActions([
   'deselectAll',
   'editMessage',
   'banUser',
+  'banIP',
 ])
 storeActions.login = Reflux.createAction({asyncResult: true})
 storeActions.logout = Reflux.createAction({asyncResult: true})
@@ -75,6 +76,7 @@ module.exports.store = Reflux.createStore({
       nickHues: {},
       who: Immutable.Map(),
       bannedIds: Immutable.Set(),
+      bannedIPs: Immutable.Set(),
       selectedMessages: Immutable.Set(),
       selectedUsers: Immutable.Set(),
     }
@@ -213,7 +215,12 @@ module.exports.store = Reflux.createStore({
       })
     } else if (ev.type === 'ban-reply') {
       if (!ev.error) {
-        this.state.bannedIds = this.state.bannedIds.add(ev.data.id)
+        if (ev.data.id) {
+          this.state.bannedIds = this.state.bannedIds.add(ev.data.id)
+        }
+        if (ev.data.ip) {
+          this.state.bannedIPs = this.state.bannedIPs.add(ev.data.ip)
+        }
       } else {
         console.warn('error banning:', ev.error)  // eslint-disable-line no-console
       }
@@ -642,6 +649,13 @@ module.exports.store = Reflux.createStore({
     this.socket.send({
       type: 'ban',
       data: _.merge(data, {id: id}),
+    })
+  },
+
+  banIP(ipAddr, data) {
+    this.socket.send({
+      type: 'ban',
+      data: _.merge(data, {ip: ipAddr}),
     })
   },
 })
