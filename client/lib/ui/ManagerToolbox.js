@@ -63,6 +63,7 @@ export default React.createClass({
             <span key={item.get('kind') + '-' + item.get('id') + '-' + item.get('name', '')} className={classNames('item', item.get('kind'), {'active': item.get('active'), 'removed': item.get('removed')})}>
               {item.has('name') && <div className="name">{item.get('name')}</div>}
               <div className="id">{item.get('id')}</div>
+              {item.has('ip') && <div className="ip">{item.get('ip')}</div>}
             </span>
           )}
         </div>
