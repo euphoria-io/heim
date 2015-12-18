@@ -549,13 +549,25 @@ func (s *session) handleChangePasswordCommand(msg *proto.ChangePasswordCommand) 
 	oldClientKey := s.client.Account.KeyFromPassword(msg.OldPassword)
 	newClientKey := s.client.Account.KeyFromPassword(msg.NewPassword)
 
+	// Change password, invalidating all agents.
 	err := s.backend.AccountManager().ChangeClientKey(
 		s.ctx, s.client.Account.ID(), oldClientKey, newClientKey)
 	if err != nil {
 		return &response{err: err}
 	}
 
-	// TODO: bounce all other sessions
+	// Log in current agent using new password.
+	err = s.backend.AgentTracker().SetClientKey(
+		s.ctx, s.client.Agent.IDString(), s.agentKey, s.client.Account.ID(), newClientKey)
+	if err != nil {
+		return &response{err: err}
+	}
+
+	// Log out all other agents on this account.
+	err = s.backend.NotifyUser(s.ctx, s.Identity().ID(), proto.LogoutEventType, proto.LogoutEvent{}, s)
+	if err != nil {
+		return &response{err: err}
+	}
 
 	if err := s.heim.OnAccountPasswordChanged(s.ctx, s.backend, s.client.Account); err != nil {
 		return &response{err: err}

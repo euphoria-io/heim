@@ -1236,16 +1236,29 @@ func testAccountChangePassword(s *serverUnderTest) {
 	Convey("Change password", func() {
 		inbox := s.app.heim.MockDeliverer().Inbox("logan" + nonce)
 
+		// Sign in other session, to wait for forced logout on password change.
+		other := s.Connect("changepass2a")
+		other.expectPing()
+		other.expectSnapshot(s.backend.Version(), nil, nil)
+		other.send("1", "login", `{"namespace":"email","id":"logan%s","password":"oldpass"}`, nonce)
+		other.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, logan.ID())
+		other.Close()
+
+		s.Reconnect(other, "changepass2b")
+		other.expectPing()
+		other.expectSnapshot(s.backend.Version(), nil, nil)
+
+		// Create password changing session, should not be able to change until logged in.
 		conn := s.Connect("changepass1a")
 		conn.expectPing()
 		conn.expectSnapshot(s.backend.Version(), nil, nil)
 		conn.send("1", "change-password", `{}`)
 		conn.expectError("1", "change-password-reply", "not logged in")
-		conn.send("2", "login",
-			`{"namespace":"email","id":"logan%s","password":"oldpass"}`, nonce)
+		conn.send("2", "login", `{"namespace":"email","id":"logan%s","password":"oldpass"}`, nonce)
 		conn.expect("2", "login-reply", `{"success":true,"account_id":"%s"}`, logan.ID())
 		conn.Close()
 
+		// Change password.
 		s.Reconnect(conn, "changepass1b")
 		conn.expectPing()
 		conn.expectSnapshot(s.backend.Version(), nil, nil)
@@ -1255,13 +1268,22 @@ func testAccountChangePassword(s *serverUnderTest) {
 		conn.expect("2", "change-password-reply", `{}`)
 		conn.Close()
 
-		conn = s.Connect("changepass1c")
+		// Agent that changed password should still be logged in.
+		s.Reconnect(conn, "changepass1c")
 		conn.expectPing()
 		conn.expectSnapshot(s.backend.Version(), nil, nil)
-		conn.send("2", "login",
-			`{"namespace":"email","id":"logan%s","password":"newpass"}`, nonce)
-		conn.expect("2", "login-reply", `{"success":true,"account_id":"%s"}`, logan.ID())
 		conn.Close()
+
+		// Other session should get logged out.
+		other.expect("", "logout-event", `{}`)
+		other.Close()
+		other.accountID = ""
+		s.Reconnect(other, "changepass2c")
+		other.expectPing()
+		other.expectSnapshot(s.backend.Version(), nil, nil)
+		other.send("1", "login", `{"namespace":"email","id":"logan%s","password":"newpass"}`, nonce)
+		other.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, logan.ID())
+		other.Close()
 
 		// Password change email should have been sent.
 		msg := <-inbox

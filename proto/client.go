@@ -80,9 +80,6 @@ func (c *Client) AuthenticateWithAgent(
 		return fmt.Errorf("agent key error: %s", err)
 	}
 
-	c.Account = account
-	c.Authorization.ClientKey = clientKey
-
 	holderKey, err := account.Unlock(clientKey)
 	if err != nil {
 		if err == ErrAccessDenied {
@@ -150,6 +147,9 @@ func (c *Client) AuthenticateWithAgent(
 			c.Authorization.CurrentMessageKeyID = messageKey.KeyID()
 		}
 	}
+
+	c.Account = account
+	c.Authorization.ClientKey = clientKey
 
 	return nil
 }
