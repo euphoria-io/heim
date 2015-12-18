@@ -4,7 +4,6 @@ import Reflux from 'reflux'
 
 import toolbox from '../stores/toolbox'
 import FastButton from './FastButton'
-import domWalkForward from '../domWalkForward'
 
 
 export default React.createClass({
@@ -13,23 +12,6 @@ export default React.createClass({
   mixins: [
     Reflux.connect(toolbox.store, 'toolbox'),
   ],
-
-  onCopy(ev) {
-    const selection = uiwindow.getSelection()
-    const range = selection.getRangeAt(0)
-
-    const ids = []
-    domWalkForward(range.startContainer, range.endContainer, childEl => {
-      const el = childEl.parentNode
-      if (!el.classList || !el.classList.contains('id')) {
-        return
-      }
-      ids.push(el.textContent)
-    })
-
-    ev.clipboardData.setData('text/plain', "'" + ids.join("', '") + "'")
-    ev.preventDefault()
-  },
 
   selectCommand(ev) {
     toolbox.chooseCommand(ev.target.value)
