@@ -77,7 +77,14 @@ func (s *Server) handleRoomStatic(w http.ResponseWriter, r *http.Request) {
 	}
 	params := map[string]interface{}{"RoomName": roomName}
 
-	// Tag the agent. We use an authenticated but un-encrypted cookie.
+	// Before creating an agent cookie, make this visitor look like a human.
+	if err := r.ParseForm(); err != nil {
+		s.serveErrorPage("bad request", http.StatusBadRequest, w, r)
+		return
+	}
+	r.Form.Set("h", "1")
+
+	// Tag the agent.
 	_, cookie, _, err := getAgent(ctx, s, r)
 	if err != nil {
 		logging.Logger(ctx).Printf("get agent error: %s", err)
