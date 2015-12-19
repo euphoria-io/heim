@@ -669,7 +669,8 @@ export default function initPlugins(roomName) {
 
         @media (max-width: 650px) {
           .messages-content {
-            background-size: 180px !important;
+            background-size: 500px !important;
+            background-position: right 10px bottom 10px !important;
           }
         }
       `}} />
