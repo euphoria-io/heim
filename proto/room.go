@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"net"
 	"time"
 
 	"golang.org/x/crypto/poly1305"
@@ -114,6 +115,8 @@ type Room interface {
 	MinAgentAge() time.Duration
 
 	WaitForPart(sessionID string) error
+
+	ResolveClientAddress(ctx scope.Context, addr string) (net.IP, error)
 }
 
 type RoomMessageKey interface {

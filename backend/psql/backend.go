@@ -438,6 +438,7 @@ func (b *Backend) CreateRoom(
 func (b *Backend) Ban(ctx scope.Context, ban proto.Ban, until time.Time) error {
 	return b.ban(ctx, global, ban, until)
 }
+
 func (b *Backend) Unban(ctx scope.Context, ban proto.Ban) error { return b.unban(ctx, global, ban) }
 
 func (b *Backend) ban(ctx scope.Context, room *Room, ban proto.Ban, until time.Time) error {

@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"net"
 	"strings"
 	"time"
 
@@ -704,4 +705,18 @@ func (rb *RoomBinding) WaitForPart(sessionID string) error {
 			}
 		}
 	}
+}
+
+func (rb *RoomBinding) ResolveClientAddress(ctx scope.Context, addr string) (net.IP, error) {
+	var row VirtualAddress
+	err := rb.DbMap.SelectOne(
+		&row,
+		"SELECT real FROM virtual_address WHERE room = $1 AND virtual = $2", rb.Name, addr)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return net.ParseIP(addr), nil
+		}
+		return nil, err
+	}
+	return net.ParseIP(row.Real), nil
 }

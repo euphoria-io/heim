@@ -868,20 +868,27 @@ func (s *session) handleEditMessageCommand(msg *proto.EditMessageCommand) *respo
 }
 
 func (s *session) handleBanCommand(msg *proto.BanCommand) *response {
+	// Copy input into reply before processing, so we don't leak addresses.
+	reply := &proto.BanReply{
+		Ban:     msg.Ban,
+		Seconds: msg.Seconds,
+	}
 	if s.privilegeLevel() == proto.General {
 		return &response{err: proto.ErrAccessDenied}
 	}
-	if s.privilegeLevel() != proto.Staff {
-		if msg.Ban.Global {
-			return &response{err: proto.ErrAccessDenied}
-		}
-		if msg.Ban.IP != "" {
-			return &response{err: fmt.Errorf("ip bans not supported")}
-		}
+	if msg.Ban.Global && s.privilegeLevel() != proto.Staff {
+		return &response{err: proto.ErrAccessDenied}
 	}
 	var until time.Time
 	if msg.Seconds != 0 {
 		until = time.Now().Add(time.Duration(msg.Seconds) * time.Second)
+	}
+	if msg.Ban.IP != "" {
+		addr, err := s.room.ResolveClientAddress(s.ctx, msg.Ban.IP)
+		if err != nil {
+			return &response{err: err}
+		}
+		msg.Ban.IP = addr.String()
 	}
 	if msg.Ban.Global {
 		if err := s.backend.Ban(s.ctx, msg.Ban, until); err != nil {
@@ -892,20 +899,26 @@ func (s *session) handleBanCommand(msg *proto.BanCommand) *response {
 			return &response{err: err}
 		}
 	}
-	return &response{
-		packet: &proto.BanReply{
-			Ban:     msg.Ban,
-			Seconds: msg.Seconds,
-		},
-	}
+	return &response{packet: reply}
 }
 
 func (s *session) handleUnbanCommand(msg *proto.UnbanCommand) *response {
+	// Copy input into reply before processing, so we don't leak addresses.
+	reply := &proto.UnbanReply{
+		Ban: msg.Ban,
+	}
 	if s.privilegeLevel() == proto.General {
 		return &response{err: proto.ErrAccessDenied}
 	}
 	if s.privilegeLevel() != proto.Staff && msg.Global {
 		return &response{err: proto.ErrAccessDenied}
+	}
+	if msg.Ban.IP != "" {
+		addr, err := s.room.ResolveClientAddress(s.ctx, msg.Ban.IP)
+		if err != nil {
+			return &response{err: err}
+		}
+		msg.Ban.IP = addr.String()
 	}
 	switch msg.Global {
 	case false:
@@ -917,9 +930,5 @@ func (s *session) handleUnbanCommand(msg *proto.UnbanCommand) *response {
 			return &response{err: err}
 		}
 	}
-	return &response{
-		packet: &proto.UnbanReply{
-			Ban: msg.Ban,
-		},
-	}
+	return &response{packet: reply}
 }

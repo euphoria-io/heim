@@ -2,7 +2,9 @@ package mock
 
 import (
 	"fmt"
+	"net"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -496,6 +498,13 @@ func (r *memRoom) WaitForPart(sessionID string) error {
 		}
 	}
 	return nil
+}
+
+func (r *memRoom) ResolveClientAddress(ctx scope.Context, addr string) (net.IP, error) {
+	if strings.HasPrefix(addr, "virt:") {
+		addr = addr[len("virt:"):]
+	}
+	return net.ParseIP(addr), nil
 }
 
 type roomMessageKey struct {

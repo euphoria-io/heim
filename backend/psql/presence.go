@@ -2,7 +2,6 @@ package psql
 
 import (
 	"encoding/json"
-	"net"
 	"time"
 
 	"euphoria.io/heim/proto"
@@ -52,6 +51,6 @@ type roomConn struct {
 type VirtualAddress struct {
 	Room    string
 	Virtual string
-	Real    net.IP
+	Real    string
 	Created time.Time
 }
