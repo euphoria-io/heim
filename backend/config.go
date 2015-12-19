@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/savaki/geoip2"
+
 	"gopkg.in/yaml.v2"
 
 	"euphoria.io/heim/aws/kms"
@@ -106,6 +108,7 @@ type ServerConfig struct {
 	DB      DatabaseConfig `yaml:"database"`
 	KMS     KMSConfig      `yaml:"kms"`
 	Email   EmailConfig    `yaml:"email"`
+	GeoIP   GeoIPConfig    `yaml:"geoip"`
 }
 
 func (cfg *ServerConfig) String() string {
@@ -178,6 +181,7 @@ func (cfg *ServerConfig) Heim(ctx scope.Context) (*proto.Heim, error) {
 		KMS:            kms,
 		EmailDeliverer: emailDeliverer,
 		EmailTemplater: emailTemplater,
+		GeoIP:          cfg.GeoIP.Api(),
 		PageTemplater:  pageTemplater,
 		SiteName:       cfg.SiteName,
 		StaticPath:     cfg.StaticPath,
@@ -391,3 +395,10 @@ func (d *mockDeliverer) Deliver(ctx scope.Context, ref *emails.EmailRef) error {
 	fmt.Fprintf(d, "----- END OF MESSAGE -----\n")
 	return nil
 }
+
+type GeoIPConfig struct {
+	UserID     string `yaml:"user-id"`
+	LicenseKey string `yaml:"license-key"`
+}
+
+func (c *GeoIPConfig) Api() *geoip2.Api { return geoip2.New(c.UserID, c.LicenseKey) }

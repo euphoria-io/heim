@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/pquerna/otp/totp"
+	"github.com/savaki/geoip2"
 
 	"encoding/hex"
 
@@ -27,6 +28,7 @@ type Heim struct {
 
 	EmailDeliverer emails.Deliverer
 	EmailTemplater *templates.Templater
+	GeoIP          *geoip2.Api
 	PageTemplater  *templates.Templater
 }
 

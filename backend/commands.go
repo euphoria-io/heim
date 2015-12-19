@@ -4,9 +4,12 @@ import (
 	"bytes"
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"image/png"
 	"time"
+
+	"golang.org/x/net/context"
 
 	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/logging"
@@ -170,6 +173,8 @@ func (s *session) handleCoreCommands(payload interface{}) *response {
 		return s.handleStaffEnrollOTPCommand(msg)
 	case *proto.StaffValidateOTPCommand:
 		return s.handleStaffValidateOTPCommand(msg)
+	case *proto.StaffInspectIPCommand:
+		return s.handleStaffInspectIPCommand(msg)
 	case *proto.StaffInvadeCommand:
 		return s.handleStaffInvadeCommand(msg)
 	case *proto.UnlockStaffCapabilityCommand:
@@ -743,6 +748,39 @@ func (s *session) handleStaffValidateOTPCommand(cmd *proto.StaffValidateOTPComma
 	}
 
 	return &response{packet: &proto.StaffValidateOTPReply{}}
+}
+
+func (s *session) handleStaffInspectIPCommand(cmd *proto.StaffInspectIPCommand) *response {
+	if s.privilegeLevel() != proto.Staff {
+		return &response{err: proto.ErrAccessDenied}
+	}
+
+	if s.heim.GeoIP == nil {
+		return &response{err: fmt.Errorf("geoip support not configured")}
+	}
+
+	addr, err := s.room.ResolveClientAddress(s.ctx, cmd.IP)
+	if err != nil {
+		return &response{err: err}
+	}
+
+	// geoip uses google's context package
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	resp, err := s.heim.GeoIP.Insights(ctx, addr.String())
+	if err != nil {
+		return &response{err: err}
+	}
+
+	serialized, err := json.Marshal(resp)
+	if err != nil {
+		return &response{err: err}
+	}
+
+	reply := &proto.StaffInspectIPReply{
+		IP:      addr.String(),
+		Details: json.RawMessage(serialized),
+	}
+	return &response{packet: reply}
 }
 
 func (s *session) handleStaffInvadeCommand(cmd *proto.StaffInvadeCommand) *response {

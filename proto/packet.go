@@ -99,6 +99,9 @@ var (
 	StaffGrantManagerType      = PacketType("staff-grant-manager")
 	StaffGrantManagerReplyType = StaffGrantManagerType.Reply()
 
+	StaffInspectIPType      = PacketType("staff-inspect-ip")
+	StaffInspectIPReplyType = StaffInspectIPType.Reply()
+
 	StaffInvadeType      = PacketType("staff-invade")
 	StaffInvadeReplyType = StaffInvadeType.Reply()
 
@@ -174,6 +177,9 @@ var (
 
 		StaffValidateOTPType:      reflect.TypeOf(StaffValidateOTPCommand{}),
 		StaffValidateOTPReplyType: reflect.TypeOf(StaffValidateOTPReply{}),
+
+		StaffInspectIPType:      reflect.TypeOf(StaffInspectIPCommand{}),
+		StaffInspectIPReplyType: reflect.TypeOf(StaffInspectIPReply{}),
 
 		StaffInvadeType:      reflect.TypeOf(StaffInvadeCommand{}),
 		StaffInvadeReplyType: reflect.TypeOf(StaffInvadeReply{}),
@@ -374,6 +380,18 @@ type StaffGrantManagerCommand GrantManagerCommand
 
 // `staff-grant-manager-reply` confirms that requested manager change was granted.
 type StaffGrantManagerReply GrantManagerReply
+
+// The `staff-inspect-ip` command looks up details about a given IP address or
+// virtual client address.
+type StaffInspectIPCommand struct {
+	IP string `json:"ip"` // the IP or virtual client address to inspect
+}
+
+// `staff-inspect-ip-reply` returns details about the requested address.
+type StaffInspectIPReply struct {
+	IP      string          `json:"ip"`      // the IP address resolved from the virtual address
+	Details json.RawMessage `json:"details"` // details looked up about the IP address
+}
 
 // The `staff-invade` command can be used by staff to acquire temporary host and/or access
 // capabilities in the current room.
