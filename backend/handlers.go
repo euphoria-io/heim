@@ -61,8 +61,9 @@ func (s *Server) handleStatic(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleRoomStatic(w http.ResponseWriter, r *http.Request) {
+	ctx := scope.New()
 	roomName := mux.Vars(r)["room"]
-	_, err := s.b.GetRoom(scope.New(), roomName)
+	_, err := s.b.GetRoom(ctx, roomName)
 	if err != nil {
 		if err == proto.ErrRoomNotFound {
 			if !s.allowRoomCreation {
@@ -75,6 +76,18 @@ func (s *Server) handleRoomStatic(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	params := map[string]interface{}{"RoomName": roomName}
+
+	// Tag the agent. We use an authenticated but un-encrypted cookie.
+	_, cookie, _, err := getAgent(ctx, s, r)
+	if err != nil {
+		logging.Logger(ctx).Printf("get agent error: %s", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if cookie != nil {
+		w.Header().Add("Set-Cookie", cookie.String())
+	}
+
 	s.servePage("room.html", params, w, r)
 }
 
