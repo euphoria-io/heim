@@ -89,19 +89,20 @@ type response struct {
 type cmdState func(*proto.Packet) *response
 
 type session struct {
-	id         string
-	ctx        scope.Context
-	server     *Server
-	conn       *websocket.Conn
-	clientAddr string
-	identity   *memIdentity
-	serverID   string
-	serverEra  string
-	roomName   string
-	room       proto.Room
-	backend    proto.Backend
-	kms        security.KMS
-	heim       *proto.Heim
+	id          string
+	ctx         scope.Context
+	server      *Server
+	conn        *websocket.Conn
+	clientAddr  string
+	vClientAddr string
+	identity    *memIdentity
+	serverID    string
+	serverEra   string
+	roomName    string
+	room        proto.Room
+	backend     proto.Backend
+	kms         security.KMS
+	heim        *proto.Heim
 
 	state    cmdState
 	client   *proto.Client
@@ -134,21 +135,22 @@ func newSession(
 	ctx = logging.LoggingContext(ctx, os.Stdout, fmt.Sprintf("[%s] ", sessionID))
 
 	session := &session{
-		id:         sessionID,
-		ctx:        ctx,
-		server:     server,
-		conn:       conn,
-		clientAddr: clientAddr,
-		identity:   newMemIdentity(client.UserID(), server.ID, server.Era),
-		client:     client,
-		agentKey:   agentKey,
-		serverID:   server.ID,
-		serverEra:  server.Era,
-		roomName:   roomName,
-		room:       room,
-		backend:    server.b,
-		kms:        server.kms,
-		heim:       server.heim,
+		id:          sessionID,
+		ctx:         ctx,
+		server:      server,
+		conn:        conn,
+		clientAddr:  clientAddr,
+		vClientAddr: clientAddr,
+		identity:    newMemIdentity(client.UserID(), server.ID, server.Era),
+		client:      client,
+		agentKey:    agentKey,
+		serverID:    server.ID,
+		serverEra:   server.Era,
+		roomName:    roomName,
+		room:        room,
+		backend:     server.b,
+		kms:         server.kms,
+		heim:        server.heim,
 
 		incoming:     make(chan *proto.Packet),
 		outgoing:     make(chan *proto.Packet, 100),
@@ -171,8 +173,8 @@ func (s *session) ServerEra() string        { return s.serverEra }
 func (s *session) Identity() proto.Identity { return s.identity }
 func (s *session) SetName(name string)      { s.identity.name = name }
 
-func (s *session) View(level proto.PrivilegeLevel) *proto.SessionView {
-	view := &proto.SessionView{
+func (s *session) View(level proto.PrivilegeLevel) proto.SessionView {
+	view := proto.SessionView{
 		IdentityView: s.identity.View(),
 		SessionID:    s.id,
 		IsStaff:      s.client.Account != nil && s.client.Account.IsStaff(),
@@ -181,7 +183,10 @@ func (s *session) View(level proto.PrivilegeLevel) *proto.SessionView {
 
 	switch level {
 	case proto.Staff:
-		view.ClientAddress = s.clientAddr
+		view.ClientAddress = s.vClientAddr
+		view.RealClientAddress = s.clientAddr
+	case proto.Host:
+		view.ClientAddress = s.vClientAddr
 	}
 
 	return view
@@ -201,15 +206,29 @@ func (s *session) writeMessage(messageType int, data []byte) error {
 }
 
 func (s *session) Send(ctx scope.Context, cmdType proto.PacketType, payload interface{}) error {
-	// Special case: presence events have privileged info that may need to be stripped from them
-	if pEvent, ok := payload.(*proto.PresenceEvent); ok {
-		if s.privilegeLevel() != proto.Staff {
-			pEvent.ClientAddress = ""
+	// Special case: certain events have privileged info that may need to be stripped from them
+	switch event := payload.(type) {
+	case *proto.PresenceEvent:
+		switch s.privilegeLevel() {
+		case proto.Staff:
+		case proto.Host:
+			event.RealClientAddress = ""
+		default:
+			event.RealClientAddress = ""
+			event.ClientAddress = ""
+		}
+	case *proto.Message:
+		if s.privilegeLevel() == proto.General {
+			event.Sender.ClientAddress = ""
+		}
+	case *proto.EditMessageEvent:
+		if s.privilegeLevel() == proto.General {
+			event.Sender.ClientAddress = ""
 		}
 	}
 
 	var err error
-	payload, err = proto.DecryptPayload(payload, &s.client.Authorization)
+	payload, err = proto.DecryptPayload(payload, &s.client.Authorization, s.privilegeLevel())
 	if err != nil {
 		return err
 	}
@@ -453,7 +472,7 @@ func (s *session) readMessages() {
 func (s *session) sendSnapshot(msgs []proto.Message, listing proto.Listing) error {
 	for i, msg := range msgs {
 		if msg.EncryptionKeyID != "" {
-			dmsg, err := proto.DecryptMessage(msg, s.client.Authorization.MessageKeys)
+			dmsg, err := proto.DecryptMessage(msg, s.client.Authorization.MessageKeys, s.privilegeLevel())
 			if err != nil {
 				continue
 			}
@@ -516,12 +535,19 @@ func (s *session) join() error {
 		return err
 	}
 
+	if s.privilegeLevel() == proto.General {
+		for i := range msgs {
+			msgs[i].Sender.ClientAddress = ""
+		}
+	}
+
 	listing, err := s.room.Listing(s.ctx, s.privilegeLevel())
 	if err != nil {
 		return err
 	}
 
-	if err := s.room.Join(s.ctx, s); err != nil {
+	s.vClientAddr, err = s.room.Join(s.ctx, s)
+	if err != nil {
 		logging.Logger(s.ctx).Printf("join failed: %s", err)
 		return err
 	}

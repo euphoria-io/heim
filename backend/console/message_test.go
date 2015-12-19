@@ -20,9 +20,9 @@ func TestDeleteMessage(t *testing.T) {
 
 	sendMessage := func(room proto.Room) (proto.Message, error) {
 		msg := proto.Message{
-			Sender: &proto.SessionView{
+			Sender: proto.SessionView{
 				SessionID:    "test",
-				IdentityView: &proto.IdentityView{ID: "test"},
+				IdentityView: proto.IdentityView{ID: "test"},
 			},
 			Content: "test",
 		}

@@ -48,8 +48,8 @@ func (c *console) SetName(name string)      {}
 func (c *console) Close()                   {}
 func (c *console) CheckAbandoned() error    { return nil }
 
-func (c *console) View(level proto.PrivilegeLevel) *proto.SessionView {
-	return &proto.SessionView{
+func (c *console) View(level proto.PrivilegeLevel) proto.SessionView {
+	return proto.SessionView{
 		IdentityView: c.Identity().View(),
 		SessionID:    "console",
 	}
@@ -86,8 +86,8 @@ func (c *consoleIdentity) ID() proto.UserID { return proto.UserID("console") }
 func (c *consoleIdentity) Name() string     { return "console" }
 func (c *consoleIdentity) ServerID() string { return "" }
 
-func (c *consoleIdentity) View() *proto.IdentityView {
-	return &proto.IdentityView{ID: "console", Name: "console"}
+func (c *consoleIdentity) View() proto.IdentityView {
+	return proto.IdentityView{ID: "console", Name: "console"}
 }
 
 type handler interface {

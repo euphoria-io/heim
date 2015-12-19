@@ -45,7 +45,7 @@ type Identity interface {
 	ID() UserID
 	Name() string
 	ServerID() string
-	View() *IdentityView
+	View() IdentityView
 }
 
 type IdentityView struct {

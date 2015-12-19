@@ -31,7 +31,8 @@ func TestRoomPresence(t *testing.T) {
 	client.FromRequest(ctx, &http.Request{})
 
 	Convey("First join", t, func() {
-		So(room.Join(ctx, userA), ShouldBeNil)
+		_, err := room.Join(ctx, userA)
+		So(err, ShouldBeNil)
 		So(room.identities, ShouldResemble,
 			map[proto.UserID]proto.Identity{"A": userA.Identity()})
 		So(room.live, ShouldResemble,
@@ -39,13 +40,15 @@ func TestRoomPresence(t *testing.T) {
 	})
 
 	Convey("Second join", t, func() {
-		So(room.Join(ctx, userB), ShouldBeNil)
+		_, err := room.Join(ctx, userB)
+		So(err, ShouldBeNil)
 		So(room.identities["B"], ShouldResemble, userB.Identity())
 		So(room.live["B"], ShouldResemble, []proto.Session{userB})
 	})
 
 	Convey("Duplicate join", t, func() {
-		So(room.Join(ctx, userA2), ShouldBeNil)
+		_, err := room.Join(ctx, userA2)
+		So(err, ShouldBeNil)
 		So(room.live["A"], ShouldResemble, []proto.Session{userA, userA2})
 	})
 
@@ -84,9 +87,12 @@ func TestRoomBroadcast(t *testing.T) {
 	client.FromRequest(ctx, &http.Request{})
 
 	Convey("Setup", t, func() {
-		So(room.Join(ctx, userA), ShouldBeNil)
-		So(room.Join(ctx, userB), ShouldBeNil)
-		So(room.Join(ctx, userC), ShouldBeNil)
+		_, err := room.Join(ctx, userA)
+		So(err, ShouldBeNil)
+		_, err = room.Join(ctx, userB)
+		So(err, ShouldBeNil)
+		_, err = room.Join(ctx, userC)
+		So(err, ShouldBeNil)
 	})
 
 	Convey("Multiple exclude", t, func() {
@@ -98,14 +104,14 @@ func TestRoomBroadcast(t *testing.T) {
 					cmdType: proto.JoinEventType,
 					payload: &proto.PresenceEvent{
 						SessionID:    "B",
-						IdentityView: &proto.IdentityView{ID: "B"},
+						IdentityView: proto.IdentityView{ID: "B"},
 					},
 				},
 				{
 					cmdType: proto.JoinEventType,
 					payload: &proto.PresenceEvent{
 						SessionID:    "C",
-						IdentityView: &proto.IdentityView{ID: "C"},
+						IdentityView: proto.IdentityView{ID: "C"},
 					},
 				},
 			})
@@ -115,7 +121,7 @@ func TestRoomBroadcast(t *testing.T) {
 					cmdType: proto.JoinEventType,
 					payload: &proto.PresenceEvent{
 						SessionID:    "C",
-						IdentityView: &proto.IdentityView{ID: "C"},
+						IdentityView: proto.IdentityView{ID: "C"},
 					},
 				},
 			})
@@ -131,14 +137,14 @@ func TestRoomBroadcast(t *testing.T) {
 					cmdType: proto.JoinEventType,
 					payload: &proto.PresenceEvent{
 						SessionID:    "B",
-						IdentityView: &proto.IdentityView{ID: "B"},
+						IdentityView: proto.IdentityView{ID: "B"},
 					},
 				},
 				{
 					cmdType: proto.JoinEventType,
 					payload: &proto.PresenceEvent{
 						SessionID:    "C",
-						IdentityView: &proto.IdentityView{ID: "C"},
+						IdentityView: proto.IdentityView{ID: "C"},
 					},
 				},
 				{
@@ -152,7 +158,7 @@ func TestRoomBroadcast(t *testing.T) {
 					cmdType: proto.JoinEventType,
 					payload: &proto.PresenceEvent{
 						SessionID:    "C",
-						IdentityView: &proto.IdentityView{ID: "C"},
+						IdentityView: proto.IdentityView{ID: "C"},
 					},
 				},
 				{cmdType: proto.SendEventType, payload: proto.Message{Content: "2"}},

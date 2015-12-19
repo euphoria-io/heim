@@ -402,10 +402,10 @@ func (tc *testConn) expectHello() {
 	if tc.accountID != "" {
 		account = fmt.Sprintf(`"account":{"id":"%s","name":"%s","email":"%s"`, tc.accountID, tc.accountName, tc.accountEmail)
 		if tc.isStaff {
-			sessionParts += `,"is_staff":true,"client_address":"*"`
+			sessionParts += `,"is_staff":true,"client_address":"*","real_client_address":"*"`
 		}
 		if tc.isManager {
-			sessionParts += `,"is_manager":true`
+			sessionParts += `,"is_manager":true,"client_address":"*"`
 		}
 		account += "},"
 	}
@@ -540,7 +540,6 @@ func IntegrationTest(t *testing.T, factory proto.BackendFactory) {
 	runTest("Staff invasion", testStaffInvasion)
 	runTest("NotifyUser", testNotifyUser)
 	runTest("Account change email", testAccountChangeEmail)
-
 }
 
 func testLurker(s *serverUnderTest) {
@@ -603,7 +602,7 @@ func testBroadcast(s *serverUnderTest) {
 			me := conn.id()
 			ids[i] = proto.SessionView{
 				SessionID: conn.sessionID,
-				IdentityView: &proto.IdentityView{
+				IdentityView: proto.IdentityView{
 					ID:   proto.UserID(me),
 					Name: fmt.Sprintf("user%d", i),
 				},
@@ -699,7 +698,7 @@ func testThreading(s *serverUnderTest) {
 
 		id := &proto.SessionView{
 			SessionID:    conn.sessionID,
-			IdentityView: &proto.IdentityView{ID: proto.UserID(conn.id()), Name: conn.id()},
+			IdentityView: proto.IdentityView{ID: proto.UserID(conn.id()), Name: conn.id()},
 		}
 		server := `"name":"test","server_id":"test1","server_era":"era1"`
 		sendReplyCommon := fmt.Sprintf(
@@ -988,18 +987,18 @@ func testDeletion(s *serverUnderTest) {
 
 		conn.send("1", "send", `{"content":"@#$!"}`)
 		capture := conn.expect("1", "send-reply",
-			`{"id":"*","time":"*","sender":{"session_id":"%s","id":"%s",%s},"content":"@#$!"}`,
+			`{"id":"*","time":"*","sender":{"session_id":"%s","id":"%s","client_address":"*",%s},"content":"@#$!"}`,
 			conn.sessionID, conn.userID, server)
 
 		conn.send("3", "log", `{"n":10}`)
 		conn.expect("3", "log-reply",
-			`{"log":[{"id":"*","time":"*","sender":{"session_id":"%s","id":"%s",%s},"content":"@#$!"}]}`,
+			`{"log":[{"id":"*","time":"*","sender":{"session_id":"%s","id":"%s","client_address":"*",%s},"content":"@#$!"}]}`,
 			conn.sessionID, conn.userID, server)
 
 		// Delete message.
 		conn.send("4", "edit-message", `{"id":"%s","delete":true,"announce":true}`, capture["id"])
 		conn.expect("4", "edit-message-reply",
-			`{"edit_id":"*","id":"*","time":"*","sender":{"session_id":"*","id":"*",%s},"content":"@#$!","edited":"*","deleted":"*"}`,
+			`{"edit_id":"*","id":"*","time":"*","sender":{"session_id":"*","id":"*","client_address":"*",%s},"content":"@#$!","edited":"*","deleted":"*"}`,
 			server)
 
 		conn2 := s.Connect("deletion")
@@ -1857,9 +1856,9 @@ func testRoomGrants(s *serverUnderTest) {
 
 		// Revoke passcode access.
 		loganConn.expect(
-			"", "join-event", `{"id":"*", "name":"", "server_id":"*","server_era":"*","session_id":"*"}`)
+			"", "join-event", `{"id":"*", "name":"", "server_id":"*","server_era":"*","session_id":"*","client_address":"*"}`)
 		loganConn.expect(
-			"", "part-event", `{"id":"*", "name":"", "server_id":"*","server_era":"*","session_id":"*"}`)
+			"", "part-event", `{"id":"*", "name":"", "server_id":"*","server_era":"*","session_id":"*","client_address":"*"}`)
 		loganConn.send("2", "revoke-access", `{"passcode":"hunter2"}`)
 		loganConn.expect("2", "revoke-access-reply", `{}`)
 		conn = s.Connect("passcodegrants")
@@ -1932,10 +1931,10 @@ func testRoomGrants(s *serverUnderTest) {
 		// Synchronize and revoke access.
 		maxConn.Close()
 		loganConn.expect("", "join-event",
-			`{"session_id":"%s","id":"%s","name":"","server_id":"test1","server_era":"era1"}`,
+			`{"session_id":"%s","id":"%s","name":"","server_id":"test1","server_era":"era1","client_address":"*"}`,
 			maxConn.sessionID, maxConn.id())
 		loganConn.expect("", "part-event",
-			`{"session_id":"%s","id":"%s","name":"","server_id":"test1","server_era":"era1"}`,
+			`{"session_id":"%s","id":"%s","name":"","server_id":"test1","server_era":"era1","client_address":"*"}`,
 			maxConn.sessionID, maxConn.id())
 		loganConn.send("2", "revoke-access", `{"account_id":"%s"}`, max.ID())
 		loganConn.expect("2", "revoke-access-reply", `{}`)
@@ -2119,7 +2118,7 @@ func testBans(s *serverUnderTest) {
 
 		// Wait for manager to see join, acquire agentID.
 		capture := mconn.expect("", "join-event",
-			`{"session_id":"*","id":"*","name":"","server_id":"test1","server_era":"era1"}`)
+			`{"session_id":"*","id":"*","name":"","server_id":"test1","server_era":"era1","client_address":"*"}`)
 		agentID := capture["id"]
 		So(agentID, ShouldNotBeNil)
 
@@ -2131,7 +2130,7 @@ func testBans(s *serverUnderTest) {
 		vconn.Close()
 
 		mconn.expect("", "part-event",
-			`{"session_id":"*","id":"%s","name":"","server_id":"test1","server_era":"era1"}`, agentID)
+			`{"session_id":"*","id":"%s","name":"","server_id":"test1","server_era":"era1","client_address":"*"}`, agentID)
 
 		// Repeat ban; should go through despite redundancy.
 		mconn.send("2", "ban", `{"id":"%s"}`, agentID)
@@ -2194,7 +2193,7 @@ func testBans(s *serverUnderTest) {
 
 		// Wait for manager to see join, acquire agentID.
 		mconn.expect("", "join-event",
-			`{"session_id":"*","id":"account:%s","name":"","server_id":"test1","server_era":"era1"}`,
+			`{"session_id":"*","id":"account:%s","name":"","server_id":"test1","server_era":"era1","client_address":"*"}`,
 			victim.ID())
 
 		// Ban account.
@@ -2205,7 +2204,7 @@ func testBans(s *serverUnderTest) {
 		vconn.Close()
 
 		mconn.expect("", "part-event",
-			`{"session_id":"*","id":"account:%s","name":"","server_id":"test1","server_era":"era1"}`,
+			`{"session_id":"*","id":"account:%s","name":"","server_id":"test1","server_era":"era1","client_address":"*"}`,
 			victim.ID())
 
 		// Account should be unable to reconnect.
@@ -2229,7 +2228,11 @@ func testBans(s *serverUnderTest) {
 func testMessageTruncation(s *serverUnderTest) {
 	bigMessage := strings.Repeat(".", proto.MaxMessageTransmissionLength+1)
 
-	named := func(name string) string {
+	named := func(name string, withAddr ...bool) string {
+		if len(withAddr) > 0 && withAddr[0] {
+			return fmt.Sprintf(
+				`{"session_id":"*","id":"*","name":"%s","server_id":"*","server_era":"*","client_address":"*"}`, name)
+		}
 		return fmt.Sprintf(
 			`{"session_id":"*","id":"*","name":"%s","server_id":"*","server_era":"*"}`, name)
 	}
@@ -2352,15 +2355,15 @@ func testMessageTruncation(s *serverUnderTest) {
 
 		// let host receive spam, then delete it
 		c1.expect("", "join-event",
-			`{"session_id":"%s","id":"*","name":"","server_id":"*","server_era":"*"}`, c2.sessionID)
+			`{"session_id":"%s","id":"*","name":"","server_id":"*","server_era":"*","client_address":"*"}`, c2.sessionID)
 		c1.expect("", "nick-event", `{"session_id":"*","id":"*","from":"","to":"c2"}`)
 		c1.expect("", "send-event",
-			`{"id":"%s","time":"*","sender":%s,"content":"*","truncated":true}`, capture["id"], named("c2"))
+			`{"id":"%s","time":"*","sender":%s,"content":"*","truncated":true}`, capture["id"], named("c2", true))
 		c1.send("2", "edit-message", `{"id":"%s","delete":true,"announce":true}`, capture["id"])
 		c1.debug(false)
 		c1.expect("2", "edit-message-reply",
 			`{"edit_id":"*","id":"*","time":"*","sender":%s,"content":"*","edited":"*","deleted":"*","truncated":true}`,
-			named("c2"))
+			named("c2", true))
 
 		c2.debug(false)
 		c2.expect("", "edit-message-event",
@@ -2962,7 +2965,7 @@ func testStaffInvasion(s *serverUnderTest) {
 		c1.send("1", "nick", `{"name":"host"}`)
 		c1.expect("1", "nick-reply", `{"session_id":"*","id":"*","from":"","to":"host"}`)
 		c1.send("2", "send", `{"content":"hi"}`)
-		id := `{"session_id":"*","id":"*","name":"host","server_id":"*","server_era":"*","is_manager":true}`
+		id := `{"session_id":"*","id":"*","name":"host","server_id":"*","server_era":"*","is_manager":true,"client_address":"*"}`
 		capture := c1.expect("2", "send-reply", `{"id":"*","time":"*","sender":%s,"content":"*","encryption_key_id":"*"}`, id)
 		msg := fmt.Sprintf(`{"id":"%s","time":%f,"sender":%s,"content":"hi","encryption_key_id":"%s"}`,
 			capture["id"], capture["time"], id, capture["encryption_key_id"])
@@ -2987,10 +2990,10 @@ func testStaffInvasion(s *serverUnderTest) {
 		capture = c2.expect("2", "staff-enroll-otp-reply", `{"uri":"*","qr_uri":"*"}`)
 		c2.send("3", "staff-invade", `{"password":"%s"}`, oneTimePassword(capture["uri"].(string)))
 		c2.expect("3", "staff-invade-reply", `{}`)
-		id = `{"session_id":"*","id":"*","name":"host","server_id":"*","server_era":"*","is_manager":true,"client_address":"*"}`
+		id = `{"session_id":"*","id":"*","name":"host","server_id":"*","server_era":"*","is_manager":true,"client_address":"*","real_client_address":"*"}`
 		c2.expectSnapshot(s.backend.Version(), []string{id}, []string{msg})
 		c1.expect("", "join-event",
-			`{"session_id":"%s","id":"*","name":"","server_id":"*","server_era":"*","is_staff":true,"is_manager":true}`, c2.sessionID)
+			`{"session_id":"%s","id":"*","name":"","server_id":"*","server_era":"*","is_staff":true,"is_manager":true,"client_address":"*"}`, c2.sessionID)
 	})
 }
 

@@ -116,10 +116,10 @@ func (r *memRoom) Latest(ctx scope.Context, n int, before snowflake.Snowflake) (
 	return r.log.Latest(ctx, n, before)
 }
 
-func (r *memRoom) Join(ctx scope.Context, session proto.Session) error {
+func (r *memRoom) Join(ctx scope.Context, session proto.Session) (string, error) {
 	client := &proto.Client{}
 	if !client.FromContext(ctx) {
-		return fmt.Errorf("client data not found in scope")
+		return "", fmt.Errorf("client data not found in scope")
 	}
 
 	r.m.Lock()
@@ -139,11 +139,11 @@ func (r *memRoom) Join(ctx scope.Context, session proto.Session) error {
 	id := ident.ID()
 
 	if banned, ok := r.agentBans[ident.ID()]; ok && banned.After(time.Now()) {
-		return proto.ErrAccessDenied
+		return "", proto.ErrAccessDenied
 	}
 
 	if banned, ok := r.ipBans[client.IP]; ok && banned.After(time.Now()) {
-		return proto.ErrAccessDenied
+		return "", proto.ErrAccessDenied
 	}
 
 	if _, ok := r.identities[id]; !ok {
@@ -153,8 +153,8 @@ func (r *memRoom) Join(ctx scope.Context, session proto.Session) error {
 	r.live[id] = append(r.live[id], session)
 	r.clients[session.ID()] = client
 
-	event := (*proto.PresenceEvent)(session.View(proto.Staff))
-	return r.broadcast(ctx, proto.JoinType, event, session)
+	event := proto.PresenceEvent(session.View(proto.Staff))
+	return "virt:" + event.RealClientAddress, r.broadcast(ctx, proto.JoinType, &event, session)
 }
 
 func (r *memRoom) Part(ctx scope.Context, session proto.Session) error {
@@ -175,8 +175,8 @@ func (r *memRoom) Part(ctx scope.Context, session proto.Session) error {
 		delete(r.identities, id)
 	}
 	delete(r.clients, session.ID())
-	event := (*proto.PresenceEvent)(session.View(proto.Staff))
-	return r.broadcast(ctx, proto.PartEventType, event, session)
+	event := proto.PresenceEvent(session.View(proto.Staff))
+	return r.broadcast(ctx, proto.PartEventType, &event, session)
 }
 
 func (r *memRoom) Send(ctx scope.Context, session proto.Session, message proto.Message) (
@@ -270,7 +270,7 @@ func (r *memRoom) Listing(ctx scope.Context, level proto.PrivilegeLevel) (proto.
 	listing := proto.Listing{}
 	for _, sessions := range r.live {
 		for _, session := range sessions {
-			listing = append(listing, *session.View(level))
+			listing = append(listing, session.View(level))
 		}
 	}
 	sort.Sort(listing)

@@ -18,7 +18,7 @@ type Message struct {
 	Parent          snowflake.Snowflake `json:"parent,omitempty"`            // the id of the message's parent, or null if top-level
 	PreviousEditID  snowflake.Snowflake `json:"previous_edit_id,omitempty"`  // the edit id of the most recent edit of this message, or null if it's never been edited
 	UnixTime        Time                `json:"time"`                        // the unix timestamp of when the message was posted
-	Sender          *SessionView        `json:"sender"`                      // the view of the sender's session
+	Sender          SessionView         `json:"sender"`                      // the view of the sender's session
 	Content         string              `json:"content"`                     // the content of the message (client-defined)
 	EncryptionKeyID string              `json:"encryption_key_id,omitempty"` // the id of the key that encrypts the message in storage
 	Edited          Time                `json:"edited,omitempty"`            // the unix timestamp of when the message was last edited

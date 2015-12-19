@@ -56,7 +56,7 @@ type Room interface {
 	Unban(ctx scope.Context, ban Ban) error
 
 	// Join inserts a Session into the Room's global presence.
-	Join(scope.Context, Session) error
+	Join(scope.Context, Session) (virtualClientAddr string, err error)
 
 	// Part removes a Session from the Room's global presence.
 	Part(scope.Context, Session) error

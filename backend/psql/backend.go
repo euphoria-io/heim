@@ -40,6 +40,7 @@ var schema = []struct {
 
 	// Presence.
 	{"presence", Presence{}, []string{"Room", "Topic", "ServerID", "ServerEra", "SessionID"}},
+	{"virtual_address", VirtualAddress{}, []string{"Room", "Virtual"}},
 
 	// Bans.
 	{"banned_agent", BannedAgent{}, []string{"AgentID", "Room"}},
@@ -603,25 +604,25 @@ func (b *Backend) sendMessageToRoom(
 	return result, nil
 }
 
-func (b *Backend) join(ctx scope.Context, room *Room, session proto.Session) error {
+func (b *Backend) join(ctx scope.Context, room *Room, session proto.Session) (string, error) {
 	client := &proto.Client{}
 	if !client.FromContext(ctx) {
-		return fmt.Errorf("client data not found in scope")
+		return "", fmt.Errorf("client data not found in scope")
 	}
 
 	bannedAgentCols, err := allColumns(b.DbMap, BannedAgent{}, "")
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	bannedIPCols, err := allColumns(b.DbMap, BannedIP{}, "")
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	t, err := b.DbMap.Begin()
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	rb := func() { rollback(ctx, t) }
@@ -635,14 +636,14 @@ func (b *Backend) join(ctx scope.Context, room *Room, session proto.Session) err
 		session.Identity().ID().String(), room.Name)
 	if err != nil {
 		rb()
-		return err
+		return "", err
 	}
 	if len(agentBans) > 0 {
 		logging.Logger(ctx).Printf("access denied to %s: %#v", session.Identity().ID(), agentBans)
 		if err := t.Rollback(); err != nil {
-			return err
+			return "", err
 		}
-		return proto.ErrAccessDenied
+		return "", proto.ErrAccessDenied
 	}
 
 	// Check for IP bans.
@@ -654,15 +655,24 @@ func (b *Backend) join(ctx scope.Context, room *Room, session proto.Session) err
 		client.IP, room.Name)
 	if err != nil {
 		rb()
-		return err
+		return "", err
 	}
 	if len(ipBans) > 0 {
 		logging.Logger(ctx).Printf("access denied to %s: %#v", client.IP, ipBans)
 		if err := t.Rollback(); err != nil {
-			return err
+			return "", err
 		}
-		return proto.ErrAccessDenied
+		return "", proto.ErrAccessDenied
 	}
+
+	// Virtualize the session's client address.
+	var row struct {
+		Address string `db:"address"`
+	}
+	if err := t.SelectOne(&row, "SELECT virtualize_address($1, $2::inet) AS address", room.Name, client.IP); err != nil {
+		return "", err
+	}
+	virtualAddress := row.Address
 
 	// Write to session log.
 	// TODO: do proper upsert simulation
@@ -677,13 +687,13 @@ func (b *Backend) join(ctx scope.Context, room *Room, session proto.Session) err
 		if rerr := t.Rollback(); rerr != nil {
 			logging.Logger(ctx).Printf("rollback error: %s", rerr)
 		}
-		return err
+		return "", err
 	}
 	if err := t.Insert(entry); err != nil {
 		if rerr := t.Rollback(); rerr != nil {
 			logging.Logger(ctx).Printf("rollback error: %s", rerr)
 		}
-		return err
+		return "", err
 	}
 
 	// Broadcast a presence event.
@@ -696,16 +706,18 @@ func (b *Backend) join(ctx scope.Context, room *Room, session proto.Session) err
 		SessionID: session.ID(),
 		Updated:   time.Now(),
 	}
+	sessionView := session.View(proto.Staff)
+	sessionView.ClientAddress = virtualAddress
 	err = presence.SetFact(&proto.Presence{
-		SessionView:    *session.View(proto.Staff),
+		SessionView:    sessionView,
 		LastInteracted: presence.Updated,
 	})
 	if err != nil {
 		rb()
-		return fmt.Errorf("presence marshal error: %s", err)
+		return "", fmt.Errorf("presence marshal error: %s", err)
 	}
 	if err := t.Insert(presence); err != nil {
-		return fmt.Errorf("presence insert error: %s", err)
+		return "", fmt.Errorf("presence insert error: %s", err)
 	}
 
 	b.Lock()
@@ -718,17 +730,18 @@ func (b *Backend) join(ctx scope.Context, room *Room, session proto.Session) err
 	lm[session.ID()] = Listener{Session: session, Client: client}
 	b.Unlock()
 
-	event := proto.PresenceEvent(*session.View(proto.Staff))
+	event := proto.PresenceEvent(session.View(proto.Staff))
+	event.ClientAddress = virtualAddress
 	if err := room.broadcast(ctx, t, proto.JoinEventType, event, session); err != nil {
 		rb()
-		return err
+		return "", err
 	}
 
 	if err := t.Commit(); err != nil {
-		return err
+		return "", err
 	}
 
-	return nil
+	return virtualAddress, nil
 }
 
 func (b *Backend) part(ctx scope.Context, room *Room, session proto.Session) error {
@@ -748,7 +761,7 @@ func (b *Backend) part(ctx scope.Context, room *Room, session proto.Session) err
 
 	// Broadcast a presence event.
 	// TODO: make this an explicit action via the Room protocol, to support encryption
-	event := proto.PresenceEvent(*session.View(proto.Staff))
+	event := proto.PresenceEvent(session.View(proto.Staff))
 	if err := room.broadcast(ctx, t, proto.PartEventType, event); err != nil {
 		rollback(ctx, t)
 		return err

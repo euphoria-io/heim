@@ -22,8 +22,8 @@ func (s *memIdentity) Name() string      { return s.name }
 func (s *memIdentity) ServerID() string  { return s.serverID }
 func (s *memIdentity) ServerEra() string { return s.serverEra }
 
-func (s *memIdentity) View() *proto.IdentityView {
-	return &proto.IdentityView{
+func (s *memIdentity) View() proto.IdentityView {
+	return proto.IdentityView{
 		ID:        proto.UserID(s.id),
 		Name:      s.name,
 		ServerID:  s.serverID,

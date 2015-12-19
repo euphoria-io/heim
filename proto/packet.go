@@ -512,7 +512,7 @@ type GetMessageReply Message
 type HelloEvent struct {
 	ID                   UserID               `json:"id"`                               // the id of the agent or account logged into this session
 	AccountView          *PersonalAccountView `json:"account,omitempty"`                // details about the user's account, if the session is logged in
-	SessionView          *SessionView         `json:"session"`                          // details about the session
+	SessionView          SessionView          `json:"session"`                          // details about the session
 	AccountHasAccess     bool                 `json:"account_has_access,omitempty"`     // if true, then the account has an explicit access grant to the current room
 	AccountEmailVerified bool                 `json:"account_email_verified,omitempty"` // whether the account's email address has been verified
 	RoomIsPrivate        bool                 `json:"room_is_private"`                  // if true, the session is connected to a private room

@@ -156,7 +156,7 @@ func (rb *RoomBinding) Latest(ctx scope.Context, n int, before snowflake.Snowfla
 	return rb.Backend.latest(ctx, rb.Room, n, before)
 }
 
-func (rb *RoomBinding) Join(ctx scope.Context, session proto.Session) error {
+func (rb *RoomBinding) Join(ctx scope.Context, session proto.Session) (string, error) {
 	return rb.Backend.join(ctx, rb.Room, session)
 }
 
@@ -298,7 +298,7 @@ func (rb *RoomBinding) RenameUser(ctx scope.Context, session proto.Session, form
 		Updated:   time.Now(),
 	}
 	err := presence.SetFact(&proto.Presence{
-		SessionView:    *session.View(proto.Staff),
+		SessionView:    session.View(proto.Staff),
 		LastInteracted: presence.Updated,
 	})
 	if err != nil {

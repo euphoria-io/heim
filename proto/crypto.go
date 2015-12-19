@@ -9,35 +9,35 @@ import (
 	"euphoria.io/heim/proto/security"
 )
 
-func DecryptPayload(payload interface{}, auth *Authorization) (interface{}, error) {
+func DecryptPayload(payload interface{}, auth *Authorization, level PrivilegeLevel) (interface{}, error) {
 	var messageKeys map[string]*security.ManagedKey
 	if auth != nil {
 		messageKeys = auth.MessageKeys
 	}
 	switch msg := payload.(type) {
 	case Message:
-		return DecryptMessage(msg, messageKeys)
+		return DecryptMessage(msg, messageKeys, level)
 	case SendReply:
-		dm, err := DecryptMessage(Message(msg), messageKeys)
+		dm, err := DecryptMessage(Message(msg), messageKeys, level)
 		if err != nil {
 			return nil, err
 		}
 		return SendReply(dm), nil
 	case GetMessageReply:
-		dm, err := DecryptMessage(Message(msg), messageKeys)
+		dm, err := DecryptMessage(Message(msg), messageKeys, level)
 		if err != nil {
 			return nil, err
 		}
 		return GetMessageReply(dm), nil
 	case *SendEvent:
-		dm, err := DecryptMessage(Message(*msg), messageKeys)
+		dm, err := DecryptMessage(Message(*msg), messageKeys, level)
 		if err != nil {
 			return nil, err
 		}
 		return (*SendEvent)(&dm), nil
 	case LogReply:
 		for i, entry := range msg.Log {
-			dm, err := DecryptPayload(entry, auth)
+			dm, err := DecryptPayload(entry, auth, level)
 			if err != nil {
 				return nil, err
 			}
@@ -78,8 +78,8 @@ func EncryptMessage(msg *Message, keyID string, key *security.ManagedKey) error 
 	digestStr := base64.URLEncoding.EncodeToString(digest)
 	cipherStr := base64.URLEncoding.EncodeToString(ciphertext)
 
-	msg.Sender = &SessionView{
-		IdentityView: &IdentityView{ID: msg.Sender.ID},
+	msg.Sender = SessionView{
+		IdentityView: IdentityView{ID: msg.Sender.ID},
 		SessionID:    msg.Sender.SessionID,
 	}
 	msg.Content = digestStr + "/" + cipherStr
@@ -87,7 +87,11 @@ func EncryptMessage(msg *Message, keyID string, key *security.ManagedKey) error 
 	return nil
 }
 
-func DecryptMessage(msg Message, auths map[string]*security.ManagedKey) (Message, error) {
+func DecryptMessage(msg Message, auths map[string]*security.ManagedKey, level PrivilegeLevel) (Message, error) {
+	if level == General {
+		msg.Sender.ClientAddress = ""
+	}
+
 	if msg.EncryptionKeyID == "" || msg.Truncated {
 		return msg, nil
 	}
@@ -141,6 +145,9 @@ func DecryptMessage(msg Message, auths map[string]*security.ManagedKey) (Message
 			return msg, fmt.Errorf("message corrupted: %s", err)
 		}
 		msg.Sender = payload.Sender
+		if level == General {
+			msg.Sender.ClientAddress = ""
+		}
 		msg.Content = payload.Content
 	}
 	return msg, nil

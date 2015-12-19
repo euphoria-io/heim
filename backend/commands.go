@@ -60,7 +60,7 @@ func (s *session) joinedState(cmd *proto.Packet) *response {
 		if err != nil {
 			return &response{err: err}
 		}
-		packet, err := proto.DecryptPayload(proto.GetMessageReply(*ret), &s.client.Authorization)
+		packet, err := proto.DecryptPayload(proto.GetMessageReply(*ret), &s.client.Authorization, s.privilegeLevel())
 		return &response{
 			packet: packet,
 			err:    err,
@@ -72,7 +72,7 @@ func (s *session) joinedState(cmd *proto.Packet) *response {
 			return &response{err: err}
 		}
 		packet, err := proto.DecryptPayload(
-			proto.LogReply{Log: msgs, Before: msg.Before}, &s.client.Authorization)
+			proto.LogReply{Log: msgs, Before: msg.Before}, &s.client.Authorization, s.privilegeLevel())
 		return &response{
 			packet: packet,
 			err:    err,
@@ -206,7 +206,7 @@ func (s *session) handleSendCommand(cmd *proto.SendCommand) *response {
 		ID:      msgID,
 		Content: cmd.Content,
 		Parent:  cmd.Parent,
-		Sender:  s.View(s.privilegeLevel()),
+		Sender:  s.View(proto.Host),
 	}
 
 	if s.keyID != "" {
@@ -221,7 +221,11 @@ func (s *session) handleSendCommand(cmd *proto.SendCommand) *response {
 		return &response{err: err}
 	}
 
-	packet, err := proto.DecryptPayload(proto.SendReply(sent), &s.client.Authorization)
+	if s.privilegeLevel() == proto.General {
+		sent.Sender.ClientAddress = ""
+	}
+
+	packet, err := proto.DecryptPayload(proto.SendReply(sent), &s.client.Authorization, s.privilegeLevel())
 	return &response{
 		packet: packet,
 		err:    err,

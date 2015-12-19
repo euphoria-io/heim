@@ -34,8 +34,8 @@ func (s *session) CheckAbandoned() error    { return nil }
 func (s *session) SetName(name string)      { s.name = name }
 func (s *session) Identity() proto.Identity { return backend.NewIdentity(s.id, s.name) }
 
-func (s *session) View(level proto.PrivilegeLevel) *proto.SessionView {
-	return &proto.SessionView{
+func (s *session) View(level proto.PrivilegeLevel) proto.SessionView {
+	return proto.SessionView{
 		IdentityView: s.Identity().View(),
 		SessionID:    s.id,
 	}

@@ -2,6 +2,7 @@ package psql
 
 import (
 	"encoding/json"
+	"net"
 	"time"
 
 	"euphoria.io/heim/proto"
@@ -32,8 +33,13 @@ func (p *Presence) SessionView(level proto.PrivilegeLevel) (proto.SessionView, e
 	if err := json.Unmarshal(p.Fact, &fact); err != nil {
 		return proto.SessionView{}, err
 	}
-	if level != proto.Staff {
+	switch level {
+	case proto.Staff:
+	case proto.Host:
+		fact.RealClientAddress = ""
+	case proto.General:
 		fact.ClientAddress = ""
+		fact.RealClientAddress = ""
 	}
 	return fact.SessionView, nil
 }
@@ -41,4 +47,11 @@ func (p *Presence) SessionView(level proto.PrivilegeLevel) (proto.SessionView, e
 type roomConn struct {
 	sessions map[string]proto.Session
 	nicks    map[string]string
+}
+
+type VirtualAddress struct {
+	Room    string
+	Virtual string
+	Real    net.IP
+	Created time.Time
 }

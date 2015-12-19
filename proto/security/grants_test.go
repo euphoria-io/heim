@@ -48,7 +48,8 @@ func TestGrants(t *testing.T) {
 		So(err, ShouldBeNil)
 
 		alice := mock.TestSession("Alice", "A1", "ip1")
-		So(room.Join(ctx, alice), ShouldBeNil)
+		_, err = room.Join(ctx, alice)
+		So(err, ShouldBeNil)
 
 		msg := proto.Message{
 			ID:       snowflake.NewFromTime(aliceSendTime),
@@ -94,7 +95,8 @@ func TestGrants(t *testing.T) {
 		So(json.Unmarshal(bobKey.Unpad(payload), &key.Plaintext), ShouldBeNil)
 
 		bob := mock.TestSession("Bob", "B1", "ip2")
-		So(room.Join(ctx, bob), ShouldBeNil)
+		_, err = room.Join(ctx, bob)
+		So(err, ShouldBeNil)
 		log, err := room.Latest(ctx, 1, 0)
 		So(err, ShouldBeNil)
 		So(len(log), ShouldEqual, 1)

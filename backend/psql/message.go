@@ -11,18 +11,21 @@ import (
 )
 
 type Message struct {
-	Room            string
-	ID              string
-	PreviousEditID  sql.NullString `db:"previous_edit_id"`
-	Parent          string
-	Posted          time.Time
-	Edited          gorp.NullTime
-	Deleted         gorp.NullTime
-	SessionID       string `db:"session_id"`
-	SenderID        string `db:"sender_id"`
-	SenderName      string `db:"sender_name"`
-	SenderIsManager bool   `db:"sender_is_manager"`
-	SenderIsStaff   bool   `db:"sender_is_staff"`
+	Room           string
+	ID             string
+	PreviousEditID sql.NullString `db:"previous_edit_id"`
+	Parent         string
+	Posted         time.Time
+	Edited         gorp.NullTime
+	Deleted        gorp.NullTime
+	SessionID      string `db:"session_id"`
+
+	SenderID            string `db:"sender_id"`
+	SenderName          string `db:"sender_name"`
+	SenderClientAddress string `db:"sender_client_address"`
+	SenderIsManager     bool   `db:"sender_is_manager"`
+	SenderIsStaff       bool   `db:"sender_is_staff"`
+
 	ServerID        string `db:"server_id"`
 	ServerEra       string `db:"server_era"`
 	Content         string
@@ -30,24 +33,23 @@ type Message struct {
 }
 
 func NewMessage(
-	room *Room, sessionView *proto.SessionView, id, parent snowflake.Snowflake, keyID, content string) (
+	room *Room, sessionView proto.SessionView, id, parent snowflake.Snowflake, keyID, content string) (
 	*Message, error) {
 
 	msg := &Message{
-		Room:    room.Name,
-		ID:      id.String(),
-		Parent:  parent.String(),
-		Posted:  id.Time(),
-		Content: content,
-	}
-	if sessionView != nil {
-		msg.SessionID = sessionView.SessionID
-		msg.SenderID = string(sessionView.ID)
-		msg.SenderName = sessionView.Name
-		msg.ServerID = sessionView.ServerID
-		msg.ServerEra = sessionView.ServerEra
-		msg.SenderIsManager = sessionView.IsManager
-		msg.SenderIsStaff = sessionView.IsStaff
+		Room:                room.Name,
+		ID:                  id.String(),
+		Parent:              parent.String(),
+		Posted:              id.Time(),
+		Content:             content,
+		SessionID:           sessionView.SessionID,
+		SenderID:            string(sessionView.ID),
+		SenderName:          sessionView.Name,
+		ServerID:            sessionView.ServerID,
+		ServerEra:           sessionView.ServerEra,
+		SenderClientAddress: sessionView.ClientAddress,
+		SenderIsManager:     sessionView.IsManager,
+		SenderIsStaff:       sessionView.IsStaff,
 	}
 	if keyID != "" {
 		msg.EncryptionKeyID = sql.NullString{
@@ -61,16 +63,17 @@ func NewMessage(
 func (m *Message) ToBackend() proto.Message {
 	msg := proto.Message{
 		UnixTime: proto.Time(m.Posted),
-		Sender: &proto.SessionView{
-			IdentityView: &proto.IdentityView{
+		Sender: proto.SessionView{
+			IdentityView: proto.IdentityView{
 				ID:        proto.UserID(m.SenderID),
 				Name:      m.SenderName,
 				ServerID:  m.ServerID,
 				ServerEra: m.ServerEra,
 			},
-			SessionID: m.SessionID,
-			IsManager: m.SenderIsManager,
-			IsStaff:   m.SenderIsStaff,
+			ClientAddress: m.SenderClientAddress,
+			SessionID:     m.SessionID,
+			IsManager:     m.SenderIsManager,
+			IsStaff:       m.SenderIsStaff,
 		},
 		Content: m.Content,
 	}
