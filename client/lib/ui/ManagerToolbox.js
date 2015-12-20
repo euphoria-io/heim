@@ -2,7 +2,6 @@ import React from 'react'
 import classNames from 'classnames'
 import Reflux from 'reflux'
 
-import chat from '../stores/chat'
 import toolbox from '../stores/toolbox'
 import FastButton from './FastButton'
 
@@ -11,7 +10,6 @@ export default React.createClass({
   displayName: 'ManagerToolbox',
 
   mixins: [
-    Reflux.connect(chat.store, 'chat'),
     Reflux.connect(toolbox.store, 'toolbox'),
   ],
 
@@ -62,7 +60,7 @@ export default React.createClass({
           <select className="command-picker" value={selectedCommand} onChange={this.selectCommand}>
             <option value="delete">delete</option>
             <option value="ban">ban</option>
-            {this.state.chat.isStaff && <option value="banIP">IP ban</option>}
+            <option value="banIP">IP ban</option>
           </select>
           <div className="preview">{toolboxData.activeItemSummary}</div>
           {!isEmpty && inputDuration && <select ref="banDuration" defaultValue={60 * 60}>
