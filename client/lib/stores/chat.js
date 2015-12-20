@@ -652,10 +652,10 @@ module.exports.store = Reflux.createStore({
     })
   },
 
-  banIP(ipAddr, data) {
+  banIP(addr, data) {
     this.socket.send({
       type: 'ban',
-      data: _.merge(data, {ip: ipAddr}),
+      data: _.merge(data, {ip: addr}),
     })
   },
 })

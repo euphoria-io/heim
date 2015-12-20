@@ -43,11 +43,11 @@ const commands = {
   banIP: {
     kind: 'user',
     filter(item) {
-      return !!item.get('ipAddr')
+      return !!item.get('addr')
     },
     execute(items, commandParams) {
       items.forEach(item =>
-        chat.banIP(item.get('ipAddr'), {
+        chat.banIP(item.get('addr'), {
           seconds: commandParams.seconds,
           global: commandParams.global,
         })
@@ -95,7 +95,7 @@ module.exports.store = Reflux.createStore({
         const sender = message.get('sender')
         const senderId = sender.get('id')
         const userInfo = chatState.who.get(sender.get('session_id'))
-        const ipAddr = userInfo && userInfo.get('client_address')
+        const addr = userInfo && userInfo.get('client_address')
         return Immutable.fromJS([
           {
             kind: 'message',
@@ -106,8 +106,8 @@ module.exports.store = Reflux.createStore({
             kind: 'user',
             id: senderId,
             name: sender.get('name'),
-            ipAddr,
-            removed: chatState.bannedIds.has(senderId) || chatState.bannedIPs.has(ipAddr),
+            addr,
+            removed: chatState.bannedIds.has(senderId) || chatState.bannedIPs.has(addr),
           },
         ])
       })
@@ -123,13 +123,13 @@ module.exports.store = Reflux.createStore({
         }
 
         const userId = userInfo.get('id')
-        const ipAddr = userInfo.get('client_address')
+        const addr = userInfo.get('client_address')
         return Immutable.Map({
           kind: 'user',
           id: userId,
           name: userInfo.get('name'),
-          ipAddr,
-          removed: chatState.bannedIds.has(userId) || chatState.bannedIPs.has(ipAddr),
+          addr,
+          removed: chatState.bannedIds.has(userId) || chatState.bannedIPs.has(addr),
         })
       })
       .filter(Boolean)
