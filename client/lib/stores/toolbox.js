@@ -94,8 +94,7 @@ module.exports.store = Reflux.createStore({
 
         const sender = message.get('sender')
         const senderId = sender.get('id')
-        const userInfo = chatState.who.get(sender.get('session_id'))
-        const addr = userInfo && userInfo.get('client_address')
+        const addr = sender.get('client_address')
         return Immutable.fromJS([
           {
             kind: 'message',
@@ -106,7 +105,7 @@ module.exports.store = Reflux.createStore({
             kind: 'user',
             id: senderId,
             name: sender.get('name'),
-            addr,
+            addr: sender.get('client_address'),
             removed: chatState.bannedIds.has(senderId) || chatState.bannedIPs.has(addr),
           },
         ])
