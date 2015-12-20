@@ -581,7 +581,7 @@ export default function initPlugins(roomName) {
             background: #327bbe;
           }
 
-          .top-bar button {
+          .top-bar button:not(.manager-toggle) {
             background: rgba(255, 255, 255, .5) !important;
           }
 
