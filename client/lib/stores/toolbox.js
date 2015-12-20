@@ -128,6 +128,7 @@ module.exports.store = Reflux.createStore({
           id: userId,
           name: userInfo.get('name'),
           addr,
+          realAddr: userInfo.get('real_client_address'),
           removed: chatState.bannedIds.has(userId) || chatState.bannedIPs.has(addr),
         })
       })
