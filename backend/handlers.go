@@ -63,9 +63,36 @@ func (s *Server) handleStatic(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleRoomStatic(w http.ResponseWriter, r *http.Request) {
 	ctx := scope.New()
-	roomName := mux.Vars(r)["room"]
-	_, err := s.b.GetRoom(ctx, roomName)
+
+	// Before creating an agent cookie, make this visitor look like a human.
+	if err := r.ParseForm(); err != nil {
+		s.serveErrorPage("bad request", http.StatusBadRequest, w, r)
+		return
+	}
+	r.Form.Set("h", "1")
+
+	// Tag the agent.
+	agent, cookie, agentKey, err := getAgent(ctx, s, r)
 	if err != nil {
+		logging.Logger(ctx).Printf("get agent error: %s", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if cookie != nil {
+		w.Header().Add("Set-Cookie", cookie.String())
+	}
+	client := &proto.Client{
+		Agent: agent,
+		Authorization: proto.Authorization{
+			ClientKey: agentKey,
+		},
+	}
+	client.FromRequest(ctx, r)
+
+	// Parameterize and serve the page.
+	prefix := mux.Vars(r)["prefix"]
+	roomName := mux.Vars(r)["room"]
+	if _, err := s.resolveRoom(ctx, prefix, roomName, client); err != nil {
 		if err == proto.ErrRoomNotFound {
 			if !s.allowRoomCreation {
 				s.serveErrorPage("room not found", http.StatusNotFound, w, r)
@@ -77,24 +104,6 @@ func (s *Server) handleRoomStatic(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	params := map[string]interface{}{"RoomName": roomName}
-
-	// Before creating an agent cookie, make this visitor look like a human.
-	if err := r.ParseForm(); err != nil {
-		s.serveErrorPage("bad request", http.StatusBadRequest, w, r)
-		return
-	}
-	r.Form.Set("h", "1")
-
-	// Tag the agent.
-	_, cookie, _, err := getAgent(ctx, s, r)
-	if err != nil {
-		logging.Logger(ctx).Printf("get agent error: %s", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if cookie != nil {
-		w.Header().Add("Set-Cookie", cookie.String())
-	}
 
 	s.servePage("room.html", params, w, r)
 }
