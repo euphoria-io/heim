@@ -227,10 +227,11 @@ module.exports.store = Reflux.createStore({
         console.warn('error banning:', ev.error)  // eslint-disable-line no-console
       }
     } else if (ev.type === 'pm-initiate-reply') {
+      // TODO: nick: ev.data.to_nick,
       this.state.activePMs = this.state.activePMs.add(Immutable.Map({
         kind: 'to',
-        nick: ev.data.to_nick,
         id: ev.data.pm_id,
+        nick: "???",
       }))
     } else if (ev.type === 'pm-initiate-event') {
       this.state.activePMs = this.state.activePMs.add(Immutable.Map({
@@ -675,7 +676,7 @@ module.exports.store = Reflux.createStore({
   pmInitiate(id) {
     this.socket.send({
       type: 'pm-initiate',
-      data: {id},
+      data: {user_id: id},
     })
   },
 })
