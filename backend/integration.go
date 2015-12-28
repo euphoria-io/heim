@@ -50,7 +50,7 @@ func newServerUnderTest(
 		kms:         kms,
 		accounts:    map[string]proto.Account{},
 		accountKeys: map[string]*security.ManagedKey{},
-		rooms:       map[string]proto.Room{},
+		rooms:       map[string]proto.ManagedRoom{},
 	}
 }
 
@@ -62,7 +62,7 @@ type serverUnderTest struct {
 	once        sync.Once
 	accounts    map[string]proto.Account
 	accountKeys map[string]*security.ManagedKey
-	rooms       map[string]proto.Room
+	rooms       map[string]proto.ManagedRoom
 }
 
 func (s *serverUnderTest) Close() {
@@ -72,11 +72,6 @@ func (s *serverUnderTest) Close() {
 }
 
 func (s *serverUnderTest) openWebsocket(roomName string, cookies []*http.Cookie, params url.Values) (proto.Room, *websocket.Conn, *http.Response) {
-	room, err := s.backend.GetRoom(scope.New(), roomName)
-	if err == proto.ErrRoomNotFound {
-		room, err = s.backend.CreateRoom(scope.New(), s.app.kms, false, roomName)
-		So(err, ShouldBeNil)
-	}
 	headers := http.Header{}
 	for _, cookie := range cookies {
 		headers.Add("Cookie", cookie.String())
@@ -91,6 +86,32 @@ func (s *serverUnderTest) openWebsocket(roomName string, cookies []*http.Cookie,
 			body, _ := ioutil.ReadAll(resp.Body)
 			So(string(body), ShouldEqual, "")
 		}
+	}
+	So(err, ShouldBeNil)
+
+	// Mimic the ws request handler so we can resolve the room.
+	headersBuf := &bytes.Buffer{}
+	So(headers.Write(headersBuf), ShouldBeNil)
+	r, err := http.NewRequest("GET", url, headersBuf)
+	So(err, ShouldBeNil)
+	ctx := scope.New()
+	agent, _, agentKey, err := getAgent(ctx, s.app, r)
+	So(err, ShouldBeNil)
+	client := &proto.Client{
+		Agent: agent,
+		Authorization: proto.Authorization{
+			ClientKey: agentKey,
+		},
+	}
+	client.FromRequest(ctx, r)
+	var prefix string
+	if strings.HasPrefix(roomName, "pm:") {
+		prefix = "pm:"
+		roomName = roomName[3:]
+	}
+	room, err := s.app.resolveRoom(scope.New(), prefix, roomName, client)
+	if err == proto.ErrRoomNotFound {
+		err = fmt.Errorf("roomName: %s:%s", prefix, roomName)
 	}
 	So(err, ShouldBeNil)
 	return room, conn, resp
@@ -162,7 +183,7 @@ func (s *serverUnderTest) Account(
 
 func (s *serverUnderTest) Room(
 	ctx scope.Context, kms security.KMS, private bool, name string, managers ...proto.Account) (
-	proto.Room, error) {
+	proto.ManagedRoom, error) {
 
 	if room, ok := s.rooms[name]; ok {
 		return room, nil
@@ -409,9 +430,9 @@ func (tc *testConn) expectHello() {
 		}
 		account += "},"
 	}
-	key, err := tc.room.MessageKey(scope.New())
+	_, ok, err := tc.room.MessageKeyID(scope.New())
 	So(err, ShouldBeNil)
-	if key != nil {
+	if ok {
 		isParts += `,"room_is_private":true`
 		if tc.accountHasAccess {
 			isParts += `,"account_has_access":true`
@@ -540,6 +561,7 @@ func IntegrationTest(t *testing.T, factory proto.BackendFactory) {
 	runTest("Staff invasion", testStaffInvasion)
 	runTest("NotifyUser", testNotifyUser)
 	runTest("Account change email", testAccountChangeEmail)
+	runTest("PMs", testPMs)
 }
 
 func testLurker(s *serverUnderTest) {
@@ -3081,5 +3103,69 @@ func testNotifyUser(s *serverUnderTest) {
 		conn4.Close()
 		conn5.expect("", "part-event",
 			`{"session_id":"%s","id":"*","name":"","server_id":"*","server_era":"*"}`, conn4.sessionID)
+	})
+}
+
+func testPMs(s *serverUnderTest) {
+	Convey("Initiate with agent and interact", func() {
+		// Create initiator
+		ctx := scope.New()
+		kms := s.app.kms
+		nonce := fmt.Sprintf("%s", time.Now())
+		logan, _, err := s.Account(ctx, kms, "email", "logan"+nonce, "hunter2")
+		So(err, ShouldBeNil)
+
+		// Create recipient
+		r := s.Connect("pminit")
+		r.expectPing()
+		r.expectSnapshot(s.backend.Version(), nil, nil)
+		r.Close()
+
+		// Try to invite recipient to PM but fail because not logged in
+		c := s.Connect("pminvite")
+		c.expectPing()
+		c.expectSnapshot(s.backend.Version(), nil, nil)
+		c.send("1", "pm-initiate", `{"user_id":"%s"}`, r.id())
+		c.expectError("1", "pm-initiate-reply", proto.ErrAccessDenied.Error())
+
+		// Log in and invite recipient to PM
+		c.send("2", "login", `{"namespace":"email","id":"logan%s","password":"hunter2"}`, nonce)
+		c.expect("2", "login-reply", `{"success":true,"account_id":"%s"}`, logan.ID())
+		c.Close()
+		c = s.Reconnect(c, "pminvite2")
+		c.expectPing()
+		c.expectSnapshot(s.backend.Version(), nil, nil)
+		c.send("1", "pm-initiate", `{"user_id":"%s"}`, r.id())
+		capture := c.expect("1", "pm-initiate-reply", `{"pm_id":"*"}`)
+		c.Close()
+
+		// Reconnect to PM room
+		roomName := fmt.Sprintf("pm:%s", capture["pm_id"])
+		r.accountHasAccess = true
+		r = s.Reconnect(r, roomName)
+		defer r.Close()
+		r.expectPing()
+		r.expectSnapshot(s.backend.Version(), nil, nil)
+		r.send("1", "nick", `{"name":"r"}`)
+		r.expect("1", "nick-reply", `{"session_id":"*","id":"*","from":"","to":"r"}`)
+		r.send("2", "send", `{"content":"hi"}`)
+		id := `{"session_id":"*","id":"*","name":"r","server_id":"*","server_era":"*"}`
+		capture = r.expect("2", "send-reply", `{"id":"*","time":"*","sender":%s,"content":"*","encryption_key_id":"*"}`, id)
+		msg := fmt.Sprintf(`{"id":"%s","time":%f,"sender":%s,"content":"hi","encryption_key_id":"%s"}`,
+			capture["id"], capture["time"], id, capture["encryption_key_id"])
+		So(capture["encryption_key_id"], ShouldEqual, "v1/"+roomName)
+
+		c.accountHasAccess = true
+		c = s.Reconnect(c, roomName)
+		defer c.Close()
+		c.expectPing()
+		c.expectSnapshot(s.backend.Version(), []string{id}, []string{msg})
+		c.send("1", "nick", `{"name":"c"}`)
+		c.expect("1", "nick-reply", `{"session_id":"*","id":"*","from":"","to":"c"}`)
+		c.send("2", "send", `{"content":"hello"}`)
+		c.expect("2", "send-reply", `{"id":"*","time":"*","sender":"*","content":"*","encryption_key_id":"%s"}`, capture["encryption_key_id"])
+		r.expect("", "join-event", `{"session_id":"*","id":"*","name":"","server_id":"*","server_era":"*"}`)
+		r.expect("", "nick-event", `{"session_id":"*","id":"*","from":"","to":"c"}`)
+		r.expect("", "send-event", `{"id":"*","time":"*","sender":"*","content":"hello","encryption_key_id":"*"}`)
 	})
 }

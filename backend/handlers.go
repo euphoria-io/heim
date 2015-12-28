@@ -11,6 +11,7 @@ import (
 
 	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/logging"
+	"euphoria.io/heim/proto/security"
 	"euphoria.io/heim/proto/snowflake"
 	"euphoria.io/scope"
 	"github.com/gorilla/mux"
@@ -36,7 +37,7 @@ func (s *Server) route() {
 	s.r.PathPrefix("/about").Handler(
 		prometheus.InstrumentHandler("about", http.HandlerFunc(s.handleAboutStatic)))
 
-	s.r.HandleFunc("/room/{room:[a-z0-9]+}/ws", instrumentSocketHandlerFunc("ws", s.handleRoom))
+	s.r.HandleFunc("/room/{prefix:(pm:)?}{room:[a-z0-9]+}/ws", instrumentSocketHandlerFunc("ws", s.handleRoom))
 	s.r.Handle(
 		"/room/{room:[a-z0-9]+}/", prometheus.InstrumentHandlerFunc("room_static", s.handleRoomStatic))
 
@@ -114,25 +115,42 @@ func (s *Server) handleRobotsTxt(w http.ResponseWriter, r *http.Request) {
 	s.serveGzippedFile(w, r, "/static/robots.txt", false)
 }
 
+func (s *Server) resolveRoom(ctx scope.Context, prefix, roomName string, client *proto.Client) (room proto.Room, err error) {
+	// TODO: support room creation?
+	switch prefix {
+	case "pm:":
+		var (
+			sf      snowflake.Snowflake
+			roomKey *security.ManagedKey
+		)
+		if err := sf.FromString(roomName); err != nil {
+			return nil, proto.ErrRoomNotFound
+		}
+		room, roomKey, err = s.b.PMTracker().Room(ctx, s.kms, sf, client)
+		if err != nil {
+			return nil, err
+		}
+		client.Authorization.AddMessageKey("pm:"+roomName, roomKey)
+		return room, nil
+	case "":
+		room, err = s.b.GetRoom(ctx, roomName)
+		if s.allowRoomCreation && err == proto.ErrRoomNotFound {
+			room, err = s.b.CreateRoom(ctx, s.kms, false, roomName)
+		}
+		if err != nil {
+			return nil, err
+		}
+		if err := client.RoomAuthorize(ctx, room); err != nil {
+			return nil, err
+		}
+		return room, nil
+	default:
+		return nil, proto.ErrRoomNotFound
+	}
+}
+
 func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
 	ctx := s.rootCtx.Fork()
-
-	// Resolve the room.
-	// TODO: support room creation?
-	roomName := mux.Vars(r)["room"]
-	room, err := s.b.GetRoom(ctx, roomName)
-	if s.allowRoomCreation && err == proto.ErrRoomNotFound {
-		room, err = s.b.CreateRoom(ctx, s.kms, false, roomName)
-	}
-	if err != nil {
-		if err == proto.ErrRoomNotFound {
-			http.Error(w, "404 page not found", http.StatusNotFound)
-			return
-		}
-		logging.Logger(ctx).Printf("room error: %s", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
 
 	// Tag the agent. We use an authenticated but un-encrypted cookie.
 	agent, cookie, agentKey, err := getAgent(ctx, s, r)
@@ -142,13 +160,18 @@ func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client := &proto.Client{Agent: agent}
+	client := &proto.Client{
+		Agent: agent,
+		Authorization: proto.Authorization{
+			ClientKey: agentKey,
+		},
+	}
 	client.FromRequest(ctx, r)
 
 	// Look up account associated with agent.
 	var accountID snowflake.Snowflake
 	if err := accountID.FromString(agent.AccountID); agent.AccountID != "" && err == nil {
-		if err := client.AuthenticateWithAgent(ctx, s.b, room, agent, agentKey); err != nil {
+		if err := client.AuthenticateWithAgent(ctx, s.b, agent, agentKey); err != nil {
 			fmt.Printf("agent auth failed: %s\n", err)
 			switch err {
 			case proto.ErrAccessDenied:
@@ -160,6 +183,33 @@ func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
+
+	// Resolve the room.
+	prefix := mux.Vars(r)["prefix"]
+	roomName := mux.Vars(r)["room"]
+	room, err := s.resolveRoom(ctx, prefix, roomName, client)
+	if err != nil {
+		switch err {
+		case proto.ErrAccessDenied:
+			http.Error(w, "401 unauthorized", http.StatusUnauthorized)
+			return
+		case proto.ErrRoomNotFound:
+			http.Error(w, "404 page not found", http.StatusNotFound)
+			return
+		default:
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	// Serve the room websocket.
+	s.serveRoomWebsocket(ctx, room, cookie, client, agentKey, w, r)
+}
+
+func (s *Server) serveRoomWebsocket(
+	ctx scope.Context, room proto.Room,
+	cookie *http.Cookie, client *proto.Client, agentKey *security.ManagedKey,
+	w http.ResponseWriter, r *http.Request) {
 
 	// Upgrade to a websocket and set cookie.
 	headers := http.Header{}
@@ -187,7 +237,7 @@ func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Serve the session.
-	session := newSession(ctx, s, conn, clientAddress, roomName, room, client, agentKey)
+	session := newSession(ctx, s, conn, clientAddress, room, client, agentKey)
 	if err = session.serve(); err != nil {
 		// TODO: error handling
 		logging.Logger(ctx).Printf("session serve error: %s", err)

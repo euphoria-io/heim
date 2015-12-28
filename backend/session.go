@@ -128,10 +128,10 @@ type session struct {
 
 func newSession(
 	ctx scope.Context, server *Server, conn *websocket.Conn, clientAddr string,
-	roomName string, room proto.Room, client *proto.Client, agentKey *security.ManagedKey) *session {
+	room proto.Room, client *proto.Client, agentKey *security.ManagedKey) *session {
 
 	nextID := atomic.AddUint64(&sessionIDCounter, 1)
-	sessionCount.WithLabelValues(roomName).Set(float64(nextID))
+	sessionCount.WithLabelValues(room.ID()).Set(float64(nextID))
 	sessionID := fmt.Sprintf("%x-%08x", client.Agent.IDString(), nextID)
 	ctx = logging.LoggingContext(ctx, os.Stdout, fmt.Sprintf("[%s] ", sessionID))
 
@@ -147,7 +147,7 @@ func newSession(
 		agentKey:    agentKey,
 		serverID:    server.ID,
 		serverEra:   server.Era,
-		roomName:    roomName,
+		roomName:    room.ID(),
 		room:        room,
 		backend:     server.b,
 		kms:         server.kms,
@@ -276,17 +276,17 @@ func (s *session) serve() error {
 	logger := logging.Logger(s.ctx)
 	logger.Printf("client connected")
 
-	key, err := s.room.MessageKey(s.ctx)
+	keyID, isPrivate, err := s.room.MessageKeyID(s.ctx)
 	if err != nil {
 		return err
 	}
 
 	accountHasAccess := false
-	if key != nil {
-		_, accountHasAccess = s.client.Authorization.MessageKeys[key.KeyID()]
+	if isPrivate {
+		_, accountHasAccess = s.client.Authorization.MessageKeys[keyID]
 	}
 
-	if err := s.sendHello(key != nil, accountHasAccess); err != nil {
+	if err := s.sendHello(isPrivate, accountHasAccess); err != nil {
 		return err
 	}
 
@@ -318,29 +318,23 @@ func (s *session) serve() error {
 		}
 	}
 
-	// TODO: check room auth
-	switch key {
-	case nil:
-		if allowed {
-			if err := s.join(); err != nil {
-				// TODO: send an error packet
-				return err
-			}
-			s.state = s.joinedState
+	isAuthed := !isPrivate
+	if isPrivate {
+		_, isAuthed = s.client.Authorization.MessageKeys[keyID]
+	}
+
+	if allowed && isAuthed {
+		if isPrivate {
+			s.keyID = keyID
 		}
-	default:
-		if _, ok := s.client.Authorization.MessageKeys[key.KeyID()]; ok {
-			s.client.Authorization.CurrentMessageKeyID = key.KeyID()
-			s.keyID = key.KeyID()
-			if err := s.join(); err != nil {
-				// TODO: send an error packet
-				return err
-			}
-			s.state = s.joinedState
-		} else {
-			s.sendBounce("authentication required")
-			s.state = s.unauthedState
+		if err := s.join(); err != nil {
+			// TODO: send an error packet
+			return err
 		}
+		s.state = s.joinedState
+	} else {
+		s.sendBounce("authentication required")
+		s.state = s.unauthedState
 	}
 
 	go s.readMessages()

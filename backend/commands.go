@@ -180,6 +180,10 @@ func (s *session) handleCoreCommands(payload interface{}) *response {
 	case *proto.UnlockStaffCapabilityCommand:
 		return s.handleUnlockStaffCapabilityCommand(msg)
 
+	// other commands
+	case *proto.PMInitiateCommand:
+		return s.handlePMInitiateCommand(msg)
+
 	// fallthrough
 	default:
 		return nil
@@ -200,7 +204,12 @@ func (s *session) handleSendCommand(cmd *proto.SendCommand) *response {
 		return &response{err: err}
 	}
 
-	isValidParent, err := s.room.IsValidParent(cmd.Parent)
+	var isValidParent bool
+	if s.managedRoom != nil {
+		isValidParent, err = s.managedRoom.IsValidParent(cmd.Parent)
+	} else {
+		isValidParent, err = s.room.IsValidParent(cmd.Parent)
+	}
 	if err != nil {
 		return &response{err: err}
 	}
@@ -240,11 +249,11 @@ func (s *session) handleSendCommand(cmd *proto.SendCommand) *response {
 
 func (s *session) handleGrantAccessCommand(cmd *proto.GrantAccessCommand) *response {
 	mkp := s.client.Authorization.ManagerKeyPair
-	if mkp == nil {
+	if s.managedRoom == nil || mkp == nil {
 		return &response{err: proto.ErrAccessDenied}
 	}
 
-	rmk, err := s.room.MessageKey(s.ctx)
+	rmk, err := s.managedRoom.MessageKey(s.ctx)
 	if err != nil {
 		return &response{err: err}
 	}
@@ -280,11 +289,11 @@ func (s *session) handleGrantAccessCommand(cmd *proto.GrantAccessCommand) *respo
 
 func (s *session) handleRevokeAccessCommand(cmd *proto.RevokeAccessCommand) *response {
 	mkp := s.client.Authorization.ManagerKeyPair
-	if s.client.Account == nil || mkp == nil {
+	if s.managedRoom == nil || s.client.Account == nil || mkp == nil {
 		return &response{err: proto.ErrAccessDenied}
 	}
 
-	mkey, err := s.room.MessageKey(s.ctx)
+	mkey, err := s.managedRoom.MessageKey(s.ctx)
 	if err != nil {
 		return &response{err: err}
 	}
@@ -363,7 +372,7 @@ func (s *session) handleStaffGrantManagerCommand(cmd *proto.StaffGrantManagerCom
 		return &response{err: err}
 	}
 
-	msgkey, err := s.room.MessageKey(s.ctx)
+	msgkey, err := s.managedRoom.MessageKey(s.ctx)
 	if err != nil {
 		return &response{err: err}
 	}
@@ -693,7 +702,11 @@ func (s *session) handleAuthCommand(msg *proto.AuthCommand) *response {
 	)
 	switch msg.Type {
 	case proto.AuthPasscode:
-		failureReason, err = s.client.AuthenticateWithPasscode(s.ctx, s.room, msg.Passcode)
+		if s.managedRoom == nil {
+			failureReason = fmt.Sprintf("auth type not supported: %s", msg.Type)
+		} else {
+			failureReason, err = s.client.AuthenticateWithPasscode(s.ctx, s.managedRoom, msg.Passcode)
+		}
 	default:
 		failureReason = fmt.Sprintf("auth type not supported: %s", msg.Type)
 	}
@@ -985,4 +998,20 @@ func (s *session) handleUnbanCommand(msg *proto.UnbanCommand) *response {
 		}
 	}
 	return &response{packet: reply}
+}
+
+func (s *session) handlePMInitiateCommand(msg *proto.PMInitiateCommand) *response {
+	if s.client.Account == nil {
+		return &response{err: proto.ErrAccessDenied}
+	}
+	pmID, err := s.backend.PMTracker().Initiate(s.ctx, s.kms, s.client, msg.UserID)
+	if err != nil {
+		return &response{err: fmt.Errorf("pm initiate: %s", err)}
+	}
+	// TODO: NotifyUser
+	return &response{
+		packet: &proto.PMInitiateReply{
+			PMID: pmID,
+		},
+	}
 }

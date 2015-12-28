@@ -15,7 +15,7 @@ import (
 	"euphoria.io/scope"
 )
 
-type memRoom struct {
+type RoomBase struct {
 	m sync.Mutex
 
 	name        string
@@ -27,9 +27,256 @@ type memRoom struct {
 	live        map[proto.UserID][]proto.Session
 	clients     map[string]*proto.Client
 	partWaiters map[string]chan struct{}
+	messageKey  *roomMessageKey
+}
+
+func (r *RoomBase) ID() string      { return r.name }
+func (r *RoomBase) Version() string { return r.version }
+
+func (r *RoomBase) GetMessage(ctx scope.Context, id snowflake.Snowflake) (*proto.Message, error) {
+	return r.log.GetMessage(ctx, id)
+}
+
+func (r *RoomBase) Latest(ctx scope.Context, n int, before snowflake.Snowflake) ([]proto.Message, error) {
+	return r.log.Latest(ctx, n, before)
+}
+
+func (r *RoomBase) Join(ctx scope.Context, session proto.Session) (string, error) {
+	client := &proto.Client{}
+	if !client.FromContext(ctx) {
+		return "", fmt.Errorf("client data not found in scope")
+	}
+
+	r.m.Lock()
+	defer r.m.Unlock()
+
+	if r.identities == nil {
+		r.identities = map[proto.UserID]proto.Identity{}
+	}
+	if r.live == nil {
+		r.live = map[proto.UserID][]proto.Session{}
+	}
+	if r.clients == nil {
+		r.clients = map[string]*proto.Client{}
+	}
+
+	ident := session.Identity()
+	id := ident.ID()
+
+	if banned, ok := r.agentBans[ident.ID()]; ok && banned.After(time.Now()) {
+		return "", proto.ErrAccessDenied
+	}
+
+	if banned, ok := r.ipBans[client.IP]; ok && banned.After(time.Now()) {
+		return "", proto.ErrAccessDenied
+	}
+
+	if _, ok := r.identities[id]; !ok {
+		r.identities[id] = ident
+	}
+
+	r.live[id] = append(r.live[id], session)
+	r.clients[session.ID()] = client
+
+	event := proto.PresenceEvent(session.View(proto.Staff))
+	return "virt:" + event.RealClientAddress, r.broadcast(ctx, proto.JoinType, &event, session)
+}
+
+func (r *RoomBase) Part(ctx scope.Context, session proto.Session) error {
+	r.m.Lock()
+	defer r.m.Unlock()
+
+	ident := session.Identity()
+	id := ident.ID()
+	live := r.live[id]
+	for i, s := range live {
+		if s == session {
+			copy(live[i:], live[i+1:])
+			r.live[id] = live[:len(live)-1]
+		}
+	}
+	if len(r.live[id]) == 0 {
+		delete(r.live, id)
+		delete(r.identities, id)
+	}
+	delete(r.clients, session.ID())
+	event := proto.PresenceEvent(session.View(proto.Staff))
+	return r.broadcast(ctx, proto.PartEventType, &event, session)
+}
+
+func (r *RoomBase) Send(ctx scope.Context, session proto.Session, message proto.Message) (
+	proto.Message, error) {
+
+	r.m.Lock()
+	defer r.m.Unlock()
+
+	msg := &proto.Message{
+		ID:              message.ID,
+		UnixTime:        proto.Time(message.ID.Time()),
+		Parent:          message.Parent,
+		Sender:          message.Sender,
+		Content:         message.Content,
+		EncryptionKeyID: message.EncryptionKeyID,
+	}
+	r.log.post(msg)
+	msg = maybeTruncate(msg)
+	event := (*proto.SendEvent)(msg)
+	return *msg, r.broadcast(ctx, proto.SendType, event, session)
+}
+
+func (r *RoomBase) EditMessage(
+	ctx scope.Context, session proto.Session, edit proto.EditMessageCommand) (
+	proto.EditMessageReply, error) {
+
+	r.m.Lock()
+	defer r.m.Unlock()
+
+	editID, err := snowflake.New()
+	if err != nil {
+		return proto.EditMessageReply{}, err
+	}
+
+	msg, err := r.log.edit(edit)
+	if err != nil {
+		return proto.EditMessageReply{}, err
+	}
+
+	if edit.Announce {
+		event := &proto.EditMessageEvent{
+			EditID:  editID,
+			Message: *msg,
+		}
+		if err := r.broadcast(ctx, proto.EditMessageType, event, session); err != nil {
+			return proto.EditMessageReply{}, err
+		}
+	}
+
+	reply := proto.EditMessageReply{
+		EditID:  editID,
+		Message: *msg,
+	}
+	return reply, nil
+}
+
+func (r *RoomBase) broadcast(
+	ctx scope.Context, cmdType proto.PacketType, payload interface{}, excluding ...proto.Session) error {
+
+	excMap := make(map[string]struct{}, len(excluding))
+	for _, x := range excluding {
+		if x != nil {
+			excMap[x.ID()] = struct{}{}
+		}
+	}
+
+	for _, sessions := range r.live {
+		for _, session := range sessions {
+			if _, ok := excMap[session.ID()]; ok {
+				continue
+			}
+			if err := session.Send(ctx, cmdType.Event(), payload); err != nil {
+				// TODO: accumulate errors
+				return err
+			}
+		}
+	}
+
+	if cmdType == proto.PartEventType {
+		if presence, ok := payload.(*proto.PresenceEvent); ok {
+			if waiter, ok := r.partWaiters[presence.SessionID]; ok {
+				r.m.Unlock()
+				waiter <- struct{}{}
+				r.m.Lock()
+			}
+		}
+	}
+	return nil
+}
+
+func (r *RoomBase) Listing(ctx scope.Context, level proto.PrivilegeLevel) (proto.Listing, error) {
+	listing := proto.Listing{}
+	for _, sessions := range r.live {
+		for _, session := range sessions {
+			listing = append(listing, session.View(level))
+		}
+	}
+	sort.Sort(listing)
+	return listing, nil
+}
+
+func (r *RoomBase) RenameUser(
+	ctx scope.Context, session proto.Session, formerName string) (*proto.NickEvent, error) {
+
+	r.m.Lock()
+	defer r.m.Unlock()
+
+	logging.Logger(ctx).Printf(
+		"renaming %s from %s to %s\n", session.ID(), formerName, session.Identity().Name())
+	payload := &proto.NickEvent{
+		SessionID: session.ID(),
+		ID:        session.Identity().ID(),
+		From:      formerName,
+		To:        session.Identity().Name(),
+	}
+	return payload, r.broadcast(ctx, proto.NickType, payload, session)
+}
+
+func (r *RoomBase) MessageKeyID(ctx scope.Context) (string, bool, error) {
+	if r.messageKey == nil {
+		return "", false, nil
+	}
+	return r.messageKey.id, true, nil
+}
+
+func (r *memRoom) MessageKey(ctx scope.Context) (proto.RoomMessageKey, error) {
+	if r.messageKey == nil {
+		return nil, nil
+	}
+	return r.messageKey, nil
+}
+
+func (r *memRoom) ManagerKey(ctx scope.Context) (proto.RoomManagerKey, error) {
+	return r.managerKey, nil
+}
+
+func (r *RoomBase) IsValidParent(id snowflake.Snowflake) (bool, error) {
+	// TODO: actually check log to see if it is valid.
+	return true, nil
+}
+
+func (r *RoomBase) WaitForPart(sessionID string) error {
+	r.m.Lock()
+	defer r.m.Unlock()
+
+	for _, ss := range r.live {
+		for _, s := range ss {
+			if s.ID() == sessionID {
+				c := make(chan struct{})
+				if r.partWaiters == nil {
+					r.partWaiters = map[string]chan struct{}{}
+				}
+				r.partWaiters[sessionID] = c
+				r.m.Unlock()
+				<-c
+				r.m.Lock()
+				delete(r.partWaiters, sessionID)
+				return nil
+			}
+		}
+	}
+	return nil
+}
+
+func (r *RoomBase) ResolveClientAddress(ctx scope.Context, addr string) (net.IP, error) {
+	if strings.HasPrefix(addr, "virt:") {
+		addr = addr[len("virt:"):]
+	}
+	return net.ParseIP(addr), nil
+}
+
+type memRoom struct {
+	RoomBase
 
 	sec        *proto.RoomSecurity
-	messageKey *roomMessageKey
 	managerKey *roomManagerKey
 }
 
@@ -52,12 +299,14 @@ func NewRoom(
 	}
 
 	room := &memRoom{
-		name:      name,
-		version:   version,
-		log:       newMemLog(),
-		agentBans: map[proto.UserID]time.Time{},
-		ipBans:    map[string]time.Time{},
-		sec:       sec,
+		RoomBase: RoomBase{
+			name:      name,
+			version:   version,
+			log:       newMemLog(),
+			agentBans: map[proto.UserID]time.Time{},
+			ipBans:    map[string]time.Time{},
+		},
+		sec: sec,
 		managerKey: &roomManagerKey{
 			RoomSecurity: sec,
 			GrantManager: &proto.GrantManager{
@@ -106,205 +355,6 @@ func NewRoom(
 	}
 
 	return room, nil
-}
-
-func (r *memRoom) Version() string { return r.version }
-
-func (r *memRoom) GetMessage(ctx scope.Context, id snowflake.Snowflake) (*proto.Message, error) {
-	return r.log.GetMessage(ctx, id)
-}
-
-func (r *memRoom) Latest(ctx scope.Context, n int, before snowflake.Snowflake) ([]proto.Message, error) {
-	return r.log.Latest(ctx, n, before)
-}
-
-func (r *memRoom) Join(ctx scope.Context, session proto.Session) (string, error) {
-	client := &proto.Client{}
-	if !client.FromContext(ctx) {
-		return "", fmt.Errorf("client data not found in scope")
-	}
-
-	r.m.Lock()
-	defer r.m.Unlock()
-
-	if r.identities == nil {
-		r.identities = map[proto.UserID]proto.Identity{}
-	}
-	if r.live == nil {
-		r.live = map[proto.UserID][]proto.Session{}
-	}
-	if r.clients == nil {
-		r.clients = map[string]*proto.Client{}
-	}
-
-	ident := session.Identity()
-	id := ident.ID()
-
-	if banned, ok := r.agentBans[ident.ID()]; ok && banned.After(time.Now()) {
-		return "", proto.ErrAccessDenied
-	}
-
-	if banned, ok := r.ipBans[client.IP]; ok && banned.After(time.Now()) {
-		return "", proto.ErrAccessDenied
-	}
-
-	if _, ok := r.identities[id]; !ok {
-		r.identities[id] = ident
-	}
-
-	r.live[id] = append(r.live[id], session)
-	r.clients[session.ID()] = client
-
-	event := proto.PresenceEvent(session.View(proto.Staff))
-	return "virt:" + event.RealClientAddress, r.broadcast(ctx, proto.JoinType, &event, session)
-}
-
-func (r *memRoom) Part(ctx scope.Context, session proto.Session) error {
-	r.m.Lock()
-	defer r.m.Unlock()
-
-	ident := session.Identity()
-	id := ident.ID()
-	live := r.live[id]
-	for i, s := range live {
-		if s == session {
-			copy(live[i:], live[i+1:])
-			r.live[id] = live[:len(live)-1]
-		}
-	}
-	if len(r.live[id]) == 0 {
-		delete(r.live, id)
-		delete(r.identities, id)
-	}
-	delete(r.clients, session.ID())
-	event := proto.PresenceEvent(session.View(proto.Staff))
-	return r.broadcast(ctx, proto.PartEventType, &event, session)
-}
-
-func (r *memRoom) Send(ctx scope.Context, session proto.Session, message proto.Message) (
-	proto.Message, error) {
-
-	r.m.Lock()
-	defer r.m.Unlock()
-
-	msg := &proto.Message{
-		ID:              message.ID,
-		UnixTime:        proto.Time(message.ID.Time()),
-		Parent:          message.Parent,
-		Sender:          message.Sender,
-		Content:         message.Content,
-		EncryptionKeyID: message.EncryptionKeyID,
-	}
-	r.log.post(msg)
-	msg = maybeTruncate(msg)
-	return *msg, r.broadcast(ctx, proto.SendType, msg, session)
-}
-
-func (r *memRoom) EditMessage(
-	ctx scope.Context, session proto.Session, edit proto.EditMessageCommand) (
-	proto.EditMessageReply, error) {
-
-	r.m.Lock()
-	defer r.m.Unlock()
-
-	editID, err := snowflake.New()
-	if err != nil {
-		return proto.EditMessageReply{}, err
-	}
-
-	msg, err := r.log.edit(edit)
-	if err != nil {
-		return proto.EditMessageReply{}, err
-	}
-
-	if edit.Announce {
-		event := &proto.EditMessageEvent{
-			EditID:  editID,
-			Message: *msg,
-		}
-		if err := r.broadcast(ctx, proto.EditMessageType, event, session); err != nil {
-			return proto.EditMessageReply{}, err
-		}
-	}
-
-	reply := proto.EditMessageReply{
-		EditID:  editID,
-		Message: *msg,
-	}
-	return reply, nil
-}
-
-func (r *memRoom) broadcast(
-	ctx scope.Context, cmdType proto.PacketType, payload interface{}, excluding ...proto.Session) error {
-
-	excMap := make(map[string]struct{}, len(excluding))
-	for _, x := range excluding {
-		if x != nil {
-			excMap[x.ID()] = struct{}{}
-		}
-	}
-
-	for _, sessions := range r.live {
-		for _, session := range sessions {
-			if _, ok := excMap[session.ID()]; ok {
-				continue
-			}
-			if err := session.Send(ctx, cmdType.Event(), payload); err != nil {
-				// TODO: accumulate errors
-				return err
-			}
-		}
-	}
-
-	if cmdType == proto.PartEventType {
-		if presence, ok := payload.(*proto.PresenceEvent); ok {
-			if waiter, ok := r.partWaiters[presence.SessionID]; ok {
-				r.m.Unlock()
-				waiter <- struct{}{}
-				r.m.Lock()
-			}
-		}
-	}
-	return nil
-}
-
-func (r *memRoom) Listing(ctx scope.Context, level proto.PrivilegeLevel) (proto.Listing, error) {
-	listing := proto.Listing{}
-	for _, sessions := range r.live {
-		for _, session := range sessions {
-			listing = append(listing, session.View(level))
-		}
-	}
-	sort.Sort(listing)
-	return listing, nil
-}
-
-func (r *memRoom) RenameUser(
-	ctx scope.Context, session proto.Session, formerName string) (*proto.NickEvent, error) {
-
-	r.m.Lock()
-	defer r.m.Unlock()
-
-	logging.Logger(ctx).Printf(
-		"renaming %s from %s to %s\n", session.ID(), formerName, session.Identity().Name())
-	payload := &proto.NickEvent{
-		SessionID: session.ID(),
-		ID:        session.Identity().ID(),
-		From:      formerName,
-		To:        session.Identity().Name(),
-	}
-	return payload, r.broadcast(ctx, proto.NickType, payload, session)
-}
-
-func (r *memRoom) MessageKey(ctx scope.Context) (proto.RoomMessageKey, error) {
-	if r.messageKey == nil {
-		return nil, nil
-	}
-	return r.messageKey, nil
-}
-
-func (r *memRoom) ManagerKey(ctx scope.Context) (proto.RoomManagerKey, error) {
-	return r.managerKey, nil
 }
 
 func (r *memRoom) GenerateMessageKey(ctx scope.Context, kms security.KMS) (proto.RoomMessageKey, error) {
@@ -396,11 +446,6 @@ func (r *memRoom) Unban(ctx scope.Context, ban proto.Ban) error {
 	return nil
 }
 
-func (r *memRoom) IsValidParent(id snowflake.Snowflake) (bool, error) {
-	// TODO: actually check log to see if it is valid.
-	return true, nil
-}
-
 func (r *memRoom) Managers(ctx scope.Context) ([]proto.Account, error) {
 	caps := r.managerKey.Capabilities.(*capabilities)
 	caps.Lock()
@@ -476,36 +521,6 @@ func (r *memRoom) RemoveManager(
 }
 
 func (r *memRoom) MinAgentAge() time.Duration { return 0 }
-
-func (r *memRoom) WaitForPart(sessionID string) error {
-	r.m.Lock()
-	defer r.m.Unlock()
-
-	for _, ss := range r.live {
-		for _, s := range ss {
-			if s.ID() == sessionID {
-				c := make(chan struct{})
-				if r.partWaiters == nil {
-					r.partWaiters = map[string]chan struct{}{}
-				}
-				r.partWaiters[sessionID] = c
-				r.m.Unlock()
-				<-c
-				r.m.Lock()
-				delete(r.partWaiters, sessionID)
-				return nil
-			}
-		}
-	}
-	return nil
-}
-
-func (r *memRoom) ResolveClientAddress(ctx scope.Context, addr string) (net.IP, error) {
-	if strings.HasPrefix(addr, "virt:") {
-		addr = addr[len("virt:"):]
-	}
-	return net.ParseIP(addr), nil
-}
 
 type roomMessageKey struct {
 	*proto.GrantManager

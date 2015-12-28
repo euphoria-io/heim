@@ -10,6 +10,7 @@
     * [get-message](#get-message)
     * [log](#log)
     * [nick](#nick)
+    * [pm-initiate](#pm-initiate)
     * [send](#send)
     * [who](#who)
   * [Account Management](#account-management)
@@ -51,6 +52,7 @@
   * [nick-event](#nick-event)
   * [part-event](#part-event)
   * [ping-event](#ping-event)
+  * [pm-initiate-event](#pm-initiate-event)
   * [send-event](#send-event)
   * [snapshot-event](#snapshot-event)
 
@@ -468,6 +470,34 @@ and new names (the server may modify the requested nick).
 | `id` | [UserID](#userid) | required |  the id of the agent or account logged into the session |
 | `from` | [string](#string) | required |  the previous name associated with the session |
 | `to` | [string](#string) | required |  the name associated with the session henceforth |
+
+
+
+
+
+
+
+### pm-initiate
+
+The `pm-initiate` command constructs a virtual room for private messaging
+between the client and the given [UserID](#userid).
+
+
+| Field | Type | Required? | Description |
+| :-- | :-- | :-- | :--------- |
+| `user_id` | [UserID](#userid) | required |  the id of the user to invite to chat privately |
+
+
+
+
+
+The `pm-initiate-reply` provides the PMID for the requested private messaging
+room.
+
+
+| Field | Type | Required? | Description |
+| :-- | :-- | :-- | :--------- |
+| `pm_id` | [Snowflake](#snowflake) | required |  the private chat can be accessed at /room/pm:*PMID* |
 
 
 
@@ -1432,6 +1462,20 @@ a `ping-reply` with the same value for the time field as soon as possible
 | :-- | :-- | :-- | :--------- |
 | `time` | [Time](#time) | required |  a unix timestamp according to the server's clock |
 | `next` | [Time](#time) | required |  the expected time of the next ping-event, according to the server's clock |
+
+
+
+
+## pm-initiate-event
+
+The `pm-initiate-event` informs the client that another user wants to chat
+with them privately.
+
+
+| Field | Type | Required? | Description |
+| :-- | :-- | :-- | :--------- |
+| `from` | [UserID](#userid) | required |  the id of the user inviting the client to chat privately |
+| `pm_id` | [Snowflake](#snowflake) | required |  the private chat can be accessed at /room/pm:*PMID* |
 
 
 

@@ -55,9 +55,7 @@ func (c *Client) UserID() string {
 	}
 }
 
-func (c *Client) AuthenticateWithAgent(
-	ctx scope.Context, backend Backend, room Room, agent *Agent, agentKey *security.ManagedKey) error {
-
+func (c *Client) AuthenticateWithAgent(ctx scope.Context, backend Backend, agent *Agent, agentKey *security.ManagedKey) error {
 	if agent.AccountID == "" {
 		return nil
 	}
@@ -80,10 +78,22 @@ func (c *Client) AuthenticateWithAgent(
 		return fmt.Errorf("agent key error: %s", err)
 	}
 
-	holderKey, err := account.Unlock(clientKey)
+	c.Account = account
+	c.Authorization.ClientKey = clientKey
+	return nil
+}
+
+func (c *Client) RoomAuthorize(ctx scope.Context, room Room) error {
+	if c.Account == nil {
+		return nil
+	}
+
+	holderKey, err := c.Account.Unlock(c.Authorization.ClientKey)
 	if err != nil {
+		c.Account = nil
+		c.Authorization.ClientKey = nil
 		if err == ErrAccessDenied {
-			return err
+			return nil
 		}
 		return fmt.Errorf("client key error: %s", err)
 	}
@@ -95,7 +105,7 @@ func (c *Client) AuthenticateWithAgent(
 			return fmt.Errorf("manager key error: %s", err)
 		}
 
-		managerCap, err := managedRoom.ManagerCapability(ctx, account)
+		managerCap, err := managedRoom.ManagerCapability(ctx, c.Account)
 		if err != nil && err != ErrManagerNotFound {
 			return err
 		}
@@ -122,42 +132,39 @@ func (c *Client) AuthenticateWithAgent(
 
 			c.Authorization.ManagerKeyPair = managerKeyPair
 		}
-	}
 
-	// Look for message key grants to this account.
-	messageKey, err := room.MessageKey(ctx)
-	if err != nil {
-		return err
-	}
-	if messageKey != nil {
-		capability, err := messageKey.AccountCapability(ctx, account)
+		// Look for message key grants to this account.
+		messageKey, err := managedRoom.MessageKey(ctx)
 		if err != nil {
-			return fmt.Errorf("access capability error: %s", err)
+			return err
 		}
-		if capability != nil {
-			subjectKey := managerKey.KeyPair()
-			roomKeyJSON, err := capability.DecryptPayload(&subjectKey, holderKey)
+		if messageKey != nil {
+			capability, err := messageKey.AccountCapability(ctx, c.Account)
 			if err != nil {
-				return fmt.Errorf("access capability decrypt error: %s", err)
+				return fmt.Errorf("access capability error: %s", err)
 			}
-			roomKey := &security.ManagedKey{
-				KeyType: security.AES128,
+			if capability != nil {
+				subjectKey := managerKey.KeyPair()
+				roomKeyJSON, err := capability.DecryptPayload(&subjectKey, holderKey)
+				if err != nil {
+					return fmt.Errorf("access capability decrypt error: %s", err)
+				}
+				roomKey := &security.ManagedKey{
+					KeyType: security.AES128,
+				}
+				if err := json.Unmarshal(roomKeyJSON, &roomKey.Plaintext); err != nil {
+					return fmt.Errorf("access capability unmarshal error: %s", err)
+				}
+				c.Authorization.AddMessageKey(messageKey.KeyID(), roomKey)
+				c.Authorization.CurrentMessageKeyID = messageKey.KeyID()
 			}
-			if err := json.Unmarshal(roomKeyJSON, &roomKey.Plaintext); err != nil {
-				return fmt.Errorf("access capability unmarshal error: %s", err)
-			}
-			c.Authorization.AddMessageKey(messageKey.KeyID(), roomKey)
-			c.Authorization.CurrentMessageKeyID = messageKey.KeyID()
 		}
 	}
-
-	c.Account = account
-	c.Authorization.ClientKey = clientKey
 
 	return nil
 }
 
-func (c *Client) AuthenticateWithPasscode(ctx scope.Context, room Room, passcode string) (string, error) {
+func (c *Client) AuthenticateWithPasscode(ctx scope.Context, room ManagedRoom, passcode string) (string, error) {
 	mkey, err := room.MessageKey(ctx)
 	if err != nil {
 		return "", err

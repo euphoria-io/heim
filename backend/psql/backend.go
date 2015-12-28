@@ -49,6 +49,7 @@ var schema = []struct {
 	// Messages.
 	{"message", Message{}, []string{"Room", "ID"}},
 	{"message_edit_log", MessageEditLog{}, []string{"EditID"}},
+	{"pm", PM{}, []string{"ID"}},
 
 	// Sessions.
 	{"session_log", SessionLog{}, []string{"SessionID"}},
@@ -441,29 +442,29 @@ func (b *Backend) Ban(ctx scope.Context, ban proto.Ban, until time.Time) error {
 
 func (b *Backend) Unban(ctx scope.Context, ban proto.Ban) error { return b.unban(ctx, global, ban) }
 
-func (b *Backend) ban(ctx scope.Context, room *Room, ban proto.Ban, until time.Time) error {
+func (b *Backend) ban(ctx scope.Context, rb *RoomBinding, ban proto.Ban, until time.Time) error {
 	switch {
 	case ban.IP != "":
-		return b.banIP(ctx, room, ban.IP, until)
+		return b.banIP(ctx, rb, ban.IP, until)
 	case ban.ID != "":
-		return b.banAgent(ctx, room, ban.ID, until)
+		return b.banAgent(ctx, rb, ban.ID, until)
 	default:
 		return nil
 	}
 }
 
-func (b *Backend) unban(ctx scope.Context, room *Room, ban proto.Ban) error {
+func (b *Backend) unban(ctx scope.Context, rb *RoomBinding, ban proto.Ban) error {
 	switch {
 	case ban.IP != "":
-		return b.unbanIP(ctx, room, ban.IP)
+		return b.unbanIP(ctx, rb, ban.IP)
 	case ban.ID != "":
-		return b.unbanAgent(ctx, room, ban.ID)
+		return b.unbanAgent(ctx, rb, ban.ID)
 	default:
 		return nil
 	}
 }
 
-func (b *Backend) banAgent(ctx scope.Context, room *Room, agentID proto.UserID, until time.Time) error {
+func (b *Backend) banAgent(ctx scope.Context, rb *RoomBinding, agentID proto.UserID, until time.Time) error {
 	ban := &BannedAgent{
 		AgentID: string(agentID),
 		Created: time.Now(),
@@ -473,10 +474,10 @@ func (b *Backend) banAgent(ctx scope.Context, room *Room, agentID proto.UserID, 
 		},
 	}
 
-	if room != global {
+	if rb != global {
 		ban.Room = sql.NullString{
 			Valid:  true,
-			String: room.Name,
+			String: rb.RoomName,
 		}
 	}
 
@@ -491,11 +492,7 @@ func (b *Backend) banAgent(ctx scope.Context, room *Room, agentID proto.UserID, 
 	}
 
 	bounceEvent := &proto.BounceEvent{Reason: "banned", AgentID: agentID}
-	roomb := &RoomBinding{
-		Room:    room,
-		Backend: b,
-	}
-	if err := roomb.broadcast(ctx, t, proto.BounceEventType, bounceEvent); err != nil {
+	if err := rb.broadcast(ctx, t, proto.BounceEventType, bounceEvent); err != nil {
 		rollback(ctx, t)
 		return err
 	}
@@ -507,7 +504,7 @@ func (b *Backend) banAgent(ctx scope.Context, room *Room, agentID proto.UserID, 
 	return nil
 }
 
-func (b *Backend) banIP(ctx scope.Context, room *Room, ip string, until time.Time) error {
+func (b *Backend) banIP(ctx scope.Context, rb *RoomBinding, ip string, until time.Time) error {
 	ban := &BannedIP{
 		IP:      ip,
 		Created: time.Now(),
@@ -517,10 +514,10 @@ func (b *Backend) banIP(ctx scope.Context, room *Room, ip string, until time.Tim
 		},
 	}
 
-	if room != global {
+	if rb != global {
 		ban.Room = sql.NullString{
 			Valid:  true,
-			String: room.Name,
+			String: rb.RoomName,
 		}
 	}
 
@@ -535,11 +532,7 @@ func (b *Backend) banIP(ctx scope.Context, room *Room, ip string, until time.Tim
 	}
 
 	bounceEvent := &proto.BounceEvent{Reason: "banned", IP: ip}
-	roomb := &RoomBinding{
-		Room:    room,
-		Backend: b,
-	}
-	if err := roomb.broadcast(ctx, t, proto.BounceEventType, bounceEvent); err != nil {
+	if err := rb.broadcast(ctx, t, proto.BounceEventType, bounceEvent); err != nil {
 		rollback(ctx, t)
 		return err
 	}
@@ -551,32 +544,32 @@ func (b *Backend) banIP(ctx scope.Context, room *Room, ip string, until time.Tim
 	return nil
 }
 
-func (b *Backend) unbanAgent(ctx scope.Context, room *Room, agentID proto.UserID) error {
-	switch room {
+func (b *Backend) unbanAgent(ctx scope.Context, rb *RoomBinding, agentID proto.UserID) error {
+	switch rb {
 	case global:
 		_, err := b.DbMap.Exec("DELETE FROM banned_agent WHERE room IS NULL AND agent_id = $1", agentID.String())
 		return err
 	default:
-		_, err := b.DbMap.Exec("DELETE FROM banned_agent WHERE room = $1 AND agent_id = $2", room.Name, agentID.String())
+		_, err := b.DbMap.Exec("DELETE FROM banned_agent WHERE room = $1 AND agent_id = $2", rb.RoomName, agentID.String())
 		return err
 	}
 }
 
-func (b *Backend) unbanIP(ctx scope.Context, room *Room, ip string) error {
-	switch room {
+func (b *Backend) unbanIP(ctx scope.Context, rb *RoomBinding, ip string) error {
+	switch rb {
 	case global:
 		_, err := b.DbMap.Exec("DELETE FROM banned_ip WHERE room IS NULL AND ip = $1", ip)
 		return err
 	default:
-		_, err := b.DbMap.Exec("DELETE FROM banned_ip WHERE room = $1 AND ip = $2", room.Name, ip)
+		_, err := b.DbMap.Exec("DELETE FROM banned_ip WHERE room = $1 AND ip = $2", rb.RoomName, ip)
 		return err
 	}
 }
 
 func (b *Backend) sendMessageToRoom(
-	ctx scope.Context, room *Room, msg proto.Message, exclude ...proto.Session) (proto.Message, error) {
+	ctx scope.Context, rb *RoomBinding, msg proto.Message, exclude ...proto.Session) (proto.Message, error) {
 
-	stored, err := NewMessage(room, msg.Sender, msg.ID, msg.Parent, msg.EncryptionKeyID, msg.Content)
+	stored, err := NewMessage(rb.RoomName, msg.Sender, msg.ID, msg.Parent, msg.EncryptionKeyID, msg.Content)
 	if err != nil {
 		return proto.Message{}, err
 	}
@@ -593,7 +586,7 @@ func (b *Backend) sendMessageToRoom(
 
 	result := stored.ToTransmission()
 	event := proto.SendEvent(result)
-	if err := room.broadcast(ctx, t, proto.SendEventType, &event, exclude...); err != nil {
+	if err := rb.broadcast(ctx, t, proto.SendEventType, &event, exclude...); err != nil {
 		rollback(ctx, t)
 		return proto.Message{}, err
 	}
@@ -605,7 +598,7 @@ func (b *Backend) sendMessageToRoom(
 	return result, nil
 }
 
-func (b *Backend) join(ctx scope.Context, room *Room, session proto.Session) (string, error) {
+func (b *Backend) join(ctx scope.Context, rb *RoomBinding, session proto.Session) (string, error) {
 	client := &proto.Client{}
 	if !client.FromContext(ctx) {
 		return "", fmt.Errorf("client data not found in scope")
@@ -626,17 +619,15 @@ func (b *Backend) join(ctx scope.Context, room *Room, session proto.Session) (st
 		return "", err
 	}
 
-	rb := func() { rollback(ctx, t) }
-
 	// Check for agent ID bans.
 	agentBans, err := t.Select(
 		BannedAgent{},
 		fmt.Sprintf(
 			"SELECT %s FROM banned_agent WHERE agent_id = $1 AND (room IS NULL OR room = $2) AND (expires IS NULL OR expires > NOW())",
 			bannedAgentCols),
-		session.Identity().ID().String(), room.Name)
+		session.Identity().ID().String(), rb.RoomName)
 	if err != nil {
-		rb()
+		rollback(ctx, t)
 		return "", err
 	}
 	if len(agentBans) > 0 {
@@ -653,9 +644,9 @@ func (b *Backend) join(ctx scope.Context, room *Room, session proto.Session) (st
 		fmt.Sprintf(
 			"SELECT %s FROM banned_ip WHERE ip = $1 AND (room IS NULL OR room = $2) AND (expires IS NULL OR expires > NOW())",
 			bannedIPCols),
-		client.IP, room.Name)
+		client.IP, rb.RoomName)
 	if err != nil {
-		rb()
+		rollback(ctx, t)
 		return "", err
 	}
 	if len(ipBans) > 0 {
@@ -670,7 +661,7 @@ func (b *Backend) join(ctx scope.Context, room *Room, session proto.Session) (st
 	var row struct {
 		Address string `db:"address"`
 	}
-	if err := t.SelectOne(&row, "SELECT virtualize_address($1, $2::inet) AS address", room.Name, client.IP); err != nil {
+	if err := t.SelectOne(&row, "SELECT virtualize_address($1, $2::inet) AS address", rb.RoomName, client.IP); err != nil {
 		return "", err
 	}
 	virtualAddress := row.Address
@@ -680,7 +671,7 @@ func (b *Backend) join(ctx scope.Context, room *Room, session proto.Session) (st
 	entry := &SessionLog{
 		SessionID: session.ID(),
 		IP:        client.IP,
-		Room:      room.Name,
+		Room:      rb.RoomName,
 		UserAgent: client.UserAgent,
 		Connected: client.Connected,
 	}
@@ -701,7 +692,7 @@ func (b *Backend) join(ctx scope.Context, room *Room, session proto.Session) (st
 	// TODO: make this an explicit action via the Room protocol, to support encryption
 
 	presence := &Presence{
-		Room:      room.Name,
+		Room:      rb.RoomName,
 		ServerID:  b.desc.ID,
 		ServerEra: b.desc.Era,
 		SessionID: session.ID(),
@@ -714,7 +705,7 @@ func (b *Backend) join(ctx scope.Context, room *Room, session proto.Session) (st
 		LastInteracted: presence.Updated,
 	})
 	if err != nil {
-		rb()
+		rollback(ctx, t)
 		return "", fmt.Errorf("presence marshal error: %s", err)
 	}
 	if err := t.Insert(presence); err != nil {
@@ -723,18 +714,18 @@ func (b *Backend) join(ctx scope.Context, room *Room, session proto.Session) (st
 
 	b.Lock()
 	// Add session to listeners.
-	lm, ok := b.listeners[room.Name]
+	lm, ok := b.listeners[rb.RoomName]
 	if !ok {
 		lm = ListenerMap{}
-		b.listeners[room.Name] = lm
+		b.listeners[rb.RoomName] = lm
 	}
 	lm[session.ID()] = Listener{Session: session, Client: client}
 	b.Unlock()
 
 	event := proto.PresenceEvent(session.View(proto.Staff))
 	event.ClientAddress = virtualAddress
-	if err := room.broadcast(ctx, t, proto.JoinEventType, event, session); err != nil {
-		rb()
+	if err := rb.broadcast(ctx, t, proto.JoinEventType, event, session); err != nil {
+		rollback(ctx, t)
 		return "", err
 	}
 
@@ -745,7 +736,7 @@ func (b *Backend) join(ctx scope.Context, room *Room, session proto.Session) (st
 	return virtualAddress, nil
 }
 
-func (b *Backend) part(ctx scope.Context, room *Room, session proto.Session) error {
+func (b *Backend) part(ctx scope.Context, rb *RoomBinding, session proto.Session) error {
 	t, err := b.DbMap.Begin()
 	if err != nil {
 		return err
@@ -753,7 +744,7 @@ func (b *Backend) part(ctx scope.Context, room *Room, session proto.Session) err
 
 	_, err = t.Exec(
 		"DELETE FROM presence WHERE room = $1 AND server_id = $2 AND server_era = $3 AND session_id = $4",
-		room.Name, b.desc.ID, b.desc.Era, session.ID())
+		rb.RoomName, b.desc.ID, b.desc.Era, session.ID())
 	if err != nil {
 		rollback(ctx, t)
 		logging.Logger(ctx).Printf("failed to persist departure: %s", err)
@@ -763,7 +754,7 @@ func (b *Backend) part(ctx scope.Context, room *Room, session proto.Session) err
 	// Broadcast a presence event.
 	// TODO: make this an explicit action via the Room protocol, to support encryption
 	event := proto.PresenceEvent(session.View(proto.Staff))
-	if err := room.broadcast(ctx, t, proto.PartEventType, event); err != nil {
+	if err := rb.broadcast(ctx, t, proto.PartEventType, event, session); err != nil {
 		rollback(ctx, t)
 		return err
 	}
@@ -773,7 +764,7 @@ func (b *Backend) part(ctx scope.Context, room *Room, session proto.Session) err
 	}
 
 	b.Lock()
-	if lm, ok := b.listeners[room.Name]; ok {
+	if lm, ok := b.listeners[rb.RoomName]; ok {
 		delete(lm, session.ID())
 	}
 	b.Unlock()
@@ -781,7 +772,7 @@ func (b *Backend) part(ctx scope.Context, room *Room, session proto.Session) err
 	return nil
 }
 
-func (b *Backend) listing(ctx scope.Context, room *Room, level proto.PrivilegeLevel) (proto.Listing, error) {
+func (b *Backend) listing(ctx scope.Context, rb *RoomBinding, level proto.PrivilegeLevel) (proto.Listing, error) {
 	// TODO: return presence in an envelope, to support encryption
 	// TODO: cache for performance
 
@@ -789,7 +780,7 @@ func (b *Backend) listing(ctx scope.Context, room *Room, level proto.PrivilegeLe
 	if err != nil {
 		return nil, err
 	}
-	rows, err := b.DbMap.Select(Presence{}, fmt.Sprintf("SELECT %s FROM presence WHERE room = $1", cols), room.Name)
+	rows, err := b.DbMap.Select(Presence{}, fmt.Sprintf("SELECT %s FROM presence WHERE room = $1", cols), rb.RoomName)
 	if err != nil {
 		return nil, fmt.Errorf("presence listing error: %s", err)
 	}
@@ -813,7 +804,7 @@ func (b *Backend) listing(ctx scope.Context, room *Room, level proto.PrivilegeLe
 	return result, nil
 }
 
-func (b *Backend) latest(ctx scope.Context, room *Room, n int, before snowflake.Snowflake) (
+func (b *Backend) latest(ctx scope.Context, rb *RoomBinding, n int, before snowflake.Snowflake) (
 	[]proto.Message, error) {
 
 	if n <= 0 {
@@ -825,10 +816,10 @@ func (b *Backend) latest(ctx scope.Context, room *Room, n int, before snowflake.
 	}
 
 	var query string
-	args := []interface{}{room.Name, n}
+	args := []interface{}{rb.RoomName, n}
 
 	// Get the time before which messages will be expired
-	nDays, err := b.DbMap.SelectInt("SELECT retention_days FROM room WHERE name = $1", room.Name)
+	nDays, err := b.DbMap.SelectInt("SELECT retention_days FROM room WHERE name = $1", rb.RoomName)
 	if err != nil {
 		return nil, err
 	}
@@ -894,6 +885,7 @@ func (b *Backend) AccountManager() proto.AccountManager { return &AccountManager
 func (b *Backend) AgentTracker() proto.AgentTracker     { return &AgentTrackerBinding{b} }
 func (b *Backend) EmailTracker() proto.EmailTracker     { return &EmailTracker{b} }
 func (b *Backend) Jobs() jobs.JobService                { return &JobService{b} }
+func (b *Backend) PMTracker() proto.PMTracker           { return &PMTracker{b} }
 
 func (b *Backend) jobQueueListener() *jobQueueListener {
 	b.Lock()

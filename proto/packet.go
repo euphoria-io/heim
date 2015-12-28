@@ -612,17 +612,25 @@ type LogoutEvent struct{}
 // The `logout-reply` packet confirms a logout.
 type LogoutReply struct{}
 
+// The `pm-initiate` command constructs a virtual room for private messaging
+// between the client and the given [UserID](#userid).
 type PMInitiateCommand struct {
-	UserID UserID `json:"user_id"`
+	UserID UserID `json:"user_id"` // the id of the user to invite to chat privately
 }
 
+// The `pm-initiate-reply` provides the PMID for the requested private messaging
+// room.
 type PMInitiateReply struct {
-	PMID snowflake.Snowflake `json:"pm_id"`
+	PMID snowflake.Snowflake `json:"pm_id"` // the private chat can be accessed at /room/pm:*PMID*
 }
 
+// The `pm-initiate-event` informs the client that another user wants to chat
+// with them privately.
 type PMInitiateEvent struct {
-	From UserID              `json:"from"`
-	PMID snowflake.Snowflake `json:"pm_id"`
+	From     UserID              `json:"from"`      // the id of the user inviting the client to chat privately
+	FromNick string              `json:"from_nick"` // the nick of the inviting user
+	FromRoom string              `json:"from_room"` // the room where the invitation was sent from
+	PMID     snowflake.Snowflake `json:"pm_id"`     // the private chat can be accessed at /room/pm:*PMID*
 }
 
 // The `register-account` command creates a new account and logs into it.
