@@ -43,7 +43,7 @@ export default function clientRoom() {
     const socketLog = _.has(hashFlags, 'socket')
 
     // connect websocket as early as possible so we can start streaming data
-    const Socket = require('./heim/socket').default
+    const Socket = require('./heim/Socket').default
     const socket = new Socket()
     socket.startBuffering()
     socket.connect(connectEndpoint, roomName, {log: socketLog})
@@ -168,7 +168,7 @@ export default function clientRoom() {
       const React = require('react')
       const ReactDOM = require('react-dom')
       const SyntheticKeyboardEvent = require('react/lib/SyntheticKeyboardEvent')
-      const Main = require('./ui/main').default
+      const Main = require('./ui/Main').default
 
       Heim.loadCSS('css')
       Heim.loadCSS('emoji-css')

@@ -3,7 +3,7 @@ import classNames from 'classnames'
 import Reflux from 'reflux'
 
 import accountAuthFlow from '../stores/accountAuthFlow'
-import Dialog from './dialog'
+import Dialog from './Dialog'
 import { Form, CheckField, TextField, PasswordStrengthField, ErrorMessage } from './forms'
 import { validateEmail, validatePassword, minPasswordEntropy } from './formValidators'
 import heimURL from '../heimURL'

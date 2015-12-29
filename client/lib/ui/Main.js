@@ -22,9 +22,9 @@ import UserList from './UserList'
 import AccountButton from './AccountButton'
 import AccountAuthDialog from './AccountAuthDialog'
 import AccountSettingsDialog from './AccountSettingsDialog'
-import Bubble from './bubble'
+import Bubble from './Bubble'
 import FastButton from './FastButton'
-import Panner from './panner'
+import Panner from './Panner'
 
 export default React.createClass({
   displayName: 'Main',

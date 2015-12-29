@@ -1,6 +1,6 @@
 import React from 'react'
 
-import Tree from '../tree'
+import Tree from '../Tree'
 import ThreadListItem from './ThreadListItem'
 import MessageData from '../MessageData'
 import TreeNodeMixin from './TreeNodeMixin'

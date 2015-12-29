@@ -3,7 +3,7 @@ import assert from 'assert'
 import sinon from 'sinon'
 import Immutable from 'immutable'
 
-import Tree from '../lib/tree'
+import Tree from '../lib/Tree'
 
 
 describe('Tree', () => {

@@ -1,7 +1,7 @@
 import _ from 'lodash'
 import React from 'react'
 
-import Bubble from './bubble'
+import Bubble from './Bubble'
 
 
 export default React.createClass({

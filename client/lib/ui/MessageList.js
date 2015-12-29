@@ -1,7 +1,7 @@
 import React from 'react'
 
-import Message from './message'
-import Tree from '../tree'
+import Message from './Message'
+import Tree from '../Tree'
 import { Pane } from '../stores/ui'
 import TreeNodeMixin from './TreeNodeMixin'
 

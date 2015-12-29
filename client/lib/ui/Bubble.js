@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom'
 import ReactCSSTransitionGroup from 'react-addons-css-transition-group'
 import classNames from 'classnames'
 
-import Popup from './popup'
+import Popup from './Popup'
 
 
 export default React.createClass({

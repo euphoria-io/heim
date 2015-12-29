@@ -1,9 +1,9 @@
 import React from 'react'
 import classNames from 'classnames'
 
-import Popup from './popup'
+import Popup from './Popup'
 import FastButton from './FastButton'
-import Spinner from './spinner'
+import Spinner from './Spinner'
 
 
 export default React.createClass({

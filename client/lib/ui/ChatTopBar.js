@@ -5,7 +5,7 @@ import Immutable from 'immutable'
 
 import FastButton from './FastButton'
 import RoomTitle from './RoomTitle'
-import Spinner from './spinner'
+import Spinner from './Spinner'
 
 
 const hexLeftSVG = fs.readFileSync(__dirname + '/../../res/hex-left-side.svg')

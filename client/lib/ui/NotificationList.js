@@ -3,7 +3,7 @@ import ReactTransitionGroup from 'react-addons-transition-group'
 import Immutable from 'immutable'
 
 import NotificationListItem from './NotificationListItem'
-import Tree from '../tree'
+import Tree from '../Tree'
 
 
 export default React.createClass({

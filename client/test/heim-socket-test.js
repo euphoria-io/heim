@@ -2,7 +2,7 @@ import support from './support/setup'
 import assert from 'assert'
 import sinon from 'sinon'
 
-import Socket from '../lib/heim/socket'
+import Socket from '../lib/heim/Socket'
 
 
 describe('socket store', () => {

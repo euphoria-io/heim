@@ -3,7 +3,7 @@ import Reflux from 'reflux'
 
 import accountSettingsFlow from '../stores/accountSettingsFlow'
 import chat from '../stores/chat'
-import Dialog from './dialog'
+import Dialog from './Dialog'
 import { Form, TextField, FieldLabelContainer, PasswordStrengthField } from './forms'
 import { validateEmail, validatePassword, minPasswordEntropy } from './formValidators'
 import hueHash from '../hueHash'

@@ -48,7 +48,7 @@ export default function initPlugins(roomName) {
   }
 
   if (roomName === 'space') {
-    const Embed = require('./ui/embed').default
+    const Embed = require('./ui/Embed').default
 
     Heim.hook('main-sidebar', () => {
       return (
@@ -87,7 +87,7 @@ export default function initPlugins(roomName) {
   }
 
   if (roomName === 'music' || roomName === 'youtube') {
-    const Embed = require('./ui/embed').default
+    const Embed = require('./ui/Embed').default
     const MessageText = require('./ui/MessageText').default
 
     let clientTimeOffset = 0
