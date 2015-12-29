@@ -179,7 +179,10 @@ export default function clientRoom() {
         Heim.activity.windowFocused()
         Heim.activity.touch(roomName)
       }, false)
-      Heim.addEventListener(uiwindow, 'blur', Heim.activity.windowBlurred, false)
+      Heim.addEventListener(uiwindow, 'blur', () => {
+        Heim.activity.windowBlurred()
+        Heim.tabPressed = false
+      }, false)
       if (uidocument.hasFocus()) {
         Heim.activity.windowFocused()
       }
