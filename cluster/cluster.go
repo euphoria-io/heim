@@ -108,6 +108,9 @@ func (tc *TestCluster) GetValueWithDefault(key string, setter func() (string, er
 	if err != nil {
 		return "", err
 	}
+	if tc.data == nil {
+		tc.data = map[string]string{}
+	}
 	tc.data[key] = val
 	return val, nil
 }

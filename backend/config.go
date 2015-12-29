@@ -227,10 +227,14 @@ type ClusterConfig struct {
 }
 
 func (c *ClusterConfig) EtcdCluster(ctx scope.Context) (cluster.Cluster, error) {
-	if c.EtcdHost == "" {
+	switch c.EtcdHost {
+	case "":
 		return nil, fmt.Errorf("cluster: etcd-host must be specified")
+	case "mock":
+		return &cluster.TestCluster{}, nil
+	default:
+		return etcd.EtcdCluster(ctx, c.EtcdHome, c.EtcdHost, c.DescribeSelf())
 	}
-	return etcd.EtcdCluster(ctx, c.EtcdHome, c.EtcdHost, c.DescribeSelf())
 }
 
 func (c *ClusterConfig) DescribeSelf() *cluster.PeerDesc {

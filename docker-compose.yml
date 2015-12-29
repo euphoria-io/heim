@@ -54,8 +54,28 @@ upgradedb:
   volumes:
     - ./backend/psql/migrations:/migrations
 
-# The backend container runs the backend server against the psql container.
+# The backend container runs the backend server against the psql container with etcd mocked out.
 backend:
+  build: backend
+  links:
+    - psql
+  volumes:
+    - .:/go/src/euphoria.io/heim
+    - ./_deps/godeps:/godeps
+    - ./client/build:/srv/heim/client/src/build
+    - ./backend/console/keys:/keys
+  ports:
+    - "8080:80"
+    - "2222:2222"
+  environment:
+    HEIM_ID: dev1
+    HEIM_ETCD: mock
+    HEIM_ETCD_HOME: /dev/euphoria.io
+    HEIM_CONFIG: /go/src/euphoria.io/heim/heim.yml
+  command: run.sh heimctl -static /srv/heim/client/src/build/heim serve -http :80 -console :2222
+
+# The backend_etcd container runs the backend server against the psql container using etcd.
+backend_etcd:
   build: backend
   links:
     - etcd
