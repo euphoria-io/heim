@@ -2,6 +2,7 @@ import React from 'react'
 import classNames from 'classnames'
 import Reflux from 'reflux'
 
+import chat from '../stores/chat'
 import toolbox from '../stores/toolbox'
 import FastButton from './FastButton'
 
@@ -10,6 +11,7 @@ export default React.createClass({
   displayName: 'ManagerToolbox',
 
   mixins: [
+    Reflux.connect(chat.store, 'chat'),
     Reflux.connect(toolbox.store, 'toolbox'),
   ],
 
@@ -70,7 +72,7 @@ export default React.createClass({
             <option value="m">for 30 days</option>
             <option value="f">forever</option>
           </select>}
-          {!isEmpty && selectedCommand === 'banIP' && <label className="toggle-global"><input type="checkbox" ref="banGlobally" /> everywhere</label>}
+          {!isEmpty && selectedCommand === 'banIP' && this.state.chat.isStaff && <label className="toggle-global"><input type="checkbox" ref="banGlobally" /> everywhere</label>}
           <div className="spacer" />
           <FastButton className="apply" onClick={this.apply}>
             <div className="emoji emoji-26a1" /> apply
