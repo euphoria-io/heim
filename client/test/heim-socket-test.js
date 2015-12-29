@@ -48,7 +48,7 @@ describe('socket store', () => {
     })
 
     it('should init with buffering off', () => {
-      assert.equal(socket._buffer, null)
+      assert.equal(socket._recvBuffer, null)
     })
 
     it('when started should suppress events and store them until end', () => {
@@ -57,7 +57,7 @@ describe('socket store', () => {
       socket._emit('open')
       socket._emit('receive', receiveObj)
       sinon.assert.notCalled(socket.events.emit)
-      assert.deepEqual(socket._buffer, [
+      assert.deepEqual(socket._recvBuffer, [
         ['open', undefined],
         ['receive', receiveObj],
       ])
@@ -65,7 +65,7 @@ describe('socket store', () => {
       sinon.assert.calledTwice(socket.events.emit)
       sinon.assert.calledWithExactly(socket.events.emit, 'open', undefined)
       sinon.assert.calledWithExactly(socket.events.emit, 'receive', receiveObj)
-      assert.equal(socket._buffer, null)
+      assert.equal(socket._recvBuffer, null)
 
       socket.events.emit.reset()
       socket._emit('receive', receiveObj)

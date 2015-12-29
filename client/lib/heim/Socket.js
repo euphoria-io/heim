@@ -29,7 +29,7 @@ export default class Socket {
     this.nextPing = 0
     this.pingLimit = 2000
     this.lastMessage = null
-    this._buffer = null
+    this._recvBuffer = null
     this._logPackets = false
     this._logPacketIds = {}
   }
@@ -48,21 +48,21 @@ export default class Socket {
   }
 
   startBuffering() {
-    if (!this._buffer) {
-      this._buffer = []
+    if (!this._recvBuffer) {
+      this._recvBuffer = []
     }
   }
 
   endBuffering() {
-    _.each(this._buffer, ([name, data]) =>
+    _.each(this._recvBuffer, ([name, data]) =>
       this.events.emit(name, data)
     )
-    this._buffer = null
+    this._recvBuffer = null
   }
 
   _emit(name, data) {
-    if (this._buffer) {
-      this._buffer.push([name, data])
+    if (this._recvBuffer) {
+      this._recvBuffer.push([name, data])
     } else {
       this.events.emit(name, data)
     }
