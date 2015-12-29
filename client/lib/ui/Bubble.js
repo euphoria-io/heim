@@ -13,6 +13,7 @@ export default React.createClass({
     visible: React.PropTypes.bool,
     anchorEl: React.PropTypes.any,
     className: React.PropTypes.string,
+    transition: React.PropTypes.string,
     offset: React.PropTypes.func,
     edgeSpacing: React.PropTypes.number,
     onDismiss: React.PropTypes.func,
@@ -24,6 +25,7 @@ export default React.createClass({
   getDefaultProps() {
     return {
       edgeSpacing: 10,
+      transition: 'slide-down',
     }
   },
 
@@ -66,7 +68,7 @@ export default React.createClass({
 
   render() {
     return (
-      <ReactCSSTransitionGroup transitionName="slide-down" transitionEnterTimeout={150} transitionLeaveTimeout={150}>
+      <ReactCSSTransitionGroup transitionName={this.props.transition} transitionEnterTimeout={150} transitionLeaveTimeout={150}>
         {this.props.visible &&
           <Popup ref="bubble" key="bubble" className={classNames('bubble', this.props.className)} onDismiss={this.onDismiss}>
             {this.props.children}

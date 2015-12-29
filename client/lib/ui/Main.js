@@ -337,14 +337,14 @@ export default React.createClass({
               )
             })}
           </div>}
-          {!thin && <Bubble ref="threadPopup" className="thread-popup bubble-from-left" anchorEl={this.state.ui.threadPopupAnchorEl} visible={!!this.state.ui.threadPopupAnchorEl} onDismiss={this.dismissThreadPopup} offset={() => ({ left: ReactDOM.findDOMNode(this).getBoundingClientRect().left + 5, top: 26 })}>
+          {!thin && <Bubble ref="threadPopup" className="thread-popup" transition="slide-right" anchorEl={this.state.ui.threadPopupAnchorEl} visible={!!this.state.ui.threadPopupAnchorEl} onDismiss={this.dismissThreadPopup} offset={() => ({ left: ReactDOM.findDOMNode(this).getBoundingClientRect().left + 5, top: 26 })}>
             <div className="top-line">
               <FastButton className="to-pane" onClick={ui.popupToThreadPane}>new pane</FastButton>
               <FastButton className="scroll-to" onClick={ui.gotoPopupMessage}>go to</FastButton>
             </div>
             {selectedThread && <ChatPane key={this.state.ui.popupPane} pane={this.state.ui.panes.get(this.state.ui.popupPane)} afterRender={() => this.refs.threadPopup.reposition()} showParent showAllReplies />}
           </Bubble>}
-          {!thin && this.state.ui.managerMode && <Bubble ref="managerToolboxPopup" className="manager-toolbox-popup bubble-from-top" anchorEl={this.state.ui.managerToolboxAnchorEl} visible={!!this.state.ui.managerToolboxAnchorEl} offset={anchorBox => ({ left: anchorBox.width, top: -anchorBox.height })}>
+          {!thin && this.state.ui.managerMode && <Bubble ref="managerToolboxPopup" className="manager-toolbox-popup" transition="slide-down" anchorEl={this.state.ui.managerToolboxAnchorEl} visible={!!this.state.ui.managerToolboxAnchorEl} offset={anchorBox => ({ left: anchorBox.width, top: -anchorBox.height })}>
             <ManagerToolbox />
           </Bubble>}
           {this.templateHook('page-bottom')}
