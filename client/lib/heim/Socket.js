@@ -5,9 +5,14 @@ import EventEmitter from 'eventemitter3'
 
 function logPacket(kind, data, highlight) {
   const group = highlight ? 'group' : 'groupCollapsed'
+  const colors = {
+    'send': 'green',
+    'recv': '#06f',
+    'buffered-send': 'gray',
+  }
   console[group](  // eslint-disable-line no-console
     '%c%s %c%s %c%s',
-    kind === 'send' ? 'color: green' : 'color: #06f', kind,
+    'color: ' + colors[kind], kind,
     'color: black', data.type,
     highlight ? 'background: #efb' : 'color: gray; font-weight: normal', data.id ? '(id: ' + data.id + ')' : '(no id)'
   )
@@ -30,6 +35,7 @@ export default class Socket {
     this.pingLimit = 2000
     this.lastMessage = null
     this._recvBuffer = null
+    this._sendBuffer = []
     this._logPackets = false
     this._logPacketIds = {}
   }
@@ -90,6 +96,8 @@ export default class Socket {
 
   _onOpen() {
     this._emit('open')
+    this._sendBuffer.forEach(item => this._send(item.data, item.log))
+    this._sendBuffer = []
   }
 
   _onClose() {
@@ -143,7 +151,7 @@ export default class Socket {
     this.pingReplyTimeout = null
   }
 
-  send(data, log) {
+  _send(data, log) {
     if (!data.id) {
       data.id = String(this.seq++)
     }
@@ -160,6 +168,17 @@ export default class Socket {
       logPacket('send', data, log)
     }
     this.ws.send(JSON.stringify(data))
+  }
+
+  send(data, log) {
+    if (this.ws.readyState === WebSocket.OPEN) {
+      this._send(data, log)
+    } else {
+      if (this._logPackets || log) {
+        logPacket('buffered-send', data, log)
+      }
+      this._sendBuffer.push({data, log: !!log})
+    }
   }
 
   _ping() {

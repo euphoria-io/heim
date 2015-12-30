@@ -16,9 +16,11 @@ describe('socket store', () => {
     clock = support.setupClock()
     fakeWebSocketContructor = sinon.spy(function initSpy() {
       fakeWebSocket = this
+      this.readyState = realWebSocket.OPEN
       this.send = sinon.spy()
       this.close = sinon.spy()
     })
+    fakeWebSocketContructor.OPEN = realWebSocket.OPEN
     window.WebSocket = fakeWebSocketContructor
     socket = new Socket()
   })
@@ -38,7 +40,7 @@ describe('socket store', () => {
     })
   })
 
-  describe('buffering', () => {
+  describe('receive buffering', () => {
     beforeEach(() => {
       sinon.stub(socket.events, 'emit')
     })
@@ -71,6 +73,42 @@ describe('socket store', () => {
       socket._emit('receive', receiveObj)
       sinon.assert.calledOnce(socket.events.emit)
       sinon.assert.calledWithExactly(socket.events.emit, 'receive', receiveObj)
+    })
+  })
+
+  describe('send buffering', () => {
+    beforeEach(() => {
+      sinon.stub(socket, '_send')
+      socket.connect('https://heimhost/test', 'ezzie')
+      sinon.stub(console, 'log')  // eslint-disable-line no-console
+    })
+
+    afterEach(() => {
+      socket._send.restore()
+      console.log.restore()  // eslint-disable-line no-console
+    })
+
+    it('should init with empty buffer', () => {
+      assert.deepEqual(socket._sendBuffer, [])
+    })
+
+    it('should buffer sends when socket not ready, then send and empty buffer when socket becomes ready', () => {
+      fakeWebSocket.readyState = 0
+      socket.send({
+        type: 'ping',
+      })
+      socket.send({
+        type: 'logged',
+      }, true)
+      assert.deepEqual(socket._sendBuffer, [
+        {data: {type: 'ping'}, log: false},
+        {data: {type: 'logged'}, log: true},
+      ])
+      fakeWebSocket.readyState = WebSocket.OPEN
+      socket._onOpen()
+      sinon.assert.calledWithExactly(socket._send, {type: 'ping'}, false)
+      sinon.assert.calledWithExactly(socket._send, {type: 'logged'}, true)
+      assert.deepEqual(socket._sendBuffer, [])
     })
   })
 
@@ -375,6 +413,12 @@ describe('socket store', () => {
     })
 
     it('should output packets sent', () => {
+      socket.send(testPacket1)
+      sinon.assert.calledWithExactly(console.log, testPacket1)  // eslint-disable-line no-console
+    })
+
+    it('should output packets buffered', () => {
+      fakeWebSocket.readyState = 0
       socket.send(testPacket1)
       sinon.assert.calledWithExactly(console.log, testPacket1)  // eslint-disable-line no-console
     })
