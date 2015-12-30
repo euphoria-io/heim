@@ -458,7 +458,8 @@ module.exports.store = Reflux.createStore({
       try {
         alert.popup = new Notification(roomName, options)
       } catch (err) {
-        Raven.captureException(err)
+        // FIXME: on mobile Chrome we need to implement a ServiceWorker for
+        // notifications to work
         return
       }
 

@@ -158,7 +158,7 @@ export default React.createClass({
       const boxRight = Math.min(box.right, bodyBox.right)
       anchor = uidocument.elementFromPoint(boxRight - 40, box.top + box.height / 2)
       if (!anchor) {
-        console.warn('scroller: unable to find anchor')  // eslint-disable-line no-console
+        // FIXME: this can happen from time to time, need a better fallback
       }
       this._anchor = anchor
       this._anchorPos = anchor && dimensions(anchor, 'bottom')
