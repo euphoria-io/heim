@@ -21,6 +21,23 @@ func (t *PMTracker) Initiate(
 	ctx scope.Context, kms security.KMS, room proto.Room, client *proto.Client, recipient proto.UserID) (
 	snowflake.Snowflake, error) {
 
+	t.m.Lock()
+	defer t.m.Unlock()
+
+	// Look for reusable PM.
+	for pmID, pm := range t.pms {
+		if pm.pm.Initiator == client.Account.ID() && pm.pm.Receiver == recipient {
+			return pmID, nil
+		}
+		if pm.pm.Receiver == client.UserID() {
+			kind, id := pm.pm.Receiver.Parse()
+			if kind == "account" && id == pm.pm.Initiator.String() {
+				return pmID, nil
+			}
+		}
+	}
+
+	// Create new PM.
 	initiatorNick, ok, err := room.ResolveNick(ctx, proto.UserID(fmt.Sprintf("account:%s", client.Account.ID())))
 	if err != nil {
 		return 0, err
@@ -46,9 +63,6 @@ func (t *PMTracker) Initiate(
 	if err != nil {
 		return 0, err
 	}
-
-	t.m.Lock()
-	defer t.m.Unlock()
 
 	if t.pms == nil {
 		t.pms = map[snowflake.Snowflake]*PM{}

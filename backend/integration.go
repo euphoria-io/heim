@@ -3183,13 +3183,12 @@ func testPMs(s *serverUnderTest) {
 		c.expect("1", "nick-reply", `{"session_id":"*","id":"*","from":"","to":"c"}`)
 		c.send("2", "pm-initiate", `{"user_id":"%s"}`, r.id())
 		capture := c.expect("2", "pm-initiate-reply", `{"pm_id":"*","to_nick":"r"}`)
+		pmID := capture["pm_id"].(string)
 		c.Close()
 
 		// Recipient receive pm-initiate-event and reconnect to PM room
-		r.expect(
-			"", "pm-initiate-event", `{"from":"%s","from_nick":"c","from_room":"pminvite","pm_id":"%s"}`,
-			c.id(), capture["pm_id"])
-		roomName := fmt.Sprintf("pm:%s", capture["pm_id"])
+		r.expect("", "pm-initiate-event", `{"from":"%s","from_nick":"c","from_room":"pminvite","pm_id":"%s"}`, c.id(), pmID)
+		roomName := fmt.Sprintf("pm:%s", pmID)
 		r.accountHasAccess = true
 		r = s.Reconnect(r, roomName)
 		defer r.Close()
@@ -3216,6 +3215,16 @@ func testPMs(s *serverUnderTest) {
 		c.expect("1", "send-reply", `{"id":"*","time":"*","sender":"*","content":"*","encryption_key_id":"%s"}`, capture["encryption_key_id"])
 		r.expect("", "join-event", `{"session_id":"*","id":"*","name":"c","server_id":"*","server_era":"*"}`)
 		r.expect("", "send-event", `{"id":"*","time":"*","sender":"*","content":"hello","encryption_key_id":"*"}`)
+
+		// A repeat pm invitation should reuse the same pm_id
+		c.isManager = true
+		c = s.Reconnect(c, "pminvite")
+		defer c.Close()
+		c.roomTitle = ""
+		c.expectPing()
+		c.expectSnapshot(s.backend.Version(), nil, nil)
+		c.send("1", "pm-initiate", `{"user_id":"%s"}`, r.id())
+		c.expect("1", "pm-initiate-reply", `{"pm_id":"%s","to_nick":"r"}`, pmID)
 	})
 
 	Convey("Initiate with account and interact", func() {

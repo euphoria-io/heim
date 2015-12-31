@@ -122,9 +122,61 @@ func (t *PMTracker) Initiate(
 	if pm.EncryptedReceiverKey != nil {
 		row.EncryptedReceiverKey = pm.EncryptedReceiverKey.Ciphertext
 	}
-	if err := t.Backend.Insert(row); err != nil {
+
+	// Look for existing PM to reuse.
+	tx, err := t.DbMap.Begin()
+	if err != nil {
 		return 0, err
 	}
+
+	var existingRow PM
+	err = tx.SelectOne(
+		&existingRow,
+		"SELECT id FROM pm WHERE initiator = $1 AND receiver = $2",
+		client.Account.ID().String(), string(recipient))
+	if err != nil && err != sql.ErrNoRows {
+		rollback(ctx, tx)
+		return 0, err
+	}
+	if err == nil {
+		rollback(ctx, tx)
+		var pmID snowflake.Snowflake
+		if err := pmID.FromString(existingRow.ID); err != nil {
+			return 0, err
+		}
+		return pmID, nil
+	}
+
+	kind, id := recipient.Parse()
+	if kind == "account" {
+		var existingRow PM
+		err = tx.SelectOne(
+			&existingRow,
+			"SELECT id FROM pm WHERE initiator = $1 AND receiver = $2",
+			id, string(client.UserID()))
+		if err != nil && err != sql.ErrNoRows {
+			rollback(ctx, tx)
+			return 0, err
+		}
+		if err == nil {
+			rollback(ctx, tx)
+			var pmID snowflake.Snowflake
+			if err := pmID.FromString(existingRow.ID); err != nil {
+				return 0, err
+			}
+			return pmID, nil
+		}
+	}
+
+	if err := tx.Insert(row); err != nil {
+		rollback(ctx, tx)
+		return 0, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return 0, err
+	}
+
 	return pm.ID, nil
 }
 
