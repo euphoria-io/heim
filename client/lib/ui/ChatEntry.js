@@ -166,6 +166,7 @@ export default React.createClass({
     const word = text.substring(wordStart, wordEnd)
     const nameSeq = this.state.chat.who
       .toSeq()
+      .filter(user => user.get('present'))
       .map(user => user.get('name', ''))
     const match = mention.rankCompletions(nameSeq, word).first()
 
