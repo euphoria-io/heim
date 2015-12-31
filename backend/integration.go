@@ -235,7 +235,9 @@ type testConn struct {
 	*websocket.Conn
 	room                 proto.Room
 	cookies              []*http.Cookie
+	nicks                map[string]string
 	roomName             string
+	roomTitle            string
 	sessionID            string
 	userID               string
 	accountID            string
@@ -275,6 +277,16 @@ func (tc *testConn) send(id, cmdType, data string, args ...interface{}) {
 		err := json.Unmarshal([]byte(data), &parsed)
 		So(err, ShouldBeNil)
 		tc.accountEmail = parsed["id"].(string)
+	}
+	if cmdType == "nick" {
+		// parse msg and extract nick
+		var parsed map[string]interface{}
+		err := json.Unmarshal([]byte(data), &parsed)
+		So(err, ShouldBeNil)
+		if tc.nicks == nil {
+			tc.nicks = map[string]string{}
+		}
+		tc.nicks[tc.room.ID()] = parsed["name"].(string)
 	}
 	So(tc.Conn.WriteMessage(websocket.TextMessage, []byte(msg)), ShouldBeNil)
 }
@@ -476,9 +488,17 @@ func (tc *testConn) expectPing() *proto.PingEvent {
 }
 
 func (tc *testConn) expectSnapshot(version string, listingParts []string, logParts []string) {
+	title := fmt.Sprintf("&%s", tc.roomName)
+	if tc.roomTitle != "" {
+		title = tc.roomTitle
+	}
+	nickPart := ""
+	if nick, ok := tc.nicks[tc.room.ID()]; ok {
+		nickPart = fmt.Sprintf(`,"nick":"%s"`, nick)
+	}
 	tc.expect("", "snapshot-event",
-		`{"identity":"*","session_id":"*","version":"%s","listing":[%s],"log":[%s]}`,
-		version, strings.Join(listingParts, ","), strings.Join(logParts, ","))
+		`{"identity":"*","session_id":"*","version":"%s","listing":[%s],"log":[%s],"room_title":"%s"%s}`,
+		version, strings.Join(listingParts, ","), strings.Join(logParts, ","), title, nickPart)
 }
 
 func (tc *testConn) Close() {
@@ -3130,14 +3150,22 @@ func testPMs(s *serverUnderTest) {
 		nonce := fmt.Sprintf("%s", time.Now())
 		logan, _, err := s.Account(ctx, kms, "email", "logan"+nonce, "hunter2")
 		So(err, ShouldBeNil)
+		_, err = s.Room(ctx, kms, false, "pminvite", logan)
+		So(err, ShouldBeNil)
 
 		// Create recipient and remain online to receive pm-initiate-event.
-		r := s.Connect("pminit")
+		r := s.Connect("pminvite")
+		r.expectPing()
+		r.expectSnapshot(s.backend.Version(), nil, nil)
+		r.send("1", "nick", `{"name":"r"}`)
+		r.expect("1", "nick-reply", `{"session_id":"*","id":"*","from":"","to":"r"}`)
+		r.Close()
+		r = s.Reconnect(r, "pmwait")
 		r.expectPing()
 		r.expectSnapshot(s.backend.Version(), nil, nil)
 
 		// Try to invite recipient to PM but fail because not logged in
-		c := s.Connect("pminvite")
+		c := s.Connect("pminvite2")
 		c.expectPing()
 		c.expectSnapshot(s.backend.Version(), nil, nil)
 		c.send("1", "pm-initiate", `{"user_id":"%s"}`, r.id())
@@ -3147,31 +3175,31 @@ func testPMs(s *serverUnderTest) {
 		c.send("2", "login", `{"namespace":"email","id":"logan%s","password":"hunter2"}`, nonce)
 		c.expect("2", "login-reply", `{"success":true,"account_id":"%s"}`, logan.ID())
 		c.Close()
-		_, err = s.Room(ctx, kms, false, "pminvite2", logan)
-		So(err, ShouldBeNil)
 		c.isManager = true
-		c = s.Reconnect(c, "pminvite2")
+		c = s.Reconnect(c, "pminvite")
 		c.expectPing()
 		c.expectSnapshot(s.backend.Version(), nil, nil)
-		c.send("1", "pm-initiate", `{"user_id":"%s"}`, r.id())
-		capture := c.expect("1", "pm-initiate-reply", `{"pm_id":"*"}`)
+		c.send("1", "nick", `{"name":"c"}`)
+		c.expect("1", "nick-reply", `{"session_id":"*","id":"*","from":"","to":"c"}`)
+		c.send("2", "pm-initiate", `{"user_id":"%s"}`, r.id())
+		capture := c.expect("2", "pm-initiate-reply", `{"pm_id":"*","to_nick":"r"}`)
 		c.Close()
 
 		// Recipient receive pm-initiate-event and reconnect to PM room
 		r.expect(
-			"", "pm-initiate-event", `{"from":"%s","from_nick":"","from_room":"pminvite2","pm_id":"%s"}`,
+			"", "pm-initiate-event", `{"from":"%s","from_nick":"c","from_room":"pminvite","pm_id":"%s"}`,
 			c.id(), capture["pm_id"])
 		roomName := fmt.Sprintf("pm:%s", capture["pm_id"])
 		r.accountHasAccess = true
 		r = s.Reconnect(r, roomName)
 		defer r.Close()
+		r.nicks[r.room.ID()] = "r"
+		r.roomTitle = "private chat with c"
 		r.expectPing()
 		r.expectSnapshot(s.backend.Version(), nil, nil)
-		r.send("1", "nick", `{"name":"r"}`)
-		r.expect("1", "nick-reply", `{"session_id":"*","id":"*","from":"","to":"r"}`)
-		r.send("2", "send", `{"content":"hi"}`)
+		r.send("1", "send", `{"content":"hi"}`)
 		id := `{"session_id":"*","id":"*","name":"r","server_id":"*","server_era":"*"}`
-		capture = r.expect("2", "send-reply", `{"id":"*","time":"*","sender":%s,"content":"*","encryption_key_id":"*"}`, id)
+		capture = r.expect("1", "send-reply", `{"id":"*","time":"*","sender":%s,"content":"*","encryption_key_id":"*"}`, id)
 		msg := fmt.Sprintf(`{"id":"%s","time":%f,"sender":%s,"content":"hi","encryption_key_id":"%s"}`,
 			capture["id"], capture["time"], id, capture["encryption_key_id"])
 		So(capture["encryption_key_id"], ShouldEqual, "v1/"+roomName)
@@ -3180,14 +3208,13 @@ func testPMs(s *serverUnderTest) {
 		c.isManager = false
 		c = s.Reconnect(c, roomName)
 		defer c.Close()
+		c.nicks[c.room.ID()] = "c"
+		c.roomTitle = "private chat with r"
 		c.expectPing()
 		c.expectSnapshot(s.backend.Version(), []string{id}, []string{msg})
-		c.send("1", "nick", `{"name":"c"}`)
-		c.expect("1", "nick-reply", `{"session_id":"*","id":"*","from":"","to":"c"}`)
-		c.send("2", "send", `{"content":"hello"}`)
-		c.expect("2", "send-reply", `{"id":"*","time":"*","sender":"*","content":"*","encryption_key_id":"%s"}`, capture["encryption_key_id"])
-		r.expect("", "join-event", `{"session_id":"*","id":"*","name":"","server_id":"*","server_era":"*"}`)
-		r.expect("", "nick-event", `{"session_id":"*","id":"*","from":"","to":"c"}`)
+		c.send("1", "send", `{"content":"hello"}`)
+		c.expect("1", "send-reply", `{"id":"*","time":"*","sender":"*","content":"*","encryption_key_id":"%s"}`, capture["encryption_key_id"])
+		r.expect("", "join-event", `{"session_id":"*","id":"*","name":"c","server_id":"*","server_era":"*"}`)
 		r.expect("", "send-event", `{"id":"*","time":"*","sender":"*","content":"hello","encryption_key_id":"*"}`)
 	})
 
@@ -3203,13 +3230,19 @@ func testPMs(s *serverUnderTest) {
 		_, err = s.Room(ctx, kms, false, "pmtoaccount", alice)
 
 		// Log in both parties and connect to common room.
-		r := s.Connect("pmtoaccount2")
+		r := s.Connect("pmtoaccount")
 		r.expectPing()
 		r.expectSnapshot(s.backend.Version(), nil, nil)
-		r.send("1", "login", `{"namespace":"email","id":"bob%s","password":"hunter2"}`, nonce)
-		r.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, bob.ID())
+		r.send("2", "login", `{"namespace":"email","id":"bob%s","password":"hunter2"}`, nonce)
+		r.expect("2", "login-reply", `{"success":true,"account_id":"%s"}`, bob.ID())
 		r.Close()
 
+		r = s.Reconnect(r, "pmtoaccount")
+		r.expectPing()
+		r.expectSnapshot(s.backend.Version(), nil, nil)
+		r.send("1", "nick", `{"name":"r"}`)
+		r.expect("1", "nick-reply", `{"session_id":"*","id":"*","from":"","to":"r"}`)
+		r.Close()
 		r = s.Reconnect(r, "pmtoaccount2")
 		r.expectPing()
 		r.expectSnapshot(s.backend.Version(), nil, nil)
@@ -3226,26 +3259,28 @@ func testPMs(s *serverUnderTest) {
 		c.expectPing()
 		c.expectSnapshot(s.backend.Version(), nil, nil)
 
-		c.send("1", "pm-initiate", `{"user_id":"%s"}`, r.id())
-		capture := c.expect("1", "pm-initiate-reply", `{"pm_id":"*"}`)
+		c.send("1", "nick", `{"name":"c"}`)
+		c.expect("1", "nick-reply", `{"session_id":"*","id":"*","from":"","to":"c"}`)
+		c.send("2", "pm-initiate", `{"user_id":"%s"}`, r.id())
+		capture := c.expect("2", "pm-initiate-reply", `{"pm_id":"*","to_nick":"r"}`)
 		c.Close()
 
 		// Recipient receive pm-initiate-event and reconnect to PM room
 		r.expect(
-			"", "pm-initiate-event", `{"from":"%s","from_nick":"","from_room":"pmtoaccount","pm_id":"%s"}`,
+			"", "pm-initiate-event", `{"from":"%s","from_nick":"c","from_room":"pmtoaccount","pm_id":"%s"}`,
 			c.id(), capture["pm_id"])
 		roomName := fmt.Sprintf("pm:%s", capture["pm_id"])
 		r.Close()
 		r.accountHasAccess = true
 		r = s.Reconnect(r, roomName)
 		defer r.Close()
+		r.nicks[r.room.ID()] = "r"
+		r.roomTitle = "private chat with c"
 		r.expectPing()
 		r.expectSnapshot(s.backend.Version(), nil, nil)
-		r.send("1", "nick", `{"name":"r"}`)
-		r.expect("1", "nick-reply", `{"session_id":"*","id":"*","from":"","to":"r"}`)
-		r.send("2", "send", `{"content":"hi"}`)
+		r.send("1", "send", `{"content":"hi"}`)
 		id := `{"session_id":"*","id":"*","name":"r","server_id":"*","server_era":"*"}`
-		capture = r.expect("2", "send-reply", `{"id":"*","time":"*","sender":%s,"content":"*","encryption_key_id":"*"}`, id)
+		capture = r.expect("1", "send-reply", `{"id":"*","time":"*","sender":%s,"content":"*","encryption_key_id":"*"}`, id)
 		msg := fmt.Sprintf(`{"id":"%s","time":%f,"sender":%s,"content":"hi","encryption_key_id":"%s"}`,
 			capture["id"], capture["time"], id, capture["encryption_key_id"])
 		So(capture["encryption_key_id"], ShouldEqual, "v1/"+roomName)
@@ -3254,14 +3289,13 @@ func testPMs(s *serverUnderTest) {
 		c.isManager = false
 		c = s.Reconnect(c, roomName)
 		defer c.Close()
+		c.nicks[c.room.ID()] = "c"
+		c.roomTitle = "private chat with r"
 		c.expectPing()
 		c.expectSnapshot(s.backend.Version(), []string{id}, []string{msg})
-		c.send("1", "nick", `{"name":"c"}`)
-		c.expect("1", "nick-reply", `{"session_id":"*","id":"*","from":"","to":"c"}`)
-		c.send("2", "send", `{"content":"hello"}`)
-		c.expect("2", "send-reply", `{"id":"*","time":"*","sender":"*","content":"*","encryption_key_id":"%s"}`, capture["encryption_key_id"])
-		r.expect("", "join-event", `{"session_id":"*","id":"*","name":"","server_id":"*","server_era":"*"}`)
-		r.expect("", "nick-event", `{"session_id":"*","id":"*","from":"","to":"c"}`)
+		c.send("1", "send", `{"content":"hello"}`)
+		c.expect("1", "send-reply", `{"id":"*","time":"*","sender":"*","content":"*","encryption_key_id":"%s"}`, capture["encryption_key_id"])
+		r.expect("", "join-event", `{"session_id":"*","id":"*","name":"c","server_id":"*","server_era":"*"}`)
 		r.expect("", "send-event", `{"id":"*","time":"*","sender":"*","content":"hello","encryption_key_id":"*"}`)
 	})
 }

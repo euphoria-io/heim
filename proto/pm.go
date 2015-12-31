@@ -10,11 +10,13 @@ import (
 )
 
 type PMTracker interface {
-	Initiate(ctx scope.Context, kms security.KMS, client *Client, receiver UserID) (snowflake.Snowflake, error)
+	Initiate(ctx scope.Context, kms security.KMS, room Room, client *Client, receiver UserID) (snowflake.Snowflake, error)
 	Room(ctx scope.Context, kms security.KMS, pmID snowflake.Snowflake, client *Client) (Room, *security.ManagedKey, error)
 }
 
-func NewPM(kms security.KMS, client *Client, receiver UserID) (*PM, *security.ManagedKey, error) {
+func NewPM(kms security.KMS, client *Client, initiatorNick string, receiver UserID, receiverNick string) (
+	*PM, *security.ManagedKey, error) {
+
 	if client.Account == nil {
 		return nil, nil, ErrAccessDenied
 	}
@@ -61,7 +63,9 @@ func NewPM(kms security.KMS, client *Client, receiver UserID) (*PM, *security.Ma
 	pm := &PM{
 		ID:                    pmID,
 		Initiator:             client.Account.ID(),
+		InitiatorNick:         initiatorNick,
 		Receiver:              receiver,
+		ReceiverNick:          receiverNick,
 		ReceiverMAC:           mac[:],
 		IV:                    iv,
 		EncryptedSystemKey:    encryptedSystemKey,
@@ -73,7 +77,9 @@ func NewPM(kms security.KMS, client *Client, receiver UserID) (*PM, *security.Ma
 type PM struct {
 	ID                    snowflake.Snowflake
 	Initiator             snowflake.Snowflake
+	InitiatorNick         string
 	Receiver              UserID
+	ReceiverNick          string
 	ReceiverMAC           []byte
 	IV                    []byte
 	EncryptedSystemKey    *security.ManagedKey
@@ -97,9 +103,9 @@ func (pm *PM) transmitToAccount(kms security.KMS, pmKey *security.ManagedKey, re
 	return pm, nil
 }
 
-func (pm *PM) Access(ctx scope.Context, b Backend, kms security.KMS, client *Client) (*security.ManagedKey, bool, error) {
+func (pm *PM) Access(ctx scope.Context, b Backend, kms security.KMS, client *Client) (*security.ManagedKey, bool, string, error) {
 	if client.Authorization.ClientKey == nil {
-		return nil, false, ErrAccessDenied
+		return nil, false, "", ErrAccessDenied
 	}
 
 	keyID := fmt.Sprintf("v1/pm:%s", pm.ID)
@@ -107,58 +113,71 @@ func (pm *PM) Access(ctx scope.Context, b Backend, kms security.KMS, client *Cli
 	if client.Account != nil && client.Account.ID() == pm.Initiator {
 		userKey := client.Account.UserKey()
 		if err := userKey.Decrypt(client.Authorization.ClientKey); err != nil {
-			return nil, false, err
+			return nil, false, "", err
 		}
 		pmKey := pm.EncryptedInitiatorKey.Clone()
 		if err := pmKey.Decrypt(&userKey); err != nil {
-			return nil, false, err
+			return nil, false, "", err
 		}
 		client.Authorization.AddMessageKey(keyID, &pmKey)
-		return &pmKey, false, nil
+		return &pmKey, false, pm.ReceiverNick, pm.verifyKey(&pmKey)
 	}
 
 	kind, _ := pm.Receiver.Parse()
 	switch kind {
 	case "account":
 		if client.Account == nil {
-			return nil, false, ErrAccessDenied
+			return nil, false, "", ErrAccessDenied
 		}
 		userKey := client.Account.UserKey()
 		if err := userKey.Decrypt(client.Authorization.ClientKey); err != nil {
-			return nil, false, err
+			return nil, false, "", err
 		}
 		pmKey := pm.EncryptedReceiverKey.Clone()
 		if err := pmKey.Decrypt(&userKey); err != nil {
-			return nil, false, err
+			return nil, false, "", err
 		}
 		client.Authorization.AddMessageKey(keyID, &pmKey)
-		return &pmKey, false, nil
+		return &pmKey, false, pm.InitiatorNick, pm.verifyKey(&pmKey)
 	case "agent", "bot":
 		if client.Account != nil {
 			pmKey, err := pm.upgradeToAccountReceiver(ctx, b, kms, client)
 			if err != nil {
-				return nil, false, err
+				return nil, false, "", err
 			}
 			client.Authorization.AddMessageKey(keyID, pmKey)
-			return pmKey, true, nil
+			return pmKey, true, pm.InitiatorNick, pm.verifyKey(pmKey)
 		}
 		if pm.EncryptedReceiverKey == nil {
 			pmKey, err := pm.transmitToAgent(kms, client)
 			if err != nil {
-				return nil, false, err
+				return nil, false, "", err
 			}
 			client.Authorization.AddMessageKey(keyID, pmKey)
-			return pmKey, true, nil
+			return pmKey, true, pm.InitiatorNick, pm.verifyKey(pmKey)
 		}
 		pmKey := pm.EncryptedReceiverKey.Clone()
 		if err := pmKey.Decrypt(client.Authorization.ClientKey); err != nil {
-			return nil, false, err
+			return nil, false, "", err
 		}
 		client.Authorization.AddMessageKey(keyID, &pmKey)
-		return &pmKey, false, nil
+		return &pmKey, false, pm.InitiatorNick, pm.verifyKey(&pmKey)
 	default:
-		return nil, false, ErrInvalidUserID
+		return nil, false, "", ErrInvalidUserID
 	}
+}
+
+func (pm *PM) verifyKey(pmKey *security.ManagedKey) error {
+	var (
+		mac [16]byte
+		key [32]byte
+	)
+	copy(mac[:], pm.ReceiverMAC)
+	copy(key[:], pmKey.Plaintext)
+	if !poly1305.Verify(&mac, []byte(pm.Receiver), &key) {
+		return ErrAccessDenied
+	}
+	return nil
 }
 
 func (pm *PM) upgradeToAccountReceiver(ctx scope.Context, b Backend, kms security.KMS, client *Client) (*security.ManagedKey, error) {
@@ -173,18 +192,12 @@ func (pm *PM) upgradeToAccountReceiver(ctx scope.Context, b Backend, kms securit
 	}
 
 	// Unlock PM and verify Receiver.
-	var (
-		mac [16]byte
-		key [32]byte
-	)
 	pmKey := pm.EncryptedSystemKey.Clone()
 	if err := kms.DecryptKey(&pmKey); err != nil {
 		return nil, err
 	}
-	copy(mac[:], pm.ReceiverMAC)
-	copy(key[:], pmKey.Plaintext)
-	if !poly1305.Verify(&mac, []byte(pm.Receiver), &key) {
-		return nil, ErrAccessDenied
+	if err := pm.verifyKey(&pmKey); err != nil {
+		return nil, err
 	}
 
 	// Re-encrypt PM key for account.
@@ -199,6 +212,10 @@ func (pm *PM) upgradeToAccountReceiver(ctx scope.Context, b Backend, kms securit
 }
 
 func (pm *PM) transmitToAgent(kms security.KMS, client *Client) (*security.ManagedKey, error) {
+	if client.UserID() != pm.Receiver {
+		return nil, ErrAccessDenied
+	}
+
 	// Decrypt PM key
 	pmKey := pm.EncryptedSystemKey.Clone()
 	if err := kms.DecryptKey(&pmKey); err != nil {
@@ -206,14 +223,8 @@ func (pm *PM) transmitToAgent(kms security.KMS, client *Client) (*security.Manag
 	}
 
 	// Verify ReceiverMAC
-	var (
-		mac [16]byte
-		key [32]byte
-	)
-	copy(mac[:], pm.ReceiverMAC)
-	copy(key[:], pmKey.Plaintext)
-	if !poly1305.Verify(&mac, []byte(pm.Receiver), &key) {
-		return nil, ErrAccessDenied
+	if err := pm.verifyKey(&pmKey); err != nil {
+		return nil, err
 	}
 
 	// Encrypt PM key for agent
@@ -227,7 +238,10 @@ func (pm *PM) transmitToAgent(kms security.KMS, client *Client) (*security.Manag
 	return &pmKey, nil
 }
 
-func InitiatePM(ctx scope.Context, b Backend, kms security.KMS, client *Client, receiver UserID) (*PM, error) {
+func InitiatePM(
+	ctx scope.Context, b Backend, kms security.KMS, client *Client, initiatorNick string, receiver UserID,
+	receiverNick string) (*PM, error) {
+
 	resolveAccount := func(accountIDStr string) (Account, error) {
 		var accountID snowflake.Snowflake
 		if err := accountID.FromString(accountIDStr); err != nil {
@@ -236,7 +250,7 @@ func InitiatePM(ctx scope.Context, b Backend, kms security.KMS, client *Client, 
 		return b.AccountManager().Get(ctx, accountID)
 	}
 
-	pm, pmKey, err := NewPM(kms, client, receiver)
+	pm, pmKey, err := NewPM(kms, client, initiatorNick, receiver, receiverNick)
 	if err != nil {
 		return nil, fmt.Errorf("new pm: %s", err)
 	}

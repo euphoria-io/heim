@@ -62,6 +62,7 @@ module.exports.store = Reflux.createStore({
       joined: false,  // => received snapshot; sent nick; ui ready
       loadingLogs: false,
       roomName: null,
+      roomTitle: null,
       roomSettings: Immutable.Map(),
       tentativeNick: null,
       nick: null,
@@ -163,6 +164,10 @@ module.exports.store = Reflux.createStore({
     } else if (ev.type === 'snapshot-event') {
       this.state.serverVersion = ev.data.version
       this.state.sessionId = ev.data.session_id
+      this.state.roomTitle = ev.data.room_title
+      if (!this.state.nick) {
+        this.state.nick = ev.data.nick
+      }
       this._joinReady()
       this._handleWhoReply(ev.data)
       this._handleLogReply(ev.data)
@@ -227,11 +232,10 @@ module.exports.store = Reflux.createStore({
         console.warn('error banning:', ev.error)  // eslint-disable-line no-console
       }
     } else if (ev.type === 'pm-initiate-reply') {
-      // TODO: nick: ev.data.to_nick,
       this.state.activePMs = this.state.activePMs.add(Immutable.Map({
         kind: 'to',
         id: ev.data.pm_id,
-        nick: "???",
+        nick: ev.data.to_nick,
       }))
     } else if (ev.type === 'pm-initiate-event') {
       this.state.activePMs = this.state.activePMs.add(Immutable.Map({

@@ -1012,7 +1012,16 @@ func (s *session) handlePMInitiateCommand(msg *proto.PMInitiateCommand) *respons
 		return &response{err: proto.ErrAccessDenied}
 	}
 
-	pmID, err := s.backend.PMTracker().Initiate(s.ctx, s.kms, s.client, msg.UserID)
+	toNick, ok, err := s.room.ResolveNick(s.ctx, msg.UserID)
+	if err != nil {
+		return &response{err: err}
+	}
+
+	if !ok {
+		toNick = string(msg.UserID)
+	}
+
+	pmID, err := s.backend.PMTracker().Initiate(s.ctx, s.kms, s.room, s.client, msg.UserID)
 	if err != nil {
 		return &response{err: fmt.Errorf("pm initiate: %s", err)}
 	}
@@ -1023,13 +1032,17 @@ func (s *session) handlePMInitiateCommand(msg *proto.PMInitiateCommand) *respons
 		FromRoom: s.room.ID(),
 		PMID:     pmID,
 	}
+	if event.FromNick == "" {
+		event.FromNick = string(event.From)
+	}
 	if err := s.backend.NotifyUser(s.ctx, msg.UserID, proto.PMInitiateEventType, event); err != nil {
 		return &response{err: err}
 	}
 
 	return &response{
 		packet: &proto.PMInitiateReply{
-			PMID: pmID,
+			PMID:   pmID,
+			ToNick: toNick,
 		},
 	}
 }

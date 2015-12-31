@@ -44,14 +44,14 @@ func (c *Client) FromContext(ctx scope.Context) bool {
 	return true
 }
 
-func (c *Client) UserID() string {
+func (c *Client) UserID() UserID {
 	switch {
 	case c.Account != nil:
-		return fmt.Sprintf("account:%s", c.Account.ID().String())
+		return UserID(fmt.Sprintf("account:%s", c.Account.ID().String()))
 	case c.Agent.Bot:
-		return fmt.Sprintf("bot:%s", c.Agent.IDString())
+		return UserID(fmt.Sprintf("bot:%s", c.Agent.IDString()))
 	default:
-		return fmt.Sprintf("agent:%s", c.Agent.IDString())
+		return UserID(fmt.Sprintf("agent:%s", c.Agent.IDString()))
 	}
 }
 

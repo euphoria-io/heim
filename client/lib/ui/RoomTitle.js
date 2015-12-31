@@ -10,6 +10,7 @@ export default React.createClass({
 
   propTypes: {
     name: React.PropTypes.string.isRequired,
+    title: React.PropTypes.string.isRequired,
     connected: React.PropTypes.bool,
     authType: React.PropTypes.string,
   },
@@ -49,7 +50,7 @@ export default React.createClass({
     return (
       <span className="room-container">
         <span className="room">
-          <a className="name" href={'/room/' + this.props.name} onClick={ev => ev.preventDefault()}>&amp;{this.props.name}</a>
+          <a className="name" href={'/room/' + this.props.name} onClick={ev => ev.preventDefault()}>{this.props.title}</a>
           <FastButton fastTouch className={classNames('state', className)} onClick={this.showPrivacyInfo}>{caption}</FastButton>
         </span>
         <ToggleBubble ref="privacyInfo" className="small-text privacy-info" visible={this.props.connected === false}>

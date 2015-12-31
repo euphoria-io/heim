@@ -472,7 +472,7 @@ func (s *session) readMessages() {
 	}
 }
 
-func (s *session) sendSnapshot(msgs []proto.Message, listing proto.Listing) error {
+func (s *session) sendSnapshot(nick string, msgs []proto.Message, listing proto.Listing) error {
 	for i, msg := range msgs {
 		if msg.EncryptionKeyID != "" {
 			dmsg, err := proto.DecryptMessage(msg, s.client.Authorization.MessageKeys, s.privilegeLevel())
@@ -489,6 +489,8 @@ func (s *session) sendSnapshot(msgs []proto.Message, listing proto.Listing) erro
 		Version:   s.room.Version(),
 		Listing:   listing,
 		Log:       msgs,
+		RoomTitle: s.room.Title(),
+		Nick:      nick,
 	}
 
 	event, err := proto.MakeEvent(snapshot)
@@ -544,6 +546,14 @@ func (s *session) join() error {
 		}
 	}
 
+	nick, ok, err := s.room.ResolveNick(s.ctx, s.Identity().ID())
+	if err != nil {
+		return err
+	}
+	if ok {
+		s.identity.name = nick
+	}
+
 	listing, err := s.room.Listing(s.ctx, s.privilegeLevel())
 	if err != nil {
 		return err
@@ -565,7 +575,7 @@ func (s *session) join() error {
 		}
 	}
 
-	if err := s.sendSnapshot(msgs, listing); err != nil {
+	if err := s.sendSnapshot(nick, msgs, listing); err != nil {
 		logging.Logger(s.ctx).Printf("snapshot failed: %s", err)
 		return err
 	}

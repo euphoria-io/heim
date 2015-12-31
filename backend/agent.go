@@ -9,6 +9,7 @@ import (
 
 	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/security"
+	"euphoria.io/heim/proto/snowflake"
 	"euphoria.io/scope"
 	"github.com/gorilla/securecookie"
 )
@@ -140,4 +141,36 @@ func getAgent(
 	}
 
 	return agent, cookie, agentKey, nil
+}
+
+func getClient(ctx scope.Context, s *Server, r *http.Request) (*proto.Client, *http.Cookie, *security.ManagedKey, error) {
+	agent, cookie, agentKey, err := getAgent(ctx, s, r)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	client := &proto.Client{
+		Agent: agent,
+		Authorization: proto.Authorization{
+			ClientKey: agentKey,
+		},
+	}
+	client.FromRequest(ctx, r)
+
+	// Look up account associated with agent.
+	var accountID snowflake.Snowflake
+	if err := accountID.FromString(agent.AccountID); agent.AccountID != "" && err == nil {
+		if err := client.AuthenticateWithAgent(ctx, s.b, agent, agentKey); err != nil {
+			fmt.Printf("agent auth failed: %s\n", err)
+			switch err {
+			case proto.ErrAccessDenied:
+				// allow session to proceed, but agent will not be logged into account
+				agent.AccountID = ""
+			default:
+				return nil, nil, nil, err
+			}
+		}
+	}
+
+	return client, cookie, agentKey, nil
 }

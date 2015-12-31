@@ -548,11 +548,13 @@ type HelloEvent struct {
 // A `snapshot-event` indicates that a session has successfully joined a room.
 // It also offers a snapshot of the room's state and recent history.
 type SnapshotEvent struct {
-	Identity  UserID    `json:"identity"`   // the id of the agent or account logged into this session
-	SessionID string    `json:"session_id"` // the globally unique id of this session
-	Version   string    `json:"version"`    // the server's version identifier
-	Listing   Listing   `json:"listing"`    // the list of all other sessions joined to the room (excluding this session)
-	Log       []Message `json:"log"`        // the most recent messages posted to the room (currently up to 100)
+	Identity  UserID    `json:"identity"`       // the id of the agent or account logged into this session
+	SessionID string    `json:"session_id"`     // the globally unique id of this session
+	Version   string    `json:"version"`        // the server's version identifier
+	Listing   Listing   `json:"listing"`        // the list of all other sessions joined to the room (excluding this session)
+	Log       []Message `json:"log"`            // the most recent messages posted to the room (currently up to 100)
+	RoomTitle string    `json:"room_title"`     // the title of the room
+	Nick      string    `json:"nick,omitempty"` // the acting nick of the session; if omitted, client set nick before speaking
 }
 
 // A `network-event` indicates some server-side event that impacts the presence
@@ -621,7 +623,8 @@ type PMInitiateCommand struct {
 // The `pm-initiate-reply` provides the PMID for the requested private messaging
 // room.
 type PMInitiateReply struct {
-	PMID snowflake.Snowflake `json:"pm_id"` // the private chat can be accessed at /room/pm:*PMID*
+	PMID   snowflake.Snowflake `json:"pm_id"`   // the private chat can be accessed at /room/pm:*PMID*
+	ToNick string              `json:"to_nick"` // the nickname of the recipient of the invitation
 }
 
 // The `pm-initiate-event` informs the client that another user wants to chat

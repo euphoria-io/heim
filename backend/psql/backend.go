@@ -41,6 +41,7 @@ var schema = []struct {
 	// Presence.
 	{"presence", Presence{}, []string{"Room", "Topic", "ServerID", "ServerEra", "SessionID"}},
 	{"virtual_address", VirtualAddress{}, []string{"Room", "Virtual"}},
+	{"nick", Nick{}, []string{"UserID", "Room"}},
 
 	// Bans.
 	{"banned_agent", BannedAgent{}, []string{"AgentID", "Room"}},
@@ -665,6 +666,15 @@ func (b *Backend) join(ctx scope.Context, rb *RoomBinding, session proto.Session
 		return "", err
 	}
 	virtualAddress := row.Address
+
+	// Look up session's nick.
+	nickRow, err := t.Get(Nick{}, string(session.Identity().ID()), rb.RoomName)
+	if err != nil && err != sql.ErrNoRows {
+		return "", err
+	}
+	if nickRow != nil {
+		session.SetName(nickRow.(*Nick).Nick)
+	}
 
 	// Write to session log.
 	// TODO: do proper upsert simulation

@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/http"
 	"path"
+	"strings"
 
 	"encoding/hex"
 	"encoding/json"
@@ -72,29 +73,22 @@ func (s *Server) handleRoomStatic(w http.ResponseWriter, r *http.Request) {
 	r.Form.Set("h", "1")
 
 	// Tag the agent.
-	agent, cookie, agentKey, err := getAgent(ctx, s, r)
+	client, cookie, _, err := getClient(ctx, s, r)
 	if err != nil {
-		logging.Logger(ctx).Printf("get agent error: %s", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	if cookie != nil {
 		w.Header().Add("Set-Cookie", cookie.String())
 	}
-	client := &proto.Client{
-		Agent: agent,
-		Authorization: proto.Authorization{
-			ClientKey: agentKey,
-		},
-	}
-	client.FromRequest(ctx, r)
 
 	// Parameterize and serve the page.
 	prefix := mux.Vars(r)["prefix"]
 	roomName := mux.Vars(r)["room"]
-	if _, err := s.resolveRoom(ctx, prefix, roomName, client); err != nil {
+	room, err := s.resolveRoom(ctx, prefix, roomName, client)
+	if err != nil {
 		if err == proto.ErrRoomNotFound {
-			if !s.allowRoomCreation {
+			if !s.allowRoomCreation || prefix != "" {
 				s.serveErrorPage("room not found", http.StatusNotFound, w, r)
 				return
 			}
@@ -103,8 +97,7 @@ func (s *Server) handleRoomStatic(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	params := map[string]interface{}{"RoomName": roomName}
-
+	params := map[string]interface{}{"RoomTitle": strings.TrimPrefix(room.Title(), "&")}
 	s.servePage("room.html", params, w, r)
 }
 
@@ -137,7 +130,12 @@ func (s *Server) resolveRoom(ctx scope.Context, prefix, roomName string, client 
 		}
 		room, roomKey, err = s.b.PMTracker().Room(ctx, s.kms, sf, client)
 		if err != nil {
-			return nil, err
+			switch err {
+			case proto.ErrAccessDenied, proto.ErrPMNotFound:
+				return nil, proto.ErrRoomNotFound
+			default:
+				return nil, err
+			}
 		}
 		client.Authorization.AddMessageKey("pm:"+roomName, roomKey)
 		return room, nil
@@ -161,36 +159,10 @@ func (s *Server) resolveRoom(ctx scope.Context, prefix, roomName string, client 
 func (s *Server) handleRoom(w http.ResponseWriter, r *http.Request) {
 	ctx := s.rootCtx.Fork()
 
-	// Tag the agent. We use an authenticated but un-encrypted cookie.
-	agent, cookie, agentKey, err := getAgent(ctx, s, r)
+	client, cookie, agentKey, err := getClient(ctx, s, r)
 	if err != nil {
-		logging.Logger(ctx).Printf("get agent error: %s", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
-	}
-
-	client := &proto.Client{
-		Agent: agent,
-		Authorization: proto.Authorization{
-			ClientKey: agentKey,
-		},
-	}
-	client.FromRequest(ctx, r)
-
-	// Look up account associated with agent.
-	var accountID snowflake.Snowflake
-	if err := accountID.FromString(agent.AccountID); agent.AccountID != "" && err == nil {
-		if err := client.AuthenticateWithAgent(ctx, s.b, agent, agentKey); err != nil {
-			fmt.Printf("agent auth failed: %s\n", err)
-			switch err {
-			case proto.ErrAccessDenied:
-				// allow session to proceed, but agent will not be logged into account
-				agent.AccountID = ""
-			default:
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-		}
 	}
 
 	// Resolve the room.
@@ -268,7 +240,7 @@ func (s *Server) handlePrefsVerify(w http.ResponseWriter, r *http.Request) {
 			"confirmation": confirmation,
 			"email":        email,
 		}
-		s.servePage(VerifyEmailPage, params, w, r)
+		s.serveJSONPage(VerifyEmailPage, params, w, r)
 	case "POST":
 		s.handlePrefsVerifyPost(w, r)
 	default:
@@ -360,7 +332,7 @@ func (s *Server) handlePrefsResetPassword(w http.ResponseWriter, r *http.Request
 					break
 				}
 			}
-			s.servePage(ResetPasswordPage, params, w, r)
+			s.serveJSONPage(ResetPasswordPage, params, w, r)
 		case proto.ErrInvalidConfirmationCode:
 			s.serveErrorPage("invalid/expired confirmation code", http.StatusBadRequest, w, r)
 		default:

@@ -72,13 +72,8 @@ func LoadPageTemplates(path string) (*templates.Templater, error) {
 	return pageTemplater, nil
 }
 
-func (s *Server) servePage(name string, context map[string]interface{}, w http.ResponseWriter, r *http.Request) {
-	params, err := json.Marshal(context)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	content, err := s.pageTemplater.Evaluate(name, map[string]interface{}{"Data": string(params)})
+func (s *Server) servePage(name string, params map[string]interface{}, w http.ResponseWriter, r *http.Request) {
+	content, err := s.pageTemplater.Evaluate(name, params)
 	if err != nil {
 		switch err {
 		case templates.ErrTemplateNotFound:
@@ -90,6 +85,15 @@ func (s *Server) servePage(name string, context map[string]interface{}, w http.R
 	}
 	// TODO: figure out real modtime
 	http.ServeContent(w, r, name, s.pageModTime, bytes.NewReader(content))
+}
+
+func (s *Server) serveJSONPage(name string, context map[string]interface{}, w http.ResponseWriter, r *http.Request) {
+	params, err := json.Marshal(context)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	s.servePage(name, map[string]interface{}{"Data": string(params)}, w, r)
 }
 
 func (s *Server) serveErrorPage(message string, code int, w http.ResponseWriter, r *http.Request) {

@@ -17,13 +17,32 @@ type PMTracker struct {
 	pms map[snowflake.Snowflake]*PM
 }
 
-func (t *PMTracker) Initiate(ctx scope.Context, kms security.KMS, client *proto.Client, recipient proto.UserID) (snowflake.Snowflake, error) {
-	pm, err := proto.InitiatePM(ctx, t.b, kms, client, recipient)
+func (t *PMTracker) Initiate(
+	ctx scope.Context, kms security.KMS, room proto.Room, client *proto.Client, recipient proto.UserID) (
+	snowflake.Snowflake, error) {
+
+	initiatorNick, ok, err := room.ResolveNick(ctx, proto.UserID(fmt.Sprintf("account:%s", client.Account.ID())))
+	if err != nil {
+		return 0, err
+	}
+	if !ok {
+		initiatorNick = fmt.Sprintf("account:%s", client.Account.ID())
+	}
+
+	recipientNick, ok, err := room.ResolveNick(ctx, recipient)
+	if err != nil {
+		return 0, err
+	}
+	if !ok {
+		recipientNick = string(recipient)
+	}
+
+	pm, err := proto.InitiatePM(ctx, t.b, kms, client, initiatorNick, recipient, recipientNick)
 	if err != nil {
 		return 0, err
 	}
 
-	pmKey, _, err := pm.Access(ctx, t.b, kms, client)
+	pmKey, _, otherName, err := pm.Access(ctx, t.b, kms, client)
 	if err != nil {
 		return 0, err
 	}
@@ -36,7 +55,7 @@ func (t *PMTracker) Initiate(ctx scope.Context, kms security.KMS, client *proto.
 	}
 	t.pms[pm.ID] = &PM{
 		RoomBase: RoomBase{
-			name:    pm.ID.String(),
+			name:    fmt.Sprintf("private chat with %s", otherName),
 			version: t.b.version,
 			log:     newMemLog(),
 			messageKey: &roomMessageKey{
@@ -56,15 +75,26 @@ func (t *PMTracker) Room(ctx scope.Context, kms security.KMS, pmID snowflake.Sno
 		return nil, nil, proto.ErrPMNotFound
 	}
 
-	pmKey, _, err := pm.pm.Access(ctx, t.b, kms, client)
+	pmKey, _, otherName, err := pm.pm.Access(ctx, t.b, kms, client)
 	if err != nil {
 		return nil, nil, err
 	}
 
+	pm.RoomBase.name = fmt.Sprintf("private chat with %s", otherName)
 	return pm, pmKey, nil
 }
 
 type PM struct {
 	RoomBase
 	pm *proto.PM
+}
+
+func (pm *PM) ResolveNick(ctx scope.Context, userID proto.UserID) (string, bool, error) {
+	if userID == proto.UserID(fmt.Sprintf("account:%s", pm.pm.Initiator)) {
+		return pm.pm.InitiatorNick, true, nil
+	}
+	if userID == pm.pm.Receiver {
+		return pm.pm.ReceiverNick, true, nil
+	}
+	return "", false, nil
 }

@@ -48,6 +48,7 @@ func (l Listing) Less(i, j int) bool {
 // Session and interact.
 type Room interface {
 	ID() string
+	Title() string
 	GetMessage(scope.Context, snowflake.Snowflake) (*Message, error)
 	Latest(scope.Context, int, snowflake.Snowflake) ([]Message, error)
 
@@ -81,6 +82,8 @@ type Room interface {
 	MessageKeyID(scope.Context) (string, bool, error)
 
 	ResolveClientAddress(ctx scope.Context, addr string) (net.IP, error)
+
+	ResolveNick(ctx scope.Context, userID UserID) (string, bool, error)
 }
 
 type ManagedRoom interface {

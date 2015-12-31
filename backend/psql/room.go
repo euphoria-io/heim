@@ -67,6 +67,7 @@ func (r *Room) generateMessageKey(b *Backend, kms security.KMS) (*RoomMessageKey
 type RoomBinding struct {
 	*Backend
 	RoomName     string
+	RoomTitle    string
 	messageKeyID sql.NullString
 }
 
@@ -103,6 +104,13 @@ func (rb *RoomBinding) broadcast(
 }
 
 func (rb *RoomBinding) ID() string { return rb.RoomName }
+
+func (rb *RoomBinding) Title() string {
+	if rb.RoomTitle == "" {
+		return fmt.Sprintf("&%s", rb.RoomName)
+	}
+	return rb.RoomTitle
+}
 
 func (rb *RoomBinding) GetMessage(ctx scope.Context, id snowflake.Snowflake) (*proto.Message, error) {
 	var msg Message
@@ -325,6 +333,33 @@ func (rb *RoomBinding) RenameUser(ctx scope.Context, session proto.Session, form
 		return nil, fmt.Errorf("presence update error: %s", err)
 	}
 
+	// Store latest nick.
+	// Loop in read-committed mode to simulate UPSERT.
+	for {
+		// Try to insert; if this fails due to duplicate key value, try to update.
+		nick := &Nick{
+			Room:   rb.RoomName,
+			UserID: string(session.Identity().ID()),
+			Nick:   session.Identity().Name(),
+		}
+		if err := rb.DbMap.Insert(nick); err != nil {
+			if !strings.HasPrefix(err.Error(), "pq: duplicate key value") {
+				rollback(ctx, t)
+				return nil, err
+			}
+		} else {
+			break
+		}
+		n, err := rb.DbMap.Update(nick)
+		if err != nil {
+			rollback(ctx, t)
+			return nil, err
+		}
+		if n > 0 {
+			break
+		}
+	}
+
 	event := &proto.NickEvent{
 		SessionID: session.ID(),
 		ID:        session.Identity().ID(),
@@ -344,6 +379,20 @@ func (rb *RoomBinding) RenameUser(ctx scope.Context, session proto.Session, form
 }
 
 func (rb *RoomBinding) MessageKeyID(ctx scope.Context) (string, bool, error) { return "", false, nil }
+
+func (rb *RoomBinding) ResolveNick(ctx scope.Context, userID proto.UserID) (string, bool, error) {
+	row, err := rb.DbMap.Get(Nick{}, string(userID), rb.RoomName)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return "", false, nil
+		}
+		return "", false, err
+	}
+	if row == nil {
+		return "", false, nil
+	}
+	return row.(*Nick).Nick, true, nil
+}
 
 func (rb *ManagedRoomBinding) GenerateMessageKey(ctx scope.Context, kms security.KMS) (
 	proto.RoomMessageKey, error) {

@@ -49,6 +49,10 @@ func TestBackend(t *testing.T) {
 		"job_complete(bigint, integer, bytea)",
 		"job_fail(bigint, integer, text, bytea)",
 		"job_cancel(bigint)",
+		"virtualize_address(text, inet)",
+		"virtualize_inet4(text, inet)",
+		"virtualize_inet6(text, inet)",
+		"permute32(integer)",
 	} {
 		if _, err := db.Exec("DROP FUNCTION IF EXISTS " + function); err != nil {
 			t.Fatal(err)

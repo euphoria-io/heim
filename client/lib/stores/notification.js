@@ -199,7 +199,7 @@ module.exports.store = Reflux.createStore({
       .filter(Boolean)
       .cacheResult()
 
-    unseen.forEach(msg => this._markNotification('new-message', state.roomName, msg))
+    unseen.forEach(msg => this._markNotification('new-message', state.roomName, state.roomTitle, msg))
 
     unseen
       .filter(msg => {
@@ -220,17 +220,18 @@ module.exports.store = Reflux.createStore({
         const prevChild = children.get(children.indexOf(msgId) - 1)
         return prevChild && state.messages.get(prevChild).get('_own')
       })
-      .forEach(msg => this._markNotification('new-reply', state.roomName, msg))
+      .forEach(msg => this._markNotification('new-reply', state.roomName, state.roomTitle, msg))
 
     unseen
       .filter(msg => msg.get('_mention'))
-      .forEach(msg => this._markNotification('new-mention', state.roomName, msg))
+      .forEach(msg => this._markNotification('new-mention', state.roomName, state.roomTitle, msg))
   },
 
-  _markNotification(kind, roomName, message) {
+  _markNotification(kind, roomName, roomTitle, message) {
     this._newNotifications.push({
       kind: kind,
       roomName: roomName,
+      roomTitle: roomTitle,
       message: message,
     })
     this._queueUpdateNotifications()
@@ -285,7 +286,7 @@ module.exports.store = Reflux.createStore({
     if (newMention) {
       const newMentionId = newMention.message.get('id')
       alerts = _.reject(alerts, a => a.message.get('id') === newMentionId)
-      this._notifyAlert('new-mention', newMention.roomName, newMention.message, {
+      this._notifyAlert('new-mention', newMention.roomName, newMention.roomTitle, newMention.message, {
         favicon: favicons.highlight,
         icon: icons.highlight,
       })
@@ -293,7 +294,7 @@ module.exports.store = Reflux.createStore({
 
     const newMessage = alerts['new-reply'] || alerts['new-message']
     if (newMessage) {
-      this._notifyAlert(alerts['new-reply'] ? 'new-reply' : 'new-message', newMessage.roomName, newMessage.message, {
+      this._notifyAlert(alerts['new-reply'] ? 'new-reply' : 'new-message', newMessage.roomName, newMessage.roomTitle, newMessage.message, {
         favicon: favicons.active,
         icon: icons.active,
         timeout: this.timeout,
@@ -417,7 +418,7 @@ module.exports.store = Reflux.createStore({
     return true
   },
 
-  _notifyAlert(kind, roomName, message, options) {
+  _notifyAlert(kind, roomName, roomTitle, message, options) {
     if (this.active) {
       return
     }
@@ -446,6 +447,10 @@ module.exports.store = Reflux.createStore({
     }
 
     if (this.state.popupsPermission && this._popupsAreEnabled()) {
+      let title = roomTitle
+      if (title && title[0] === '&') {
+        title = title.substr(1)
+      }
       if (this.state.soundEnabled && alertKind === 'new-mention') {
         require('../alertSound').play()
       }
@@ -456,7 +461,7 @@ module.exports.store = Reflux.createStore({
       options.body = message.getIn(['sender', 'name']) + ': ' + message.get('content')
 
       try {
-        alert.popup = new Notification(roomName, options)
+        alert.popup = new Notification(title, options)
       } catch (err) {
         // FIXME: on mobile Chrome we need to implement a ServiceWorker for
         // notifications to work

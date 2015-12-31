@@ -24,6 +24,7 @@ type RoomBase struct {
 	agentBans   map[proto.UserID]time.Time
 	ipBans      map[string]time.Time
 	identities  map[proto.UserID]proto.Identity
+	nicks       map[proto.UserID]string
 	live        map[proto.UserID][]proto.Session
 	clients     map[string]*proto.Client
 	partWaiters map[string]chan struct{}
@@ -31,6 +32,7 @@ type RoomBase struct {
 }
 
 func (r *RoomBase) ID() string      { return r.name }
+func (r *RoomBase) Title() string   { return r.name }
 func (r *RoomBase) Version() string { return r.version }
 
 func (r *RoomBase) GetMessage(ctx scope.Context, id snowflake.Snowflake) (*proto.Message, error) {
@@ -52,6 +54,9 @@ func (r *RoomBase) Join(ctx scope.Context, session proto.Session) (string, error
 
 	if r.identities == nil {
 		r.identities = map[proto.UserID]proto.Identity{}
+	}
+	if r.nicks == nil {
+		r.nicks = map[proto.UserID]string{}
 	}
 	if r.live == nil {
 		r.live = map[proto.UserID][]proto.Session{}
@@ -211,6 +216,7 @@ func (r *RoomBase) RenameUser(
 
 	logging.Logger(ctx).Printf(
 		"renaming %s from %s to %s\n", session.ID(), formerName, session.Identity().Name())
+	r.nicks[session.Identity().ID()] = session.Identity().Name()
 	payload := &proto.NickEvent{
 		SessionID: session.ID(),
 		ID:        session.Identity().ID(),
@@ -218,6 +224,14 @@ func (r *RoomBase) RenameUser(
 		To:        session.Identity().Name(),
 	}
 	return payload, r.broadcast(ctx, proto.NickType, payload, session)
+}
+
+func (r *RoomBase) ResolveNick(ctx scope.Context, userID proto.UserID) (string, bool, error) {
+	r.m.Lock()
+	defer r.m.Unlock()
+
+	nick, ok := r.nicks[userID]
+	return nick, ok, nil
 }
 
 func (r *RoomBase) MessageKeyID(ctx scope.Context) (string, bool, error) {
@@ -356,6 +370,8 @@ func NewRoom(
 
 	return room, nil
 }
+
+func (r *memRoom) Title() string { return fmt.Sprintf("&%s", r.name) }
 
 func (r *memRoom) GenerateMessageKey(ctx scope.Context, kms security.KMS) (proto.RoomMessageKey, error) {
 	nonce, err := kms.GenerateNonce(security.AES128.KeySize())

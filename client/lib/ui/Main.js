@@ -258,6 +258,7 @@ export default React.createClass({
     const sidebarPaneHidden = thin
 
     const roomName = this.state.chat.roomName
+    const roomTitle = this.state.chat.roomTitle || ''
     const pmNotices = this.state.chat.activePMs.filterNot(pm => this.state.ui.dismissedPMNotices.contains(pm.get('id')))
 
     const snapPoints = {main: 0}
@@ -287,7 +288,7 @@ export default React.createClass({
             <NotificationList tree={this.state.chat.messages} notifications={this.state.ui.frozenNotifications || this.state.notification.notifications} onNotificationSelect={this.onNotificationSelect} animate={!this.state.ui.thin} />
           </div>
           <div className="chat-pane-container main-pane" onClickCapture={_.partial(this.onPaneClick, 'main')}>
-            <ChatTopBar who={this.state.chat.who} roomName={roomName} connected={this.state.chat.connected} joined={!!this.state.chat.joined} authType={this.state.chat.authType} isManager={this.state.chat.isManager} managerMode={this.state.ui.managerMode} working={this.state.chat.loadingLogs} showInfoPaneButton={!thin || !Heim.isTouch} infoPaneOpen={infoPaneOpen} collapseInfoPane={ui.collapseInfoPane} expandInfoPane={ui.expandInfoPane} toggleUserList={ui.toggleUserList} toggleManagerMode={ui.toggleManagerMode} />
+            <ChatTopBar who={this.state.chat.who} roomName={roomName} roomTitle={roomTitle} connected={this.state.chat.connected} joined={!!this.state.chat.joined} authType={this.state.chat.authType} isManager={this.state.chat.isManager} managerMode={this.state.ui.managerMode} working={this.state.chat.loadingLogs} showInfoPaneButton={!thin || !Heim.isTouch} infoPaneOpen={infoPaneOpen} collapseInfoPane={ui.collapseInfoPane} expandInfoPane={ui.expandInfoPane} toggleUserList={ui.toggleUserList} toggleManagerMode={ui.toggleManagerMode} />
             {this.templateHook('main-pane-top')}
             <ReactCSSTransitionGroup className="notice-stack" transitionName="slide-down" transitionEnterTimeout={150} transitionLeaveTimeout={150}>
               {this.state.ui.notices.has('notifications') && this.state.notification.popupsSupported && <div className="notice dark notifications">

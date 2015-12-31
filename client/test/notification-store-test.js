@@ -201,11 +201,13 @@ describe('notification store', () => {
 
     const emptyChatState = {
       roomName: 'ezzie',
+      roomTitle: '&ezzie',
       messages: new ChatTree(),
     }
 
     const mockChatState = {
       roomName: 'ezzie',
+      roomTitle: '&ezzie',
       messages: new ChatTree().reset([
         message1,
       ]),
@@ -213,6 +215,7 @@ describe('notification store', () => {
 
     const mockChatState2 = {
       roomName: 'ezzie',
+      roomTitle: '&ezzie',
       messages: new ChatTree().reset([
         message1,
         message2,
@@ -221,6 +224,7 @@ describe('notification store', () => {
 
     const mockChatState3 = {
       roomName: 'ezzie',
+      roomTitle: '&ezzie',
       messages: new ChatTree().reset([
         message1,
         message2,
@@ -230,6 +234,7 @@ describe('notification store', () => {
 
     const mockChatState3Old = {
       roomName: 'ezzie',
+      roomTitle: '&ezzie',
       messages: new ChatTree().reset([
         messageOld,
         message1,
@@ -240,6 +245,7 @@ describe('notification store', () => {
 
     const mockChatState2Own = {
       roomName: 'ezzie',
+      roomTitle: '&ezzie',
       messages: new ChatTree().reset([
         message1,
         message2Own,
@@ -248,6 +254,7 @@ describe('notification store', () => {
 
     const mockChatStateMention = {
       roomName: 'ezzie',
+      roomTitle: '&ezzie',
       messages: new ChatTree().reset([
         message1,
         message2,
@@ -257,6 +264,7 @@ describe('notification store', () => {
 
     const mockChatStateMentionSeen = {
       roomName: 'ezzie',
+      roomTitle: '&ezzie',
       messages: new ChatTree().reset([
         message1,
         message2,
@@ -266,6 +274,7 @@ describe('notification store', () => {
 
     const mockChatStateMentionShadow = {
       roomName: 'ezzie',
+      roomTitle: '&ezzie',
       messages: new ChatTree().reset([
         message1,
         message2,
@@ -275,6 +284,7 @@ describe('notification store', () => {
 
     const mockChatStateMentionDeleted = {
       roomName: 'ezzie',
+      roomTitle: '&ezzie',
       messages: new ChatTree().reset([
         message1,
         message2,
@@ -284,6 +294,7 @@ describe('notification store', () => {
 
     const mockChatState2Reply2Own = {
       roomName: 'ezzie',
+      roomTitle: '&ezzie',
       messages: new ChatTree().reset([
         message1,
         message2,
@@ -294,6 +305,7 @@ describe('notification store', () => {
 
     const mockChatState2OwnReply = {
       roomName: 'ezzie',
+      roomTitle: '&ezzie',
       messages: new ChatTree().reset([
         message1,
         message2Own,
@@ -303,6 +315,7 @@ describe('notification store', () => {
 
     const mockChatState2Reply3 = {
       roomName: 'ezzie',
+      roomTitle: '&ezzie',
       messages: new ChatTree().reset([
         message1,
         message2Own,
@@ -314,6 +327,7 @@ describe('notification store', () => {
 
     const mockChatStateOrphan = {
       roomName: 'ezzie',
+      roomTitle: '&ezzie',
       messages: new ChatTree().reset([
         message1,
         message2Reply1,
