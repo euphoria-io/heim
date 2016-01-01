@@ -100,6 +100,8 @@ export default function clientRoom() {
 
       setFavicon(favicon) { Heim._favicon = favicon },
       setTitleMsg(msg) { Heim._titleMsg = msg },
+      setTitlePrefix(prefix) { Heim._titlePrefix = prefix },
+      _getTitlePrefix() { return Heim._titlePrefix },
 
       transition: new BatchTransition(),
 
@@ -267,7 +269,8 @@ export default function clientRoom() {
         delete Heim._favicon
       }
 
-      Heim.setTitleMsg = msg => uidocument.title = msg ? roomName + ' (' + msg + ')' : roomName
+      Heim._getTitlePrefix = () => { return Heim._titlePrefix || roomName }
+      Heim.setTitleMsg = msg => uidocument.title = msg ? Heim._getTitlePrefix() + ' (' + msg + ')' : Heim._getTitlePrefix()
       if (Heim._titleMsg) {
         Heim.setTitleMsg(Heim._titleMsg)
         delete Heim._titleMsg

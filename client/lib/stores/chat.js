@@ -162,9 +162,14 @@ module.exports.store = Reflux.createStore({
         this.state.authState = null
       }
     } else if (ev.type === 'snapshot-event') {
+      let title = ev.data.room_title
+      if (title && title[0] === '&') {
+        title = title.substr(1)
+      }
+      Heim.setTitlePrefix(title)
+      this.state.roomTitle = ev.data.room_title
       this.state.serverVersion = ev.data.version
       this.state.sessionId = ev.data.session_id
-      this.state.roomTitle = ev.data.room_title
       if (!this.state.nick) {
         this.state.nick = ev.data.nick
       }
