@@ -61,7 +61,7 @@ module.exports.store = Reflux.createStore({
   },
 
   chatChange(state) {
-    this.triggerUpdate(this.state.set('email', state.account && state.account.email))
+    this.triggerUpdate(this.state.set('email', state.account && state.account.get('email')))
   },
 
   changeNameCompleted() {
