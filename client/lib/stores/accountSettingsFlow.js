@@ -37,7 +37,6 @@ const StateRecord = Immutable.Record({
 module.exports.store = Reflux.createStore({
   listenables: [
     storeActions,
-    {chatChange: chat.store},
     {changeNameCompleted: chat.changeName.completed},
     {changeNameFailed: chat.changeName.failed},
     {changeEmailCompleted: chat.changeEmail.completed},
@@ -58,10 +57,6 @@ module.exports.store = Reflux.createStore({
 
   getInitialState() {
     return this.state
-  },
-
-  chatChange(state) {
-    this.triggerUpdate(this.state.set('email', state.account && state.account.get('email')))
   },
 
   changeNameCompleted() {
@@ -208,7 +203,7 @@ module.exports.store = Reflux.createStore({
       working: true,
       errors: Immutable.Map(),
     }))
-    chat.resetPassword(this.state.get('email'))
+    chat.resetPassword(chat.store.state.account.get('email'))
   },
 
   logout() {
