@@ -145,8 +145,10 @@ module.exports.store = Reflux.createStore({
   },
 
   resetPasswordFailed(data) {
-    this.triggerUpdate(this.state.set('working', false))
-    throw new Error('unable to reset password: ' + data.error)
+    if (this.state.get('working')) {
+      this.triggerUpdate(this.state.set('working', false))
+      throw new Error('unable to reset password: ' + data.error)
+    }
   },
 
   reset() {
