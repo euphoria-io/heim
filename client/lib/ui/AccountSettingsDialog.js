@@ -74,7 +74,9 @@ export default React.createClass({
       working: flow.working,
       errors: flow.errors.toJS(),
     }
-    if (flow.step === 'change-name') {
+    if (!account) {
+      dialogContent = <div className="account-state">you're signed out.</div>
+    } else if (flow.step === 'change-name') {
       title = 'change account name'
       dialogContent = (
         <Form
