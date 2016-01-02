@@ -51,6 +51,7 @@ type Room interface {
 	Title() string
 	GetMessage(scope.Context, snowflake.Snowflake) (*Message, error)
 	Latest(scope.Context, int, snowflake.Snowflake) ([]Message, error)
+	Snapshot(ctx scope.Context, session Session, level PrivilegeLevel, numMessages int) (*SnapshotEvent, error)
 
 	// Join inserts a Session into the Room's global presence.
 	Join(scope.Context, Session) (virtualClientAddr string, err error)
@@ -69,7 +70,7 @@ type Room interface {
 
 	// Listing returns the current global list of connected sessions to this
 	// Room.
-	Listing(scope.Context, PrivilegeLevel) (Listing, error)
+	Listing(ctx scope.Context, level PrivilegeLevel, exclude ...Session) (Listing, error)
 
 	// RenameUser updates the nickname of a Session in this Room.
 	RenameUser(ctx scope.Context, session Session, formerName string) (*NickEvent, error)

@@ -112,3 +112,21 @@ func (pm *PM) ResolveNick(ctx scope.Context, userID proto.UserID) (string, bool,
 	}
 	return "", false, nil
 }
+
+func (pm *PM) Snapshot(
+	ctx scope.Context, session proto.Session, level proto.PrivilegeLevel, numMessages int) (*proto.SnapshotEvent, error) {
+
+	snapshot, err := pm.RoomBase.Snapshot(ctx, session, level, numMessages)
+	if err != nil {
+		return nil, err
+	}
+
+	if snapshot.Nick == pm.pm.InitiatorNick {
+		snapshot.PMWithNick = pm.pm.ReceiverNick
+		snapshot.PMWithUserID = pm.pm.Receiver
+	} else {
+		snapshot.PMWithNick = pm.pm.InitiatorNick
+		snapshot.PMWithUserID = proto.UserID(fmt.Sprintf("account:%s", pm.pm.Initiator))
+	}
+	return snapshot, nil
+}

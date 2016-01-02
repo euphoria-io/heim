@@ -174,6 +174,33 @@ func (rb *RoomBinding) Latest(ctx scope.Context, n int, before snowflake.Snowfla
 	return rb.Backend.latest(ctx, rb, n, before)
 }
 
+func (rb *RoomBinding) Snapshot(
+	ctx scope.Context, session proto.Session, level proto.PrivilegeLevel, numMessages int) (*proto.SnapshotEvent, error) {
+
+	snapshot := &proto.SnapshotEvent{
+		Identity:  session.Identity().ID(),
+		Nick:      session.Identity().Name(),
+		SessionID: session.ID(),
+		Version:   rb.Version(),
+	}
+
+	// TODO: do all this in a transaction
+
+	listing, err := rb.Listing(ctx, level, session)
+	if err != nil {
+		return nil, err
+	}
+	snapshot.Listing = listing
+
+	log, err := rb.Latest(ctx, numMessages, 0)
+	if err != nil {
+		return nil, err
+	}
+	snapshot.Log = log
+
+	return snapshot, nil
+}
+
 func (rb *RoomBinding) Join(ctx scope.Context, session proto.Session) (string, error) {
 	return rb.Backend.join(ctx, rb, session)
 }
@@ -301,8 +328,8 @@ func (rb *RoomBinding) EditMessage(
 	return reply, nil
 }
 
-func (rb *RoomBinding) Listing(ctx scope.Context, level proto.PrivilegeLevel) (proto.Listing, error) {
-	return rb.Backend.listing(ctx, rb, level)
+func (rb *RoomBinding) Listing(ctx scope.Context, level proto.PrivilegeLevel, exclude ...proto.Session) (proto.Listing, error) {
+	return rb.Backend.listing(ctx, rb, level, exclude)
 }
 
 func (rb *RoomBinding) RenameUser(ctx scope.Context, session proto.Session, formerName string) (
