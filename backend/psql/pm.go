@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"euphoria.io/heim/proto"
-	"euphoria.io/heim/proto/logging"
 	"euphoria.io/heim/proto/security"
 	"euphoria.io/heim/proto/snowflake"
 	"euphoria.io/scope"
@@ -66,18 +65,31 @@ func (pmrb *PMRoomBinding) MessageKeyID(ctx scope.Context) (string, bool, error)
 }
 
 func (pmrb *PMRoomBinding) ResolveNick(ctx scope.Context, userID proto.UserID) (string, bool, error) {
-	log := logging.Logger(ctx)
-	log.Printf("Resolving nick for %s", userID)
 	if userID == proto.UserID(fmt.Sprintf("account:%s", pmrb.pm.Initiator)) {
-		log.Printf("resolving to initiator: %s", pmrb.pm.InitiatorNick)
 		return pmrb.pm.InitiatorNick, true, nil
 	}
 	if userID == pmrb.pm.Receiver {
-		log.Printf("resolving to receiver: %s", pmrb.pm.ReceiverNick)
 		return pmrb.pm.ReceiverNick, true, nil
 	}
-	log.Printf("dunno who this is")
 	return "", false, nil
+}
+
+func (pmrb *PMRoomBinding) Snapshot(
+	ctx scope.Context, session proto.Session, level proto.PrivilegeLevel, numMessages int) (*proto.SnapshotEvent, error) {
+
+	snapshot, err := pmrb.RoomBinding.Snapshot(ctx, session, level, numMessages)
+	if err != nil {
+		return nil, err
+	}
+
+	if snapshot.Nick == pmrb.pm.InitiatorNick {
+		snapshot.PMWithNick = pmrb.pm.ReceiverNick
+		snapshot.PMWithUserID = pmrb.pm.Receiver
+	} else {
+		snapshot.PMWithNick = pmrb.pm.InitiatorNick
+		snapshot.PMWithUserID = proto.UserID(fmt.Sprintf("account:%s", pmrb.pm.Initiator))
+	}
+	return snapshot, nil
 }
 
 type PMTracker struct {

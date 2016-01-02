@@ -553,8 +553,10 @@ type SnapshotEvent struct {
 	Version   string    `json:"version"`        // the server's version identifier
 	Listing   Listing   `json:"listing"`        // the list of all other sessions joined to the room (excluding this session)
 	Log       []Message `json:"log"`            // the most recent messages posted to the room (currently up to 100)
-	RoomTitle string    `json:"room_title"`     // the title of the room
 	Nick      string    `json:"nick,omitempty"` // the acting nick of the session; if omitted, client set nick before speaking
+
+	PMWithNick   string `json:"pm_with_nick,omitempty"`    // if given, this room is for private chat with the given nick
+	PMWithUserID UserID `json:"pm_with_user_id,omitempty"` // if given, this room is for private chat with the given user
 }
 
 // A `network-event` indicates some server-side event that impacts the presence

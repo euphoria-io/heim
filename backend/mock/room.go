@@ -197,11 +197,13 @@ func (r *RoomBase) broadcast(
 	return nil
 }
 
-func (r *RoomBase) Listing(ctx scope.Context, level proto.PrivilegeLevel) (proto.Listing, error) {
+func (r *RoomBase) Listing(ctx scope.Context, level proto.PrivilegeLevel, exclude ...proto.Session) (proto.Listing, error) {
 	listing := proto.Listing{}
 	for _, sessions := range r.live {
 		for _, session := range sessions {
-			listing = append(listing, session.View(level))
+			if !isExcluded(session, exclude) {
+				listing = append(listing, session.View(level))
+			}
 		}
 	}
 	sort.Sort(listing)
@@ -232,6 +234,31 @@ func (r *RoomBase) ResolveNick(ctx scope.Context, userID proto.UserID) (string, 
 
 	nick, ok := r.nicks[userID]
 	return nick, ok, nil
+}
+
+func (r *RoomBase) Snapshot(
+	ctx scope.Context, session proto.Session, level proto.PrivilegeLevel, numMessages int) (*proto.SnapshotEvent, error) {
+
+	snapshot := &proto.SnapshotEvent{
+		Identity:  session.Identity().ID(),
+		Nick:      session.Identity().Name(),
+		SessionID: session.ID(),
+		Version:   r.Version(),
+	}
+
+	listing, err := r.Listing(ctx, level, session)
+	if err != nil {
+		return nil, err
+	}
+	snapshot.Listing = listing
+
+	log, err := r.Latest(ctx, numMessages, 0)
+	if err != nil {
+		return nil, err
+	}
+	snapshot.Log = log
+
+	return snapshot, nil
 }
 
 func (r *RoomBase) MessageKeyID(ctx scope.Context) (string, bool, error) {

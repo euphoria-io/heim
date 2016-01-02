@@ -782,9 +782,14 @@ func (b *Backend) part(ctx scope.Context, rb *RoomBinding, session proto.Session
 	return nil
 }
 
-func (b *Backend) listing(ctx scope.Context, rb *RoomBinding, level proto.PrivilegeLevel) (proto.Listing, error) {
+func (b *Backend) listing(ctx scope.Context, rb *RoomBinding, level proto.PrivilegeLevel, exclude []proto.Session) (proto.Listing, error) {
 	// TODO: return presence in an envelope, to support encryption
 	// TODO: cache for performance
+
+	excludeSet := map[string]struct{}{}
+	for _, exc := range exclude {
+		excludeSet[exc.ID()] = struct{}{}
+	}
 
 	cols, err := allColumns(b.DbMap, Presence{}, "")
 	if err != nil {
@@ -799,10 +804,12 @@ func (b *Backend) listing(ctx scope.Context, rb *RoomBinding, level proto.Privil
 	for _, row := range rows {
 		p := row.(*Presence)
 		if b.peers[p.ServerID] == p.ServerEra {
-			if view, err := p.SessionView(level); err == nil {
-				result = append(result, view)
-			} else {
-				b.debug("ignoring presence row because error: %s", err)
+			if _, ok := excludeSet[p.SessionID]; !ok {
+				if view, err := p.SessionView(level); err == nil {
+					result = append(result, view)
+				} else {
+					b.debug("ignoring presence row because error: %s", err)
+				}
 			}
 		} else {
 			b.debug("ignoring presence row because era doesn't match (%s != %s)",

@@ -472,31 +472,31 @@ func (s *session) readMessages() {
 	}
 }
 
-func (s *session) sendSnapshot(nick string, msgs []proto.Message, listing proto.Listing) error {
-	for i, msg := range msgs {
+func (s *session) sendSnapshot() error {
+	snapshot, err := s.room.Snapshot(s.ctx, s, s.privilegeLevel(), 100)
+	if err != nil {
+		return err
+	}
+
+	s.identity.name = snapshot.Nick
+
+	for i, msg := range snapshot.Log {
 		if msg.EncryptionKeyID != "" {
 			dmsg, err := proto.DecryptMessage(msg, s.client.Authorization.MessageKeys, s.privilegeLevel())
 			if err != nil {
 				continue
 			}
-			msgs[i] = dmsg
+			snapshot.Log[i] = dmsg
 		}
 	}
 
-	snapshot := &proto.SnapshotEvent{
-		Identity:  s.Identity().ID(),
-		SessionID: s.ID(),
-		Version:   s.room.Version(),
-		Listing:   listing,
-		Log:       msgs,
-		RoomTitle: s.room.Title(),
-		Nick:      nick,
-	}
+	s.identity.name = snapshot.Nick
 
 	event, err := proto.MakeEvent(snapshot)
 	if err != nil {
 		return err
 	}
+
 	s.outgoing <- event
 	return nil
 }
@@ -535,17 +535,6 @@ func (s *session) privilegeLevel() proto.PrivilegeLevel {
 }
 
 func (s *session) join() error {
-	msgs, err := s.room.Latest(s.ctx, 100, 0)
-	if err != nil {
-		return err
-	}
-
-	if s.privilegeLevel() == proto.General {
-		for i := range msgs {
-			msgs[i].Sender.ClientAddress = ""
-		}
-	}
-
 	nick, ok, err := s.room.ResolveNick(s.ctx, s.Identity().ID())
 	if err != nil {
 		return err
@@ -554,17 +543,13 @@ func (s *session) join() error {
 		s.identity.name = nick
 	}
 
-	listing, err := s.room.Listing(s.ctx, s.privilegeLevel())
-	if err != nil {
-		return err
-	}
-
-	s.vClientAddr, err = s.room.Join(s.ctx, s)
+	addr, err := s.room.Join(s.ctx, s)
 	if err != nil {
 		logging.Logger(s.ctx).Printf("join failed: %s", err)
 		return err
 	}
 
+	s.vClientAddr = addr
 	s.onClose = func() {
 		// Use a fork of the server's root context, because the session's context
 		// might be closed.
@@ -575,7 +560,7 @@ func (s *session) join() error {
 		}
 	}
 
-	if err := s.sendSnapshot(nick, msgs, listing); err != nil {
+	if err := s.sendSnapshot(); err != nil {
 		logging.Logger(s.ctx).Printf("snapshot failed: %s", err)
 		return err
 	}

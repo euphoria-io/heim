@@ -237,7 +237,6 @@ type testConn struct {
 	cookies              []*http.Cookie
 	nicks                map[string]string
 	roomName             string
-	roomTitle            string
 	sessionID            string
 	userID               string
 	accountID            string
@@ -248,6 +247,8 @@ type testConn struct {
 	isStaff              bool
 	isManager            bool
 	debugOn              bool
+	pmNick               string
+	pmUserID             string
 }
 
 func (tc *testConn) clone() *testConn {
@@ -488,17 +489,19 @@ func (tc *testConn) expectPing() *proto.PingEvent {
 }
 
 func (tc *testConn) expectSnapshot(version string, listingParts []string, logParts []string) {
-	title := fmt.Sprintf("&%s", tc.roomName)
-	if tc.roomTitle != "" {
-		title = tc.roomTitle
-	}
-	nickPart := ""
+	optionals := ""
 	if nick, ok := tc.nicks[tc.room.ID()]; ok {
-		nickPart = fmt.Sprintf(`,"nick":"%s"`, nick)
+		optionals = fmt.Sprintf(`,"nick":"%s"`, nick)
+	}
+	if tc.pmNick != "" {
+		optionals += fmt.Sprintf(`,"pm_with_nick":"%s"`, tc.pmNick)
+	}
+	if tc.pmUserID != "" {
+		optionals += fmt.Sprintf(`,"pm_with_user_id":"%s"`, tc.pmUserID)
 	}
 	tc.expect("", "snapshot-event",
-		`{"identity":"*","session_id":"*","version":"%s","listing":[%s],"log":[%s],"room_title":"%s"%s}`,
-		version, strings.Join(listingParts, ","), strings.Join(logParts, ","), title, nickPart)
+		`{"identity":"*","session_id":"*","version":"%s","listing":[%s],"log":[%s]%s}`,
+		version, strings.Join(listingParts, ","), strings.Join(logParts, ","), optionals)
 }
 
 func (tc *testConn) Close() {
@@ -3193,7 +3196,8 @@ func testPMs(s *serverUnderTest) {
 		r = s.Reconnect(r, roomName)
 		defer r.Close()
 		r.nicks[r.room.ID()] = "r"
-		r.roomTitle = "private chat with c"
+		r.pmNick = "c"
+		r.pmUserID = c.id()
 		r.expectPing()
 		r.expectSnapshot(s.backend.Version(), nil, nil)
 		r.send("1", "send", `{"content":"hi"}`)
@@ -3208,7 +3212,8 @@ func testPMs(s *serverUnderTest) {
 		c = s.Reconnect(c, roomName)
 		defer c.Close()
 		c.nicks[c.room.ID()] = "c"
-		c.roomTitle = "private chat with r"
+		c.pmNick = "r"
+		c.pmUserID = r.id()
 		c.expectPing()
 		c.expectSnapshot(s.backend.Version(), []string{id}, []string{msg})
 		c.send("1", "send", `{"content":"hello"}`)
@@ -3220,7 +3225,8 @@ func testPMs(s *serverUnderTest) {
 		c.isManager = true
 		c = s.Reconnect(c, "pminvite")
 		defer c.Close()
-		c.roomTitle = ""
+		c.pmNick = ""
+		c.pmUserID = ""
 		c.expectPing()
 		c.expectSnapshot(s.backend.Version(), nil, nil)
 		c.send("1", "pm-initiate", `{"user_id":"%s"}`, r.id())
@@ -3284,7 +3290,8 @@ func testPMs(s *serverUnderTest) {
 		r = s.Reconnect(r, roomName)
 		defer r.Close()
 		r.nicks[r.room.ID()] = "r"
-		r.roomTitle = "private chat with c"
+		r.pmNick = "c"
+		r.pmUserID = c.id()
 		r.expectPing()
 		r.expectSnapshot(s.backend.Version(), nil, nil)
 		r.send("1", "send", `{"content":"hi"}`)
@@ -3299,7 +3306,8 @@ func testPMs(s *serverUnderTest) {
 		c = s.Reconnect(c, roomName)
 		defer c.Close()
 		c.nicks[c.room.ID()] = "c"
-		c.roomTitle = "private chat with r"
+		c.pmNick = "r"
+		c.pmUserID = r.id()
 		c.expectPing()
 		c.expectSnapshot(s.backend.Version(), []string{id}, []string{msg})
 		c.send("1", "send", `{"content":"hello"}`)
