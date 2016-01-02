@@ -318,7 +318,6 @@ const store = module.exports.store = Reflux.createStore({
       draggingToolboxSelectionToggle: null,
       notices: Immutable.OrderedSet(),
       notificationsNoticeDismissed: false,
-      dismissedPMNotices: Immutable.Set(),
       modalDialog: null,
     }
 
@@ -693,11 +692,6 @@ const store = module.exports.store = Reflux.createStore({
     if (name === 'notifications') {
       storage.setRoom(this.chatState.roomName, 'notificationsNoticeDismissed', true)
     }
-  },
-
-  dismissPMNotice(id) {
-    this.state.dismissedPMNotices = this.state.dismissedPMNotices.add(id)
-    this.trigger(this.state)
   },
 
   openPMWindow(pmId) {

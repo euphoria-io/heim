@@ -27,6 +27,7 @@ const storeActions = module.exports.actions = Reflux.createActions([
   'banUser',
   'banIP',
   'pmInitiate',
+  'dismissPMNotice',
 ])
 storeActions.login = Reflux.createAction({asyncResult: true})
 storeActions.logout = Reflux.createAction({asyncResult: true})
@@ -82,6 +83,7 @@ module.exports.store = Reflux.createStore({
       selectedMessages: Immutable.Set(),
       selectedUsers: Immutable.Set(),
       activePMs: Immutable.Set(),
+      dismissedPMNotices: Immutable.Set(),
     }
 
     this.socket = null
@@ -89,6 +91,7 @@ module.exports.store = Reflux.createStore({
     this._loadingLogs = false
     this._seenMessages = Immutable.Map()
     this._joinWhenReady = false
+    this._lastDismissedPM = null
 
     this.lastActive = null
     this.lastVisit = null
@@ -243,6 +246,10 @@ module.exports.store = Reflux.createStore({
         nick: ev.data.to_nick,
       }))
     } else if (ev.type === 'pm-initiate-event') {
+      if (this._lastDismissedPM == ev.data.pm_id) {
+        this._lastDismissedPM = null
+      }
+      this.state.dismissedPMNotices = this.state.dismissedPMNotices.remove(ev.data.pm_id)
       this.state.activePMs = this.state.activePMs.add(Immutable.Map({
         kind: 'from',
         nick: ev.data.from_nick,
@@ -445,6 +452,13 @@ module.exports.store = Reflux.createStore({
     }
     this.setRoomSettings({showAllReplies: roomStorage.showAllReplies})
     this._seenMessages = Immutable.Map(roomStorage.seenMessages || {})
+
+    // Receive notice of dismissed PM
+    if (data.dismissedPM !== this._lastDismissedPM) {
+      this._lastDismissedPM = data.dismissedPM
+      this.state.dismissedPMNotices = this.state.dismissedPMNotices.add(data.dismissedPM)
+    }
+
     this.trigger(this.state)
   },
 
@@ -576,6 +590,12 @@ module.exports.store = Reflux.createStore({
     this.state.messages.mergeNodes(this.state.selectedMessages.toArray(), {_selected: false})
     this.state.selectedMessages = this.state.selectedMessages.clear()
     this.state.selectedUsers = this.state.selectedUsers.clear()
+    this.trigger(this.state)
+  },
+
+  dismissPMNotice(id) {
+    storage.set('dismissedPM', id)
+    this.state.dismissedPMNotices = this.state.dismissedPMNotices.add(id)
     this.trigger(this.state)
   },
 
