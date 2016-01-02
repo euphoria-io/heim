@@ -1,19 +1,19 @@
 import React from 'react'
 
-import { Item, Link, Text, textDefaults } from '../email'
+import { Item, A, Span, textDefaults } from 'react-html-email'
 
 
 export default function BigButton(props) {
   return (
     <Item align="center" cellPadding={24}>
-      <Link color="white" textDecoration="none" href={props.href} style={{
+      <A color="white" textDecoration="none" href={props.href} style={{
         display: 'inline-block',
         background: props.color,
         padding: '22px 30px',
         borderRadius: '4px',
       }}>
-        <Text {...textDefaults} fontSize={24} fontWeight="bold" color="white">{props.children}</Text>
-      </Link>
+        <Span {...textDefaults} fontSize={24} fontWeight="bold" color="white">{props.children}</Span>
+      </A>
     </Item>
   )
 }

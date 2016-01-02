@@ -1,6 +1,6 @@
 import React from 'react'
 
-import { Item } from '../email'
+import { Item } from 'react-html-email'
 
 
 export default function Footer(props) {

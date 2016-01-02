@@ -1,14 +1,14 @@
 import React from 'react'
 
-import { Box, Item, Link, Image } from '../email'
+import { Box, Item, A, Image } from 'react-html-email'
 
 
 export default function TopBubbleBox(props) {
   return (
     <Item align="center">
-      <Link href="{{.SiteURL}}">
+      <A href="{{.SiteURL}}">
         <Image src={'{{.File `' + props.logo + '`}}'} width={67} height={90} />
-      </Link>
+      </A>
       <Box width="600" cellPadding={2} bgcolor="white" style={{
         borderBottom: '3px solid #ccc',
         borderRadius: '10px',

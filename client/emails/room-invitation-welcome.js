@@ -1,6 +1,6 @@
 import React from 'react'
 
-import { Item, Text, Link } from './email'
+import { Item, Span, A } from 'react-html-email'
 import { StandardEmail, TopBubbleBox, BodyBox, standardFooter, textDefaults } from './common'
 
 
@@ -8,25 +8,25 @@ module.exports = (
   <StandardEmail>
     <TopBubbleBox logo="logo.png">
       <Item align="center">
-        <Text {...textDefaults} fontSize={18}>Hi! <strong>{'{{.SenderName}}'}</strong> invites you to join a {'{{.RoomPrivacy}}'} chat room:</Text>
+        <Span {...textDefaults} fontSize={18}>Hi! <strong>{'{{.SenderName}}'}</strong> invites you to join a {'{{.RoomPrivacy}}'} chat room:</Span>
       </Item>
       <Item align="center">
-        <Link href="https://euphoria.io/room/space">
-          <Text {...textDefaults} fontSize={28} color={null}>&{'{{.RoomName}}'}</Text>
-        </Link>
+        <A href="https://euphoria.io/room/space">
+          <Span {...textDefaults} fontSize={28} color={null}>&{'{{.RoomName}}'}</Span>
+        </A>
       </Item>
     </TopBubbleBox>
     <BodyBox>
       <Item align="center">
-        <Text {...textDefaults} color="#7d7d7d">A note from @{'{{.SenderName}}'}:</Text>
+        <Span {...textDefaults} color="#7d7d7d">A note from @{'{{.SenderName}}'}:</Span>
       </Item>
       <Item>
-        <Text {...textDefaults}>{'{{.SenderMessage}}'}</Text>
+        <Span {...textDefaults}>{'{{.SenderMessage}}'}</Span>
       </Item>
     </BodyBox>
     <BodyBox>
       <Item>
-        <Text {...textDefaults}><Link href="{{.RoomURL}}">&{'{{.RoomName}}'}</Link> is hosted on <Link {...textDefaults} href="{{.SiteURL}}">{'{{.SiteName}}'}</Link>, a free online discussion platform. You don't have to sign up to chat &ndash; just click the link, enter a nickname, and you'll be chatting with {'{{.SenderName}}'} in moments.</Text>
+        <Span {...textDefaults}><A href="{{.RoomURL}}">&{'{{.RoomName}}'}</A> is hosted on <A {...textDefaults} href="{{.SiteURL}}">{'{{.SiteName}}'}</A>, a free online discussion platform. You don't have to sign up to chat &ndash; just click the link, enter a nickname, and you'll be chatting with {'{{.SenderName}}'} in moments.</Span>
       </Item>
     </BodyBox>
     {standardFooter}

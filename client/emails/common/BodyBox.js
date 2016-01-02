@@ -1,6 +1,6 @@
 import React from 'react'
 
-import { Item, Box } from '../email'
+import { Item, Box } from 'react-html-email'
 
 
 export default function BodyBox({children}) {

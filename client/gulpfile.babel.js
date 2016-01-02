@@ -21,6 +21,7 @@ import envify from 'envify/custom'
 import serve from 'gulp-serve'
 import fs from 'fs'
 import path from 'path'
+import ReactHTMLEmail from 'react-html-email'
 import { exec } from 'child_process'
 
 let watching = false
@@ -228,8 +229,9 @@ gulp.task('site-templates', ['heim-git-commit'], () => {
 })
 
 gulp.task('email-templates', () => {
-  require('./emails/email/injectReactAttributes').default()
-  const renderEmail = require('./emails/email/renderEmail').default
+  ReactHTMLEmail.injectReactEmailAttributes()
+  ReactHTMLEmail.configStyleValidator({platforms: ['gmail']})
+  const renderEmail = require('react-html-email').renderEmail
   const emails = ['welcome', 'room-invitation', 'room-invitation-welcome', 'verification', 'password-changed', 'password-reset']
 
   const htmls = merge(_.map(emails, name => {

@@ -1,6 +1,6 @@
 import React from 'react'
 
-import { Email } from '../email'
+import { Email } from 'react-html-email'
 
 
 export default function StandardEmail({children}) {
