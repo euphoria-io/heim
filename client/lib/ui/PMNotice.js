@@ -1,5 +1,6 @@
 import React from 'react'
 
+import chat from '../stores/chat'
 import ui from '../stores/ui'
 import hueHash from '../hueHash'
 import FastButton from './FastButton'
@@ -17,7 +18,7 @@ export default function PMNotice({ pmId, nick, kind }) {
           <FastButton onClick={() => ui.openPMWindow(pmId)} style={{color: textColor}}>join room</FastButton>
         </div>
       </div>
-      <FastButton className="close" onClick={() => ui.dismissPMNotice(pmId)} />
+      <FastButton className="close" onClick={() => chat.dismissPMNotice(pmId)} />
     </div>
   )
 }
