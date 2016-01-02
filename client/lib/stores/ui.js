@@ -47,7 +47,6 @@ const storeActions = Reflux.createActions([
   'closeManagerToolbox',
   'notificationsNoticeChoice',
   'dismissNotice',
-  'dismissPMNotice',
   'openPMWindow',
   'openAccountAuthDialog',
   'openAccountSettingsDialog',
@@ -695,6 +694,7 @@ const store = module.exports.store = Reflux.createStore({
   },
 
   openPMWindow(pmId) {
+    chat.dismissPMNotice(pmId)
     window.open(heimURL('/room/pm:' + pmId))
   },
 

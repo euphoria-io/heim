@@ -127,7 +127,7 @@ func (s *serverUnderTest) openWebsocket(roomName string, cookies []*http.Cookie,
 	}
 	room, err := s.app.resolveRoom(scope.New(), prefix, roomName, client)
 	if err == proto.ErrRoomNotFound {
-		err = fmt.Errorf("roomName: %s:%s", prefix, roomName)
+		err = fmt.Errorf("roomName: %s%s", prefix, roomName)
 	}
 	So(err, ShouldBeNil)
 	return room, conn, resp
@@ -3146,18 +3146,191 @@ func testNotifyUser(s *serverUnderTest) {
 }
 
 func testPMs(s *serverUnderTest) {
-	Convey("Initiate with agent and interact", func() {
+	/*
+		Convey("Initiate with agent and interact", func() {
+			// Create initiator
+			ctx := scope.New()
+			kms := s.app.kms
+			nonce := fmt.Sprintf("%s", time.Now())
+			logan, _, err := s.Account(ctx, kms, "email", "logan"+nonce, "hunter2")
+			So(err, ShouldBeNil)
+			_, err = s.Room(ctx, kms, false, "pminvite", logan)
+			So(err, ShouldBeNil)
+
+			// Create recipient and remain online to receive pm-initiate-event.
+			r := s.Connect("pminvite")
+			r.expectPing()
+			r.expectSnapshot(s.backend.Version(), nil, nil)
+			r.send("1", "nick", `{"name":"r"}`)
+			r.expect("1", "nick-reply", `{"session_id":"*","id":"*","from":"","to":"r"}`)
+			r.Close()
+			r = s.Reconnect(r, "pmwait")
+			r.expectPing()
+			r.expectSnapshot(s.backend.Version(), nil, nil)
+
+			// Try to invite recipient to PM but fail because not logged in
+			c := s.Connect("pminvite2")
+			c.expectPing()
+			c.expectSnapshot(s.backend.Version(), nil, nil)
+			c.send("1", "pm-initiate", `{"user_id":"%s"}`, r.id())
+			c.expectError("1", "pm-initiate-reply", proto.ErrAccessDenied.Error())
+
+			// Log in and invite recipient to PM
+			c.send("2", "login", `{"namespace":"email","id":"logan%s","password":"hunter2"}`, nonce)
+			c.expect("2", "login-reply", `{"success":true,"account_id":"%s"}`, logan.ID())
+			c.Close()
+			c.isManager = true
+			c = s.Reconnect(c, "pminvite")
+			c.expectPing()
+			c.expectSnapshot(s.backend.Version(), nil, nil)
+			c.send("1", "nick", `{"name":"c"}`)
+			c.expect("1", "nick-reply", `{"session_id":"*","id":"*","from":"","to":"c"}`)
+			c.send("2", "pm-initiate", `{"user_id":"%s"}`, r.id())
+			capture := c.expect("2", "pm-initiate-reply", `{"pm_id":"*","to_nick":"r"}`)
+			pmID := capture["pm_id"].(string)
+			c.Close()
+
+			// Recipient receive pm-initiate-event and reconnect to PM room
+			r.expect("", "pm-initiate-event", `{"from":"%s","from_nick":"c","from_room":"pminvite","pm_id":"%s"}`, c.id(), pmID)
+			roomName := fmt.Sprintf("pm:%s", pmID)
+			r.accountHasAccess = true
+			r = s.Reconnect(r, roomName)
+			defer r.Close()
+			r.nicks[r.room.ID()] = "r"
+			r.pmNick = "c"
+			r.pmUserID = c.id()
+			r.expectPing()
+			r.expectSnapshot(s.backend.Version(), nil, nil)
+			r.send("1", "send", `{"content":"hi"}`)
+			id := `{"session_id":"*","id":"*","name":"r","server_id":"*","server_era":"*"}`
+			capture = r.expect("1", "send-reply", `{"id":"*","time":"*","sender":%s,"content":"*","encryption_key_id":"*"}`, id)
+			msg := fmt.Sprintf(`{"id":"%s","time":%f,"sender":%s,"content":"hi","encryption_key_id":"%s"}`,
+				capture["id"], capture["time"], id, capture["encryption_key_id"])
+			So(capture["encryption_key_id"], ShouldEqual, "v1/"+roomName)
+
+			c.accountHasAccess = true
+			c.isManager = false
+			c = s.Reconnect(c, roomName)
+			defer c.Close()
+			c.nicks[c.room.ID()] = "c"
+			c.pmNick = "r"
+			c.pmUserID = r.id()
+			c.expectPing()
+			c.expectSnapshot(s.backend.Version(), []string{id}, []string{msg})
+			c.send("1", "send", `{"content":"hello"}`)
+			c.expect("1", "send-reply", `{"id":"*","time":"*","sender":"*","content":"*","encryption_key_id":"%s"}`, capture["encryption_key_id"])
+			r.expect("", "join-event", `{"session_id":"*","id":"*","name":"c","server_id":"*","server_era":"*"}`)
+			r.expect("", "send-event", `{"id":"*","time":"*","sender":"*","content":"hello","encryption_key_id":"*"}`)
+
+			// A repeat pm invitation should reuse the same pm_id
+			c.isManager = true
+			c = s.Reconnect(c, "pminvite")
+			defer c.Close()
+			c.pmNick = ""
+			c.pmUserID = ""
+			c.expectPing()
+			c.expectSnapshot(s.backend.Version(), nil, nil)
+			c.send("1", "pm-initiate", `{"user_id":"%s"}`, r.id())
+			c.expect("1", "pm-initiate-reply", `{"pm_id":"%s","to_nick":"r"}`, pmID)
+		})
+
+		Convey("Initiate with account and interact", func() {
+			// Create initiator
+			ctx := scope.New()
+			kms := s.app.kms
+			nonce := fmt.Sprintf("%s", time.Now())
+			alice, _, err := s.Account(ctx, kms, "email", "alice"+nonce, "hunter2")
+			So(err, ShouldBeNil)
+			bob, _, err := s.Account(ctx, kms, "email", "bob"+nonce, "hunter2")
+			So(err, ShouldBeNil)
+			_, err = s.Room(ctx, kms, false, "pmtoaccount", alice)
+
+			// Log in both parties and connect to common room.
+			r := s.Connect("pmtoaccount")
+			r.expectPing()
+			r.expectSnapshot(s.backend.Version(), nil, nil)
+			r.send("2", "login", `{"namespace":"email","id":"bob%s","password":"hunter2"}`, nonce)
+			r.expect("2", "login-reply", `{"success":true,"account_id":"%s"}`, bob.ID())
+			r.Close()
+
+			r = s.Reconnect(r, "pmtoaccount")
+			r.expectPing()
+			r.expectSnapshot(s.backend.Version(), nil, nil)
+			r.send("1", "nick", `{"name":"r"}`)
+			r.expect("1", "nick-reply", `{"session_id":"*","id":"*","from":"","to":"r"}`)
+			r.Close()
+			r = s.Reconnect(r, "pmtoaccount2")
+			r.expectPing()
+			r.expectSnapshot(s.backend.Version(), nil, nil)
+
+			c := s.Connect("pmtoaccount")
+			c.expectPing()
+			c.expectSnapshot(s.backend.Version(), nil, nil)
+			c.send("1", "login", `{"namespace":"email","id":"alice%s","password":"hunter2"}`, nonce)
+			c.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, alice.ID())
+			c.Close()
+
+			c.isManager = true
+			c = s.Reconnect(c, "pmtoaccount")
+			c.expectPing()
+			c.expectSnapshot(s.backend.Version(), nil, nil)
+
+			c.send("1", "nick", `{"name":"c"}`)
+			c.expect("1", "nick-reply", `{"session_id":"*","id":"*","from":"","to":"c"}`)
+			c.send("2", "pm-initiate", `{"user_id":"%s"}`, r.id())
+			capture := c.expect("2", "pm-initiate-reply", `{"pm_id":"*","to_nick":"r"}`)
+			c.Close()
+
+			// Recipient receive pm-initiate-event and reconnect to PM room
+			r.expect(
+				"", "pm-initiate-event", `{"from":"%s","from_nick":"c","from_room":"pmtoaccount","pm_id":"%s"}`,
+				c.id(), capture["pm_id"])
+			roomName := fmt.Sprintf("pm:%s", capture["pm_id"])
+			r.Close()
+			r.accountHasAccess = true
+			r = s.Reconnect(r, roomName)
+			defer r.Close()
+			r.nicks[r.room.ID()] = "r"
+			r.pmNick = "c"
+			r.pmUserID = c.id()
+			r.expectPing()
+			r.expectSnapshot(s.backend.Version(), nil, nil)
+			r.send("1", "send", `{"content":"hi"}`)
+			id := `{"session_id":"*","id":"*","name":"r","server_id":"*","server_era":"*"}`
+			capture = r.expect("1", "send-reply", `{"id":"*","time":"*","sender":%s,"content":"*","encryption_key_id":"*"}`, id)
+			msg := fmt.Sprintf(`{"id":"%s","time":%f,"sender":%s,"content":"hi","encryption_key_id":"%s"}`,
+				capture["id"], capture["time"], id, capture["encryption_key_id"])
+			So(capture["encryption_key_id"], ShouldEqual, "v1/"+roomName)
+
+			c.accountHasAccess = true
+			c.isManager = false
+			c = s.Reconnect(c, roomName)
+			defer c.Close()
+			c.nicks[c.room.ID()] = "c"
+			c.pmNick = "r"
+			c.pmUserID = r.id()
+			c.expectPing()
+			c.expectSnapshot(s.backend.Version(), []string{id}, []string{msg})
+			c.send("1", "send", `{"content":"hello"}`)
+			c.expect("1", "send-reply", `{"id":"*","time":"*","sender":"*","content":"*","encryption_key_id":"%s"}`, capture["encryption_key_id"])
+			r.expect("", "join-event", `{"session_id":"*","id":"*","name":"c","server_id":"*","server_era":"*"}`)
+			r.expect("", "send-event", `{"id":"*","time":"*","sender":"*","content":"hello","encryption_key_id":"*"}`)
+		})
+	*/
+
+	Convey("Initiate with agent, interact, log in, then interact", func() {
 		// Create initiator
 		ctx := scope.New()
 		kms := s.app.kms
 		nonce := fmt.Sprintf("%s", time.Now())
-		logan, _, err := s.Account(ctx, kms, "email", "logan"+nonce, "hunter2")
+		alice, _, err := s.Account(ctx, kms, "email", "alice"+nonce, "hunter2")
 		So(err, ShouldBeNil)
-		_, err = s.Room(ctx, kms, false, "pminvite", logan)
+		bob, _, err := s.Account(ctx, kms, "email", "bob"+nonce, "hunter2")
 		So(err, ShouldBeNil)
+		_, err = s.Room(ctx, kms, false, "pmtransmit1", alice)
 
 		// Create recipient and remain online to receive pm-initiate-event.
-		r := s.Connect("pminvite")
+		r := s.Connect("pmtransmit1")
 		r.expectPing()
 		r.expectSnapshot(s.backend.Version(), nil, nil)
 		r.send("1", "nick", `{"name":"r"}`)
@@ -3167,19 +3340,15 @@ func testPMs(s *serverUnderTest) {
 		r.expectPing()
 		r.expectSnapshot(s.backend.Version(), nil, nil)
 
-		// Try to invite recipient to PM but fail because not logged in
-		c := s.Connect("pminvite2")
+		// Log in and invite recipient to PM
+		c := s.Connect("pmtransmit1")
 		c.expectPing()
 		c.expectSnapshot(s.backend.Version(), nil, nil)
-		c.send("1", "pm-initiate", `{"user_id":"%s"}`, r.id())
-		c.expectError("1", "pm-initiate-reply", proto.ErrAccessDenied.Error())
-
-		// Log in and invite recipient to PM
-		c.send("2", "login", `{"namespace":"email","id":"logan%s","password":"hunter2"}`, nonce)
-		c.expect("2", "login-reply", `{"success":true,"account_id":"%s"}`, logan.ID())
+		c.send("1", "login", `{"namespace":"email","id":"alice%s","password":"hunter2"}`, nonce)
+		c.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, alice.ID())
 		c.Close()
 		c.isManager = true
-		c = s.Reconnect(c, "pminvite")
+		c = s.Reconnect(c, "pmtransmit1")
 		c.expectPing()
 		c.expectSnapshot(s.backend.Version(), nil, nil)
 		c.send("1", "nick", `{"name":"c"}`)
@@ -3187,25 +3356,8 @@ func testPMs(s *serverUnderTest) {
 		c.send("2", "pm-initiate", `{"user_id":"%s"}`, r.id())
 		capture := c.expect("2", "pm-initiate-reply", `{"pm_id":"*","to_nick":"r"}`)
 		pmID := capture["pm_id"].(string)
-		c.Close()
-
-		// Recipient receive pm-initiate-event and reconnect to PM room
-		r.expect("", "pm-initiate-event", `{"from":"%s","from_nick":"c","from_room":"pminvite","pm_id":"%s"}`, c.id(), pmID)
 		roomName := fmt.Sprintf("pm:%s", pmID)
-		r.accountHasAccess = true
-		r = s.Reconnect(r, roomName)
-		defer r.Close()
-		r.nicks[r.room.ID()] = "r"
-		r.pmNick = "c"
-		r.pmUserID = c.id()
-		r.expectPing()
-		r.expectSnapshot(s.backend.Version(), nil, nil)
-		r.send("1", "send", `{"content":"hi"}`)
-		id := `{"session_id":"*","id":"*","name":"r","server_id":"*","server_era":"*"}`
-		capture = r.expect("1", "send-reply", `{"id":"*","time":"*","sender":%s,"content":"*","encryption_key_id":"*"}`, id)
-		msg := fmt.Sprintf(`{"id":"%s","time":%f,"sender":%s,"content":"hi","encryption_key_id":"%s"}`,
-			capture["id"], capture["time"], id, capture["encryption_key_id"])
-		So(capture["encryption_key_id"], ShouldEqual, "v1/"+roomName)
+		c.Close()
 
 		c.accountHasAccess = true
 		c.isManager = false
@@ -3215,25 +3367,38 @@ func testPMs(s *serverUnderTest) {
 		c.pmNick = "r"
 		c.pmUserID = r.id()
 		c.expectPing()
-		c.expectSnapshot(s.backend.Version(), []string{id}, []string{msg})
-		c.send("1", "send", `{"content":"hello"}`)
-		c.expect("1", "send-reply", `{"id":"*","time":"*","sender":"*","content":"*","encryption_key_id":"%s"}`, capture["encryption_key_id"])
-		r.expect("", "join-event", `{"session_id":"*","id":"*","name":"c","server_id":"*","server_era":"*"}`)
-		r.expect("", "send-event", `{"id":"*","time":"*","sender":"*","content":"hello","encryption_key_id":"*"}`)
-
-		// A repeat pm invitation should reuse the same pm_id
-		c.isManager = true
-		c = s.Reconnect(c, "pminvite")
-		defer c.Close()
-		c.pmNick = ""
-		c.pmUserID = ""
-		c.expectPing()
 		c.expectSnapshot(s.backend.Version(), nil, nil)
-		c.send("1", "pm-initiate", `{"user_id":"%s"}`, r.id())
-		c.expect("1", "pm-initiate-reply", `{"pm_id":"%s","to_nick":"r"}`, pmID)
+		c.send("1", "send", `{"content":"hello"}`)
+		capture = c.expect("1", "send-reply", `{"id":"*","time":"*","sender":"*","content":"*","encryption_key_id":"*"}`)
+
+		// Receive invitation, join room, log in, and rejoin.
+		agentID := r.id()
+		r.expect("", "pm-initiate-event", `{"from":"%s","from_nick":"c","from_room":"pmtransmit1","pm_id":"%s"}`, c.id(), pmID)
+		r.Close()
+		r.accountHasAccess = true
+		r = s.Reconnect(r, roomName)
+		r.nicks[r.room.ID()] = "r"
+		r.pmNick = "c"
+		r.pmUserID = c.id()
+		r.expectPing()
+		id := `{"session_id":"*","id":"*","name":"c","server_id":"*","server_era":"*"}`
+		msg := fmt.Sprintf(`{"id":"%s","time":%f,"sender":%s,"content":"hello","encryption_key_id":"%s"}`,
+			capture["id"], capture["time"], id, capture["encryption_key_id"])
+		r.expectSnapshot(s.backend.Version(), []string{id}, []string{msg})
+		r.send("1", "login", `{"namespace":"email","id":"bob%s","password":"hunter2"}`, nonce)
+		r.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, bob.ID())
+		r.Close()
+		r = s.Reconnect(r, roomName)
+		defer r.Close()
+		r.expectPing()
+		r.expectSnapshot(s.backend.Version(), []string{id}, []string{msg})
+
+		c.expect("", "join-event", `{"session_id":"*","id":"%s","name":"r","server_id":"*","server_era":"*"}`, agentID)
+		c.expect("", "part-event", `{"session_id":"*","id":"%s","name":"r","server_id":"*","server_era":"*"}`, agentID)
+		c.expect("", "join-event", `{"session_id":"*","id":"account:%s","name":"r","server_id":"*","server_era":"*"}`, bob.ID())
 	})
 
-	Convey("Initiate with account and interact", func() {
+	Convey("Initiate with agent, who logs in before interacting", func() {
 		// Create initiator
 		ctx := scope.New()
 		kms := s.app.kms
@@ -3242,64 +3407,37 @@ func testPMs(s *serverUnderTest) {
 		So(err, ShouldBeNil)
 		bob, _, err := s.Account(ctx, kms, "email", "bob"+nonce, "hunter2")
 		So(err, ShouldBeNil)
-		_, err = s.Room(ctx, kms, false, "pmtoaccount", alice)
+		_, err = s.Room(ctx, kms, false, "pmtransmit2", alice)
 
-		// Log in both parties and connect to common room.
-		r := s.Connect("pmtoaccount")
-		r.expectPing()
-		r.expectSnapshot(s.backend.Version(), nil, nil)
-		r.send("2", "login", `{"namespace":"email","id":"bob%s","password":"hunter2"}`, nonce)
-		r.expect("2", "login-reply", `{"success":true,"account_id":"%s"}`, bob.ID())
-		r.Close()
-
-		r = s.Reconnect(r, "pmtoaccount")
+		// Create recipient and remain online to receive pm-initiate-event.
+		r := s.Connect("pmtransmit2")
 		r.expectPing()
 		r.expectSnapshot(s.backend.Version(), nil, nil)
 		r.send("1", "nick", `{"name":"r"}`)
 		r.expect("1", "nick-reply", `{"session_id":"*","id":"*","from":"","to":"r"}`)
 		r.Close()
-		r = s.Reconnect(r, "pmtoaccount2")
+		r = s.Reconnect(r, "pmwait")
 		r.expectPing()
 		r.expectSnapshot(s.backend.Version(), nil, nil)
 
-		c := s.Connect("pmtoaccount")
+		// Log in and invite recipient to PM
+		c := s.Connect("pmtransmit2")
 		c.expectPing()
 		c.expectSnapshot(s.backend.Version(), nil, nil)
 		c.send("1", "login", `{"namespace":"email","id":"alice%s","password":"hunter2"}`, nonce)
 		c.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, alice.ID())
 		c.Close()
-
 		c.isManager = true
-		c = s.Reconnect(c, "pmtoaccount")
+		c = s.Reconnect(c, "pmtransmit2")
 		c.expectPing()
 		c.expectSnapshot(s.backend.Version(), nil, nil)
-
 		c.send("1", "nick", `{"name":"c"}`)
 		c.expect("1", "nick-reply", `{"session_id":"*","id":"*","from":"","to":"c"}`)
 		c.send("2", "pm-initiate", `{"user_id":"%s"}`, r.id())
 		capture := c.expect("2", "pm-initiate-reply", `{"pm_id":"*","to_nick":"r"}`)
+		pmID := capture["pm_id"].(string)
+		roomName := fmt.Sprintf("pm:%s", pmID)
 		c.Close()
-
-		// Recipient receive pm-initiate-event and reconnect to PM room
-		r.expect(
-			"", "pm-initiate-event", `{"from":"%s","from_nick":"c","from_room":"pmtoaccount","pm_id":"%s"}`,
-			c.id(), capture["pm_id"])
-		roomName := fmt.Sprintf("pm:%s", capture["pm_id"])
-		r.Close()
-		r.accountHasAccess = true
-		r = s.Reconnect(r, roomName)
-		defer r.Close()
-		r.nicks[r.room.ID()] = "r"
-		r.pmNick = "c"
-		r.pmUserID = c.id()
-		r.expectPing()
-		r.expectSnapshot(s.backend.Version(), nil, nil)
-		r.send("1", "send", `{"content":"hi"}`)
-		id := `{"session_id":"*","id":"*","name":"r","server_id":"*","server_era":"*"}`
-		capture = r.expect("1", "send-reply", `{"id":"*","time":"*","sender":%s,"content":"*","encryption_key_id":"*"}`, id)
-		msg := fmt.Sprintf(`{"id":"%s","time":%f,"sender":%s,"content":"hi","encryption_key_id":"%s"}`,
-			capture["id"], capture["time"], id, capture["encryption_key_id"])
-		So(capture["encryption_key_id"], ShouldEqual, "v1/"+roomName)
 
 		c.accountHasAccess = true
 		c.isManager = false
@@ -3309,10 +3447,27 @@ func testPMs(s *serverUnderTest) {
 		c.pmNick = "r"
 		c.pmUserID = r.id()
 		c.expectPing()
-		c.expectSnapshot(s.backend.Version(), []string{id}, []string{msg})
+		c.expectSnapshot(s.backend.Version(), nil, nil)
 		c.send("1", "send", `{"content":"hello"}`)
-		c.expect("1", "send-reply", `{"id":"*","time":"*","sender":"*","content":"*","encryption_key_id":"%s"}`, capture["encryption_key_id"])
-		r.expect("", "join-event", `{"session_id":"*","id":"*","name":"c","server_id":"*","server_era":"*"}`)
-		r.expect("", "send-event", `{"id":"*","time":"*","sender":"*","content":"hello","encryption_key_id":"*"}`)
+		capture = c.expect("1", "send-reply", `{"id":"*","time":"*","sender":"*","content":"*","encryption_key_id":"*"}`)
+
+		// Receive invitation, log in, join room.
+		r.expect("", "pm-initiate-event", `{"from":"%s","from_nick":"c","from_room":"pmtransmit2","pm_id":"%s"}`, c.id(), pmID)
+		r.send("2", "login", `{"namespace":"email","id":"bob%s","password":"hunter2"}`, nonce)
+		r.expect("2", "login-reply", `{"success":true,"account_id":"%s"}`, bob.ID())
+		r.Close()
+
+		r.accountHasAccess = true
+		r = s.Reconnect(r, roomName)
+		r.nicks[r.room.ID()] = "r"
+		r.pmNick = "c"
+		r.pmUserID = c.id()
+		r.expectPing()
+		id := `{"session_id":"*","id":"*","name":"c","server_id":"*","server_era":"*"}`
+		msg := fmt.Sprintf(`{"id":"%s","time":%f,"sender":%s,"content":"hello","encryption_key_id":"%s"}`,
+			capture["id"], capture["time"], id, capture["encryption_key_id"])
+		r.expectSnapshot(s.backend.Version(), []string{id}, []string{msg})
+
+		c.expect("", "join-event", `{"session_id":"*","id":"account:%s","name":"r","server_id":"*","server_era":"*"}`, bob.ID())
 	})
 }
