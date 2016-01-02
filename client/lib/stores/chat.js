@@ -84,6 +84,7 @@ module.exports.store = Reflux.createStore({
       selectedUsers: Immutable.Set(),
       activePMs: Immutable.Set(),
       dismissedPMNotices: Immutable.Set(),
+      pmRoom: false,
     }
 
     this.socket = null
@@ -108,6 +109,7 @@ module.exports.store = Reflux.createStore({
   },
 
   socketOpen() {
+    storage.set('dismissedPM', null)
     this.state.connected = true
     if (this.state.authType === 'passcode' && this.state.authData) {
       this._sendPasscode(this.state.authData)
@@ -165,12 +167,12 @@ module.exports.store = Reflux.createStore({
         this.state.authState = null
       }
     } else if (ev.type === 'snapshot-event') {
-      let title = ev.data.room_title
-      if (title && title[0] === '&') {
-        title = title.substr(1)
+      this.state.roomTitle = this.state.roomName
+      if (ev.data.pm_with_nick) {
+        this.state.roomTitle = ev.data.pm_with_nick + ' (private chat)'
+        this.state.pmRoom = true
       }
-      Heim.setTitlePrefix(title)
-      this.state.roomTitle = ev.data.room_title
+      Heim.setTitlePrefix(this.state.roomTitle)
       this.state.serverVersion = ev.data.version
       this.state.sessionId = ev.data.session_id
       if (!this.state.nick) {
@@ -240,13 +242,14 @@ module.exports.store = Reflux.createStore({
         console.warn('error banning:', ev.error)  // eslint-disable-line no-console
       }
     } else if (ev.type === 'pm-initiate-reply') {
+      this.state.dismissedPMNotices = this.state.dismissedPMNotices.remove(ev.data.pm_id)
       this.state.activePMs = this.state.activePMs.add(Immutable.Map({
         kind: 'to',
         id: ev.data.pm_id,
         nick: ev.data.to_nick,
       }))
     } else if (ev.type === 'pm-initiate-event') {
-      if (this._lastDismissedPM == ev.data.pm_id) {
+      if (this._lastDismissedPM === ev.data.pm_id) {
         this._lastDismissedPM = null
       }
       this.state.dismissedPMNotices = this.state.dismissedPMNotices.remove(ev.data.pm_id)

@@ -68,6 +68,7 @@ export function fakeEnv(env) {
 window.Heim = {
   setFavicon: () => {},
   setTitleMsg: () => {},
+  setTitlePrefix: () => {},
 }
 
 export default { setupClock, listenOnce, resetStore, fakeEnv }

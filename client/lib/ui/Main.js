@@ -259,7 +259,7 @@ export default React.createClass({
 
     const roomName = this.state.chat.roomName
     const roomTitle = this.state.chat.roomTitle || ''
-    const pmNotices = this.state.chat.activePMs.filterNot(pm => this.state.chat.dismissedPMNotices.contains(pm.get('id')))
+    const pmNotices = this.state.chat.activePMs.filterNot(pm => this.state.chat.pmRoom || this.state.chat.dismissedPMNotices.contains(pm.get('id')))
 
     const snapPoints = {main: 0}
     if (infoPaneHidden) {

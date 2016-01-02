@@ -201,13 +201,31 @@ func (pm *PM) upgradeToAccountReceiver(ctx scope.Context, b Backend, kms securit
 	}
 
 	// Re-encrypt PM key for account.
+	pm.Receiver = UserID(fmt.Sprintf("account:%s", client.Account.ID()))
+	var (
+		mac [16]byte
+		key [32]byte
+	)
+	copy(key[:], pmKey.Plaintext)
+	poly1305.Sum(&mac, []byte(pm.Receiver), &key)
+	pm.ReceiverMAC = mac[:]
+
+	userKey := client.Account.UserKey()
+	if err := userKey.Decrypt(client.Authorization.ClientKey); err != nil {
+		return nil, err
+	}
+
 	encryptedReceiverKey := pmKey.Clone()
 	encryptedReceiverKey.IV = pm.IV
-	if err := encryptedReceiverKey.Encrypt(client.Authorization.ClientKey); err != nil {
+	if err := encryptedReceiverKey.Encrypt(&userKey); err != nil {
 		return nil, err
 	}
 	pm.EncryptedReceiverKey = &encryptedReceiverKey
-	pm.Receiver = UserID(fmt.Sprintf("account:%s", client.Account.ID()))
+
+	if err := pm.verifyKey(&pmKey); err != nil {
+		return nil, err
+	}
+
 	return &pmKey, nil
 }
 

@@ -208,8 +208,8 @@ func (t *PMTracker) Room(ctx scope.Context, kms security.KMS, pmID snowflake.Sno
 
 	if modified {
 		_, err := t.Backend.DbMap.Exec(
-			"UPDATE pm SET receiver = $2, encrypted_receiver_key = $3 WHERE id = $1",
-			pm.ID.String(), string(pm.Receiver), pm.EncryptedReceiverKey.Ciphertext)
+			"UPDATE pm SET receiver = $2, receiver_mac = $3, encrypted_receiver_key = $4 WHERE id = $1",
+			pm.ID.String(), string(pm.Receiver), pm.ReceiverMAC, pm.EncryptedReceiverKey.Ciphertext)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -218,7 +218,7 @@ func (t *PMTracker) Room(ctx scope.Context, kms security.KMS, pmID snowflake.Sno
 	room := &PMRoomBinding{
 		RoomBinding: RoomBinding{
 			RoomName:  fmt.Sprintf("pm:%s", pm.ID),
-			RoomTitle: fmt.Sprintf("private chat with %s", otherName),
+			RoomTitle: fmt.Sprintf("%s (private chat)", otherName),
 			Backend:   t.Backend,
 		},
 		pm: pm,
