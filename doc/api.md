@@ -498,6 +498,7 @@ room.
 | Field | Type | Required? | Description |
 | :-- | :-- | :-- | :--------- |
 | `pm_id` | [Snowflake](#snowflake) | required |  the private chat can be accessed at /room/pm:*PMID* |
+| `to_nick` | [string](#string) | required |  the nickname of the recipient of the invitation |
 
 
 
@@ -1370,29 +1371,6 @@ This packet has no fields.
 
 
 
-## login-event
-
-The `login-event` packet is sent to all sessions of an agent when that
-agent is logged in (except for the session that issued the login command).
-
-
-| Field | Type | Required? | Description |
-| :-- | :-- | :-- | :--------- |
-| `account_id` | [Snowflake](#snowflake) | required |  |
-
-
-
-
-## logout-event
-
-The `logout-event` packet is sent to all sessions of an agent when that
-agent is logged out (except for the session that issued the logout command).
-
-
-This packet has no fields.
-
-
-
 ## network-event
 
 A `network-event` indicates some server-side event that impacts the presence
@@ -1498,6 +1476,8 @@ with them privately.
 | Field | Type | Required? | Description |
 | :-- | :-- | :-- | :--------- |
 | `from` | [UserID](#userid) | required |  the id of the user inviting the client to chat privately |
+| `from_nick` | [string](#string) | required |  the nick of the inviting user |
+| `from_room` | [string](#string) | required |  the room where the invitation was sent from |
 | `pm_id` | [Snowflake](#snowflake) | required |  the private chat can be accessed at /room/pm:*PMID* |
 
 
@@ -1537,6 +1517,9 @@ It also offers a snapshot of the room's state and recent history.
 | `version` | [string](#string) | required |  the server's version identifier |
 | `listing` | [[SessionView](#sessionview)] | required |  the list of all other sessions joined to the room (excluding this session) |
 | `log` | [[Message](#message)] | required |  the most recent messages posted to the room (currently up to 100) |
+| `nick` | [string](#string) | *optional* |  the acting nick of the session; if omitted, client set nick before speaking |
+| `pm_with_nick` | [string](#string) | *optional* |  if given, this room is for private chat with the given nick |
+| `pm_with_user_id` | [UserID](#userid) | *optional* |  if given, this room is for private chat with the given user |
 
 
 
