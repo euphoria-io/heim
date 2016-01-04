@@ -1,7 +1,7 @@
 require('./support/setup')
 import assert from 'assert'
 
-import Hooks from '../lib/hooks'
+import Hooks from '../lib/Hooks'
 
 
 describe('Hooks', () => {

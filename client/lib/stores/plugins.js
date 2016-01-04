@@ -1,7 +1,7 @@
 import _ from 'lodash'
 import Reflux from 'reflux'
 
-import Hooks from '../hooks'
+import Hooks from '../Hooks'
 import fauxPlugins from '../fauxPlugins'
 
 
