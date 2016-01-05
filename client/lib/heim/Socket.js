@@ -172,7 +172,14 @@ export default class Socket {
 
   send(data, log) {
     if (this.ws.readyState === WebSocket.OPEN) {
-      this._send(data, log)
+      try {
+        this._send(data, log)
+      } catch (err) {
+        // on exception (connection dropped?) reconnect and retry
+        console.warn('error sending to socket. reconnecting and retrying.', err, data)  // eslint-disable-line no-console
+        this._sendBuffer.push({data, log: !!log})
+        this.reconnect()
+      }
     } else {
       if (this._logPackets || log) {
         logPacket('buffered-send', data, log)

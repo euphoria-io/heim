@@ -112,6 +112,46 @@ describe('socket store', () => {
     })
   })
 
+  describe('websocket errors on send', () => {
+    beforeEach(() => {
+      socket.connect('https://heimhost/test', 'ezzie')
+      sinon.stub(console, 'warn')  // eslint-disable-line no-console
+    })
+
+    afterEach(() => {
+      console.warn.restore()  // eslint-disable-line no-console
+    })
+
+    it('should trigger a reconnect and retry once', () => {
+      fakeWebSocketContructor.reset()
+      const sendStub = fakeWebSocket.send = sinon.stub().throws()
+      socket.send({
+        type: 'ping',
+      })
+      sinon.assert.calledWithExactly(sendStub, JSON.stringify({
+        type: 'ping',
+        id: '0',
+        data: {},
+      }))
+      assert.deepEqual(socket._sendBuffer, [
+        {data: {type: 'ping', id: '0', data: {}}, log: false},
+      ])
+      sinon.assert.called(fakeWebSocketContructor)
+      sinon.assert.calledWith(console.warn, 'error sending to socket. reconnecting and retrying.')  // eslint-disable-line no-console
+      fakeWebSocketContructor.reset()
+
+      // simulate socket crashing a second time, and ensure we don't loop
+      const sendStub2 = fakeWebSocket.send = sinon.stub().throws()
+      assert.throws(() => socket._onOpen())
+      sinon.assert.calledWithExactly(sendStub2, JSON.stringify({
+        type: 'ping',
+        id: '0',
+        data: {},
+      }))
+      sinon.assert.notCalled(fakeWebSocketContructor)
+    })
+  })
+
   describe('connect method', () => {
     it('should by connect to wss://heimhost/test/ws?h=1 with heim1 protocol', () => {
       socket.connect('https://heimhost/test', 'ezzie')
