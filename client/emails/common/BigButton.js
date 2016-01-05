@@ -7,7 +7,6 @@ export default function BigButton(props) {
   return (
     <Item align="center">
       <A color="white" textDecoration="none" href={props.href} style={{
-        display: 'inline-block',
         background: props.color,
         padding: '22px 30px',
         borderRadius: '4px',
