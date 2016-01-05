@@ -5,7 +5,7 @@ import { Item, A, Span, textDefaults } from 'react-html-email'
 
 export default function BigButton(props) {
   return (
-    <Item align="center" cellPadding={24}>
+    <Item align="center">
       <A color="white" textDecoration="none" href={props.href} style={{
         display: 'inline-block',
         background: props.color,
