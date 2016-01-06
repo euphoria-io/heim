@@ -3333,10 +3333,6 @@ func testPMs(s *serverUnderTest) {
 		r.expectSnapshot(s.backend.Version(), nil, nil)
 		r.send("1", "nick", `{"name":"r"}`)
 		r.expect("1", "nick-reply", `{"session_id":"*","id":"*","from":"","to":"r"}`)
-		r.Close()
-		r = s.Reconnect(r, "pmwait")
-		r.expectPing()
-		r.expectSnapshot(s.backend.Version(), nil, nil)
 
 		// Log in and invite recipient to PM
 		c := s.Connect("pmlogin1")
@@ -3348,7 +3344,8 @@ func testPMs(s *serverUnderTest) {
 		c.isManager = true
 		c = s.Reconnect(c, "pmtransmit1")
 		c.expectPing()
-		c.expectSnapshot(s.backend.Version(), nil, nil)
+		id := `{"session_id":"*","id":"*","name":"r","server_id":"*","server_era":"*","client_address":"*"}`
+		c.expectSnapshot(s.backend.Version(), []string{id}, nil)
 		c.send("1", "nick", `{"name":"c"}`)
 		c.expect("1", "nick-reply", `{"session_id":"*","id":"*","from":"","to":"c"}`)
 		c.send("2", "pm-initiate", `{"user_id":"%s"}`, r.id())
@@ -3371,6 +3368,8 @@ func testPMs(s *serverUnderTest) {
 
 		// Receive invitation, join room, log in, and rejoin.
 		agentID := r.id()
+		r.expect("", "join-event", `{"session_id":"*","id":"*","name":"","server_id":"*","server_era":"*","is_manager":true}`)
+		r.expect("", "nick-event", `{"session_id":"*","id":"*","from":"","to":"c"}`)
 		r.expect("", "pm-initiate-event", `{"from":"%s","from_nick":"c","from_room":"pmtransmit1","pm_id":"%s"}`, c.id(), pmID)
 		r.Close()
 		r.accountHasAccess = true
@@ -3379,7 +3378,7 @@ func testPMs(s *serverUnderTest) {
 		r.pmNick = "c"
 		r.pmUserID = c.id()
 		r.expectPing()
-		id := `{"session_id":"*","id":"*","name":"c","server_id":"*","server_era":"*"}`
+		id = `{"session_id":"*","id":"*","name":"c","server_id":"*","server_era":"*"}`
 		msg := fmt.Sprintf(`{"id":"%s","time":%f,"sender":%s,"content":"hello","encryption_key_id":"%s"}`,
 			capture["id"], capture["time"], id, capture["encryption_key_id"])
 		r.expectSnapshot(s.backend.Version(), []string{id}, []string{msg})
