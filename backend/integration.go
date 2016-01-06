@@ -3339,7 +3339,7 @@ func testPMs(s *serverUnderTest) {
 		r.expectSnapshot(s.backend.Version(), nil, nil)
 
 		// Log in and invite recipient to PM
-		c := s.Connect("pmtransmit1")
+		c := s.Connect("pmlogin1")
 		c.expectPing()
 		c.expectSnapshot(s.backend.Version(), nil, nil)
 		c.send("1", "login", `{"namespace":"email","id":"alice%s","password":"hunter2"}`, nonce)
@@ -3419,7 +3419,7 @@ func testPMs(s *serverUnderTest) {
 		r.expectSnapshot(s.backend.Version(), nil, nil)
 
 		// Log in and invite recipient to PM
-		c := s.Connect("pmtransmit2")
+		c := s.Connect("pmlogin2")
 		c.expectPing()
 		c.expectSnapshot(s.backend.Version(), nil, nil)
 		c.send("1", "login", `{"namespace":"email","id":"alice%s","password":"hunter2"}`, nonce)
