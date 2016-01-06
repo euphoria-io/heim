@@ -3397,9 +3397,6 @@ func testPMs(s *serverUnderTest) {
 	})
 
 	Convey("Initiate with agent, who logs in before interacting", func() {
-		// FIXME: frequently failing test
-		return
-
 		// Create initiator
 		ctx := scope.New()
 		kms := s.app.kms
