@@ -16,7 +16,7 @@
     "react-addons-css-transition-group": "~0.14.2",
     "react-addons-transition-group": "~0.14.2",
     "react-addons-pure-render-mixin": "~0.14.2",
-    "react-html-email": "~0.2.0",
+    "react-html-email": "~0.2.1",
     "reflux": "~0.2.1",
     "classnames": "~1.2.1",
     "moment": "~2.8.4",
