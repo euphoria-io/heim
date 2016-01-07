@@ -773,7 +773,7 @@ type WhoCommand struct{}
 
 // The `who-reply` packet lists the sessions currently joined in the room.
 type WhoReply struct {
-	Listing `json:"listing"` // a list of session views
+	Listing Listing `json:"listing"` // a list of session views
 }
 
 type Packet struct {
