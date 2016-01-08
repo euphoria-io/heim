@@ -422,16 +422,19 @@ body.welcome {
     }
 
     &:not(:hover) .colors {
-      .delay-parts(.35s);
+      .delay-parts(.25s);
 
       & > div {
         animation-name: tron;
         animation-iteration-count: 1;
         animation-timing-function: ease-out;
-        animation-duration: .75s;
+        animation-duration: .65s;
         @keyframes tron {
           0% {
-            transform: translateY(1500px);
+            transform: translateY(100%) scaleY(0);
+          }
+          50% {
+            transform: translateY(100%) scaleY(0);
           }
           100% {
             transform: none;
