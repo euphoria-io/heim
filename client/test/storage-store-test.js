@@ -5,6 +5,8 @@ import sinon from 'sinon'
 import storage from '../lib/stores/storage'
 
 
+const SLEEP_TIME = 200
+
 describe('storage store', () => {
   let clock
   const getItem = localStorage.getItem
@@ -65,7 +67,7 @@ describe('storage store', () => {
 
     it('should save JSON to localStorage', () => {
       storage.store.set(testKey, testValue)
-      clock.tick(1000)
+      clock.tick(SLEEP_TIME)
       sinon.assert.calledWithExactly(localStorage.setItem, 'data', JSON.stringify({
         'testKey': testValue,
         'room': {},
@@ -74,10 +76,10 @@ describe('storage store', () => {
 
     it('should not save unchanged values', () => {
       storage.store.set(testKey, testValue)
-      clock.tick(1000)
+      clock.tick(SLEEP_TIME)
       localStorage.setItem.reset()
       storage.store.set(testKey, testValue)
-      clock.tick(1000)
+      clock.tick(SLEEP_TIME)
       sinon.assert.notCalled(localStorage.setItem)
     })
 
@@ -101,7 +103,7 @@ describe('storage store', () => {
       storage.store.load()
 
       storage.store.setRoom(testRoom, testKey, testValue)
-      clock.tick(1000)
+      clock.tick(SLEEP_TIME)
       sinon.assert.calledWithExactly(localStorage.setItem, 'data', JSON.stringify({
         'room': {
           'ezzie': {
@@ -116,10 +118,10 @@ describe('storage store', () => {
       storage.store.load()
 
       storage.store.setRoom(testRoom, testKey, testValue)
-      clock.tick(1000)
+      clock.tick(SLEEP_TIME)
       localStorage.setItem.reset()
       storage.store.setRoom(testRoom, testKey, testValue)
-      clock.tick(1000)
+      clock.tick(SLEEP_TIME)
       sinon.assert.notCalled(localStorage.setItem)
     })
 
@@ -197,7 +199,7 @@ describe('storage store', () => {
 
     it('should change previously dirty values after a save', done => {
       storage.store.set('hello', 'ezzie')
-      clock.tick(1000)
+      clock.tick(SLEEP_TIME)
       support.listenOnce(storage.store, state => {
         assert.equal(state.hello, 'max')
         done()
@@ -241,7 +243,7 @@ describe('storage store', () => {
 
       it('should log a warning', () => {
         storage.store.set('key', 'value')
-        clock.tick(1000)
+        clock.tick(SLEEP_TIME)
         sinon.assert.calledOnce(console.warn)  // eslint-disable-line no-console
       })
     })
