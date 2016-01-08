@@ -110,7 +110,11 @@ describe('activity store', () => {
     })
 
     it('should be written within ' + activity.store.flushTime + 'ms of activity', () => {
+      const firstTouchTime = Date.now()
       activity.store.touch(roomName)
+      sinon.assert.calledOnce(storage.setRoom)
+      sinon.assert.calledWithExactly(storage.setRoom, roomName, 'lastActive', firstTouchTime)
+      storage.setRoom.reset()
       clock.tick(1000)
       const lastTouchTime = Date.now()
       activity.store.touch(roomName)
