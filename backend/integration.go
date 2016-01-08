@@ -36,7 +36,10 @@ import (
 	"github.com/smartystreets/goconvey/convey/reporting"
 )
 
-var agentIDCounter int
+var (
+	agentIDCounter int
+	loginCounter   int
+)
 
 type factoryTestSuite func(factory proto.BackendFactory)
 type testSuite func(*serverUnderTest)
@@ -229,6 +232,21 @@ func (s *serverUnderTest) RoomAndManager(
 	}
 
 	return room, manager, key, err
+}
+
+func (s *serverUnderTest) Login(c *testConn, namespace, id, password string) *testConn {
+	loginCounter++
+	roomName := fmt.Sprintf("login%05d", loginCounter)
+	if c == nil {
+		c = s.Connect(roomName)
+	} else {
+		c = s.Reconnect(c, roomName)
+	}
+	c.expectPing()
+	c.expectSnapshot(s.backend.Version(), nil, nil)
+	c.send("1", "login", `{"namespace":"%s","id":"%s","password":"%s"}`, namespace, id, password)
+	c.expect("1", "login-reply", `{"success":true,"account_id":"*"}`)
+	return c
 }
 
 type testConn struct {
@@ -3173,11 +3191,10 @@ func testPMs(s *serverUnderTest) {
 		c.expectSnapshot(s.backend.Version(), nil, nil)
 		c.send("1", "pm-initiate", `{"user_id":"%s"}`, r.id())
 		c.expectError("1", "pm-initiate-reply", proto.ErrAccessDenied.Error())
+		c.Close()
 
 		// Log in and invite recipient to PM
-		c.send("2", "login", `{"namespace":"email","id":"logan%s","password":"hunter2"}`, nonce)
-		c.expect("2", "login-reply", `{"success":true,"account_id":"%s"}`, logan.ID())
-		c.Close()
+		c = s.Login(nil, "email", "logan"+nonce, "hunter2")
 		c.isManager = true
 		c = s.Reconnect(c, "pminvite")
 		c.expectPing()
@@ -3240,18 +3257,14 @@ func testPMs(s *serverUnderTest) {
 		nonce := fmt.Sprintf("%s", time.Now())
 		alice, _, err := s.Account(ctx, kms, "email", "alice"+nonce, "hunter2")
 		So(err, ShouldBeNil)
-		bob, _, err := s.Account(ctx, kms, "email", "bob"+nonce, "hunter2")
+		_, _, err = s.Account(ctx, kms, "email", "bob"+nonce, "hunter2")
 		So(err, ShouldBeNil)
 		_, err = s.Room(ctx, kms, false, "pmtoaccount", alice)
 
-		// Log in both parties and connect to common room.
-		r := s.Connect("pmtoaccount")
-		r.expectPing()
-		r.expectSnapshot(s.backend.Version(), nil, nil)
-		r.send("2", "login", `{"namespace":"email","id":"bob%s","password":"hunter2"}`, nonce)
-		r.expect("2", "login-reply", `{"success":true,"account_id":"%s"}`, bob.ID())
+		// Log in bob, establish a nick in alice's room, and then wait for an invitation in another
+		// room.
+		r := s.Login(nil, "email", "bob"+nonce, "hunter2")
 		r.Close()
-
 		r = s.Reconnect(r, "pmtoaccount")
 		r.expectPing()
 		r.expectSnapshot(s.backend.Version(), nil, nil)
@@ -3262,18 +3275,13 @@ func testPMs(s *serverUnderTest) {
 		r.expectPing()
 		r.expectSnapshot(s.backend.Version(), nil, nil)
 
-		c := s.Connect("pmtoaccount")
-		c.expectPing()
-		c.expectSnapshot(s.backend.Version(), nil, nil)
-		c.send("1", "login", `{"namespace":"email","id":"alice%s","password":"hunter2"}`, nonce)
-		c.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, alice.ID())
+		// Log in al ice, establish a nick and invite to PM.
+		c := s.Login(nil, "email", "alice"+nonce, "hunter2")
 		c.Close()
-
 		c.isManager = true
 		c = s.Reconnect(c, "pmtoaccount")
 		c.expectPing()
 		c.expectSnapshot(s.backend.Version(), nil, nil)
-
 		c.send("1", "nick", `{"name":"c"}`)
 		c.expect("1", "nick-reply", `{"session_id":"*","id":"*","from":"","to":"c"}`)
 		c.send("2", "pm-initiate", `{"user_id":"%s"}`, r.id())
@@ -3335,11 +3343,7 @@ func testPMs(s *serverUnderTest) {
 		r.expect("1", "nick-reply", `{"session_id":"*","id":"*","from":"","to":"r"}`)
 
 		// Log in and invite recipient to PM
-		c := s.Connect("pmlogin1")
-		c.expectPing()
-		c.expectSnapshot(s.backend.Version(), nil, nil)
-		c.send("1", "login", `{"namespace":"email","id":"alice%s","password":"hunter2"}`, nonce)
-		c.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, alice.ID())
+		c := s.Login(nil, "email", "alice"+nonce, "hunter2")
 		c.Close()
 		c.isManager = true
 		c = s.Reconnect(c, "pmtransmit1")
@@ -3418,11 +3422,7 @@ func testPMs(s *serverUnderTest) {
 		r.expectSnapshot(s.backend.Version(), nil, nil)
 
 		// Log in and invite recipient to PM
-		c := s.Connect("pmlogin2")
-		c.expectPing()
-		c.expectSnapshot(s.backend.Version(), nil, nil)
-		c.send("1", "login", `{"namespace":"email","id":"alice%s","password":"hunter2"}`, nonce)
-		c.expect("1", "login-reply", `{"success":true,"account_id":"%s"}`, alice.ID())
+		c := s.Login(nil, "email", "alice"+nonce, "hunter2")
 		c.Close()
 		c.isManager = true
 		c = s.Reconnect(c, "pmtransmit2")
