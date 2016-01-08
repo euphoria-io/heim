@@ -177,11 +177,22 @@ describe('storage store', () => {
 
     it('should not change dirty values pending save', done => {
       storage.store.set('hello', {to: 'ezzie'})
+      storage.store.setRoom('test', 'foo', 'bar')
+      storage.store.setRoom('test', 'hello', {to: 'ezzie'})
       support.listenOnce(storage.store, state => {
-        assert.deepEqual(state.hello, {to: 'ezzie', from: 'max'})
+        assert.deepEqual(state.hello, {to: 'ezzie'})
+        assert.deepEqual(state.room.test, {foo: 'bar', hello: {to: 'ezzie'}})
         done()
       })
-      storage.store.storageChange({key: 'data', newValue: JSON.stringify({'hello': {from: 'max'}, 'test': 'abcdef'})})
+      storage.store.storageChange({key: 'data', newValue: JSON.stringify({
+        'hello': {from: 'max'},
+        'test': 'abcdef',
+        'room': {
+          'test': {
+            'hello': {from: 'max'},
+          },
+        },
+      })})
     })
 
     it('should change previously dirty values after a save', done => {

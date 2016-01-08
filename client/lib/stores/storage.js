@@ -62,7 +62,10 @@ module.exports.store = Reflux.createStore({
     }
 
     const newData = JSON.parse(ev.newValue)
-    const newState = _.merge(_.assign({}, this.state, newData), this._dirtyChanges)
+    const newState = _.assign({}, this.state, newData)
+    _.each(this._dirtyChanges, (value, key) =>
+      _.set(newState, key, value)
+    )
     if (!_.isEqual(this.state, newState)) {
       this.state = newState
       this.trigger(this.state)
@@ -84,13 +87,7 @@ module.exports.store = Reflux.createStore({
       return
     }
 
-    if (!this._dirtyChanges.room) {
-      this._dirtyChanges.room = {}
-    }
-    if (!this._dirtyChanges.room[room]) {
-      this._dirtyChanges.room[room] = {}
-    }
-    this._dirtyChanges.room[room][key] = value
+    this._dirtyChanges[`room.${room}.${key}`] = value
 
     if (!this.state.room[room]) {
       this.state.room[room] = {}
