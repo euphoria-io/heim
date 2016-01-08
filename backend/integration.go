@@ -3417,7 +3417,7 @@ func testPMs(s *serverUnderTest) {
 		r.send("1", "nick", `{"name":"r"}`)
 		r.expect("1", "nick-reply", `{"session_id":"*","id":"*","from":"","to":"r"}`)
 		r.Close()
-		r = s.Reconnect(r, "pmwait")
+		r = s.Reconnect(r, "pmwait2")
 		r.expectPing()
 		r.expectSnapshot(s.backend.Version(), nil, nil)
 
