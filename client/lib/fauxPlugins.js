@@ -655,25 +655,4 @@ export default function initPlugins(roomName) {
       })
     }
   }
-
-  Heim.hook('page-bottom', () => {
-    return (
-      <style key="winter-style" dangerouslySetInnerHTML={{__html: `
-        .messages-content {
-          background: white url(/static/winter.svg) no-repeat !important;
-          background-position: right 180px bottom 0 !important;
-          background-size: 700px !important;
-          background-attachment: fixed !important
-        }
-
-
-        @media (max-width: 650px) {
-          .messages-content {
-            background-size: 500px !important;
-            background-position: right 10px bottom 10px !important;
-          }
-        }
-      `}} />
-    )
-  })
 }
