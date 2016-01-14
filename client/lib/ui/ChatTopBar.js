@@ -35,7 +35,17 @@ export default React.createClass({
   mixins: [require('react-immutable-render-mixin')],
 
   render() {
-    const userCount = this.props.who.filter(user => user.get('present') && user.get('name') && !/^bot:/.test(user.get('id'))).size
+    let people = this.props.who.filter(user =>
+      user.get('present') && user.get('name') && !/^bot:/.test(user.get('id')))
+    let prevUser
+    people = people.filter(user => {
+      if (prevUser && user.get('id') === prevUser.get('id') && user.get('name') === prevUser.get('name')) {
+        return false
+      }
+      prevUser = user
+      return true
+    })
+    const userCount = people.size
 
     // use an outer container element so we can z-index the bar above the
     // bubbles. this makes the bubbles slide from "underneath" the bar.

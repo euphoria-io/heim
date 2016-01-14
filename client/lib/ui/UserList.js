@@ -63,11 +63,20 @@ export default React.createClass({
       )
     }
 
+    let prevUser
+    let people = list.get('human')
+    people = people && people.filter(user => {
+      if (prevUser && user.get('id') === prevUser.get('id') && user.get('name') === prevUser.get('name')) {
+        return false
+      }
+      prevUser = user
+      return true
+    })
     return (
       <div className="user-list" {...this.props}>
-        {list.has('human') && <div className="list">
+        {people && <div className="list">
           <h1>people</h1>
-          {list.get('human').map(formatUser).toIndexedSeq()}
+          {people.map(formatUser).toIndexedSeq()}
         </div>}
         {list.has('bot') && <div className="list">
           <h1>bots</h1>
