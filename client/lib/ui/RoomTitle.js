@@ -38,7 +38,7 @@ export default React.createClass({
       case 'passcode':
         if (uiwindow.location.pathname.match(/^\/room\/(pm:)/)) {
           className = caption = 'pm'
-          details = 'private message with only one person'
+          details = 'private messaging between you and another user'
         } else {
           className = caption = 'private'
           details = 'this room requires a passcode for entry'
