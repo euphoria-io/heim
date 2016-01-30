@@ -28,6 +28,10 @@ func TestCheckOrigin(t *testing.T) {
 			So(checkOrigin(tc("heim", "http://www.heim/room/test")), ShouldBeTrue)
 		})
 
+		Convey("Accept if alpha. plus origin host matches request host", func() {
+			So(checkOrigin(tc("heim", "http://alpha.heim/room/test")), ShouldBeTrue)
+		})
+
 		Convey("Reject if all prefix + origin host combinations fail to match request host", func() {
 			So(checkOrigin(tc("heim", "http://ftp.heim/room/test")), ShouldBeFalse)
 			So(checkOrigin(tc("heim", "http://heim2/room/test")), ShouldBeFalse)
