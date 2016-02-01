@@ -391,7 +391,7 @@ const Message = React.createClass({
     const embeds = []
     content = content.replace(/(?:https?:\/\/)?(?:www\.|i\.|m\.)?imgur\.com\/(\w+)(\.\w+)?(\S*)/g, (match, id, ext, rest, offset, string) => {
       if (rest) {
-        return string
+        return match
       }
       embeds.push({
         link: '//imgur.com/' + id,
