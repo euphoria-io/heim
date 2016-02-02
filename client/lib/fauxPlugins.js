@@ -86,7 +86,7 @@ export default function initPlugins(roomName) {
     })
   }
 
-  if (roomName === 'music' || roomName === 'youtube' || roomName === 'politicalevents') {
+  if (roomName === 'music' || roomName === 'youtube') {
     const Embed = require('./ui/Embed').default
     const MessageText = require('./ui/MessageText').default
 
