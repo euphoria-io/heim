@@ -389,7 +389,7 @@ const Message = React.createClass({
 
     let content = message.get('content')
     const embeds = []
-    content = content.replace(/(?:https?:\/\/)?(?:www\.|i\.|m\.)?imgur\.com\/(\w+)(\.\w+)?(\S*)/g, (match, id, ext, rest, offset, string) => {
+    content = content.replace(/(?:https?:\/\/)?(?:www\.|i\.|m\.)?imgur\.com\/(\w+)(\.\w+)?(\S*)/g, (match, id, ext, rest) => {
       if (rest) {
         return match
       }
