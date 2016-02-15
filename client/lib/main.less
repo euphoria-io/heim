@@ -3,7 +3,7 @@
 @import "forms.less";
 
 
-@base-font-size: 12pt;
+@base-font-size: 15px;
 
 body {
   overflow-y: hidden;  // prevent mobile Chrome pull to refresh
@@ -19,7 +19,7 @@ body {
   }
 
   input, textarea, button {
-    font-family: Droid Sans, sans-serif;
+    font-family: Open Sans, Droid Sans, sans-serif;
     margin: 0;
   }
 }
@@ -559,7 +559,6 @@ iframe.js {
 .nick, .text-rect {
   background: @neutral-color;
   padding: 0 4px;
-  font-size: .85em;
   border-radius: 2px;
 }
 
@@ -1019,7 +1018,7 @@ iframe.js {
   // extended drag handle touch area can extend below bottom
   overflow: hidden;
 
-  @message-spacing: 1px;
+  @message-spacing: 2px;
   @thread-spacing: 8px;
   @seen-fade: cubic-bezier(0, 1, .4, .2);
 
@@ -1156,7 +1155,7 @@ iframe.js {
     height: 20px;
     padding-bottom: 4px;
     margin-top: 1px;
-    .button-icon('../res/expand-rest.svg', 14px, 3px, 1);
+    .button-icon('../res/expand-rest.svg', 14px, 3px, 1, @alignment: baseline);
     .inner:before {
       width: 8px;
     }
@@ -1503,7 +1502,7 @@ iframe.js {
 
     .nick-box, .entry-text, .measure, label {
       font-size: @base-font-size;
-      line-height: @base-font-size + 2.5pt;
+      line-height: 1.2;
       height: @entry-height;
       padding: 8px 10px;
       box-sizing: border-box;

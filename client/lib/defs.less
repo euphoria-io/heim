@@ -64,10 +64,10 @@
   }
 }
 
-.button-icon(@url, @size, @spacing: 3px, @opacity: .75) {
+.button-icon(@url, @size, @spacing: 3px, @opacity: .75, @alignment: center) {
   .inner {
+    align-items: @alignment;
     display: flex;
-    align-items: center;
     white-space: pre;
     .icon(@url, @size, @spacing, @opacity);
   }
