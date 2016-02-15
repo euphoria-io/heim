@@ -8,7 +8,6 @@ module.exports = (
   <MainPage title="euphoria!" className="welcome">
     <div className="splash">
       <FancyLogo />
-      <h1>let's make the internet<br /> feel like home again.</h1>
       <div className="info-box">
         <div className="description">
           <div className="messages">
@@ -19,22 +18,8 @@ module.exports = (
               </div>
             </FauxMessage>
           </div>
-          <a className="start-chatting big-green-button" href={heimURL('/room/welcome/')} target="_blank">come check it out. say hello!</a>
+          <a className="start-chatting big-green-button" href={heimURL('/room/welcome/')} target="_blank">come say hello!</a>
         </div>
-        <ul className="features">
-          <li className="chat">
-            <div className="inner">
-              <h2>chat for free</h2>
-              <p>on your computer and phone</p>
-            </div>
-          </li>
-          <li className="instant">
-            <div className="inner">
-              <h2>join instantly</h2>
-              <p>no install or sign-up required</p>
-            </div>
-          </li>
-        </ul>
       </div>
     </div>
   </MainPage>
