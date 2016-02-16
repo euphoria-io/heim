@@ -564,11 +564,12 @@ iframe.js {
 }
 
 .nick, .text-rect, .messages-container .line {
-  line-height: @nick-height;
   unicode-bidi: embed;
 }
 
 .nick {
+  padding-top: 1px;
+  padding-bottom: 1px;
   .emoji {
     height: 100%;
   }
@@ -1305,8 +1306,6 @@ iframe.js {
     .nick {
       flex-shrink: 0;
       margin-right: @nick-spacing;
-      height: @nick-height;
-      box-sizing: border-box;
     }
 
     .content {
@@ -1518,6 +1517,7 @@ iframe.js {
 
     .entry-text, .measure {
       background: none;
+      margin-top: 1px;
       padding-left: 0;
       overflow-y: hidden;
     }
