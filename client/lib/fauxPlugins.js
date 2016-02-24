@@ -607,6 +607,184 @@ export default function initPlugins(roomName) {
     })
   }
 
+  if (location.hash.substr(1) === 'darcula') {
+    Heim.hook('page-bottom', () => {
+      return (
+          <style key="spooky-style" dangerouslySetInnerHTML={{__html: `
+          #ui {
+            background: #281f3d;
+          }
+
+          .info-pane, .sidebar-pane, .top-bar {
+            background: #4C5053;
+          }
+
+          .info-pane *, .top-bar *, .sidebar-pane * {
+            color: #758076 !important;
+          }
+
+          .nick, .message-emote {
+            color: black !important;
+            -webkit-filter: saturate(2) brightness(.75);
+            filter: saturate(2) brightness(.75);
+          }
+
+          .top-bar button {
+            background: #4477B2 !important;
+          }
+
+          .top-bar button .inner, .top-bar button .inner * {
+            color: black !important;
+          }
+
+          .info-pane .thread-list-container {
+            border: none !important;
+          }
+
+          .info-pane .thread-list-container:after {
+            box-shadow: none;
+          }
+
+          .info-pane .thread-list-container .info:hover,
+          .info-pane .thread-list-container .info.selected {
+            background: black !important;
+          }
+
+          .info-pane .mode-selector {
+            background: #444 !important;
+          }
+
+          .info-pane .mode-selector button .inner {
+            filter: grayscale(1) invert(1);
+            -webkit-filter: grayscale(1) invert(1);
+          }
+
+          .info-pane .mode-selector button.selected {
+            background: darkorange !important;
+          }
+
+          .info-pane .mode-selector button.selected .inner {
+            filter: grayscale(1) invert(1) brightness(0);
+            -webkit-filter: grayscale(1) invert(1) brightness(0);
+          }
+
+          .info-pane .notification {
+            background: none !important;
+          }
+
+          .messages .timestamp {
+            color: #849AAB !important;
+          }
+
+          .messages-content {
+            background: none !important;
+          }
+
+          .messages-container, .youtube-pane .notice {
+            background: linear-gradient(to bottom, #423553 40px, #443e5d) !important;
+          }
+
+          .timestamps-visible .messages-container {
+            background:
+             linear-gradient(to right, #3A3C3E 72px, transparent 72px),
+             linear-gradient(to bottom, #1B1F20 40px, #1c2021) !important
+          }
+
+          .replies .entry:before {
+            background-color: transparent !important;
+          }
+
+          .indent-line, .replies .entry:before, .expand-rest .inner:before {
+            filter: invert(1) !important;
+            -webkit-filter: invert(1) !important;
+          }
+
+          .expand-rest {
+            color: #662E72 !important;
+          }
+
+          .entry {
+            background: rgba(0, 0, 0, .15) !important;
+          }
+
+          .entry .nick {
+            background: rgba(255, 255, 255, 1) !important;
+          }
+
+          .entry input.nick {
+            z-index: 10;
+          }
+
+          .entry-focus .entry, .expand-rest.focus-target {
+            background: #1e1f36 !important;
+            border-bottom-color: #37385d !important;
+            color: white !important;
+          }
+
+          .entry-focus .entry textarea, .line .message, .message-preview {
+            color: white !important;
+            text-shadow: 0 1px 1px black !important;
+          }
+
+          .message-emote {
+            text-shadow: none !important;
+          }
+
+          .mention > .line .message {
+            background: #4477B2 !important;
+          }
+
+          .message a {
+            color: #662E72 !important;
+          }
+
+          .expando:after {
+            background: none !important;
+          }
+
+          .last-visit hr {
+            border-color: darkgray !important;
+          }
+
+          .last-visit .label {
+            color: darkgray !important;
+          }
+
+          .spinner {
+            filter: invert(1) brightness(2);
+            -webkit-filter: invert(1) brightness(2);
+          }
+
+          .new-count {
+            color: #afa !important;
+          }
+
+          .youtube-pane .notice {
+            color: white;
+          }
+
+          ::-webkit-scrollbar {
+            width: 6px;
+            background: none !important;
+          }
+
+          ::-webkit-scrollbar-track, ::-webkit-scrollbar {
+            background: none !important;
+          }
+
+          ::-webkit-scrollbar-thumb {
+            background: darkgray !important;
+            border-radius: 2px;
+          }
+
+          ::-webkit-scrollbar-button {
+            display: none;
+          }
+        `}} />
+      )
+    })
+  }
+
   if (roomName === 'xkcd') {
     Heim.hook('main-pane-top', () => {
       return (
