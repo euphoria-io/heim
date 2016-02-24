@@ -516,6 +516,12 @@ body.welcome {
       padding: 16px;
       background: #fcfcfc;
       border-radius: @radius;
+      width: 40em;
+
+      @media (max-width: @mobile-breakpoint) {
+        padding: 8px;
+        width: 90%;
+      }
     }
 
     .messages {
@@ -621,10 +627,6 @@ body.welcome {
 
       &:before {
         top: -7px;
-      }
-
-      .description {
-        padding: 8px;
       }
 
       .start-chatting {
