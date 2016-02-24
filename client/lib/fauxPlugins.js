@@ -610,7 +610,7 @@ export default function initPlugins(roomName) {
   if (location.hash.substr(1) === 'darcula') {
     Heim.hook('page-bottom', () => {
       return (
-          <style key="spooky-style" dangerouslySetInnerHTML={{__html: `
+          <style key="darcula-style" dangerouslySetInnerHTML={{__html: `
           #ui {
             background: #281f3d;
           }
