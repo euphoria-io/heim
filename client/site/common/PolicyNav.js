@@ -3,7 +3,6 @@ import classNames from 'classnames'
 
 import heimURL from '../../lib/heimURL'
 
-
 export default function PolicyNav(props) {
   const items = [
     {name: 'values', caption: <span>Values</span>},
@@ -16,8 +15,10 @@ export default function PolicyNav(props) {
   return (
     <nav>
       <div className="container">
-        <span className="label">Platform Policies:</span>
         <ul>
+          <li className="home">
+            <a href={heimURL('/')}>&nbsp;</a>
+          </li>
           {items.map(item =>
             <li key={item.name} className={classNames(props.selected === item.name && 'selected')}>
               <a href={heimURL('/about/' + item.name)}>{item.caption}</a>
