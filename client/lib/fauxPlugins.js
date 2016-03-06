@@ -831,6 +831,17 @@ export default function initPlugins(roomName) {
           `}} />
         )
       })
+    } else if (location.hash.substr(1) === 'darcula') {
+      Heim.hook('page-bottom', () => {
+        return (
+          <style key="xkcd-top-darcula-style" dangerouslySetInnerHTML={{__html: `
+            .secondary-top-bar {
+              color: #758076;
+              background: #4c5053;
+            }
+          `}} />
+        )
+      })
     }
   }
 }
