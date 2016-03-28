@@ -259,6 +259,14 @@ const Message = React.createClass({
       'selected': message.get('_selected'),
     }
 
+    if (message.getIn(['sender', 'id']) === 'account:01c2c55f25zb4') {
+      if (/^sponsored message:/.test(message.get('content'))) {
+        messageClasses.sponsored = true
+      } else {
+        messageClasses.sponsorctl = true
+      }
+    }
+
     const lineClasses = {
       'line': true,
       'expanded': contentExpanded,
