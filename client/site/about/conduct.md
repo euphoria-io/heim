@@ -1,37 +1,34 @@
-# Euphorian Code of Conduct  *updated Sep 30, 2015*
+# Euphorian Code of Conduct  *updated April 12th, 2016*
 
 
 ## Purpose
 
-The primary goal of Euphoria is to be inclusive to the largest number of
-people, with the most varied and diverse backgrounds possible. As such, we are
-devoted to providing a friendly, safe, and welcoming environment for all,
+The main goal of Euphoria is to be inclusive to the largest number of
+people, with the most varied and diverse backgrounds possible. It's important
+to us to provide a friendly, safe, and welcoming environment for everybody,
 regardless of gender, sexual orientation, ability, ethnicity, race, or
 socioeconomic status.
 
-As online citizens, we must recognize the relationships between our actions and
-their effects on our community. Communities mirror the societies in which they
-exist and positive action is essential to counteract the many forms of
-inequality and abuses of power that exist in society. We invite all those who
-participate in Euphoria to help us create safe and positive experiences for
-everyone. Remember: there is a human on the other side of the screen.
+We invite all those who participate on Euphoria to help us create safe and
+positive experiences for everyone.
+Remember: there is a human on the other side of the screen.
 
 
 ## Rules
 
-In furtherance of these goals, the following behaviors are prohibited:
+To help us achieve these goals, the following behaviors are not allowed:
 
  * Threats of violence or violent language directed against another person.
 
- * Sexist, racist, homophobic, transphobic, ableist, or otherwise
-   discriminatory jokes, insults, or language.
+ * Sexist, racist, homophobic, transphobic, or otherwise discriminatory jokes, 
+   insults, or language.
 
  * Posting (or threatening to post) other people's personally identifying
    information ("doxing") or posting of non-harassing private communication
    without consent.
 
  * Inappropriate sexual attention or unwelcome sexual advances. Misreading the
-   tone of the situation is no excuse.
+   tone of the situation isn't an excuse.
 
  * Deliberate intimidation or stalking.
 
@@ -55,7 +52,7 @@ In furtherance of these goals, the following behaviors are prohibited:
 
 ## Consequences
 
-We may take various actions to enforce this Code of Conduct, including but not limited to:
+We may take various actions to enforce this Code of Conduct, such as:
 
  * Asking the user to stop the behavior in question.
 
@@ -76,10 +73,9 @@ us](mailto:help@euphoria.io).
 
 
 ## Addressing grievances
-If you feel you have been unfairly sanctioned or accused of violating this Code
-of Conduct, please notify Euphoria staff via
+If you feel you have been unfairly sanctioned, please send us an
 [email](mailto:help@euphoria.io) with a concise description of your
-grievance. We will respond within three business days to offer our rationale
+grievance. We'll respond within three days to offer our rationale
 and discuss any disciplinary decisions.
 
 ---
