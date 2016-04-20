@@ -35,7 +35,7 @@ export default React.createClass({
     }
     if (selectedCommand === 'banIP') {
       commandParams = {
-        global: this.refs.banGlobally.checked,
+        global: this.refs.banGlobally && this.refs.banGlobally.checked,
       }
     }
     toolbox.apply(commandParams)
