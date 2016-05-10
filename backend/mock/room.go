@@ -257,6 +257,11 @@ func (r *RoomBase) Snapshot(
 		return nil, err
 	}
 	snapshot.Log = log
+	if level == proto.General {
+		for i := range snapshot.Log {
+			snapshot.Log[i].Sender.ClientAddress = ""
+		}
+	}
 
 	return snapshot, nil
 }
