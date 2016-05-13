@@ -152,7 +152,7 @@ export default function initPlugins(roomName) {
       },
 
       shouldComponentUpdate(nextProps) {
-        return nextProps.youtubeId !== this.props.youtubeId || nextProps.youtubeTime !== this.props.youtubeTime
+        return true
       },
 
       render() {
