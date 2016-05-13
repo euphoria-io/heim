@@ -151,10 +151,6 @@ export default function initPlugins(roomName) {
         className: React.PropTypes.string,
       },
 
-      shouldComponentUpdate(nextProps) {
-        return true
-      },
-
       render() {
         return (
           <Embed
