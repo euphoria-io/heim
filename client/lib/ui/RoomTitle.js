@@ -36,8 +36,13 @@ export default React.createClass({
     } else {
       switch (this.props.authType) {
       case 'passcode':
-        className = caption = 'private'
-        details = 'this room requires a passcode for entry'
+        if (uiwindow.location.pathname.match(/^\/room\/(pm:)/)) {
+          className = caption = 'pm'
+          details = 'private messaging between you and another user'
+        } else {
+          className = caption = 'private'
+          details = 'this room requires a passcode for entry'
+        }
         break
       case 'public':
         className = caption = 'public'
