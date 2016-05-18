@@ -146,7 +146,7 @@ func (rb *RoomBinding) getParentPostTime(id snowflake.Snowflake) (time.Time, err
 		Posted time.Time
 	}
 	err := rb.DbMap.SelectOne(&row,
-		"SELECT posted FROM message WHERE room = $1 AND id = $2",
+		"SELECT posted FROM message WHERE room = $1 AND id = $2 AND deleted IS NULL",
 		rb.RoomName, id.String())
 	if err != nil {
 		return time.Time{}, err
