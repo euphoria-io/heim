@@ -151,10 +151,6 @@ export default function initPlugins(roomName) {
         className: React.PropTypes.string,
       },
 
-      shouldComponentUpdate(nextProps) {
-        return nextProps.youtubeId !== this.props.youtubeId || nextProps.youtubeTime !== this.props.youtubeTime
-      },
-
       render() {
         return (
           <Embed
