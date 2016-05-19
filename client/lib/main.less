@@ -953,7 +953,9 @@ iframe.js {
 
       &.pm {
         background: @pm-color;
+        color: darken(@pm-color, 80%);
         .touchable-bg(@pm-color);
+        .button-icon('../res/lock.svg', 10px);
       }
 
       &.reconnecting {
