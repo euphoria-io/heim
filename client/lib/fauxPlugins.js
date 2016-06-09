@@ -145,12 +145,17 @@ export default function initPlugins(roomName) {
       displayName: 'SyncedEmbed',
 
       propTypes: {
+        messageId: React.PropTypes.string,
         youtubeId: React.PropTypes.string,
         youtubeTime: React.PropTypes.number,
         startedAt: React.PropTypes.number,
         className: React.PropTypes.string,
       },
 
+      shouldComponentUpdate(nextProps) {
+         return nextProps.messageId !== this.props.messageId 
+      },
+       
       render() {
         return (
           <Embed
@@ -159,6 +164,7 @@ export default function initPlugins(roomName) {
             autoplay="1"
             start={Math.max(0, Math.floor(Date.now() / 1000 - this.props.startedAt - clientTimeOffset)) + this.props.youtubeTime}
             youtube_id={this.props.youtubeId}
+            messageId={this.props.messageId}
           />
         )
       },
@@ -176,6 +182,7 @@ export default function initPlugins(roomName) {
         return (
           <SyncedEmbed
             className="youtube-tv"
+            messageId={this.state.tv.getIn(['video', 'messageId'])}
             youtubeId={this.state.tv.getIn(['video', 'youtubeId'])}
             startedAt={this.state.tv.getIn(['video', 'time'])}
             youtubeTime={this.state.tv.getIn(['video', 'youtubeTime'])}
