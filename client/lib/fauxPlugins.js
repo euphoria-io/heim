@@ -153,9 +153,9 @@ export default function initPlugins(roomName) {
       },
 
       shouldComponentUpdate(nextProps) {
-         return nextProps.messageId !== this.props.messageId 
+        return nextProps.messageId !== this.props.messageId
       },
-       
+
       render() {
         return (
           <Embed
