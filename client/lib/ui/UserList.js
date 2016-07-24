@@ -71,7 +71,7 @@ export default React.createClass({
       }
       prevUser = user
       return true
-    })
+    }).toList()
     return (
       <div className="user-list" {...this.props}>
         {people && <div className="list">
