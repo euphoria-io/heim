@@ -69,7 +69,7 @@ const ThreadListItem = React.createClass({
     return (
       <div className="thread">
         <FastButton component="div" data-thread-id={this.props.threadNodeId} className={classNames('info', {'selected': this.state.threadData.get('selected'), 'active': isActive})} onClick={ev => this.props.onClick(ev, this.props.threadNodeId)}>
-          <MessageText className="title" content={message.get('content')} maxLength={140} />
+          <MessageText className="title" content={(message.get('content') || '').trim()} maxLength={140} />
           {newCount > 0 && <span className={classNames('new-count', {'new-mention': count.get('newMentionDescendants') > 0})}>{newCount}</span>}
           <LiveTimeAgo className="ago" time={timestamp} nowText="active" />
         </FastButton>
