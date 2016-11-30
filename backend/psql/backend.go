@@ -82,7 +82,7 @@ type Backend struct {
 	*gorp.DbMap
 
 	dsn         string
-	connCount   int
+	maxConns    int
 	cancel      func()
 	cluster     cluster.Cluster
 	desc        *cluster.PeerDesc
@@ -118,12 +118,12 @@ func NewBackend(heim *proto.Heim, config *backend.DatabaseConfig) (*Backend, err
 	if err != nil {
 		return nil, fmt.Errorf("sql.Open: %s", err)
 	}
-	db.SetMaxOpenConns(config.ConnCount);
+	db.SetMaxOpenConns(config.MaxConnCount);
 
 	b := &Backend{
 		DB:        db,
 		dsn:       config.DSN,
-		connCount: config.ConnCount,
+		maxConns:  config.MaxConnCount,
 		desc:      heim.PeerDesc,
 		version:   version,
 		cluster:   heim.Cluster,

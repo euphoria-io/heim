@@ -53,8 +53,8 @@ func init() {
 		"address of a peer in etcd cluster")
 
 	flag.StringVar(&Config.DB.DSN, "psql", env("HEIM_DSN", ""), "dsn url of heim postgres database")
-	count, _ := strconv.Atoi(env("HEIM_DB_CONNECTIONS", "0"))
-	flag.IntVar(&Config.DB.ConnCount, "connection-count", count, "maximum db connection count")
+	count, _ := strconv.Atoi(env("HEIM_DB_MAX_CONNECTIONS", "0"))
+	flag.IntVar(&Config.DB.MaxConnCount, "psql-max-connections", count, "maximum db connection count")
 
 	flag.StringVar(&Config.Console.HostKey, "console-hostkey", env("HEIM_CONSOLE_HOST_KEY", ""),
 		"path to file containing host key for ssh console")
@@ -257,8 +257,8 @@ type ConsoleConfig struct {
 }
 
 type DatabaseConfig struct {
-	DSN       string `yaml:"dsn"`
-	ConnCount int    `yaml:"connection-count"`
+	DSN          string `yaml:"dsn"`
+	MaxConnCount int    `yaml:"max_connection_count"`
 }
 
 type KMSConfig struct {
