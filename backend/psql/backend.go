@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"euphoria.io/heim/backend"
 	"euphoria.io/heim/cluster"
 	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/jobs"
@@ -81,6 +82,7 @@ type Backend struct {
 	*gorp.DbMap
 
 	dsn         string
+	connCount   int
 	cancel      func()
 	cluster     cluster.Cluster
 	desc        *cluster.PeerDesc
@@ -93,7 +95,7 @@ type Backend struct {
 	jql         *jobQueueListener
 }
 
-func NewBackend(heim *proto.Heim, dsn string) (*Backend, error) {
+func NewBackend(heim *proto.Heim, config *backend.DatabaseConfig) (*Backend, error) {
 	var version string
 
 	if heim.PeerDesc == nil {
@@ -102,7 +104,7 @@ func NewBackend(heim *proto.Heim, dsn string) (*Backend, error) {
 		version = heim.PeerDesc.Version
 	}
 
-	parsedDSN, err := url.Parse(dsn)
+	parsedDSN, err := url.Parse(config.DSN)
 	if err == nil {
 		if parsedDSN.User != nil {
 			parsedDSN.User = url.UserPassword(parsedDSN.User.Username(), "xxxxxx")
@@ -112,14 +114,16 @@ func NewBackend(heim *proto.Heim, dsn string) (*Backend, error) {
 		return nil, fmt.Errorf("url.Parse: %s", err)
 	}
 
-	db, err := sql.Open("postgres", dsn)
+	db, err := sql.Open("postgres", config.DSN)
 	if err != nil {
 		return nil, fmt.Errorf("sql.Open: %s", err)
 	}
+	db.SetMaxOpenConns(config.ConnCount);
 
 	b := &Backend{
 		DB:        db,
-		dsn:       dsn,
+		dsn:       config.DSN,
+		connCount: config.ConnCount,
 		desc:      heim.PeerDesc,
 		version:   version,
 		cluster:   heim.Cluster,
