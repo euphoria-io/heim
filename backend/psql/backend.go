@@ -23,6 +23,7 @@ import (
 	"euphoria.io/scope"
 
 	"github.com/lib/pq"
+	"github.com/prometheus/client_golang/prometheus"
 	"gopkg.in/gorp.v1"
 )
 
@@ -74,6 +75,16 @@ var schema = []struct {
 	{"job_log", JobLog{}, []string{"JobID", "Attempt"}},
 	{"job_item", JobItem{}, []string{"ID"}},
 	{"job_queue", JobQueue{}, []string{"Name"}},
+}
+
+var connCount = prometheus.NewGauge(prometheus.GaugeOpts{
+	Name:      "connections",
+	Subsystem: "db",
+	Help:      "Number of open database connections.",
+})
+
+func init() {
+	prometheus.MustRegister(connCount)
 }
 
 type Backend struct {
@@ -219,6 +230,8 @@ func (b *Backend) background(wg *sync.WaitGroup) {
 				b.ctx.Terminate(fmt.Errorf("pq ping: %s", err))
 				return
 			}
+			// Update metrics
+			connCount.Set(float64(b.Stats().OpenConnections))
 		case event := <-peerWatcher:
 			b.Lock()
 			switch e := event.(type) {
