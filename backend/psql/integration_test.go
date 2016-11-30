@@ -81,7 +81,10 @@ func TestBackend(t *testing.T) {
 				Version: "testver",
 			}
 
-			b, err = NewBackend(heim, dsn)
+			b, err = NewBackend(heim, &backend.DatabaseConfig{
+				DSN         : dsn,
+				MaxConnCount: 0,
+			})
 			if err != nil {
 				return nil, err
 			}
