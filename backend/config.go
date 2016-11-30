@@ -258,7 +258,7 @@ type ConsoleConfig struct {
 
 type DatabaseConfig struct {
 	DSN          string `yaml:"dsn"`
-	MaxConnCount int    `yaml:"max_connection_count"`
+	MaxConnCount int    `yaml:"max-connection-count,omitempty"`
 }
 
 type KMSConfig struct {
