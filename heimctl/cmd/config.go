@@ -50,7 +50,7 @@ func getConfig(ctx scope.Context) (*backend.ServerConfig, error) {
 		return &mock.TestBackend{}, nil
 	})
 	backend.RegisterBackend("psql", func(heim *proto.Heim) (proto.Backend, error) {
-		return psql.NewBackend(heim, backend.Config.DB.DSN)
+		return psql.NewBackend(heim, &backend.Config.DB)
 	})
 
 	return &backend.Config, nil
