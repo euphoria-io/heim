@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"euphoria.io/heim/backend"
 	"euphoria.io/heim/cluster"
 	"euphoria.io/heim/proto"
 	"euphoria.io/heim/proto/jobs"
@@ -22,6 +23,7 @@ import (
 	"euphoria.io/scope"
 
 	"github.com/lib/pq"
+	"github.com/prometheus/client_golang/prometheus"
 	"gopkg.in/gorp.v1"
 )
 
@@ -75,12 +77,23 @@ var schema = []struct {
 	{"job_queue", JobQueue{}, []string{"Name"}},
 }
 
+var connCount = prometheus.NewGauge(prometheus.GaugeOpts{
+	Name:      "connections",
+	Subsystem: "db",
+	Help:      "Number of open database connections.",
+})
+
+func init() {
+	prometheus.MustRegister(connCount)
+}
+
 type Backend struct {
 	sync.Mutex
 	*sql.DB
 	*gorp.DbMap
 
 	dsn         string
+	maxConns    int
 	cancel      func()
 	cluster     cluster.Cluster
 	desc        *cluster.PeerDesc
@@ -93,7 +106,7 @@ type Backend struct {
 	jql         *jobQueueListener
 }
 
-func NewBackend(heim *proto.Heim, dsn string) (*Backend, error) {
+func NewBackend(heim *proto.Heim, config *backend.DatabaseConfig) (*Backend, error) {
 	var version string
 
 	if heim.PeerDesc == nil {
@@ -102,7 +115,7 @@ func NewBackend(heim *proto.Heim, dsn string) (*Backend, error) {
 		version = heim.PeerDesc.Version
 	}
 
-	parsedDSN, err := url.Parse(dsn)
+	parsedDSN, err := url.Parse(config.DSN)
 	if err == nil {
 		if parsedDSN.User != nil {
 			parsedDSN.User = url.UserPassword(parsedDSN.User.Username(), "xxxxxx")
@@ -112,14 +125,16 @@ func NewBackend(heim *proto.Heim, dsn string) (*Backend, error) {
 		return nil, fmt.Errorf("url.Parse: %s", err)
 	}
 
-	db, err := sql.Open("postgres", dsn)
+	db, err := sql.Open("postgres", config.DSN)
 	if err != nil {
 		return nil, fmt.Errorf("sql.Open: %s", err)
 	}
+	db.SetMaxOpenConns(config.MaxConnCount);
 
 	b := &Backend{
 		DB:        db,
-		dsn:       dsn,
+		dsn:       config.DSN,
+		maxConns:  config.MaxConnCount,
 		desc:      heim.PeerDesc,
 		version:   version,
 		cluster:   heim.Cluster,
@@ -215,6 +230,8 @@ func (b *Backend) background(wg *sync.WaitGroup) {
 				b.ctx.Terminate(fmt.Errorf("pq ping: %s", err))
 				return
 			}
+			// Update metrics
+			connCount.Set(float64(b.Stats().OpenConnections))
 		case event := <-peerWatcher:
 			b.Lock()
 			switch e := event.(type) {

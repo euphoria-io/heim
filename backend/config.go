@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"strconv"
 	"time"
 
 	"github.com/savaki/geoip2"
@@ -52,6 +53,8 @@ func init() {
 		"address of a peer in etcd cluster")
 
 	flag.StringVar(&Config.DB.DSN, "psql", env("HEIM_DSN", ""), "dsn url of heim postgres database")
+	count, _ := strconv.Atoi(env("HEIM_DB_MAX_CONNECTIONS", "0"))
+	flag.IntVar(&Config.DB.MaxConnCount, "psql-max-connections", count, "maximum db connection count")
 
 	flag.StringVar(&Config.Console.HostKey, "console-hostkey", env("HEIM_CONSOLE_HOST_KEY", ""),
 		"path to file containing host key for ssh console")
@@ -254,7 +257,8 @@ type ConsoleConfig struct {
 }
 
 type DatabaseConfig struct {
-	DSN string `yaml:"dsn"`
+	DSN          string `yaml:"dsn"`
+	MaxConnCount int    `yaml:"max-connection-count,omitempty"`
 }
 
 type KMSConfig struct {
