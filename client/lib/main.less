@@ -660,6 +660,36 @@ iframe.js {
       background: @brand-color;
     }
 
+    &.donations {
+      background: @brand-color;
+      animation: rotate-color 30s linear infinite;
+
+      .content .actions button {
+        color: black;
+      }
+
+      @keyframes rotate-color {
+        from {
+          background: #d95d3f;
+        }
+        20% {
+          background: #f29526;
+        }
+        40% {
+          background: #5abe6b;
+        }
+        60% {
+          background: #4d97cb;
+        }
+        80% {
+          background: #7f62b6;
+        }
+        to {
+          background: #d95d3f;
+        }
+      }
+    }
+
     .content {
       flex: 1;
       display: flex;

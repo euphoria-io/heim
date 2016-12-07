@@ -304,6 +304,15 @@ export default React.createClass({
               </div>}
               {pmNotices.map(pm => <PMNotice key={pm.get('kind') + pm.get('id')} pmId={pm.get('id')} nick={pm.get('nick')} kind={pm.get('kind')} />) }
               {this.state.update.get('ready') && <FastButton className="update-button" onClick={update.perform}><p>update ready<em>{Heim.isTouch ? 'tap' : 'click'} to reload</em></p></FastButton>}
+              {this.state.ui.notices.has('donations') && <div className="notice dark donations">
+                <div className="content">
+                  <span className="title">euphoria maintenance and development is enabled by</span>
+                  <span className="actions">
+                    <FastButton onClick={() => null}>your donation</FastButton>
+                  </span>
+                </div>
+                <FastButton className="close" onClick={() => ui.dismissNotice('donations')} />
+              </div>}
             </ReactCSSTransitionGroup>
             <div className="main-pane-stack">
               <ChatPane pane={this.state.ui.panes.get('main')} showTimeStamps={this.state.ui.showTimestamps} onScrollbarSize={this.onScrollbarSize} disabled={!!mainPaneThreadId} />
