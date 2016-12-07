@@ -12,7 +12,8 @@ export default function MainPage(props) {
       <div className="container main">
         {props.children}
       </div>
-      <Footer />
+      {props.bottom && props.bottom}
+      <Footer noDonation={props.noDonation}/>
     </Page>
   )
 }
@@ -23,4 +24,6 @@ MainPage.propTypes = {
   heimPage: React.PropTypes.string,
   nav: React.PropTypes.node,
   children: React.PropTypes.node,
+  bottom: React.PropTypes.node,
+  noDonation: React.PropTypes.bool,
 }
