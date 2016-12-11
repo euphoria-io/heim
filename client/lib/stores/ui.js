@@ -337,7 +337,7 @@ const store = module.exports.store = Reflux.createStore({
     this.state.infoPaneExpanded = _.get(data, ['room', this.chatState.roomName, 'infoPaneExpanded'], false)
     this.state.sidebarPaneExpanded = _.get(data, ['room', this.chatState.roomName, 'sidebarPaneExpanded'], true)
     this.state.notificationsNoticeDismissed = _.get(data, ['room', this.chatState.roomName, 'notificationsNoticeDismissed'], false)
-    this.state.donationsNoticeDismissed = _.get(data, ['room', this.chatState.roomName, 'donationsNoticeDismissed'], false)
+    this.state.donationsNoticeDismissed = _.get(data, 'donationsNoticeDismissed', false)
     this._updateNotices()
     this.trigger(this.state)
   },
@@ -698,7 +698,7 @@ const store = module.exports.store = Reflux.createStore({
     if (name === 'notifications') {
       storage.setRoom(this.chatState.roomName, 'notificationsNoticeDismissed', true)
     } else if (name === 'donations') {
-      storage.setRoom(this.chatState.roomName, 'donationsNoticeDismissed', true)
+      storage.set('donationsNoticeDismissed', true)
     }
   },
 
