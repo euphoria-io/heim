@@ -5,6 +5,8 @@ import heimURL from '../../lib/heimURL'
 
 export default function Footer(props) {
   return (
+    const donationURL = (props.noDonation) ? null : process.env.HEIM_DONATION_URL
+
     <footer>
       <div className="container">
         <a href={heimURL('/about/terms')}>terms<span className="long"> of service</span></a>
@@ -17,8 +19,8 @@ export default function Footer(props) {
         <a href="https://github.com/euphoria-io/heim"><span className="long">source </span>code</a>
         <a href="http://andeuphoria.tumblr.com/">blog</a>
         <a href="mailto:hi@euphoria.io">contact</a>
-        {props.noDonation || <span className="spacer" />}
-        {props.noDonation || <a href="https://patreon.com/euphoriachat">support us!</a>}
+        {donationURL && <span className="spacer" />}
+        {donationURL && <a href={donationURL}>support us!</a>}
       </div>
     </footer>
   )

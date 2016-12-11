@@ -5,7 +5,7 @@ import heimURL from '../lib/heimURL'
 
 
 module.exports = (
-  <MainPage title="euphoria!" className="welcome" noDonation bottom={<div className="donation-banner"><a href="https://patreon.com/euphoriachat">Support us!</a></div>}>
+  <MainPage title="euphoria!" className="welcome" noDonation bottom={process.env.HEIM_DONATION_URL && <div className="donation-banner"><a href={process.env.HEIM_DONATION_URL}>Support us!</a></div>}>
     <div className="splash">
       <FancyLogo />
       <div className="info-box">
