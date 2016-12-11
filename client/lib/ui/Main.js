@@ -11,6 +11,7 @@ import update from '../stores/update'
 import hueHash from '../hueHash'
 import notification from '../stores/notification'
 import activity from '../stores/activity'
+import donations from '../stores/donations'
 import HooksMixin from './HooksMixin'
 import ChatPane from './ChatPane'
 import ChatTopBar from './ChatTopBar'
@@ -39,6 +40,7 @@ export default React.createClass({
     Reflux.connect(require('../stores/notification').store, 'notification'),
     Reflux.connect(update.store, 'update'),
     Reflux.connect(require('../stores/storage').store, 'storage'),
+    Reflux.connect(donations.store, 'donations'),
     Reflux.listenTo(ui.selectThreadInList, 'selectThreadInList'),
     Reflux.listenTo(ui.panViewTo, 'panViewTo'),
     Reflux.listenTo(ui.tabKeyCombo, 'onTabKeyCombo'),
@@ -304,7 +306,7 @@ export default React.createClass({
               </div>}
               {pmNotices.map(pm => <PMNotice key={pm.get('kind') + pm.get('id')} pmId={pm.get('id')} nick={pm.get('nick')} kind={pm.get('kind')} />) }
               {this.state.update.get('ready') && <FastButton className="update-button" onClick={update.perform}><p>update ready<em>{Heim.isTouch ? 'tap' : 'click'} to reload</em></p></FastButton>}
-              {this.state.ui.notices.has('donations') && <div className="notice dark donations">
+              {this.state.donations.eligible && this.state.donations.url && this.state.ui.notices.has('donations') && <div className="notice dark donations">
                 <div className="content">
                   <span className="title">euphoria maintenance and development is enabled by</span>
                   <span className="actions">
