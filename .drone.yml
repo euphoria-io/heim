@@ -1,5 +1,5 @@
 build:
-  image: eu.phoria/drone-runner:34
+  image: eu.phoria/drone-runner:35
   commands:
     - mv /drone/src/github.com/euphoria-io/ /drone/src/euphoria.io/
     - ci/test.sh build
