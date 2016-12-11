@@ -4,9 +4,9 @@ import heimURL from '../../lib/heimURL'
 
 
 export default function Footer(props) {
-  return (
-    const donationURL = (props.noDonation) ? null : process.env.HEIM_DONATION_URL
+  const donationURL = (props.noDonation) ? null : process.env.HEIM_DONATION_URL
 
+  return (
     <footer>
       <div className="container">
         <a href={heimURL('/about/terms')}>terms<span className="long"> of service</span></a>
