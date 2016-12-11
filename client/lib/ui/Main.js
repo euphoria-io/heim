@@ -310,7 +310,7 @@ export default React.createClass({
                 <div className="content">
                   <span className="title">euphoria maintenance and development is enabled by</span>
                   <span className="actions">
-                    <FastButton onClick={() => null}>your donation</FastButton>
+                    <FastButton onClick={() => donations.openWindow()}>your donation</FastButton>
                   </span>
                 </div>
                 <FastButton className="close" onClick={() => ui.dismissNotice('donations')} />

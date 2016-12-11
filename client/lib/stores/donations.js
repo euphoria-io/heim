@@ -5,7 +5,7 @@ import storage from './storage'
 import actions from '../actions'
 
 
-module.exports.store = Reflux.createStore({
+const store = module.exports.store = Reflux.createStore({
   init() {
     this.state = {
       eligible: null,
@@ -34,3 +34,7 @@ module.exports.store = Reflux.createStore({
     this.trigger(this.state)
   },
 })
+
+module.exports.openWindow = function openWindow() {
+  if (store.state.url) window.open(store.state.url)
+}
