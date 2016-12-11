@@ -666,8 +666,8 @@ body.welcome {
 
   .donation-banner {
     display: flex;
-    margin-top: -40px;
-    height: 40px;
+    margin-top: -50px;
+    height: 50px;
 
     a {
       margin: auto;
@@ -678,6 +678,16 @@ body.welcome {
       color: black;
       text-decoration: none;
       box-shadow: 0 0 4px fade(black, 25%);
+
+      &:before {
+        content: '';
+        display: inline-block;
+        width: 2em;
+        height: 2em;
+        padding-right: 0.25em;
+        vertical-align: middle;
+        background: data-uri('./res/bronze-alt.svg') no-repeat center center;
+      }
     }
   }
 }
