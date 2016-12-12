@@ -13,6 +13,7 @@ const store = module.exports.store = Reflux.createStore({
     }
     this.listenTo(storage.load, this.onStorageLoad)
     this.listenTo(actions.sendMessage, this.onMessageSend)
+    if (storage.store.state !== null) this.onStorageLoad()
   },
 
   getInitialState() {
