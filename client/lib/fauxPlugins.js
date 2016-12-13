@@ -857,9 +857,15 @@ export default function initPlugins(roomName) {
           .messages-content {
             background-image: url(/static/anniversary.svg) !important;
             background-repeat: no-repeat !important;
-            background-position: center bottom !important;
-            background-size: 100vmin !important;
+            background-position: right 180px bottom 0 !important;
+            background-size: 700px !important;
             background-attachment: fixed !important
+          }
+
+          @media (max-width: 650px) {
+            .messages-content {
+              background-size: 180px !important;
+            }
           }
         `}} />
       )
