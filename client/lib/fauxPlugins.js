@@ -3,7 +3,6 @@
 import React from 'react'
 import Reflux from 'reflux'
 import Immutable from 'immutable'
-import moment from 'moment'
 
 
 export default function initPlugins(roomName) {
@@ -847,22 +846,5 @@ export default function initPlugins(roomName) {
         )
       })
     }
-  }
-
-  const now = moment()
-  if (now.month() === 11 && (now.date() === 13 || now.date() === 14)) {
-    Heim.hook('page-bottom', () => {
-      return (
-        <style key="anniversary-style" dangerouslySetInnerHTML={{__html: `
-          .messages-content {
-            background-image: url(/static/anniversary.svg) !important;
-            background-repeat: no-repeat !important;
-            background-position: center bottom !important;
-            background-size: 100vmin !important;
-            background-attachment: fixed !important
-          }
-        `}} />
-      )
-    })
   }
 }
