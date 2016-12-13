@@ -12,19 +12,19 @@
             <stop id="stop5927" offset="1" style="stop-color:#393939;stop-opacity:1;"/>
         </linearGradient>
         <filter id="filter1">
-            <feComposite in="SourceAlpha" result="strongAlpha" operator="arithmetic" k2="1"/>
-            <feGaussianBlur in="strongAlpha" result="shadow" stdDeviation="2"/>
-            <feComposite in="shadow" in2="strongAlpha" result="clippedShadow" operator="arithmetic" k1="-5" k2="1"/>
-            <feComposite in="SourceGraphic" in2="clippedShadow"/>
+            <feGaussianBlur in="SourceAlpha" result="shadow" stdDeviation="2"/>
+            <feComposite in="SourceGraphic" in2="shadow"/>
         </filter>
     </defs>
-    <g filter="url(#filter1)">
-        <g transform="translate(5.9375 5.9375) scale(0.75)" opacity="0.25">
-            <circle r="23.340515" cy="23.75" cx="23.75" id="path3372" style="color:#000000;display:inline;overflow:visible;visibility:visible;opacity:1;fill:#8f4d14;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:1;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;marker:none;enable-background:accumulate"/>
-            <circle r="21.205713" cy="23.75" cx="23.75" id="path3372-8" style="color:#000000;display:inline;overflow:visible;visibility:visible;opacity:1;fill:#d3a322;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:1;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;marker:none;enable-background:accumulate"/>
-            <path id="path3004-90-9-9" d="m 23.75,10.675731 c -7.198298,0 -13.073441,5.875155 -13.073441,13.07347 0,7.198314 5.875143,13.075068 13.073441,13.075068 7.198298,0 13.073441,-5.876754 13.073441,-13.075068 0,-7.198315 -5.875143,-13.07347 -13.073441,-13.07347 z m -9.302379,13.07347 18.604758,0 c 0,5.160323 -4.142067,9.303999 -9.302379,9.303999 -5.160312,0 -9.302373,-4.143676 -9.302379,-9.303999 z" style="color:#000000;display:inline;overflow:visible;visibility:visible;fill:#ac6912;fill-opacity:1;fill-rule:nonzero;stroke:#000000;stroke-width:3.5;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:0.66964287;marker:none;enable-background:accumulate"/>
-            <path id="path3004-90-9" d="m 23.75,10.675731 c -7.198298,0 -13.073441,5.875155 -13.073441,13.07347 0,7.198314 5.875143,13.075068 13.073441,13.075068 7.198298,0 13.073441,-5.876754 13.073441,-13.075068 0,-7.198315 -5.875143,-13.07347 -13.073441,-13.07347 z m -9.302379,13.07347 18.604758,0 c 0,5.160323 -4.142067,9.303999 -9.302379,9.303999 -5.160312,0 -9.302373,-4.143676 -9.302379,-9.303999 z" style="color:#000000;display:inline;overflow:visible;visibility:visible;fill:#ac6912;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:1.5;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker:none;enable-background:accumulate"/>
-            <circle r="19.707285" cy="23.75" cx="23.75" id="path3372-8-9" style="color:#000000;display:inline;overflow:visible;visibility:visible;opacity:1;fill:none;fill-opacity:1;fill-rule:nonzero;stroke:#000000;stroke-width:2.955;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:14.30000019;stroke-dasharray:2.955,2.955;stroke-dashoffset:0;stroke-opacity:0.34375;marker:none;enable-background:accumulate"/>
+    <g opacity="0.15">
+        <g filter="url(#filter1)">
+            <g transform="translate(5.9375 5.9375) scale(0.75)">
+                <circle r="23.340515" cy="23.75" cx="23.75" id="path3372" style="color:#000000;display:inline;overflow:visible;visibility:visible;opacity:1;fill:#8f4d14;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:1;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;marker:none;enable-background:accumulate"/>
+                <circle r="21.205713" cy="23.75" cx="23.75" id="path3372-8" style="color:#000000;display:inline;overflow:visible;visibility:visible;opacity:1;fill:#d3a322;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:1;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;marker:none;enable-background:accumulate"/>
+                <path id="path3004-90-9-9" d="m 23.75,10.675731 c -7.198298,0 -13.073441,5.875155 -13.073441,13.07347 0,7.198314 5.875143,13.075068 13.073441,13.075068 7.198298,0 13.073441,-5.876754 13.073441,-13.075068 0,-7.198315 -5.875143,-13.07347 -13.073441,-13.07347 z m -9.302379,13.07347 18.604758,0 c 0,5.160323 -4.142067,9.303999 -9.302379,9.303999 -5.160312,0 -9.302373,-4.143676 -9.302379,-9.303999 z" style="color:#000000;display:inline;overflow:visible;visibility:visible;fill:#ac6912;fill-opacity:1;fill-rule:nonzero;stroke:#000000;stroke-width:3.5;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:0.66964287;marker:none;enable-background:accumulate"/>
+                <path id="path3004-90-9" d="m 23.75,10.675731 c -7.198298,0 -13.073441,5.875155 -13.073441,13.07347 0,7.198314 5.875143,13.075068 13.073441,13.075068 7.198298,0 13.073441,-5.876754 13.073441,-13.075068 0,-7.198315 -5.875143,-13.07347 -13.073441,-13.07347 z m -9.302379,13.07347 18.604758,0 c 0,5.160323 -4.142067,9.303999 -9.302379,9.303999 -5.160312,0 -9.302373,-4.143676 -9.302379,-9.303999 z" style="color:#000000;display:inline;overflow:visible;visibility:visible;fill:#ac6912;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:1.5;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker:none;enable-background:accumulate"/>
+                <circle r="19.707285" cy="23.75" cx="23.75" id="path3372-8-9" style="color:#000000;display:inline;overflow:visible;visibility:visible;opacity:1;fill:none;fill-opacity:1;fill-rule:nonzero;stroke:#000000;stroke-width:2.955;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:14.30000019;stroke-dasharray:2.955,2.955;stroke-dashoffset:0;stroke-opacity:0.34375;marker:none;enable-background:accumulate"/>
+            </g>
         </g>
     </g>
 </svg>
