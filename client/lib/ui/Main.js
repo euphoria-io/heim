@@ -308,9 +308,9 @@ export default React.createClass({
               {this.state.update.get('ready') && <FastButton className="update-button" onClick={update.perform}><p>update ready<em>{Heim.isTouch ? 'tap' : 'click'} to reload</em></p></FastButton>}
               {this.state.donations.eligible && this.state.donations.url && this.state.ui.notices.has('donations') && <div className="notice dark donations">
                 <div className="content">
-                  <span className="title">euphoria maintenance and development is enabled by</span>
+                  <span className="title">euphoria maintenance and development depends on you.</span>
                   <span className="actions">
-                    <FastButton onClick={() => donations.openWindow()}>your donation</FastButton>
+                    <FastButton onClick={() => donations.openWindow()}>support us</FastButton>
                   </span>
                 </div>
                 <FastButton className="close" onClick={() => ui.dismissNotice('donations')} />
