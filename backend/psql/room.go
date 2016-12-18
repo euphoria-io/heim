@@ -822,7 +822,7 @@ func (rb *ManagedRoomBinding) MinAgentAge() time.Duration {
 }
 
 func (rb *ManagedRoomBinding) IsValidParent(id snowflake.Snowflake) (bool, error) {
-	if id.String() == "" || rb.RetentionDays == 0 {
+	if id.String() == "" {
 		return true, nil
 	}
 	posted, err := rb.getParentPostTime(id)
@@ -832,6 +832,9 @@ func (rb *ManagedRoomBinding) IsValidParent(id snowflake.Snowflake) (bool, error
 			return false, nil
 		}
 		return false, err
+	}
+	if rb.RetentionDays == 0 {
+		return true, nil
 	}
 	threshold := time.Now().Add(time.Duration(-rb.RetentionDays) * 24 * time.Hour)
 	if posted.Before(threshold) {
