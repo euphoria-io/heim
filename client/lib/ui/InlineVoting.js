@@ -39,6 +39,8 @@ export default React.createClass({
       if (/\s*-1\s*/.test(content)) downvotes++
     })
 
+    const result = (upvotes > downvotes) ? "approved" : (upvotes < downvotes) ? "rejected" : "neutral";
+
     return <span className={"inline-voting"}>
       <FastButton onClick={this.upvote} className='approve'>
         <MessageText content={':thumbsup:'} onlyEmoji /> {upvotes}
@@ -46,6 +48,7 @@ export default React.createClass({
       <FastButton onClick={this.downvote} className='disapprove'>
         <MessageText content={':thumbsdown:'} onlyEmoji /> {downvotes}
       </FastButton>
+      <span className={result}> {upvotes - downvotes}</span>
     </span>
   }
 
