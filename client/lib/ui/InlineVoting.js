@@ -39,7 +39,11 @@ export default React.createClass({
       if (/\s*-1\s*/.test(content)) downvotes++
     })
 
-    const result = (upvotes > downvotes) ? "approved" : (upvotes < downvotes) ? "rejected" : "neutral";
+    const result = upvotes - downvotes;
+    const resultClass = (result > 0) ? "approved" : (result < 0) ? "rejected" : "neutral";
+
+    const majorityPercent = Math.max(upvotes, downvotes) * 100 / (upvotes + downvotes);
+    const percentText = " (" + Math.round(majorityPercent) + "% " + ((result > 0) ? "+" : "-") + ")";
 
     return <span className={"inline-voting"}>
       <FastButton onClick={this.upvote} className='approve'>
@@ -48,7 +52,8 @@ export default React.createClass({
       <FastButton onClick={this.downvote} className='disapprove'>
         <MessageText content={':thumbsdown:'} onlyEmoji /> {downvotes}
       </FastButton>
-      <span className={result}> {upvotes - downvotes}</span>
+      <span className={resultClass}> {result}</span>
+      {result != 0 && <small>{percentText}</small>}
     </span>
   }
 
