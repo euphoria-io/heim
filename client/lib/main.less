@@ -1345,6 +1345,26 @@ iframe.js {
         opacity: 0;
         margin-left: 0;
       }
+
+      .inline-voting {
+        .approve, .disapprove {
+           margin-left: 0.2em;
+           padding: 0 0.2em;
+           border-radius: 2px;
+        }
+
+        .approve {
+          background: #e0ffe0;
+          color: #008000;
+          .touchable-bg(#e0ffe0);
+        }
+
+        .disapprove {
+          background: #ffe0e0;
+          color: #800000;
+          .touchable-bg(#ffe0e0);
+        }
+      }
     }
 
     .message-tall {
