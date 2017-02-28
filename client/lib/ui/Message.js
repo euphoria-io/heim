@@ -443,7 +443,7 @@ const Message = React.createClass({
         <div className="message">
           <MessageText content={content} />
           {messageAgo}
-          <InlineVoting message={this} tree={this.props.tree} />
+          <InlineVoting message={message} tree={this.props.tree} />
         </div>
       )
     } else if (this.state.contentTall && this.props.roomSettings.get('collapse') !== false) {
