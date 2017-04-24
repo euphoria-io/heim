@@ -12,7 +12,7 @@ import hueHash from '../hueHash'
 
 
 const mentionDelim = String.raw`^|$|[,.!?;&<'"\s]|&#39;|&quot;|&amp;`
-const mentionFindRe = module.exports.mentionFindRe = new RegExp('(' + mentionDelim + String.raw`)@(\S+?)(?=` + mentionDelim + ')', 'g')
+const mentionFindRe = module.exports.mentionFindRe = new RegExp('(' + mentionDelim + String.raw`|[([{])@(\S+?)(?=` + mentionDelim + String.raw`|[)\]}])`, 'g')
 
 const storeActions = module.exports.actions = Reflux.createActions([
   'messageReceived',
