@@ -154,7 +154,7 @@ export default React.createClass({
     // Scan forward for the first @ sign
     let mentionStart
     for (mentionStart = wordStart; mentionStart < text.length && charRe.test(text[mentionStart]); mentionStart++) {
-      if (text[mentionStart] == '@') {
+      if (text[mentionStart] === '@') {
         wordStart = mentionStart + 1
         break
       }
