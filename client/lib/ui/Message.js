@@ -233,7 +233,7 @@ const Message = React.createClass({
     const contentExpanded = paneData.get('contentExpanded')
 
     let repliesExpanded
-    if (this.props.maxDepth == 0) {
+    if (this.props.maxDepth === 0) {
       repliesExpanded = paneData.get('repliesExpanded')
       if (repliesExpanded === null) {
         repliesExpanded = false
@@ -306,12 +306,12 @@ const Message = React.createClass({
       }
     } else if (children.size > 0 || focused) {
       const composingReply = focused && children.size === 0
-      const fullCollapse = this.props.visibleCount == 0 && !showAllReplies || this.props.maxDepth == 0
+      const fullCollapse = this.props.visibleCount === 0 && !showAllReplies || this.props.maxDepth === 0
       const partialCollapse = children.size > this.props.visibleCount && !showAllReplies && !fullCollapse
       const inlineReplies = composingReply || !fullCollapse
       let childCount
       let childNewCount
-      if (fullCollapse && !repliesExpanded) {
+      if (fullCollapse && !repliesExpanded && !composingReply) {
         childCount = count.get('descendants')
         childNewCount = count.get('newDescendants')
         let replyLabel
@@ -351,6 +351,7 @@ const Message = React.createClass({
       } else {
         let focusAction
         let expandRestOfReplies
+        const canCollapse = (fullCollapse || partialCollapse) && !composingReply
         if (partialCollapse && !repliesExpanded) {
           const descCount = this.props.tree.calculateDescendantCount(this.props.nodeId, this.props.visibleCount)
           childCount = descCount.get('descendants')
@@ -387,15 +388,15 @@ const Message = React.createClass({
           focusAction = <ChatEntry pane={pane} onChange={this.expandReplies} />
         }
         let collapseAction
-        if (fullCollapse || partialCollapse) {
+        if (canCollapse) {
           collapseAction = repliesExpanded ? this.collapseReplies : this.expandReplies
         }
         messageReplies = (
-          <div ref="replies" className={classNames('replies', {'collapsible': fullCollapse || partialCollapse, 'expanded': repliesExpanded, 'inline': inlineReplies, 'empty': children.size === 0, 'focused': focused})}>
+          <div ref="replies" className={classNames('replies', {'collapsible': canCollapse, 'expanded': repliesExpanded, 'inline': inlineReplies, 'empty': children.size === 0, 'focused': focused})}>
             <FastButton className="indent-line" onClick={collapseAction} empty />
             <div className="content">
               {children.toIndexedSeq().map((nodeId, idx) =>
-                <Message key={nodeId} pane={this.props.pane} tree={this.props.tree} nodeId={nodeId} depth={this.props.depth + 1} visibleCount={repliesExpanded ? Message.visibleCount : Math.floor((this.props.visibleCount - 1) / 2)} maxDepth={this.props.maxDepth == 0 ? Message.maxDepth - 1 : this.props.maxDepth - 1} showTimeAgo={!expandRestOfReplies && idx === children.size - 1} showTimeStamps={this.props.showTimeStamps} roomSettings={this.props.roomSettings} />
+                <Message key={nodeId} pane={this.props.pane} tree={this.props.tree} nodeId={nodeId} depth={this.props.depth + 1} visibleCount={canCollapse && repliesExpanded || this.props.maxDepth === 0 ? Message.visibleCount : Math.floor((this.props.visibleCount - 1) / 2)} maxDepth={this.props.maxDepth === 0 ? Message.maxDepth - 1 : this.props.maxDepth - 1} showTimeAgo={!expandRestOfReplies && idx === children.size - 1} showTimeStamps={this.props.showTimeStamps} roomSettings={this.props.roomSettings} />
               )}
               {focusAction}
             </div>
