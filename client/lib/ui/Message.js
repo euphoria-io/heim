@@ -306,11 +306,12 @@ const Message = React.createClass({
       }
     } else if (children.size > 0 || focused) {
       const composingReply = focused && children.size === 0
-      const canCollapse = (children.size > this.props.visibleCount && !showAllReplies) || this.props.maxDepth == 0
-      const inlineReplies = composingReply || !canCollapse
+      const fullCollapse = this.props.visibleCount == 0 && !showAllReplies || this.props.maxDepth == 0
+      const partialCollapse = children.size > this.props.visibleCount && !showAllReplies && !fullCollapse
+      const inlineReplies = composingReply || !fullCollapse
       let childCount
       let childNewCount
-      if (!inlineReplies && !repliesExpanded) {
+      if (fullCollapse && !repliesExpanded) {
         childCount = count.get('descendants')
         childNewCount = count.get('newDescendants')
         let replyLabel
@@ -350,7 +351,7 @@ const Message = React.createClass({
       } else {
         let focusAction
         let expandRestOfReplies
-        if (canCollapse && !repliesExpanded) {
+        if (partialCollapse && !repliesExpanded) {
           const descCount = this.props.tree.calculateDescendantCount(this.props.nodeId, this.props.visibleCount)
           childCount = descCount.get('descendants')
           childNewCount = descCount.get('newDescendants')
@@ -386,11 +387,11 @@ const Message = React.createClass({
           focusAction = <ChatEntry pane={pane} onChange={this.expandReplies} />
         }
         let collapseAction
-        if (canCollapse) {
+        if (fullCollapse || partialCollapse) {
           collapseAction = repliesExpanded ? this.collapseReplies : this.expandReplies
         }
         messageReplies = (
-          <div ref="replies" className={classNames('replies', {'collapsible': canCollapse, 'expanded': canCollapse && repliesExpanded, 'inline': inlineReplies, 'empty': children.size === 0, 'focused': focused})}>
+          <div ref="replies" className={classNames('replies', {'collapsible': fullCollapse || partialCollapse, 'expanded': repliesExpanded, 'inline': inlineReplies, 'empty': children.size === 0, 'focused': focused})}>
             <FastButton className="indent-line" onClick={collapseAction} empty />
             <div className="content">
               {children.toIndexedSeq().map((nodeId, idx) =>
