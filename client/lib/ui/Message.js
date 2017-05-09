@@ -392,7 +392,7 @@ const Message = React.createClass({
           collapseAction = repliesExpanded ? this.collapseReplies : this.expandReplies
         }
         messageReplies = (
-          <div ref="replies" className={classNames('replies', {'collapsible': canCollapse, 'expanded': repliesExpanded, 'inline': inlineReplies, 'empty': children.size === 0, 'focused': focused})}>
+          <div ref="replies" className={classNames('replies', {'collapsible': canCollapse, 'expanded': canCollapse && repliesExpanded, 'inline': inlineReplies, 'empty': children.size === 0, 'focused': focused})}>
             <FastButton className="indent-line" onClick={collapseAction} empty />
             <div className="content">
               {children.toIndexedSeq().map((nodeId, idx) =>
