@@ -1,7 +1,9 @@
 import React from 'react'
+import Reflux from 'reflux'
 import Immutable from 'immutable'
 
 import actions from '../actions'
+import chat from '../stores/chat'
 import Tree from '../Tree'
 import FastButton from './FastButton'
 import MessageText from './MessageText'
@@ -17,13 +19,23 @@ export default React.createClass({
     style: React.PropTypes.string,
   },
 
+  mixins: [
+    Reflux.connect(chat.store, 'chat'),
+  ],
+
+  sendMessageIfPossible(text) {
+    if (this.state.chat.joined && this.state.chat.nick) {
+      actions.sendMessage(text, this.props.message.get('id'))
+    }
+  },
+
   upvote(evt) {
-    actions.sendMessage('+1', this.props.message.get('id'))
+    this.sendMessageIfPossible('+1')
     if (evt) evt.stopPropagation()
   },
 
   downvote(evt) {
-    actions.sendMessage('-1', this.props.message.get('id'))
+    this.sendMessageIfPossible('-1')
     if (evt) evt.stopPropagation()
   },
 
