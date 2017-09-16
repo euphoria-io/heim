@@ -14,7 +14,7 @@ the terms of the [CC BY 4.0](http://creativecommons.org/licenses/by/4.0/)
 license.  You'll find a copy in the `LICENSE` file in each of these
 directories.
 
-## aws, backend, client, cluster, heimctl, and all else
+## everything else
 
 The heim source code is licensed to the public under the terms of the MIT
 license. See `LICENSE.mit` for details.
