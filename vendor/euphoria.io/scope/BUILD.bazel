@@ -1,0 +1,31 @@
+load("@io_bazel_rules_go//go:def.bzl", "gazelle", "go_library", "go_prefix", "go_test")
+
+gazelle(
+    name = "gazelle",
+    command = "fix",
+    external = "vendored",
+    prefix = "euphoria.io/scope",
+)
+
+go_prefix("euphoria.io/scope")
+
+go_library(
+    name = "scope",
+    srcs = glob(include=["*.go"], exclude=["*_test.go"]),
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "scope_test",
+    srcs = glob(include=["*_test.go"], exclude=["examples_test.go"]),
+    library = ":scope",
+    deps = ["//vendor/github.com/smartystreets/goconvey/convey:go_default_library"],
+    size = "small",
+)
+
+go_test(
+    name = "examples_test",
+    srcs = ["examples_test.go"],
+    deps = [":scope"],
+    size = "small",
+)
