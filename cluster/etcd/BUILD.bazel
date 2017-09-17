@@ -1,0 +1,30 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "etcd",
+    srcs = glob(include=["*.go"], exclude=["*_test.go"]),
+    visibility = ["//visibility:public"],
+    deps = [
+        "//cluster",
+        "//proto/security",
+        "//vendor/euphoria.io/scope",
+        "//vendor/github.com/coreos/go-etcd/etcd:go_default_library",
+        "//vendor/github.com/prometheus/client_golang/prometheus:go_default_library",
+    ],
+)
+
+go_test(
+    name = "tests",
+    srcs = glob(include=["*_test.go"]),
+    deps = [
+        ":etcd",
+        "//backend",
+        "//backend/mock",
+        "//cluster",
+        "//cluster/etcd/clustertest",
+        "//proto",
+        "//proto/security",
+        "//vendor/github.com/smartystreets/goconvey/convey:go_default_library",
+    ],
+    size = "small",
+)

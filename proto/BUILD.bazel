@@ -1,0 +1,42 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "proto",
+    srcs = glob(include=["*.go"], exclude=["*_test.go"]),
+    visibility = ["//visibility:public"],
+    deps = [
+        "//cluster",
+        "//proto/emails",
+        "//proto/jobs",
+        "//proto/security",
+        "//proto/snowflake",
+        "//templates",
+        "//vendor/euphoria.io/scope",
+        "//vendor/github.com/pquerna/otp:go_default_library",
+        "//vendor/github.com/pquerna/otp/totp:go_default_library",
+        "//vendor/github.com/savaki/geoip2:go_default_library",
+        "//vendor/golang.org/x/crypto/poly1305:go_default_library",
+    ],
+)
+
+go_test(
+    name = "small",
+    srcs = glob(include=["*_test.go"], exclude=["integration_test.go"]),
+    library = ":proto",
+    deps = [
+        "//proto/security",
+        "//vendor/github.com/smartystreets/goconvey/convey:go_default_library",
+    ],
+    size = "small",
+)
+
+go_test(
+    name = "integration",
+    srcs = ["integration_test.go"],
+    deps = [
+        ":proto",
+        "//backend",
+        "//backend/mock",
+    ],
+    size = "small",
+)

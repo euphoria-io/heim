@@ -1,0 +1,15 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "templates",
+    srcs = glob(include=["*.go"], exclude=["*_test.go"]),
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "tests",
+    srcs = glob(include=["*_test.go"]),
+    library = ":templates",
+    deps = ["//vendor/github.com/smartystreets/goconvey/convey:go_default_library"],
+    size = "small",
+)

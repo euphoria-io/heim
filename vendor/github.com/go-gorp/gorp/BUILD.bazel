@@ -1,0 +1,46 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "column.go",
+        "db.go",
+        "dialect.go",
+        "dialect_mysql.go",
+        "dialect_oracle.go",
+        "dialect_postgres.go",
+        "dialect_sqlite.go",
+        "dialect_sqlserver.go",
+        "errors.go",
+        "gorp.go",
+        "hooks.go",
+        "index.go",
+        "lockerror.go",
+        "logging.go",
+        "nulltypes.go",
+        "select.go",
+        "table.go",
+        "table_bindings.go",
+        "transaction.go",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "go_default_xtest",
+    srcs = [
+        "dialect_mysql_test.go",
+        "gorp_suite_test.go",
+        "gorp_test.go",
+    ],
+    deps = [
+        ":go_default_library",
+        "//vendor/github.com/go-sql-driver/mysql:go_default_library",
+        "//vendor/github.com/lib/pq:go_default_library",
+        "//vendor/github.com/mattn/go-sqlite3:go_default_library",
+        "//vendor/github.com/onsi/ginkgo:go_default_library",
+        "//vendor/github.com/onsi/ginkgo/extensions/table:go_default_library",
+        "//vendor/github.com/onsi/gomega:go_default_library",
+        "//vendor/github.com/ziutek/mymysql/godrv:go_default_library",
+    ],
+)

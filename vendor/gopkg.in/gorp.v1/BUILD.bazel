@@ -1,0 +1,23 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "dialect.go",
+        "errors.go",
+        "gorp.go",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["gorp_test.go"],
+    library = ":go_default_library",
+    deps = [
+        "//vendor/github.com/go-sql-driver/mysql:go_default_library",
+        "//vendor/github.com/lib/pq:go_default_library",
+        "//vendor/github.com/mattn/go-sqlite3:go_default_library",
+        "//vendor/github.com/ziutek/mymysql/godrv:go_default_library",
+    ],
+)

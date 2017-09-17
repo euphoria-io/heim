@@ -1,0 +1,20 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "cluster",
+    srcs = glob(include=["*.go"], exclude=["*_test.go"]),
+    visibility = ["//visibility:public"],
+    deps = ["//proto/security"],
+)
+
+go_test(
+    name = "tests",
+    srcs = glob(include=["*_test.go"]),
+    deps = [
+        ":cluster",
+        "//backend",
+        "//backend/mock",
+        "//proto",
+    ],
+    size = "small",
+)

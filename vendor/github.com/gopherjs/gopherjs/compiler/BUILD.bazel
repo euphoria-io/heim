@@ -1,0 +1,24 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "compiler.go",
+        "expressions.go",
+        "package.go",
+        "statements.go",
+        "utils.go",
+        "version_check.go",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/gopherjs/gopherjs/compiler/analysis:go_default_library",
+        "//vendor/github.com/gopherjs/gopherjs/compiler/astutil:go_default_library",
+        "//vendor/github.com/gopherjs/gopherjs/compiler/filter:go_default_library",
+        "//vendor/github.com/gopherjs/gopherjs/compiler/prelude:go_default_library",
+        "//vendor/github.com/gopherjs/gopherjs/compiler/typesutil:go_default_library",
+        "//vendor/github.com/neelance/astrewrite:go_default_library",
+        "//vendor/golang.org/x/tools/go/gcimporter15:go_default_library",
+        "//vendor/golang.org/x/tools/go/types/typeutil:go_default_library",
+    ],
+)

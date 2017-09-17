@@ -1,0 +1,30 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "console",
+    srcs = glob(include=["*.go"], exclude=["*_test.go"]),
+    visibility = ["//visibility:public"],
+    deps = [
+        "//cluster",
+        "//proto",
+        "//proto/security",
+        "//proto/snowflake",
+        "//vendor/euphoria.io/scope",
+        "//vendor/golang.org/x/crypto/ssh:go_default_library",
+        "//vendor/golang.org/x/crypto/ssh/terminal:go_default_library",
+    ],
+)
+
+go_test(
+    name = "tests",
+    srcs = glob(["*_test.go"]),
+    library = ":console",
+    deps = [
+        "//backend/mock",
+        "//proto",
+        "//proto/security",
+        "//vendor/euphoria.io/scope",
+        "//vendor/github.com/smartystreets/goconvey/convey:go_default_library",
+    ],
+    size = "small",
+)

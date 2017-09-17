@@ -1,0 +1,14 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "presence",
+    srcs = glob(include=["*.go"], exclude=["*_test.go"]),
+    visibility = ["//visibility:public"],
+    deps = [
+        "//backend/psql",
+        "//cluster",
+        "//proto",
+        "//vendor/euphoria.io/scope",
+        "//vendor/github.com/prometheus/client_golang/prometheus:go_default_library",
+    ],
+)

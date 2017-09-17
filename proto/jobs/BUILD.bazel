@@ -1,0 +1,12 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "jobs",
+    srcs = glob(include=["*.go"], exclude=["*_test.go"]),
+    visibility = ["//visibility:public"],
+    deps = [
+        "//proto/logging",
+        "//proto/snowflake",
+        "//vendor/euphoria.io/scope",
+    ],
+)

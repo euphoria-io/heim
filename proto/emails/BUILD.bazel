@@ -1,0 +1,23 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "emails",
+    srcs = glob(include=["*.go"], exclude=["*_test.go"]),
+    visibility = ["//visibility:public"],
+    deps = [
+        "//proto/snowflake",
+        "//templates",
+        "//vendor/euphoria.io/scope",
+    ],
+)
+
+go_test(
+    name = "tests",
+    srcs = glob(include=["*_test.go"]),
+    library = ":emails",
+    deps = [
+        "//templates",
+        "//vendor/github.com/smartystreets/goconvey/convey:go_default_library",
+    ],
+    size = "small",
+)

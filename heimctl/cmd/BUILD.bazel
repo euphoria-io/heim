@@ -1,0 +1,34 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "cmd",
+    srcs = glob(include=["*.go"], exclude=["*_test.go"]),
+    visibility = ["//visibility:public"],
+    deps = [
+        "//backend",
+        "//backend/console",
+        "//backend/mock",
+        "//backend/psql",
+        "//cluster",
+        "//heimctl/activity",
+        "//heimctl/presence",
+        "//heimctl/retention",
+        "//heimctl/worker",
+        "//proto",
+        "//proto/logging",
+        "//proto/snowflake",
+        "//templates",
+        "//vendor/euphoria.io/scope",
+        "//vendor/github.com/lib/pq:go_default_library",
+        "//vendor/github.com/prometheus/client_golang/prometheus:go_default_library",
+        "//vendor/gopkg.in/gorp.v1:go_default_library",
+    ],
+)
+
+go_test(
+    name = "tests",
+    srcs = glob(include=["*_test.go"]),
+    library = ":cmd",
+    deps = ["//vendor/github.com/smartystreets/goconvey/convey:go_default_library"],
+    size = "small",
+)

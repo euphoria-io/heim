@@ -1,0 +1,52 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "security",
+    srcs = glob(include=["*.go"], exclude=["*_test.go"]),
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/golang.org/x/crypto/nacl/box:go_default_library",
+        "//vendor/golang.org/x/crypto/pbkdf2:go_default_library",
+    ],
+)
+
+go_test(
+    name = "small",
+    srcs = glob(include=["*_test.go"], exclude=["grants_test.go", "integration_test.go"]),
+    library = ":security",
+    deps = [
+        "//vendor/github.com/smartystreets/goconvey/convey:go_default_library",
+        "//vendor/golang.org/x/crypto/nacl/box:go_default_library",
+    ],
+    size = "small",
+)
+
+go_test(
+    name = "integration",
+    srcs = ["integration_test.go"],
+    deps = [
+        ":security",
+        "//backend",
+        "//backend/mock",
+        "//proto",
+        "//proto/snowflake",
+        "//vendor/euphoria.io/scope",
+        "//vendor/github.com/smartystreets/goconvey/convey:go_default_library",
+    ],
+    size = "small",
+)
+
+go_test(
+    name = "grants",
+    srcs = ["grants_test.go"],
+    deps = [
+        ":security",
+        "//backend",
+        "//backend/mock",
+        "//proto",
+        "//proto/snowflake",
+        "//vendor/euphoria.io/scope",
+        "//vendor/github.com/smartystreets/goconvey/convey:go_default_library",
+    ],
+    size = "small",
+)

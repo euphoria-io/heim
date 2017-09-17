@@ -1,0 +1,47 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "mock",
+    srcs = glob(include=["*.go"], exclude=["*_test.go"]),
+    visibility = ["//visibility:public"],
+    deps = [
+        "//backend",
+        "//cluster",
+        "//proto",
+        "//proto/emails",
+        "//proto/jobs",
+        "//proto/logging",
+        "//proto/security",
+        "//proto/snowflake",
+        "//templates",
+        "//vendor/euphoria.io/scope",
+    ],
+)
+
+go_test(
+    name = "small",
+    srcs = glob(include=["*_test.go"], exclude=["integration_test.go"]),
+    library = ":mock",
+    deps = [
+        "//backend",
+        "//proto",
+        "//proto/security",
+        "//vendor/euphoria.io/scope",
+        "//vendor/github.com/smartystreets/goconvey/convey:go_default_library",
+    ],
+    size = "small",
+)
+
+go_test(
+    name = "integration",
+    srcs = ["integration_test.go"],
+    library = ":mock",
+    deps = [
+        "//backend",
+        "//proto",
+        "//proto/security",
+        "//vendor/euphoria.io/scope",
+        "//vendor/github.com/smartystreets/goconvey/convey:go_default_library",
+    ],
+    size = "small",
+)

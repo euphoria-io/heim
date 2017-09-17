@@ -1,0 +1,26 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "codelayout.go",
+        "codesize.go",
+        "datamatrixcode.go",
+        "encoder.go",
+        "errorcorrection.go",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/boombuler/barcode:go_default_library",
+        "//vendor/github.com/boombuler/barcode/utils:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = [
+        "datamatrix_test.go",
+        "errorcorrection_test.go",
+    ],
+    library = ":go_default_library",
+)

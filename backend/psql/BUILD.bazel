@@ -1,0 +1,37 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "psql",
+    srcs = glob(include=["*.go"], exclude=["*_test.go"]),
+    visibility = ["//visibility:public"],
+    deps = [
+        "//backend",
+        "//cluster",
+        "//proto",
+        "//proto/emails",
+        "//proto/jobs",
+        "//proto/logging",
+        "//proto/security",
+        "//proto/snowflake",
+        "//templates",
+        "//vendor/euphoria.io/scope",
+        "//vendor/github.com/lib/pq:go_default_library",
+        "//vendor/github.com/prometheus/client_golang/prometheus:go_default_library",
+        "//vendor/gopkg.in/gorp.v1:go_default_library",
+    ],
+)
+
+go_test(
+    name = "integration",
+    srcs = ["integration_test.go"],
+    library = ":psql",
+    deps = [
+        "//backend",
+        "//cluster",
+        "//proto",
+        "//vendor/github.com/rubenv/sql-migrate:go_default_library",
+    ],
+    data = glob(["migrations/*.sql"]),
+    size = "large",
+    timeout = "short",
+)

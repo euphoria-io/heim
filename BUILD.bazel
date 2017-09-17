@@ -1,0 +1,9 @@
+load("@io_bazel_rules_go//go:def.bzl", "gazelle", "go_prefix")
+
+gazelle(
+    name = "gazelle",
+    external = "vendored",
+    prefix = "euphoria.io/heim",
+)
+
+go_prefix("euphoria.io/heim")
