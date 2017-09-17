@@ -26,5 +26,8 @@ go_test(
         "//proto/security",
         "//vendor/github.com/smartystreets/goconvey/convey:go_default_library",
     ],
+    data = [
+      "@etcd//:etcd",
+    ],
     size = "small",
 )

@@ -12,25 +12,6 @@ notifications:
     on_success: always
     on_failure: always
     on_start: never
-before_install:
-    - |
-      V=0.5.3
-      DB_HOST=localhost
-      OS=linux
-      URL="https://github.com/bazelbuild/bazel/releases/download/${V}/bazel-${V}-installer-${OS}-x86_64.sh"
-      wget -O install.sh "${URL}"
-      chmod +x install.sh
-      ./install.sh --user
-      rm -f install.sh
-      psql -V
-      psql -c 'create database heimtest;' -U postgres -h $DB_HOST
-      ETCD_VER=v3.2.7
-      curl -L https://storage.googleapis.com/etcd/$ETCD_VER/etcd-$ETCD_VER-linux-amd64.tar.gz -o /tmp/etcd.tar.gz
-      mkdir /tmp/etcd
-      tar xzvf /tmp/etcd.tar.gz -C /tmp/etcd --strip-components=1
-      sudo cp /tmp/etcd/etcd /tmp/etcd/etcdctl /usr/bin
-      
 script:
-    - echo $PATH
-    - ls -alF /tmp/etcd
-    - bazel query 'kind(".*_test", ...) except //vendor/...' | xargs bazel test --test_output=errors --test_verbose_timeout_warnings --test_env=DSN=postgres://postgres@localhost/heimtest?sslmode=disable
+    - tools/ci/build.sh
+    - tools/ci/test.sh

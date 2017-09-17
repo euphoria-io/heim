@@ -6,3 +6,6 @@ http_archive(
 load("@io_bazel_rules_go//go:def.bzl", "go_repositories")
 
 go_repositories()
+
+load("//tools/bzl:etcd.bzl", "install_etcd")
+install_etcd(name = "etcd")

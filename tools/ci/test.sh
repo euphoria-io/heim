@@ -12,12 +12,32 @@ setup_deps() {
   export GOPATH=${HEIM_GOPATH}:$(pwd)/_deps/godeps
 }
 
-test_backend() {
+setup_bazel() {
+  V=0.5.3
+  OS=linux
+  URL="https://github.com/bazelbuild/bazel/releases/download/${V}/bazel-${V}-installer-${OS}-x86_64.sh"
+  wget -O install.sh "${URL}"
+  chmod +x install.sh
+  ./install.sh --user
+  rm -f install.sh
+}
+
+setup_etcd() {
+  curl -L https://storage.googleapis.com/etcd/$ETCD_VER/etcd-$ETCD_VER-linux-amd64.tar.gz -o etcd.tar.gz
+  mkdir -p etcd
+  tar xzvf /tmp/etcd.tar.gz -C /tmp/etcd --strip-components=1
+  sudo cp /tmp/etcd/etcd /tmp/etcd/etcdctl /usr/bin
+}
+
+setup_psql() {
   psql -V
   psql -c 'create database heimtest;' -U postgres -h $DB_HOST
   export DSN="postgres://postgres@$DB_HOST/heimtest?sslmode=disable"
-  go install github.com/coreos/etcd
-  go test -v euphoria.io/heim/...
+}
+
+test_backend() {
+  bazel query 'kind(".*_test", ...) except //vendor/...' |
+    xargs bazel test --test_output=errors --test_verbose_timeout_warnings --test_env=DSN="$DSN"
 }
 
 test_client() {
@@ -28,7 +48,10 @@ test_client() {
   popd
 }
 
+setup_bazel
 setup_deps
+setup_etcd
+setup_psql
 
 test_client
 test_backend
