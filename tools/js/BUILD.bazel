@@ -1,0 +1,29 @@
+sh_binary(
+    name = "gulp",
+    srcs = ["//client:gulp"],
+    data = [
+        "//client:clientfiles",
+        "//client:rcfiles",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+sh_binary(
+    name = "eslint",
+    srcs = ["//client:eslint"],
+    data = [
+        "//client:clientfiles",
+        "//client:rcfiles",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+sh_binary(
+    name = "mochify",
+    srcs = ["//client:mochify"],
+    data = [
+        "//client:clientfiles",
+        "//client:rcfiles",
+    ],
+    visibility = ["//visibility:public"],
+)

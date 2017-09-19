@@ -88,18 +88,23 @@ gulp.task('heim-js', ['heim-git-commit', 'heim-less'], () => {
   return heimBundler({debug: true})
     // share some libraries with the global namespace
     // doing this here because these exposes trip up watchify atm
+    // FIXME(logan): Commented out things to get build to work...
+    /*
     .require('lodash', {expose: 'lodash'})
     .require('react', {expose: 'react'})
     .require('reflux', {expose: 'reflux'})
     .require('immutable', {expose: 'immutable'})
     .require('moment', {expose: 'moment'})
     .require('querystring', {expose: 'querystring'})
+    */
     .bundle()
     .pipe(source('main.js'))
     .pipe(buffer())
+    /*
     .pipe(sourcemaps.init({loadMaps: true}))
       .pipe(process.env.NODE_ENV === 'production' ? uglify() : gutil.noop())
     .pipe(sourcemaps.write('./', {includeContent: true}))
+    */
     .on('error', handleError('heim browserify error'))
     .pipe(gulp.dest(heimStaticDest))
     .pipe(gzip())

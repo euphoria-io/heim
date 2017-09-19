@@ -1,0 +1,72 @@
+load("//tools/bzl:eslint.bzl", "eslint_test")
+load("//tools/bzl:gulp.bzl", "gulp_task")
+load("//tools/bzl:mochify.bzl", "mochify_test")
+
+filegroup(
+    name = "eslint",
+    srcs = ["node_modules/.bin/eslint"],
+    visibility = ["//tools/js:__pkg__"],
+)
+
+filegroup(
+    name = "gulp",
+    srcs = ["node_modules/.bin/gulp"],
+    visibility = ["//tools/js:__pkg__"],
+)
+
+filegroup(
+    name = "mochify",
+    srcs = ["node_modules/.bin/mochify"],
+    visibility = ["//tools/js:__pkg__"],
+)
+
+filegroup(
+    name = "clientfiles",
+    data = glob(
+        include = [
+            "node_modules/**",
+            "**/*.css",
+            "**/*.js",
+            "**/*.less",
+            "**/*.png",
+            "**/*.svg",
+            "**/*.txt",
+            "**/*.woff",
+        ],
+        exclude = [
+            "build",
+            "**/*&*",
+        ],
+    ),
+    visibility = ["//tools/js:__pkg__"],
+)
+
+filegroup(
+    name = "rcfiles",
+    data = [
+        ".babelrc",
+        ".eslintignore",
+        ".eslintrc",
+        ".jshintrc",
+        "package.json",
+    ],
+    visibility = ["//tools/js:__pkg__"],
+)
+
+mochify_test(name = "client")
+
+eslint_test(name = "lint")
+
+gulp_task(
+    name = "build",
+    outs = [
+        "heim",
+        "email",
+        "embed",
+    ],
+    renames = {
+        "static": "heim",
+    },
+    visibility = ["//visibility:public"],
+)
+

@@ -6,11 +6,11 @@ import (
 	"euphoria.io/heim/heimctl/cmd"
 )
 
-var version string
+var Version string
 
 func main() {
-	if version != "" {
-		cmd.Version = version
+	if Version != "" {
+		cmd.Version = Version
 	}
 	flag.Parse()
 	cmd.Run(flag.Args())

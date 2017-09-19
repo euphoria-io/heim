@@ -1,14 +1,11 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
-
-go_library(
-    name = "heimctl_lib",
-    srcs = ["main.go"],
-    visibility = ["//visibility:private"],
-    deps = ["//heimctl/cmd"],
-)
+load("@io_bazel_rules_go//go:def.bzl", "go_binary")
 
 go_binary(
     name = "heimctl",
-    library = ":heimctl_lib",
+    srcs = ["main.go"],
+    deps = ["//heimctl/cmd"],
+    x_defs = {
+      "main.Version": "{BUILD_EMBED_LABEL}",
+    },
     visibility = ["//visibility:public"],
 )

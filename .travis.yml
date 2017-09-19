@@ -1,8 +1,10 @@
 dist: trusty
 sudo: required
-language: java
+language: node_js
+node_js:
+    - "6"
 addons:
-  - postgresql: "9.4"
+    - postgresql: "9.4"
 os:
     - linux
 notifications:
@@ -13,5 +15,5 @@ notifications:
     on_failure: always
     on_start: never
 script:
-    - tools/ci/build.sh
-    - tools/ci/test.sh
+    - DB_HOST=localhost tools/ci/test.sh
+    - BRANCH=TRAVIS_BRANCH COMMIT=TRAVIS_COMMIT tools/ci/build.sh

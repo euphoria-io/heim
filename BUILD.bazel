@@ -7,3 +7,13 @@ gazelle(
 )
 
 go_prefix("euphoria.io/heim")
+
+load("//tools/bzl:hzp.bzl", "hzp_binary")
+
+hzp_binary(
+    name = "heimctl",
+    bin = "//heimctl",
+    srcs = [
+      "//client:build",
+    ],
+)
