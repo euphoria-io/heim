@@ -125,7 +125,7 @@ export default function clientRoom() {
       notification: require('./stores/notification'),
       storage: require('./stores/storage'),
       activity: require('./stores/activity'),
-      click: require('./stores/clock'),
+      clock: require('./stores/clock'),
       update: require('./stores/update'),
       plugins: require('./stores/plugins'),
     })
