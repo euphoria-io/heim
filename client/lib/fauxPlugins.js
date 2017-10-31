@@ -366,7 +366,7 @@ export default function initPlugins(roomName) {
     Heim.chat.setRoomSettings({collapse: false})
   }
 
-  if (location.hash.substr(1) === 'spooky') {
+  if (uiwindow.location.hash.substr(1) === 'spooky') {
     Heim.hook('page-bottom', () => {
       return (
         <style key="spooky-style" dangerouslySetInnerHTML={{__html: `
@@ -611,7 +611,7 @@ export default function initPlugins(roomName) {
     })
   }
 
-  if (location.hash.substr(1) === 'darcula') {
+  if (uiwindow.location.hash.substr(1) === 'darcula') {
     Heim.hook('page-bottom', () => {
       return (
           <style key="darcula-style" dangerouslySetInnerHTML={{__html: `
@@ -824,7 +824,7 @@ export default function initPlugins(roomName) {
       )
     })
 
-    if (location.hash.substr(1) === 'spooky') {
+    if (uiwindow.location.hash.substr(1) === 'spooky') {
       Heim.hook('page-bottom', () => {
         return (
           <style key="xkcd-top-spooky-style" dangerouslySetInnerHTML={{__html: `
@@ -835,7 +835,7 @@ export default function initPlugins(roomName) {
           `}} />
         )
       })
-    } else if (location.hash.substr(1) === 'darcula') {
+    } else if (uiwindow.location.hash.substr(1) === 'darcula') {
       Heim.hook('page-bottom', () => {
         return (
           <style key="xkcd-top-darcula-style" dangerouslySetInnerHTML={{__html: `
