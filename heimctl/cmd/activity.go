@@ -1,4 +1,4 @@
-package cmd
+package cmd // import "euphoria.io/heim/heimctl/cmd"
 
 import (
 	"flag"

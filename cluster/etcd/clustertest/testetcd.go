@@ -1,4 +1,4 @@
-package clustertest
+package clustertest // import "euphoria.io/heim/cluster/etcd/clustertest"
 
 import (
 	"bufio"

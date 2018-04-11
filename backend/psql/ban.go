@@ -1,4 +1,4 @@
-package psql
+package psql // import "euphoria.io/heim/backend/psql"
 
 import (
 	"database/sql"

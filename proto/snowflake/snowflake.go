@@ -1,4 +1,4 @@
-package snowflake
+package snowflake // import "euphoria.io/heim/proto/snowflake"
 
 import (
 	"encoding/json"

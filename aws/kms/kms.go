@@ -1,4 +1,4 @@
-package kms
+package kms // import "euphoria.io/heim/aws/kms"
 
 import (
 	"fmt"

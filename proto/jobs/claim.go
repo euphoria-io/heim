@@ -1,4 +1,4 @@
-package jobs
+package jobs // import "euphoria.io/heim/proto/jobs"
 
 import (
 	"bytes"

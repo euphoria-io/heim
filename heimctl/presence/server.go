@@ -1,4 +1,4 @@
-package presence
+package presence // import "euphoria.io/heim/heimctl/presence"
 
 import (
 	"fmt"

@@ -1,4 +1,4 @@
-package console
+package console // import "euphoria.io/heim/backend/console"
 
 import (
 	"euphoria.io/heim/proto/security"

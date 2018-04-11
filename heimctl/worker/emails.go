@@ -1,4 +1,4 @@
-package worker
+package worker // import "euphoria.io/heim/heimctl/worker"
 
 import (
 	"euphoria.io/heim/proto"

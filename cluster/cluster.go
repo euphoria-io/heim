@@ -1,4 +1,4 @@
-package cluster
+package cluster // import "euphoria.io/heim/cluster"
 
 import (
 	"fmt"

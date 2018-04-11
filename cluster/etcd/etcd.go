@@ -1,4 +1,4 @@
-package etcd
+package etcd // import "euphoria.io/heim/cluster/etcd"
 
 import (
 	"encoding/hex"

@@ -1,4 +1,4 @@
-package emails
+package emails // import "euphoria.io/heim/proto/emails"
 
 import (
 	"fmt"

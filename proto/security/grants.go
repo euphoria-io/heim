@@ -1,4 +1,4 @@
-package security
+package security // import "euphoria.io/heim/proto/security"
 
 import (
 	"encoding/base64"

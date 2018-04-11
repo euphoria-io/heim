@@ -1,4 +1,4 @@
-package activity
+package activity // import "euphoria.io/heim/heimctl/activity"
 
 import "github.com/prometheus/client_golang/prometheus"
 
