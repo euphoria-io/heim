@@ -38,9 +38,9 @@ func (s *Server) route() {
 	s.r.PathPrefix("/about").Handler(
 		prometheus.InstrumentHandler("about", http.HandlerFunc(s.handleAboutStatic)))
 
-	s.r.HandleFunc("/room/{prefix:(pm:)?}{room:[a-z0-9]+}/ws", instrumentSocketHandlerFunc("ws", s.handleRoom))
+	s.r.HandleFunc("/room/{prefix:(?:pm:)?}{room:[a-z0-9]+}/ws", instrumentSocketHandlerFunc("ws", s.handleRoom))
 	s.r.Handle(
-		"/room/{prefix:(pm:)?}{room:[a-z0-9]+}/", prometheus.InstrumentHandlerFunc("room_static", s.handleRoomStatic))
+		"/room/{prefix:(?:pm:)?}{room:[a-z0-9]+}/", prometheus.InstrumentHandlerFunc("room_static", s.handleRoomStatic))
 
 	s.r.Handle(
 		"/prefs/reset-password",
