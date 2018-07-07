@@ -1,0 +1,19 @@
+dist: trusty
+sudo: required
+language: java
+os:
+    - linux
+env:
+    - V=0.5.3
+notifications:
+    email: false
+before_install:
+    - |
+      OS=linux
+      URL="https://github.com/bazelbuild/bazel/releases/download/${V}/bazel-${V}-installer-${OS}-x86_64.sh"
+      wget -O install.sh "${URL}"
+      chmod +x install.sh
+      ./install.sh --user
+      rm -f install.sh
+script:
+    - bazel test :all
