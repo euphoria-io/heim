@@ -59,9 +59,7 @@ Questions? Feedback? Ideas? Come join us in
 
 ## Licensing
 
-Most of the server is distributed under the terms of the GNU Affero General Public License 3.0.
-
-The client is distributed under the terms of the MIT license.
+Software code is distributed under the terms of the MIT license.
 
 Art and documentation are distributed under the terms of the CC-BY 4.0 license.
 
