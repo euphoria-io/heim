@@ -270,6 +270,8 @@ func (b *Backend) background(wg *sync.WaitGroup) {
 				continue
 			}
 
+      b.Lock()
+
 			// Check for UserID- if so, notify user instead of room
 			if msg.UserID != "" {
 				for _, lm := range b.listeners {
@@ -277,6 +279,7 @@ func (b *Backend) background(wg *sync.WaitGroup) {
 						logger.Printf("error: pq listen: notify user error on userID %s: %s", msg.Room, err)
 					}
 				}
+        b.Unlock()
 				continue
 			}
 
@@ -287,6 +290,7 @@ func (b *Backend) background(wg *sync.WaitGroup) {
 						logger.Printf("error: pq listen: bounce broadcast error on %s: %s", msg.Room, err)
 					}
 				}
+        b.Unlock()
 				continue
 			}
 
@@ -297,6 +301,8 @@ func (b *Backend) background(wg *sync.WaitGroup) {
 					logger.Printf("error: pq listen: broadcast error on %s: %s", msg.Room, err)
 				}
 			}
+
+      b.Unlock()
 
 			if msg.Event.Type == proto.PartEventType {
 				payload, err := msg.Event.Payload()
