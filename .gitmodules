@@ -1,3 +1,0 @@
-[submodule "deps"]
-	path = _deps
-	url = https://github.com/euphoria-io/heim-deps.git
