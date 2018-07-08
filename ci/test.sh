@@ -5,17 +5,17 @@ set -ex
 export HEIM_GOPATH=$(pwd)/../../..
 
 setup_deps() {
-  git submodule update --init
-  # required for running gulp out of this directory.
-  ln -s $(pwd)/_deps/node_modules ./node_modules
-  export PATH=${PATH}:$(pwd)/node_modules/.bin:$(pwd)/_deps/godeps/bin:${HEIM_GOPATH}/bin
-  export GOPATH=${HEIM_GOPATH}:$(pwd)/_deps/godeps
+  (cd client; npm install)
+  export PATH=$(pwd)/client/node_modules/.bin:${HEIM_GOPATH}/bin:${PATH}
+  export GOPATH=${HEIM_GOPATH}
+  ls -alF $(pwd)/client/node_modules/.bin
 }
 
 test_backend() {
   psql -V
   psql -c 'create database heimtest;' -U postgres -h $DB_HOST
   export DSN="postgres://postgres@$DB_HOST/heimtest?sslmode=disable"
+  go get github.com/coreos/etcd
   go install github.com/coreos/etcd
   go test -v euphoria.io/heim/...
 }
