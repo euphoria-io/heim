@@ -1,0 +1,10 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["hotp.go"],
+    importmap = "euphoria.io/heim/vendor/github.com/pquerna/otp/hotp",
+    importpath = "github.com/pquerna/otp/hotp",
+    visibility = ["//visibility:public"],
+    deps = ["//vendor/github.com/pquerna/otp:go_default_library"],
+)

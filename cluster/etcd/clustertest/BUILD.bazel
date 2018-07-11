@@ -1,0 +1,13 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["testetcd.go"],
+    importpath = "euphoria.io/heim/cluster/etcd/clustertest",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//cluster:go_default_library",
+        "//cluster/etcd:go_default_library",
+        "//vendor/euphoria.io/scope:go_default_library",
+    ],
+)

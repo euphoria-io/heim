@@ -1,0 +1,26 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "add_child.go",
+        "client.go",
+        "cluster.go",
+        "compare_and_delete.go",
+        "compare_and_swap.go",
+        "debug.go",
+        "delete.go",
+        "error.go",
+        "get.go",
+        "member.go",
+        "options.go",
+        "requests.go",
+        "response.go",
+        "set_update_create.go",
+        "version.go",
+        "watch.go",
+    ],
+    importmap = "euphoria.io/heim/vendor/github.com/coreos/go-etcd/etcd",
+    importpath = "github.com/coreos/go-etcd/etcd",
+    visibility = ["//visibility:public"],
+)

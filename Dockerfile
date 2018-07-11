@@ -1,16 +1,24 @@
 FROM ubuntu:16.04
 MAINTAINER Logan Hanks <logan@euphoria.io>
 
-ARG HEIM_BRANCH
-ARG HEIM_COMMIT
-
-RUN apt-get update && apt-get dist-upgrade -y
-RUN apt-get install -y nodejs nodejs-legacy npm git golang-1.10
-
-# for phantomjs
-RUN apt-get install -y libfontconfig
-
 ENV PATH /root/go/src/euphoria.io/heim/client/node_modules/.bin:/usr/lib/go-1.10/bin:$PATH
+
+# install bazel and upgrade OS
+RUN apt-get update && apt-get dist-upgrade -y
+RUN apt-get install -y openjdk-8-jdk curl
+RUN echo "deb [arch=amd64] http://storage.googleapis.com/bazel-apt stable jdk1.8" > /etc/apt/sources.list.d/bazel.list
+RUN curl https://bazel.build/bazel-release.pub.gpg | apt-key add -
+RUN apt-get update
+RUN apt-get install -y bazel
+
+# install node and npm
+RUN apt-get install -y nodejs nodejs-legacy npm
+
+# install golang
+RUN apt-get install -y git golang-1.10
+
+# install phantomjs dependency
+RUN apt-get install -y libfontconfig
 
 # copy source code to /srv/heim/client/src
 ADD ./ /root/go/src/euphoria.io/heim/
@@ -24,5 +32,4 @@ ENV NODE_ENV production
 RUN gulp build
 
 # build server
-RUN go install -ldflags "-X main.version=${HEIM_COMMIT}" euphoria.io/heim/heimctl
-RUN go install euphoria.io/heim/heimlich
+RUN bazel build --workspace_status_command=./bzl/status.sh //heimctl

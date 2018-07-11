@@ -1,0 +1,41 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "aesgcm.go",
+        "clients.go",
+        "grants.go",
+        "keypairs.go",
+        "keys.go",
+        "kms.go",
+    ],
+    importpath = "euphoria.io/heim/proto/security",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/golang.org/x/crypto/nacl/box:go_default_library",
+        "//vendor/golang.org/x/crypto/pbkdf2:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = [
+        "aesgcm_test.go",
+        "grants_test.go",
+        "integration_test.go",
+        "keypairs_test.go",
+        "keys_test.go",
+        "kms_test.go",
+    ],
+    embed = [":go_default_library"],
+    deps = [
+        "//backend:go_default_library",
+        "//backend/mock:go_default_library",
+        "//proto:go_default_library",
+        "//proto/snowflake:go_default_library",
+        "//vendor/euphoria.io/scope:go_default_library",
+        "//vendor/github.com/smartystreets/goconvey/convey:go_default_library",
+        "//vendor/golang.org/x/crypto/nacl/box:go_default_library",
+    ],
+)

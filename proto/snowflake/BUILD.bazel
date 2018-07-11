@@ -1,0 +1,9 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["snowflake.go"],
+    importpath = "euphoria.io/heim/proto/snowflake",
+    visibility = ["//visibility:public"],
+    deps = ["//vendor/github.com/sdming/gosnow:go_default_library"],
+)
