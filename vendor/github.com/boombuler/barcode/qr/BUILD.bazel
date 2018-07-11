@@ -1,0 +1,23 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "alphanumeric.go",
+        "automatic.go",
+        "blocks.go",
+        "encoder.go",
+        "errorcorrection.go",
+        "numeric.go",
+        "qrcode.go",
+        "unicode.go",
+        "versioninfo.go",
+    ],
+    importmap = "euphoria.io/heim/vendor/github.com/boombuler/barcode/qr",
+    importpath = "github.com/boombuler/barcode/qr",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/boombuler/barcode:go_default_library",
+        "//vendor/github.com/boombuler/barcode/utils:go_default_library",
+    ],
+)

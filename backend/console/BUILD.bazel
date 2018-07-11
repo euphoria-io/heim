@@ -1,0 +1,40 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "ban.go",
+        "cluster.go",
+        "handler.go",
+        "message.go",
+        "server.go",
+        "staff.go",
+    ],
+    importpath = "euphoria.io/heim/backend/console",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//cluster:go_default_library",
+        "//proto:go_default_library",
+        "//proto/security:go_default_library",
+        "//proto/snowflake:go_default_library",
+        "//vendor/euphoria.io/scope:go_default_library",
+        "//vendor/golang.org/x/crypto/ssh:go_default_library",
+        "//vendor/golang.org/x/crypto/ssh/terminal:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = [
+        "handler_test.go",
+        "message_test.go",
+    ],
+    embed = [":go_default_library"],
+    deps = [
+        "//backend/mock:go_default_library",
+        "//proto:go_default_library",
+        "//proto/security:go_default_library",
+        "//vendor/euphoria.io/scope:go_default_library",
+        "//vendor/github.com/smartystreets/goconvey/convey:go_default_library",
+    ],
+)

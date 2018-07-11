@@ -1,4 +1,5 @@
-load("@io_bazel_rules_go//go:def.bzl", "gazelle", "go_library", "go_prefix", "go_test")
+load("@bazel_gazelle//:def.bzl", "gazelle")
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 gazelle(
     name = "gazelle",
@@ -7,25 +8,41 @@ gazelle(
     prefix = "euphoria.io/scope",
 )
 
-go_prefix("euphoria.io/scope")
-
 go_library(
     name = "scope",
-    srcs = glob(include=["*.go"], exclude=["*_test.go"]),
+    srcs = glob(
+        include = ["*.go"],
+        exclude = ["*_test.go"],
+    ),
     visibility = ["//visibility:public"],
 )
 
 go_test(
     name = "scope_test",
-    srcs = glob(include=["*_test.go"], exclude=["examples_test.go"]),
-    library = ":scope",
-    deps = ["//vendor/github.com/smartystreets/goconvey/convey:go_default_library"],
     size = "small",
+    srcs = glob(
+        include = ["*_test.go"],
+        exclude = ["examples_test.go"],
+    ),
+    embed = [":scope"],
+    deps = ["//vendor/github.com/smartystreets/goconvey/convey:go_default_library"],
 )
 
 go_test(
     name = "examples_test",
+    size = "small",
     srcs = ["examples_test.go"],
     deps = [":scope"],
-    size = "small",
+)
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "breakpoint.go",
+        "context.go",
+        "doc.go",
+    ],
+    importmap = "euphoria.io/heim/vendor/euphoria.io/scope",
+    importpath = "euphoria.io/scope",
+    visibility = ["//visibility:public"],
 )

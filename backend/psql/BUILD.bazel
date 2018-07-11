@@ -1,0 +1,52 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "account.go",
+        "agent.go",
+        "backend.go",
+        "ban.go",
+        "emails.go",
+        "jobs.go",
+        "listener.go",
+        "message.go",
+        "nick.go",
+        "pm.go",
+        "presence.go",
+        "queries.go",
+        "room.go",
+        "room_security.go",
+        "security.go",
+        "sessionlog.go",
+    ],
+    importpath = "euphoria.io/heim/backend/psql",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//backend:go_default_library",
+        "//cluster:go_default_library",
+        "//proto:go_default_library",
+        "//proto/emails:go_default_library",
+        "//proto/jobs:go_default_library",
+        "//proto/logging:go_default_library",
+        "//proto/security:go_default_library",
+        "//proto/snowflake:go_default_library",
+        "//templates:go_default_library",
+        "//vendor/euphoria.io/scope:go_default_library",
+        "//vendor/github.com/lib/pq:go_default_library",
+        "//vendor/github.com/prometheus/client_golang/prometheus:go_default_library",
+        "//vendor/gopkg.in/gorp.v1:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["integration_test.go"],
+    embed = [":go_default_library"],
+    deps = [
+        "//backend:go_default_library",
+        "//cluster:go_default_library",
+        "//proto:go_default_library",
+        "//vendor/github.com/rubenv/sql-migrate:go_default_library",
+    ],
+)

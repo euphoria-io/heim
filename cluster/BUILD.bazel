@@ -1,0 +1,20 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["cluster.go"],
+    importpath = "euphoria.io/heim/cluster",
+    visibility = ["//visibility:public"],
+    deps = ["//proto/security:go_default_library"],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["integration_test.go"],
+    embed = [":go_default_library"],
+    deps = [
+        "//backend:go_default_library",
+        "//backend/mock:go_default_library",
+        "//proto:go_default_library",
+    ],
+)

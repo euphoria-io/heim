@@ -1,0 +1,24 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "controller.go",
+        "emails.go",
+        "loop.go",
+        "metrics.go",
+        "server.go",
+        "worker.go",
+    ],
+    importpath = "euphoria.io/heim/heimctl/worker",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//proto:go_default_library",
+        "//proto/emails:go_default_library",
+        "//proto/jobs:go_default_library",
+        "//proto/logging:go_default_library",
+        "//proto/snowflake:go_default_library",
+        "//vendor/euphoria.io/scope:go_default_library",
+        "//vendor/github.com/prometheus/client_golang/prometheus:go_default_library",
+    ],
+)

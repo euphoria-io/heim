@@ -1,3 +1,4 @@
 .*.sw?
 backend/static/
 client/node_modules/
+bazel-*

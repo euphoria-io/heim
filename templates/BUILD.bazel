@@ -1,0 +1,21 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "email.go",
+        "templater.go",
+    ],
+    importpath = "euphoria.io/heim/templates",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = [
+        "email_test.go",
+        "templater_test.go",
+    ],
+    embed = [":go_default_library"],
+    deps = ["//vendor/github.com/smartystreets/goconvey/convey:go_default_library"],
+)
