@@ -1,5 +1,5 @@
 load("@bazel_gazelle//:def.bzl", "gazelle")
-load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 gazelle(
     name = "gazelle",
@@ -14,25 +14,9 @@ go_library(
         include = ["*.go"],
         exclude = ["*_test.go"],
     ),
+    importmap = "euphoria.io/heim/vendor/euphoria.io/scope",
+    importpath = "euphoria.io/scope",
     visibility = ["//visibility:public"],
-)
-
-go_test(
-    name = "scope_test",
-    size = "small",
-    srcs = glob(
-        include = ["*_test.go"],
-        exclude = ["examples_test.go"],
-    ),
-    embed = [":scope"],
-    deps = ["//vendor/github.com/smartystreets/goconvey/convey:go_default_library"],
-)
-
-go_test(
-    name = "examples_test",
-    size = "small",
-    srcs = ["examples_test.go"],
-    deps = [":scope"],
 )
 
 go_library(
