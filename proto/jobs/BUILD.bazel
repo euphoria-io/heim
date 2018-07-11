@@ -1,0 +1,17 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "claim.go",
+        "errors.go",
+        "jobs.go",
+    ],
+    importpath = "euphoria.io/heim/proto/jobs",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//proto/logging:go_default_library",
+        "//proto/snowflake:go_default_library",
+        "//vendor/euphoria.io/scope:go_default_library",
+    ],
+)

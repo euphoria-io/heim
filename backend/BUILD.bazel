@@ -1,0 +1,57 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "agent.go",
+        "commands.go",
+        "config.go",
+        "handlers.go",
+        "identity.go",
+        "integration.go",
+        "pages.go",
+        "server.go",
+        "session.go",
+    ],
+    importpath = "euphoria.io/heim/backend",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//aws/kms:go_default_library",
+        "//cluster:go_default_library",
+        "//cluster/etcd:go_default_library",
+        "//proto:go_default_library",
+        "//proto/emails:go_default_library",
+        "//proto/jobs:go_default_library",
+        "//proto/logging:go_default_library",
+        "//proto/security:go_default_library",
+        "//proto/snowflake:go_default_library",
+        "//templates:go_default_library",
+        "//vendor/euphoria.io/scope:go_default_library",
+        "//vendor/github.com/gorilla/context:go_default_library",
+        "//vendor/github.com/gorilla/mux:go_default_library",
+        "//vendor/github.com/gorilla/securecookie:go_default_library",
+        "//vendor/github.com/gorilla/websocket:go_default_library",
+        "//vendor/github.com/juju/ratelimit:go_default_library",
+        "//vendor/github.com/pquerna/otp:go_default_library",
+        "//vendor/github.com/prometheus/client_golang/prometheus:go_default_library",
+        "//vendor/github.com/savaki/geoip2:go_default_library",
+        "//vendor/github.com/smartystreets/goconvey/convey:go_default_library",
+        "//vendor/github.com/smartystreets/goconvey/convey/reporting:go_default_library",
+        "//vendor/golang.org/x/net/context:go_default_library",
+        "//vendor/gopkg.in/yaml.v2:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = [
+        "integration_test.go",
+        "server_test.go",
+    ],
+    embed = [":go_default_library"],
+    deps = [
+        "//backend/mock:go_default_library",
+        "//proto:go_default_library",
+        "//vendor/github.com/smartystreets/goconvey/convey:go_default_library",
+    ],
+)

@@ -1,0 +1,20 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "metrics.go",
+        "scanner.go",
+        "server.go",
+    ],
+    importpath = "euphoria.io/heim/heimctl/activity",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//backend/psql:go_default_library",
+        "//proto:go_default_library",
+        "//proto/logging:go_default_library",
+        "//vendor/euphoria.io/scope:go_default_library",
+        "//vendor/github.com/lib/pq:go_default_library",
+        "//vendor/github.com/prometheus/client_golang/prometheus:go_default_library",
+    ],
+)

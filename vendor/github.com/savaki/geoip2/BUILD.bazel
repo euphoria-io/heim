@@ -1,0 +1,13 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "geoip2.go",
+        "types.go",
+    ],
+    importmap = "euphoria.io/heim/vendor/github.com/savaki/geoip2",
+    importpath = "github.com/savaki/geoip2",
+    visibility = ["//visibility:public"],
+    deps = ["//vendor/golang.org/x/net/context:go_default_library"],
+)

@@ -1,0 +1,57 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "account.go",
+        "agent.go",
+        "auth.go",
+        "backend.go",
+        "client.go",
+        "crypto.go",
+        "emails.go",
+        "errors.go",
+        "grants.go",
+        "heim.go",
+        "identity.go",
+        "message.go",
+        "packet.go",
+        "pm.go",
+        "presence.go",
+        "room.go",
+        "session.go",
+        "time.go",
+    ],
+    importpath = "euphoria.io/heim/proto",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//cluster:go_default_library",
+        "//proto/emails:go_default_library",
+        "//proto/jobs:go_default_library",
+        "//proto/security:go_default_library",
+        "//proto/snowflake:go_default_library",
+        "//templates:go_default_library",
+        "//vendor/euphoria.io/scope:go_default_library",
+        "//vendor/github.com/pquerna/otp:go_default_library",
+        "//vendor/github.com/pquerna/otp/totp:go_default_library",
+        "//vendor/github.com/savaki/geoip2:go_default_library",
+        "//vendor/golang.org/x/crypto/poly1305:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = [
+        "account_test.go",
+        "identity_test.go",
+        "integration_test.go",
+        "packet_test.go",
+    ],
+    embed = [":go_default_library"],
+    deps = [
+        "//backend:go_default_library",
+        "//backend/mock:go_default_library",
+        "//proto/security:go_default_library",
+        "//vendor/github.com/smartystreets/goconvey/convey:go_default_library",
+    ],
+)

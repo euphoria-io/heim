@@ -1,0 +1,26 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["kms.go"],
+    importpath = "euphoria.io/heim/aws/kms",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//proto/security:go_default_library",
+        "//vendor/github.com/aws/aws-sdk-go/aws:go_default_library",
+        "//vendor/github.com/aws/aws-sdk-go/aws/awserr:go_default_library",
+        "//vendor/github.com/aws/aws-sdk-go/aws/credentials:go_default_library",
+        "//vendor/github.com/aws/aws-sdk-go/aws/session:go_default_library",
+        "//vendor/github.com/aws/aws-sdk-go/service/kms:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["kms_test.go"],
+    embed = [":go_default_library"],
+    deps = [
+        "//proto/security:go_default_library",
+        "//vendor/github.com/smartystreets/goconvey/convey:go_default_library",
+    ],
+)

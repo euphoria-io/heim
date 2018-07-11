@@ -1,0 +1,27 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "deliverer.go",
+        "emailer.go",
+        "smtp.go",
+    ],
+    importpath = "euphoria.io/heim/proto/emails",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//proto/snowflake:go_default_library",
+        "//templates:go_default_library",
+        "//vendor/euphoria.io/scope:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["emailer_test.go"],
+    embed = [":go_default_library"],
+    deps = [
+        "//templates:go_default_library",
+        "//vendor/github.com/smartystreets/goconvey/convey:go_default_library",
+    ],
+)

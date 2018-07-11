@@ -1,0 +1,31 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "column.go",
+        "db.go",
+        "dialect.go",
+        "dialect_mysql.go",
+        "dialect_oracle.go",
+        "dialect_postgres.go",
+        "dialect_sqlite.go",
+        "dialect_sqlserver.go",
+        "errors.go",
+        "gorp.go",
+        "gorp_go17.go",
+        "gorp_go18.go",
+        "hooks.go",
+        "index.go",
+        "lockerror.go",
+        "logging.go",
+        "nulltypes.go",
+        "select.go",
+        "table.go",
+        "table_bindings.go",
+        "transaction.go",
+    ],
+    importmap = "euphoria.io/heim/vendor/github.com/go-gorp/gorp",
+    importpath = "github.com/go-gorp/gorp",
+    visibility = ["//visibility:public"],
+)
