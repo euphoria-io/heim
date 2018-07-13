@@ -1,0 +1,32 @@
+load("@build_bazel_rules_nodejs//:defs.bzl", "nodejs_binary", "nodejs_test")
+
+filegroup(
+    name = "eslintrc",
+    srcs = [".eslintrc"],
+)
+
+filegroup(
+    name = "client_sources",
+    srcs = glob(
+        include = [
+            "**/*.js",
+        ],
+        exclude = ["node_modules/**"],
+    ),
+)
+
+nodejs_test(
+    name = "eslint",
+    entry_point = "eslint/bin/eslint.js",
+    node_modules = "@client//:node_modules",
+    data = [
+        ":client_sources",
+        ":eslintrc",
+    ],
+    templated_args = [
+        "--config=$(location :eslintrc)",
+        "--no-ignore",
+        "--",
+        "$(locations :client_sources)",
+    ],
+)
