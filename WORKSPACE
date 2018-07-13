@@ -1,3 +1,23 @@
+load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
+
+git_repository(
+    name = "build_bazel_rules_nodejs",
+    remote = "https://github.com/bazelbuild/rules_nodejs.git",
+    tag = "0.10.0",
+)
+
+load("@build_bazel_rules_nodejs//:defs.bzl", "node_repositories", "npm_install")
+
+node_repositories(
+    package_json = ["//client:package.json"],
+    node_version = "8.9.1",
+)
+
+npm_install(
+    name = "client",
+    package_json = "//client:package.json",
+)
+
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 http_archive(
