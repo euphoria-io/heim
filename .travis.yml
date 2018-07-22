@@ -1,22 +1,43 @@
-language: go
+dist: trusty
+sudo: required
+language: java
 
-go:
-  - tip
-
-matrix:
-  fast_finish: true
+os:
+  - linux
 
 addons:
   - postgresql: "9.4"
 
-install:
-  - export DB_HOST=localhost
-  - cd ${HOME}
-  - mkdir -p ${HOME}/src/euphoria.io
-  - mv ${TRAVIS_BUILD_DIR} ${HOME}/src/euphoria.io/
-  - cd ${HOME}/src/euphoria.io/heim
+before_install:
+  - |
+    sysctl kernel.unprivileged_userns_clone=1
+    export BAZEL_VERSION=0.15.2
+    wget -O install.sh "https://github.com/bazelbuild/bazel/releases/download/${BAZEL_VERSION}/bazel-${BAZEL_VERSION}-installer-linux-x86_64.sh"
+    chmod +x install.sh
+    ./install.sh --user
+    rm -f install.sh
+    export ETCD_VERSION=3.3.8
+    wget "https://github.com/coreos/etcd/releases/download/v${ETCD_VERSION}/etcd-v${ETCD_VERSION}-linux-amd64.tar.gz"
+    tar xzf "etcd-v${ETCD_VERSION}-linux-amd64.tar.gz"
+    export PATH=`pwd`"/etcd-v${ETCD_VERSION}-linux-amd64:$PATH"
+    psql -c 'create database heimtest;' -U postgres
 
-script: ./ci/test.sh
+script:
+  - |
+    bazel \
+      --output_base=$HOME/.cache/bazel \
+      --batch \
+      --host_jvm_args=-Xmx1000m \
+      --host_jvm_args=-Xms1000m \
+      test \
+      --experimental_repository_cache="$HOME/.bazel_repository_cache" \
+      --noshow_progress \
+      --local_resources=400,1,1.0 \
+      --test_env=DSN="postgres://postgres@localhost/heimtest?sslmode=disable" \
+      --test_output=errors \
+      --test_tag_filters=-dev \
+      --verbose_failures \
+      //...
 
 notifications:
   webhooks:
