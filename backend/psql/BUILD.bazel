@@ -39,10 +39,16 @@ go_library(
     ],
 )
 
+filegroup(
+    name = "migrations",
+    srcs = glob(["migrations/*.sql"]),
+)
+
 go_test(
     name = "go_default_test",
     srcs = ["integration_test.go"],
     embed = [":go_default_library"],
+    data = [":migrations"],
     deps = [
         "//backend:go_default_library",
         "//cluster:go_default_library",
