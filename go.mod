@@ -1,0 +1,40 @@
+module github.com/euphoria-io/heim
+
+go 1.13
+
+require (
+	euphoria.io/heim v0.0.0-20180723183715-88f351db1135
+	euphoria.io/scope v0.0.0-20170916232756-33b185f2244a
+	github.com/aws/aws-sdk-go v1.14.21
+	github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973
+	github.com/boombuler/barcode v1.0.0
+	github.com/coreos/go-etcd v2.0.0+incompatible
+	github.com/go-gorp/gorp v2.0.1-0.20180410155428-6032c66e0f5f+incompatible
+	github.com/go-ini/ini v1.37.0
+	github.com/golang/protobuf v1.1.0
+	github.com/gopherjs/gopherjs v0.0.0-20180628210949-0892b62f0d9f
+	github.com/gorilla/context v1.1.1
+	github.com/gorilla/mux v1.6.2
+	github.com/gorilla/securecookie v1.1.1
+	github.com/gorilla/websocket v1.2.0
+	github.com/jmespath/go-jmespath v0.0.0-20160202185014-0b12d6b521d8
+	github.com/jtolds/gls v4.2.1+incompatible
+	github.com/juju/ratelimit v1.0.1
+	github.com/lib/pq v0.0.0-20180523175426-90697d60dd84
+	github.com/matttproud/golang_protobuf_extensions v1.0.1
+	github.com/pquerna/otp v1.0.0
+	github.com/prometheus/client_golang v0.8.0
+	github.com/prometheus/client_model v0.0.0-20171117100541-99fa1f4be8e5
+	github.com/prometheus/common v0.0.0-20180518154759-7600349dcfe1
+	github.com/prometheus/procfs v0.0.0-20180705121852-ae68e2d4c00f
+	github.com/rubenv/sql-migrate v0.0.0-20180704111356-3f452fc0ebeb
+	github.com/savaki/geoip2 v0.0.0-20150727150920-9968b08fbf39
+	github.com/sdming/gosnow v0.0.0-20130403030620-3a05c415e886
+	github.com/smartystreets/assertions v0.0.0-20180301161246-7678a5452ebe
+	github.com/smartystreets/goconvey v1.6.3
+	golang.org/x/crypto v0.0.0-20180621125126-a49355c7e3f8
+	golang.org/x/net v0.0.0-20180706051357-32a936f46389
+	golang.org/x/sys v0.0.0-20180707002001-3c6ecd8f22c6
+	gopkg.in/gorp.v1 v1.7.1
+	gopkg.in/yaml.v2 v2.2.1
+)

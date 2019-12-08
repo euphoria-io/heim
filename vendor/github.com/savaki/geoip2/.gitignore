@@ -1,9 +1,0 @@
-# ignore intellij files
-/.idea
-/*.ipr
-/*.iws
-/*.iml
-
-# ignore temp files
-/*.env
-
