@@ -7,7 +7,7 @@
     "raven-js": "~1.1.17",
     "babel-polyfill": "~6.0.16",
     "core-js": "~1.2.5",
-    "lodash": "~3.10.0",
+    "lodash": "~4.17.15",
     "react": "~0.14.2",
     "react-dom": "~0.14.2",
     "react-addons-perf": "~0.14.2",
