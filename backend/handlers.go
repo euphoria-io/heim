@@ -24,6 +24,11 @@ func (s *Server) route() {
 	s.r.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		s.serveErrorPage("page not found", http.StatusNotFound, w, r)
 	})
+	s.r.Use(func(handler http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Security-Policy", "default-src 'self'; font-src 'self' data: fonts.gstatic.com; img-src 'self' data:; script-src 'self'; style-src 'self' 'unsafe-inline' fonts.googleapis.com; connect-src 'self' wss://euphoria.io; frame-src 'self' embed.space")
+		})
+	})
 
 	s.r.Path("/").Methods("OPTIONS").HandlerFunc(s.handleProbe)
 	s.r.Path("/robots.txt").HandlerFunc(s.handleRobotsTxt)
