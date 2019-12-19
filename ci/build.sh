@@ -15,11 +15,12 @@ build_release() {
   if [ ${DRONE_BRANCH%/*} == 'dev' ]; then
     export HEIM_PREFIX="/$DRONE_BRANCH"
   fi
-  pushd ./client
-  gulp build
-  popd
+  #pushd ./client
+  #gulp build
+  #popd
 
-  go install -ldflags "-X main.version ${DRONE_COMMIT}" euphoria.io/heim/heimctl
+  export GO111MODULE=on
+  go install -ldflags "-X main.version=${DRONE_COMMIT}" euphoria.io/heim/heimctl
   go install euphoria.io/heim/heimlich
 
   mv ./client/build/heim ${HEIM_GOPATH}/bin/static
