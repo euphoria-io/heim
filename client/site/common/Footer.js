@@ -3,7 +3,9 @@ import React from 'react'
 import heimURL from '../../lib/heimURL'
 
 
-export default function Footer() {
+export default function Footer(props) {
+  const donationURL = (props.noDonation) ? null : process.env.HEIM_DONATION_URL
+
   return (
     <footer>
       <div className="container">
@@ -17,7 +19,13 @@ export default function Footer() {
         <a href="https://github.com/euphoria-io/heim"><span className="long">source </span>code</a>
         <a href="http://andeuphoria.tumblr.com/">blog</a>
         <a href="mailto:hi@euphoria.io">contact</a>
+        {donationURL && <span className="spacer" />}
+        {donationURL && <a href={donationURL}>support us!</a>}
       </div>
     </footer>
   )
+}
+
+Footer.propTypes = {
+  noDonation: React.PropTypes.bool,
 }

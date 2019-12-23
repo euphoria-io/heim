@@ -36,6 +36,7 @@ const heimOptions = {
   HEIM_PREFIX: process.env.HEIM_PREFIX || '',
   EMBED_ORIGIN: process.env.EMBED_ORIGIN,
   NODE_ENV: process.env.NODE_ENV,
+  HEIM_DONATION_URL: process.env.HEIM_DONATION_URL,
 }
 
 // via https://github.com/tblobaum/git-rev

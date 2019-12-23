@@ -317,6 +317,7 @@ const store = module.exports.store = Reflux.createStore({
       draggingToolboxSelectionToggle: null,
       notices: Immutable.OrderedSet(),
       notificationsNoticeDismissed: false,
+      donationsNoticeDismissed: false,
       modalDialog: null,
     }
 
@@ -336,6 +337,7 @@ const store = module.exports.store = Reflux.createStore({
     this.state.infoPaneExpanded = _.get(data, ['room', this.chatState.roomName, 'infoPaneExpanded'], false)
     this.state.sidebarPaneExpanded = _.get(data, ['room', this.chatState.roomName, 'sidebarPaneExpanded'], true)
     this.state.notificationsNoticeDismissed = _.get(data, ['room', this.chatState.roomName, 'notificationsNoticeDismissed'], false)
+    this.state.donationsNoticeDismissed = _.get(data, 'donationsNoticeDismissed', false)
     this._updateNotices()
     this.trigger(this.state)
   },
@@ -360,6 +362,11 @@ const store = module.exports.store = Reflux.createStore({
       this.state.notices = this.state.notices.add('notifications')
     } else {
       this.state.notices = this.state.notices.delete('notifications')
+    }
+    if (! this.state.donationsNoticeDismissed) {
+      this.state.notices = this.state.notices.add('donations')
+    } else {
+      this.state.notices = this.state.notices.delete('donations')
     }
   },
 
@@ -690,6 +697,8 @@ const store = module.exports.store = Reflux.createStore({
   dismissNotice(name) {
     if (name === 'notifications') {
       storage.setRoom(this.chatState.roomName, 'notificationsNoticeDismissed', true)
+    } else if (name === 'donations') {
+      storage.set('donationsNoticeDismissed', true)
     }
   },
 

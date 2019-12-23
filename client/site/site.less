@@ -219,7 +219,7 @@ body.page {
     }
 
     .spacer {
-      margin: 0 35px;
+      margin: 0 25px;
     }
 
     @media (max-width: 910px) {
@@ -660,6 +660,34 @@ body.welcome {
         li {
           margin-bottom: 15px;
         }
+      }
+    }
+  }
+
+  .donation-banner {
+    display: flex;
+    margin-top: -50px;
+    height: 50px;
+
+    a {
+      margin: auto;
+      padding: 4px;
+      border-radius: 4px;
+      font-size: 1.25em;
+      font-weight: bold;
+      background: white;
+      color: #333333;
+      text-decoration: none;
+      box-shadow: 0 0 4px fade(black, 25%);
+
+      &:before {
+        content: '';
+        display: inline-block;
+        width: 2em;
+        height: 2em;
+        padding-right: 0.25em;
+        vertical-align: middle;
+        background: data-uri('./res/bronze-alt.svg') no-repeat center center;
       }
     }
   }
