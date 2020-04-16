@@ -686,9 +686,11 @@ module.exports.store = Reflux.createStore({
   },
 
   editMessage(id, data) {
+    const msg = this.state.messages.get(id)
+    const previous_edit_id = msg && msg.get('previous_edit_id')
     this.socket.send({
       type: 'edit-message',
-      data: _.merge(data, {id}),
+      data: _.merge(data, {id, previous_edit_id}),
     })
   },
 
