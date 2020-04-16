@@ -142,6 +142,7 @@ export default React.createClass({
       return
     }
 
+    // Scan backwards for beginning of word
     let wordStart
     for (wordStart = wordEnd - 1; wordStart >= 0; wordStart--) {
       if (!charRe.test(text[wordStart])) {
@@ -149,10 +150,17 @@ export default React.createClass({
       }
     }
     wordStart++
-    if (text[wordStart] === '@') {
-      wordStart++
+
+    // Scan forward for the first @ sign
+    let mentionStart
+    for (mentionStart = wordStart; mentionStart < text.length && charRe.test(text[mentionStart]); mentionStart++) {
+      if (text[mentionStart] === '@') {
+        wordStart = mentionStart + 1
+        break
+      }
     }
 
+    // Scan forward for end of word
     for (; wordEnd < text.length; wordEnd++) {
       if (!charRe.test(text[wordEnd])) {
         break
