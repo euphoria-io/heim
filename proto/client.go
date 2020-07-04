@@ -1,4 +1,4 @@
-package proto
+package proto // import "euphoria.io/heim/proto"
 
 import (
 	"fmt"

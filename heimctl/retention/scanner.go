@@ -1,4 +1,4 @@
-package retention
+package retention // import "euphoria.io/heim/heimctl/retention"
 
 import (
 	"database/sql"

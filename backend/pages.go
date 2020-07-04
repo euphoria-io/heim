@@ -1,4 +1,4 @@
-package backend
+package backend // import "euphoria.io/heim/backend"
 
 import (
 	"bytes"

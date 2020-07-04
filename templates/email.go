@@ -1,4 +1,4 @@
-package templates
+package templates // import "euphoria.io/heim/templates"
 
 import (
 	"bufio"
