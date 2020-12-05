@@ -11,6 +11,7 @@ import Tree from '../Tree'
 import FastButton from './FastButton'
 import Embed from './Embed'
 import MessageText from './MessageText'
+import InlineVoting from './InlineVoting'
 import ChatEntry from './ChatEntry'
 import LiveTimeAgo from './LiveTimeAgo'
 import KeyboardActionHandler from './KeyboardActionHandler'
@@ -436,6 +437,15 @@ const Message = React.createClass({
         </div>
       )
       lineClasses['line-emote'] = true
+    } else if (/^\/vote/.test(content) && content.length < 240) {
+      content = _.trim(content.replace(/^\/vote ?/, ''))
+      messageRender = (
+        <div className="message">
+          <MessageText content={content} />
+          {messageAgo}
+          <InlineVoting message={message} tree={this.props.tree} />
+        </div>
+      )
     } else if (this.state.contentTall && this.props.roomSettings.get('collapse') !== false) {
       const action = contentExpanded ? 'collapse' : 'expand'
       const actionMethod = action + 'Content'
