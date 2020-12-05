@@ -35,7 +35,7 @@ export default function clientRoom() {
 
     // read url hash flags pertaining to socket connection
     const roomName = uiwindow.location.pathname.match(/((pm:)?\w+)\/$/)[1]
-    const hashFlags = queryString.parse(location.hash.substr(1))
+    const hashFlags = queryString.parse(uiwindow.location.hash.substr(1))
     let connectEndpoint = process.env.HEIM_ORIGIN + process.env.HEIM_PREFIX
     if (process.env.NODE_ENV !== 'production' && hashFlags.connect) {
       connectEndpoint = hashFlags.connect
