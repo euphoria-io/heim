@@ -1102,7 +1102,7 @@ func testAccountsLowLevel(s *serverUnderTest) {
 		KeyType:   proto.AgentKeyType,
 		Plaintext: make([]byte, proto.AgentKeyType.KeySize()),
 	}
-	nonce := fmt.Sprintf("%s", time.Now())
+	nonce := time.Now().String()
 
 	loganAgent, err := proto.NewAgent([]byte("logan"+nonce), agentKey)
 	So(err, ShouldBeNil)
@@ -1178,7 +1178,7 @@ func testStaffLowLevel(s *serverUnderTest) {
 		kms := s.app.kms
 
 		// Create test account.
-		nonce := fmt.Sprintf("%s", time.Now())
+		nonce := time.Now().String()
 		logan, loganKey, err := s.Account(ctx, kms, "email", "logan"+nonce, "loganpass")
 		So(err, ShouldBeNil)
 		So(logan.IsStaff(), ShouldBeFalse)
@@ -1217,7 +1217,7 @@ func testManagersLowLevel(s *serverUnderTest) {
 	kms := s.app.kms
 
 	// Create test accounts.
-	nonce := fmt.Sprintf("%s", time.Now())
+	nonce := time.Now().String()
 
 	alice, aliceKey, err := s.Account(ctx, kms, "email", "alice"+nonce, "alicepass")
 	So(err, ShouldBeNil)
@@ -1307,7 +1307,7 @@ func testManagersLowLevel(s *serverUnderTest) {
 func testAccountChangePassword(s *serverUnderTest) {
 	ctx := scope.New()
 	kms := s.app.kms
-	nonce := fmt.Sprintf("%s", time.Now())
+	nonce := time.Now().String()
 	logan, _, err := s.Account(ctx, kms, "email", "logan"+nonce, "oldpass")
 	So(err, ShouldBeNil)
 
@@ -1374,7 +1374,7 @@ func testAccountChangePassword(s *serverUnderTest) {
 func testAccountResetPassword(s *serverUnderTest) {
 	ctx := scope.New()
 	kms := s.app.kms
-	nonce := fmt.Sprintf("%s", time.Now())
+	nonce := time.Now().String()
 	logan, _, err := s.Account(ctx, kms, "email", "logan"+nonce, "oldpass")
 	So(err, ShouldBeNil)
 
@@ -1441,7 +1441,7 @@ func testAccountResetPassword(s *serverUnderTest) {
 func testAccountChangeName(s *serverUnderTest) {
 	ctx := scope.New()
 	kms := s.app.kms
-	nonce := fmt.Sprintf("%s", time.Now())
+	nonce := time.Now().String()
 	logan, _, err := s.Account(ctx, kms, "email", "logan"+nonce, "loganpass")
 	So(err, ShouldBeNil)
 
@@ -1473,7 +1473,7 @@ func testAccountChangeName(s *serverUnderTest) {
 func testAccountChangeEmail(s *serverUnderTest) {
 	ctx := scope.New()
 	kms := s.app.kms
-	nonce := fmt.Sprintf("%s", time.Now())
+	nonce := time.Now().String()
 	logan, _, err := s.Account(ctx, kms, "email", "logan"+nonce, "loganpass")
 	So(err, ShouldBeNil)
 	emailVerified := false
@@ -1655,7 +1655,7 @@ func testAccountChangeEmail(s *serverUnderTest) {
 func testAccountLogin(s *serverUnderTest) {
 	ctx := scope.New()
 	kms := s.app.kms
-	nonce := fmt.Sprintf("%s", time.Now())
+	nonce := time.Now().String()
 	logan, _, err := s.Account(ctx, kms, "email", "logan"+nonce, "loganpass")
 	So(err, ShouldBeNil)
 
@@ -1846,7 +1846,7 @@ func testRoomCreation(s *serverUnderTest) {
 		kms := s.app.kms
 
 		// Create staff account.
-		nonce := fmt.Sprintf("%s", time.Now())
+		nonce := time.Now().String()
 		logan, _, err := s.Account(ctx, kms, "email", "logan"+nonce, "loganpass")
 		So(err, ShouldBeNil)
 		So(b.AccountManager().GrantStaff(ctx, logan.ID(), s.kms.KMSCredential()), ShouldBeNil)
@@ -1900,7 +1900,7 @@ func testRoomGrants(s *serverUnderTest) {
 		kms := s.app.kms
 
 		// Create manager account and room.
-		nonce := fmt.Sprintf("%s", time.Now())
+		nonce := time.Now().String()
 		logan, _, err := s.Account(ctx, kms, "email", "logan"+nonce, "loganpass")
 		So(err, ShouldBeNil)
 		_, err = b.CreateRoom(ctx, kms, true, "passcodegrants", logan)
@@ -1954,7 +1954,7 @@ func testRoomGrants(s *serverUnderTest) {
 		kms := s.app.kms
 
 		// Create manager account and room.
-		nonce := fmt.Sprintf("%s", time.Now())
+		nonce := time.Now().String()
 		logan, _, err := s.Account(ctx, kms, "email", "logan"+nonce, "loganpass")
 		So(err, ShouldBeNil)
 		_, err = b.CreateRoom(ctx, kms, true, "grants", logan)
@@ -2173,7 +2173,7 @@ func testBans(s *serverUnderTest) {
 		kms := s.app.kms
 
 		// Create manager and log in (via staging room).
-		nonce := fmt.Sprintf("%s", time.Now())
+		nonce := time.Now().String()
 		_, manager, _, err := s.RoomAndManager(ctx, kms, false, "bans", "email", nonce, "password")
 		So(err, ShouldBeNil)
 
@@ -2237,7 +2237,7 @@ func testBans(s *serverUnderTest) {
 		kms := s.app.kms
 
 		// Create manager and log in (via staging room).
-		nonce := fmt.Sprintf("%s", time.Now())
+		nonce := time.Now().String()
 		_, manager, _, err := s.RoomAndManager(ctx, kms, false, "acctbans", "email", nonce, "password")
 		So(err, ShouldBeNil)
 
@@ -2986,7 +2986,7 @@ func testStaffOTP(s *serverUnderTest) {
 	}
 
 	Convey("Enroll and validate", func() {
-		nonce := fmt.Sprintf("%s", time.Now())
+		nonce := time.Now().String()
 		logan := makeStaff("logan"+nonce, "hunter2")
 		c1 := s.Connect("otp1login")
 		c1.expectPing()
@@ -3021,7 +3021,7 @@ func testStaffInvasion(s *serverUnderTest) {
 		b := s.backend
 		ctx := scope.New()
 		kms := s.app.kms
-		nonce := fmt.Sprintf("%s", time.Now())
+		nonce := time.Now().String()
 
 		// Create host account and log into it.
 		host, _, err := s.Account(ctx, kms, "email", "host"+nonce, "password")
@@ -3168,7 +3168,7 @@ func testPMs(s *serverUnderTest) {
 		// Create initiator
 		ctx := scope.New()
 		kms := s.app.kms
-		nonce := fmt.Sprintf("%s", time.Now())
+		nonce := time.Now().String()
 		logan, _, err := s.Account(ctx, kms, "email", "logan"+nonce, "hunter2")
 		So(err, ShouldBeNil)
 		_, err = s.Room(ctx, kms, false, "pminvite", logan)
@@ -3328,7 +3328,7 @@ func testPMs(s *serverUnderTest) {
 		// Create initiator
 		ctx := scope.New()
 		kms := s.app.kms
-		nonce := fmt.Sprintf("%s", time.Now())
+		nonce := time.Now().String()
 		alice, _, err := s.Account(ctx, kms, "email", "alice"+nonce, "hunter2")
 		So(err, ShouldBeNil)
 		bob, _, err := s.Account(ctx, kms, "email", "bob"+nonce, "hunter2")
@@ -3403,7 +3403,7 @@ func testPMs(s *serverUnderTest) {
 		// Create initiator
 		ctx := scope.New()
 		kms := s.app.kms
-		nonce := fmt.Sprintf("%s", time.Now())
+		nonce := time.Now().String()
 		alice, _, err := s.Account(ctx, kms, "email", "alice"+nonce, "hunter2")
 		So(err, ShouldBeNil)
 		bob, _, err := s.Account(ctx, kms, "email", "bob"+nonce, "hunter2")
