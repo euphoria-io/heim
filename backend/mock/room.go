@@ -429,7 +429,7 @@ func (r *memRoom) GenerateMessageKey(ctx scope.Context, kms security.KMS) (proto
 		nonce:     nonce,
 		key:       *mkey,
 	}
-	r.messageKey.id = fmt.Sprintf("%s", r.messageKey.timestamp)
+	r.messageKey.id = r.messageKey.timestamp.String()
 	return r.messageKey, nil
 }
 
